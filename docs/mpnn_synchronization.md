@@ -28,3 +28,16 @@ mutator:
 `native_tie` uses the existing far-apart model call with tied positions and takes one native joint decoded sequence. It does not resample each position from model marginals; the existing mutation budget can select a subset of that decoded sequence. Signed state betas are supported only by the native tie path. The translated combined structure is an internal model input and is not an evaluated physical complex. Native tie currently uses the existing two-context ProteinMPNN adapter. LigandMPNN far-apart mode is rejected because that adapter does not preserve ligand atoms.
 
 The original aliases retain their order-conditioned marginal proposal and RNG behavior; migrating one to `native_tie` changes proposal semantics. Tests use CPU models with random weights and mock backends; no trained-weight or GPU equivalence is implied.
+
+Both MCMC and MPNN builders also accept an optional `proposal_policy` on the mutator term, for example:
+
+```yaml
+proposal_policy:
+  allowed_residues: [C, D]
+  disallowed_residues: []
+  bias: {C: 0.5}
+  temperature: 1.2
+  max_mutations: 1
+```
+
+For mutable positions this applies `p(aa)^(1/temperature) * exp(bias(aa)/temperature)` to the backend's probability vector, masks disallowed residues, then normalizes. Fixed/selector-excluded positions are left untouched. The policy's temperature and bias are a post-backend proposal transform, distinct from the MPNN model's native logit temperature and bias. The shared mutation budget is applied after candidate generation and combines with an existing MCMC cap. Unconfigured policy leaves legacy numerical and RNG paths unchanged. Native joint decoding permits the shared budget but rejects probability transforms because post-processing marginals would change joint decoding semantics.

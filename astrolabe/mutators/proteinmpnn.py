@@ -98,6 +98,8 @@ class MultistateProteinMPNNMutator(ProteinMPNNMutator):
     ):
         super().__init__(sequence_model_runner=sequence_model_runner, **kwargs)
         self.native_joint_decode = bool(native_joint_decode)
+        if self.native_joint_decode and self.proposal_policy is not None and self.proposal_policy.changes_probabilities:
+            raise ValueError("native joint decoding does not support probability-space proposal transforms")
         self.state_oligos: list[str] | None = None
         self.shared_protomer: str | None = None
         self.state_betas = self._parse_configured_state_betas(state_betas)
@@ -311,6 +313,8 @@ class MultistateProteinMPNNMutator(ProteinMPNNMutator):
                 for key, value in layout.features.items()
                 if not str(key).startswith("_")
             }
+            if "_proposal_excluded_positions" in layout.features:
+                outputs[layout.oligo]["_proposal_excluded_positions"] = layout.features["_proposal_excluded_positions"]
             outputs[layout.oligo].update(
                 {
                     "name": layout.oligo,

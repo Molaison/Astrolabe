@@ -1656,6 +1656,7 @@ def sample_mutations_by_aa_probs(
     entropy_cutoff: float | None = None,
     enforce_mutation_num: bool = False,
     synchronization_policy=None,
+    proposal_policy=None,
 ):
     if propagate_scores:
         per_proto_scores = aggregate_per_proto_scores(
@@ -1701,6 +1702,19 @@ def sample_mutations_by_aa_probs(
             value_key="log_probs",
         )
 
+    policy_exclusions = None
+    if proposal_policy is not None and proposal_policy.changes_probabilities:
+        for output in (mutation_output or {}).values():
+            if not isinstance(output, dict) or "_proposal_excluded_positions" not in output:
+                raise ValueError("proposal_policy requires the backend's position mask")
+            candidate = output["_proposal_excluded_positions"]
+            if policy_exclusions is None:
+                policy_exclusions = candidate
+            elif policy_exclusions != candidate:
+                raise ValueError("proposal_policy position masks differ across contexts")
+        if policy_exclusions is None:
+            raise ValueError("proposal_policy requires backend outputs")
+
     for name, probs in proto_probabilities.items():
         protomer = global_config.protomers[name]
         sorted_probs = sort_probabilities_by_aaorder(probs, aa_order)
@@ -1719,6 +1733,10 @@ def sample_mutations_by_aa_probs(
                 aa_order,
                 protomer_name=name,
             )
+        if proposal_policy is not None and proposal_policy.changes_probabilities:
+            if name not in policy_exclusions:
+                raise ValueError(f"proposal_policy position mask is missing protomer {name!r}")
+            sorted_probs = proposal_policy.apply(sorted_probs, aa_order, policy_exclusions[name])
         protomer.propagating_probs(sorted_probs)
     mutations = global_config.segment_manager.collect_mutations()
 
@@ -1784,7 +1802,8 @@ def sample_mutations_by_aa_probs(
             proto_usage[proto_name] += 1
         shuffled_mutations = budgeted
 
-    requested_mutations = round(global_config.mutation_num * mutation_weight)
+    from astrolabe.mutators.proposal_policy import mutation_budget
+    requested_mutations = mutation_budget(global_config.mutation_num, mutation_weight, policy=proposal_policy)
     if (
         enforce_mutation_num
         and requested_mutations > 0

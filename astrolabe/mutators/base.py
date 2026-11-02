@@ -344,6 +344,10 @@ def _build_proteinmpnn_mutator(
         policy = SynchronizationPolicy(layout or "separate", coupling or "probability_mean", weights)
         term_conf["synchronization_policy"] = policy
         if policy.coupling == "native_tie":
+            from astrolabe.mutators.proposal_policy import ProposalPolicy
+            proposal = ProposalPolicy.from_config(term_conf.get("proposal_policy"))
+            if proposal is not None and proposal.changes_probabilities:
+                raise ValueError("native joint decoding does not support probability-space proposal transforms")
             mutator_cls = MultistateProteinMPNNMutator
             term_conf["native_joint_decode"] = True
     return _build_mpnn_mutator(

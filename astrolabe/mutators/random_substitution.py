@@ -12,7 +12,8 @@ from astrolabe.mutators.utils import (
     prepare_exclude_sites,
     propagate_evaluation_scores_to_protomers,
 )
-from astrolabe.utils.constant import cached_aa_freq, restype_str_to_int
+from astrolabe.utils.constant import cached_aa_freq, restype_str_to_int, aa_order
+from astrolabe.mutators.proposal_policy import ProposalPolicy, mutation_budget
 
 
 def generate_aa_freqs(
@@ -88,7 +89,9 @@ class RandomSubstitutionMutator(Mutator):
         disallowed_residues=None,
         max_mutations=None,
         avoid_current_residue=False,
+        proposal_policy=None,
     ):
+        self.proposal_policy = ProposalPolicy.from_config(proposal_policy)
         self.mutation_method = mutation_method
         self.select_positions = select_positions
         self.enabled_types = MutableTypes
@@ -128,15 +131,12 @@ class RandomSubstitutionMutator(Mutator):
                 if protomer.type == ProtomerTypes.PROTEIN
                 else None,
             )
-            aa_probs = self._apply_excluded_positions(
-                protomer,
-                self._apply_avoid_current_residue(
-                    protomer,
-                    aa_probs,
-                    excluded_positions.get(name, ()),
-                ),
-                excluded_positions.get(name, ()),
-            )
+            excluded = excluded_positions.get(name, ())
+            aa_probs = self._apply_avoid_current_residue(protomer, aa_probs, excluded)
+            if self.proposal_policy is not None and aa_probs is not None:
+                alphabet = {ProtomerTypes.PROTEIN: aa_order[:20], ProtomerTypes.RNA: ('A','C','G','U'), ProtomerTypes.DNA: ('A','C','G','T')}[protomer.type]
+                aa_probs = self.proposal_policy.apply(aa_probs, alphabet, excluded)
+            aa_probs = self._apply_excluded_positions(protomer, aa_probs, excluded)
             protomer.propagating_probs(aa_probs)
 
     def prepare_mutation_input(
@@ -235,9 +235,8 @@ class RandomSubstitutionMutator(Mutator):
 
         mutations = sort_by_score(mutations)
 
-        n_mutations = round(global_config.mutation_num * self.mutation_weight)
-        if self.max_mutations is not None:
-            n_mutations = min(n_mutations, self.max_mutations)
+        n_mutations = mutation_budget(global_config.mutation_num, self.mutation_weight,
+                                      existing_cap=self.max_mutations, policy=self.proposal_policy)
 
         global_config.segment_manager.add_mutations(mutations, n_mutations)
 

@@ -39,7 +39,7 @@ class FakeRunner:
                 'distribution_semantics':'shared_reference_teacher_forcing'}
 
 
-def setup_case(tmp_path, monkeypatch, coupling):
+def setup_case(tmp_path, monkeypatch, coupling, proposal_policy=None):
     monkeypatch.setattr('astrolabe.mutators.wrappers.ligandmpnn_run.LigandMPNN', FakeRunner)
     global_config.reset()
     for key, value in [('segments', {}), ('named_files', {}), ('predefined_statement', {}),
@@ -61,6 +61,7 @@ def setup_case(tmp_path, monkeypatch, coupling):
     scores = StandardScores(names=['AB','AC'], plddt={'AB':[.8], 'AC':[.8]}, complex_paths={'AB':ab,'AC':ac})
     term = {'_type':'ProteinMPNN', 'context_layout':'far_apart' if coupling == 'native_tie' else 'separate', 'coupling':coupling}
     if coupling == 'probability_mean': term['context_weights'] = {'AB':1, 'AC':2}
+    if proposal_policy is not None: term['proposal_policy'] = proposal_policy
     cfg = OmegaConf.create({'enabled_aliases':['design'], 'mutator_terms':{'design':term}, 'LigandMPNN':{'model_type':'protein_mpnn'}})
     mutator = build_mutators(cfg, tmp_path)['design']
     mutator.mutation_weight = 1

@@ -51,7 +51,10 @@ class LigandMPNNMutator(Mutator):
         entropy_cutoff=None,
         enforce_mutation_num=False,
         map_sequence_positions_to_pdb_residues=False,
+        proposal_policy=None,
     ):
+        from astrolabe.mutators.proposal_policy import ProposalPolicy
+        self.proposal_policy = ProposalPolicy.from_config(proposal_policy)
         self.runner = sequence_model_runner
         self.position_selector = position_selector
         self.fallback_to_all_mutable_if_selector_empty = bool(
@@ -107,6 +110,7 @@ class LigandMPNNMutator(Mutator):
             ranks = reference_decoding_ranks(mutation_input_features, global_config.protomers)
         for oligo_name, input_feat in mutation_input_features.items():
             input_feat = dict(input_feat)
+            policy_exclusions = input_feat.pop("_proposal_excluded_positions", None)
             if ranks is not None:
                 input_feat["distribution_semantics"] = "shared_reference_teacher_forcing"
                 input_feat["reference_decoding_ranks"] = ranks[oligo_name]
@@ -131,6 +135,8 @@ class LigandMPNNMutator(Mutator):
                     supplemental_outputs,
                 )
             oligo_output.update({"name": oligo_name, "feature_dict": input_feat})
+            if policy_exclusions is not None:
+                oligo_output["_proposal_excluded_positions"] = policy_exclusions
             mutation_output[oligo_name] = oligo_output
 
         return mutation_output
@@ -383,6 +389,8 @@ class LigandMPNNMutator(Mutator):
                 )
             if supplemental_inputs:
                 base_features["supplemental_inputs"] = supplemental_inputs
+            if self.proposal_policy is not None and self.proposal_policy.changes_probabilities:
+                base_features["_proposal_excluded_positions"] = excluded_positions
             prepared[oligo_name] = base_features
         return prepared
 
@@ -666,6 +674,7 @@ class LigandMPNNMutator(Mutator):
             self.mutation_weight,
             runtime_config=runtime_config,
             synchronization_policy=policy,
+            proposal_policy=self.proposal_policy,
             entropy_cutoff=self.entropy_cutoff,
             enforce_mutation_num=self.enforce_mutation_num,
         )
@@ -747,6 +756,9 @@ class GroupedLigandMPNNMutator(LigandMPNNMutator):
                     "feature_dict": primary_features[oligo_name],
                 }
             )
+            exclusions = mutation_input_features[oligo_name].get("_proposal_excluded_positions")
+            if exclusions is not None:
+                oligo_output["_proposal_excluded_positions"] = exclusions
             mutation_output[oligo_name] = oligo_output
         return mutation_output
 
