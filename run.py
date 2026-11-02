@@ -2879,6 +2879,12 @@ def _shutdown_pipeline_resources() -> None:
             shutdown()
         except Exception:
             logging.exception("Failed to shutdown mutator '%s'.", alias)
+    try:
+        predockers = global_config.get_const("predockers")
+    except RuntimeError:
+        predockers = {}
+    from astrolabe.structure_processors.base import shutdown_structure_processors
+    shutdown_structure_processors(predockers)
 
 
 def _finish_run_provenance(
