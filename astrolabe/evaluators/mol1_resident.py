@@ -67,7 +67,9 @@ class Mol1Resident:
             assets = json.loads(subprocess.run(cmd, check=True, capture_output=True, text=True, env=probe_env).stdout)['assets']
         else:
             assets = run_probe(cmd, env=env)['assets']
-        options = asdict(runner)
+        self._runner = runner
+        self._runner_snapshot = asdict(runner)
+        options = dict(self._runner_snapshot)
         for key in ('python_bin', 'repo_path', 'timeout_seconds'):
             options.pop(key, None)
         self._artifacts = WorkerArtifacts()
@@ -84,6 +86,8 @@ class Mol1Resident:
         self.timeout = runner.timeout_seconds
 
     def run(self, input_json, output_dir):
+        if asdict(self._runner) != self._runner_snapshot:
+            raise ValueError('Mol-1 configuration changed after model initialization')
         data = json.loads(Path(input_json).read_text())
         if not isinstance(data, list) or len(data) != 1 or not data[0].get('modelSeeds'):
             raise ValueError('Mol-1 requires one job with explicit modelSeeds')

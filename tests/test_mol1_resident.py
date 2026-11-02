@@ -60,22 +60,31 @@ def infer_predict(runner, cfg):
         name = job['name']
         (out / (name + '_summary_confidence_sample_0.json')).write_text(json.dumps({'plddt': 90.0, 'ptm': .8, 'iptm': .7, 'chain_plddt': [.6] * len(job['sequences'])}))
         (out / (name + '_sample_0.cif')).write_text(job['sequences'][0]['proteinChain']['sequence'])
+        lengths = [len(item['proteinChain']['sequence']) for item in job['sequences']]
+        n = sum(lengths)
+        full = {'atom_plddt': [0.4, 0.8] * n, 'atom_to_token_idx': [i for i in range(n) for _ in range(2)], 'token_asym_id': [i+1 for i,length in enumerate(lengths) for _ in range(length)]}
+        (out / (name + '_full_data_sample_0.json')).write_text(json.dumps(full))
 ''')
     monkeypatch.setenv('FAKE_MOL1_LOADS', str(tmp_path / 'loads'))
     monkeypatch.delenv('ASTROLABE_EXECUTION_ENDPOINT', raising=False)
     monkeypatch.delenv('ASTROLABE_EXECUTION_TOKEN', raising=False)
     global_config.reset(); global_config.init_const('out_dir', tmp_path); global_config.set_variable('step', 1)
-    runner = Mol1Runner(str(source), str(root), str(root / 'model.pt'), python_bin=sys.executable, num_samples=1)
+    runner = Mol1Runner(str(source), str(root), str(root / 'model.pt'), python_bin=sys.executable, num_samples=1, need_atom_confidence=True)
     evaluator = Mol1Evaluator(runner, tmp_path / 'raw')
     try:
         for seed, seq in ((11, 'AC'), (22, 'CA')):
             fold = SimpleNamespace(chains=[ProteinChain(id='A', sequence=seq, ptms=[])], rng_seeds=[seed])
             inputs = {'A': fold}
-            scores = evaluator.prepare_output(evaluator.run_function(evaluator.prepare_input(inputs, None)), inputs, None)
+            output = evaluator.run_function(evaluator.prepare_input(inputs, None))
+            scores = evaluator.prepare_output(output, inputs, None)
             assert scores.plddt['A'] == [0.9]
             np.testing.assert_allclose(scores.per_proto_scores['A'], [[0.6, 0.6]])
             assert scores.complex_paths['A'].name == 'step_001_A_model.cif'
             assert scores.complex_paths['A'].read_text() == seq
+            runner.need_atom_confidence = False
+            summary_only = evaluator.prepare_output(output, inputs, None)
+            assert summary_only.per_proto_scores is None
+            runner.need_atom_confidence = True
         fold = SimpleNamespace(chains=[ProteinChain(id='A', sequence='AC', ptms=[]), ProteinChain(id='B', sequence='AC', ptms=[])], rng_seeds=[33])
         inputs = {'AA': fold}
         scores = evaluator.prepare_output(evaluator.run_function(evaluator.prepare_input(inputs, None)), inputs, None)
@@ -83,6 +92,10 @@ def infer_predict(runner, cfg):
         assert len(scores.per_proto_scores['A']) == 2
         assert (tmp_path / 'loads').read_text().splitlines() == ['load']
         assert runner._resident._client.hello['load_count'] == 1
+        runner.dtype = 'fp32'
+        with pytest.raises(ValueError, match='configuration changed'):
+            evaluator.run_function(evaluator.prepare_input(inputs, None))
+        runner.dtype = 'bf16'
         from alphafold3.common.folding_input import ProteinChain as AF3ProteinChain
         af3_chain = AF3ProteinChain(id='A', sequence='AC', ptms=[], unpaired_msa='', paired_msa='', templates=[])
         converted = evaluator.prepare_input({'A': SimpleNamespace(chains=[af3_chain], rng_seeds=[33])}, None)

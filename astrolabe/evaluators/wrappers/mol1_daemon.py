@@ -76,6 +76,8 @@ def main():
             summaries = sorted(directory.glob(f'{name}_summary_confidence_sample_*.json'))
             if len(summaries) != options['num_samples'] or any(not p.with_name(p.name.replace('_summary_confidence', '')).with_suffix('.cif').is_file() for p in summaries):
                 raise RuntimeError(f'Mol-1 incomplete outputs for {name} seed {seed}')
+            if options['need_atom_confidence'] and any(not p.with_name(p.name.replace('_summary_confidence', '_full_data')).is_file() for p in summaries):
+                raise RuntimeError(f'Mol-1 missing full confidence for {name} seed {seed}')
         if (out / 'ERR').exists() and any((out / 'ERR').iterdir()):
             raise RuntimeError('Mol-1 reported inference errors')
         return {'request': request.name}
