@@ -49,6 +49,8 @@ class CandidateGroup:
     candidate_paths: tuple[tuple[tuple[str, Path], ...], ...]
     invocation_ids: tuple[int | str, ...]
     alignment: str = "unknown"
+    # Identifies the dispatch that created this group, never a sample.
+    origin_id: int | str | None = None
 
 
 def observe_evaluation_inputs(inputs: Mapping[str, Input]) -> tuple[InputObservation, ...]:
@@ -90,11 +92,46 @@ def attach_evaluation_records(
         )
         for observation in observations
     )
-    result.evaluation_records = (result.evaluation_records or ()) + records
-    for candidate in result.candidate_scores or ():
+    candidates = tuple(result.candidate_scores or ())
+    group = None
+    if candidates:
+        # Construct the complete snapshot and every pending assignment before
+        # publishing any metadata. A malformed later candidate must not leave
+        # earlier ones or the canonical result partially annotated.
+        group = CandidateGroup(
+            candidate_paths=tuple(
+                tuple((name, Path(path)) for name, path in candidate.complex_paths.items())
+                for candidate in candidates
+            ),
+            invocation_ids=(invocation_id,),
+            origin_id=invocation_id,
+        )
+    result_groups = result.candidate_groups
+    if group is not None:
+        result_groups = _merge_candidate_groups((*(result_groups or ()), group))
+    updates = [(result, (result.evaluation_records or ()) + records, result_groups)]
+    seen = {id(result)}
+    for candidate in candidates:
+        if id(candidate) in seen:
+            continue
+        seen.add(id(candidate))
         allowed = set(candidate.names)
         context = tuple(record for record in records if record.input.oligomer in allowed)
-        candidate.evaluation_records = (candidate.evaluation_records or ()) + context
+        candidate_groups = _merge_candidate_groups((*(candidate.candidate_groups or ()), group))
+        updates.append((candidate, (candidate.evaluation_records or ()) + context, candidate_groups))
+
+    # StandardScores fields are ordinary attributes. Keep prior values for a
+    # rollback if a custom subclass rejects a metadata assignment.
+    old = [(obj, obj.evaluation_records, obj.candidate_groups) for obj, _, _ in updates]
+    try:
+        for obj, new_records, new_groups in updates:
+            obj.evaluation_records = new_records
+            obj.candidate_groups = new_groups
+    except BaseException:
+        for obj, old_records, old_groups in old:
+            object.__setattr__(obj, "evaluation_records", old_records)
+            object.__setattr__(obj, "candidate_groups", old_groups)
+        raise
     return result
 
 
@@ -103,11 +140,41 @@ def _filter_group(group: CandidateGroup, allowed: set[str]) -> CandidateGroup | 
                   for candidate in group.candidate_paths)
     if not any(paths):
         return None
-    return CandidateGroup(paths, group.invocation_ids, group.alignment)
+    return CandidateGroup(paths, group.invocation_ids, group.alignment, group.origin_id)
 
 
 def filter_candidate_groups(groups: tuple[CandidateGroup, ...], allowed: set[str]) -> tuple[CandidateGroup, ...]:
     return tuple(filtered for group in groups if (filtered := _filter_group(group, allowed)) is not None)
+
+
+def _merge_candidate_groups(groups: tuple[CandidateGroup, ...]) -> tuple[CandidateGroup, ...]:
+    """Coalesce filtered views of one known origin, keeping request order."""
+    combined: list[CandidateGroup] = []
+    positions: dict[int | str, int] = {}
+    for group in groups:
+        origin = group.origin_id
+        if origin is None or origin not in positions:
+            if origin is not None:
+                positions[origin] = len(combined)
+            combined.append(group)
+            continue
+        index = positions[origin]
+        previous = combined[index]
+        if (len(previous.candidate_paths) != len(group.candidate_paths)
+                or previous.invocation_ids != group.invocation_ids
+                or previous.alignment != group.alignment):
+            raise ValueError("Inconsistent candidate group for the same origin")
+        merged_paths = []
+        for before, after in zip(previous.candidate_paths, group.candidate_paths):
+            paths = dict(before)
+            for name, path in after:
+                if name in paths and paths[name] != path:
+                    raise ValueError("Conflicting candidate path for the same origin")
+                paths[name] = path
+            merged_paths.append(tuple(paths.items()))
+        combined[index] = CandidateGroup(tuple(merged_paths), previous.invocation_ids,
+                                         previous.alignment, origin)
+    return tuple(combined)
 
 
 def merge_evidence_metadata(
@@ -118,8 +185,6 @@ def merge_evidence_metadata(
     Records and candidate groups follow result/request order. Candidate groups
     are observations only and are never promoted to canonical candidate_scores.
     """
-    if strict and sum(bool(r.candidate_scores or r.candidate_groups) for r in results) > 1:
-        raise ValueError("Cannot align multiple candidate groups without candidate identity")
     reports = {}
     derived = {}
     records = []
@@ -139,9 +204,12 @@ def merge_evidence_metadata(
                                       for candidate in result.candidate_scores),
                 invocation_ids=ids,
             ))
+    groups = _merge_candidate_groups(tuple(groups))
+    if strict and len(groups) > 1:
+        raise ValueError("Cannot align multiple candidate groups without candidate identity")
     # Leave merged.candidate_scores untouched: the caller owns canonical selection.
     merged.post_eval_hook_reports = reports or None
     merged.derived_structures = derived or None
     merged.evaluation_records = tuple(records) or None
-    merged.candidate_groups = tuple(groups) or None
+    merged.candidate_groups = groups or None
     return merged

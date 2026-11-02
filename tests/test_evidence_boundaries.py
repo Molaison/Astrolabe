@@ -240,3 +240,124 @@ def test_actual_candidate_selection_retains_invocation_observation(monkeypatch):
     assert selected.evaluation_records == wrapper.evaluation_records
     assert selected.evaluation_records[0].original_complex_path == Path('AB.cif')
     assert selected.evaluation_records[0].sample_identity is None
+
+
+def test_single_dispatch_selected_candidate_keeps_all_original_sibling_paths(monkeypatch):
+    from types import SimpleNamespace
+    from astrolabe import structure_start
+    from astrolabe.core import global_config
+
+    first, second = scores('AB', 'AC'), scores('AB', 'AC')
+    first.complex_paths = {'AB': Path('one-ab.cif'), 'AC': Path('one-ac.cif')}
+    second.complex_paths = {'AB': Path('two-ab.cif'), 'AC': Path('two-ac.cif')}
+    wrapper = scores('AB', 'AC')
+    wrapper.candidate_scores = [first, second]
+    candidates_before = wrapper.candidate_scores
+    obs = tuple(InputObservation(name, (('A', 'ProteinChain', 'AA'),), (5,))
+                for name in ('AB', 'AC'))
+    attach_evaluation_records(wrapper, obs, invocation_id='run:1', step=0,
+                              committed_stage='s', execution_stage='s', backend_alias='dummy')
+    expected_paths = (
+        (('AB', Path('one-ab.cif')), ('AC', Path('one-ac.cif'))),
+        (('AB', Path('two-ab.cif')), ('AC', Path('two-ac.cif'))),
+    )
+    group = wrapper.candidate_groups[0]
+    assert group.origin_id == 'run:1' and group.invocation_ids == ('run:1',)
+    assert group.alignment == 'unknown' and group.candidate_paths == expected_paths
+    assert first.candidate_groups == second.candidate_groups == (group,)
+    assert wrapper.candidate_scores is candidates_before
+    assert wrapper.candidate_scores == [first, second]
+
+    def gate(candidate, **kwargs):
+        return structure_start.ReferenceGateResult(
+            gate_active=True, score=float(candidate is second), threshold=0,
+            passed=True, comparisons={})
+    monkeypatch.setattr(structure_start, 'evaluate_structure_start_gate', gate)
+    global_config.reset()
+    global_config.init_const('structure_start', SimpleNamespace(config=SimpleNamespace(mode='soft_select')))
+    try:
+        selected, decision = structure_start.select_structure_start_candidate(wrapper, timing='step0')
+    finally:
+        global_config.reset()
+    assert selected is second and decision.selected_candidate_index == 1
+    first.complex_paths['AB'] = Path('changed-after-attach.cif')
+    selected.complex_paths['AB'] = Path('selected-post-eval.pdb')
+    assert selected.clone().candidate_groups[0].candidate_paths == expected_paths
+    filtered = selected.clone().filter_by_oligomer(['AB'])
+    assert filtered.candidate_groups[0].candidate_paths == (
+        (('AB', Path('one-ab.cif')),), (('AB', Path('two-ab.cif')),))
+    assert filtered.candidate_groups[0].origin_id == 'run:1'
+    assert all(record.sample_identity is None for record in selected.evaluation_records)
+
+
+def test_merge_deduplicates_origin_and_reassembles_filtered_views_in_request_order():
+    def make(invocation):
+        result = scores('AB', 'AC')
+        result.candidate_scores = [scores('AB', 'AC'), scores('AB', 'AC')]
+        attach_evaluation_records(result, (), invocation_id=invocation, step=0,
+                                  committed_stage='s', execution_stage='s', backend_alias='dummy')
+        return result
+    first = make('run:1')
+    second = make('run:2')
+    views = [first.filter_by_oligomer(['AB']), second, first.filter_by_oligomer(['AC'])]
+    merged = merge_evidence_metadata(scores('AB', 'AC'), views)
+    assert [g.origin_id for g in merged.candidate_groups] == ['run:1', 'run:2']
+    assert merged.candidate_groups[0].candidate_paths == first.candidate_groups[0].candidate_paths
+    assert merged.candidate_scores is None
+    repeated = merge_evidence_metadata(scores('AB', 'AC'), [merged, first])
+    assert repeated.candidate_groups == merged.candidate_groups
+    # Unknown origins cannot safely be deduplicated based on matching paths.
+    old_group = CandidateGroup(((('AB', Path('x')),),), (), 'unknown')
+    one, two = scores('AB'), scores('AB')
+    one.candidate_groups = two.candidate_groups = (old_group,)
+    assert len(merge_evidence_metadata(scores('AB'), [one, two]).candidate_groups) == 2
+
+
+def test_attach_prepares_all_records_groups_and_candidates_before_publication():
+    wrapper = scores('AB')
+    first, bad = scores('AB'), scores('AB')
+    wrapper.candidate_scores = [first, bad]
+    bad.complex_paths = {'AB': object()}  # cannot become a Path
+    old_records = (EvaluationRecord(9, 0, None, None, 'old',
+        InputObservation('AB', (), (1,)), Path('old.cif')),)
+    old_groups = (CandidateGroup(((('AB', Path('old.cif')),),), (9,), origin_id=9),)
+    wrapper.evaluation_records = first.evaluation_records = old_records
+    wrapper.candidate_groups = first.candidate_groups = old_groups
+    with pytest.raises(TypeError):
+        attach_evaluation_records(wrapper, (InputObservation('AB', (), (5,)),),
+                                  invocation_id=10, step=1, committed_stage='s',
+                                  execution_stage='s', backend_alias='dummy')
+    assert wrapper.evaluation_records is first.evaluation_records is old_records
+    assert wrapper.candidate_groups is first.candidate_groups is old_groups
+    assert bad.evaluation_records is None and bad.candidate_groups is None
+
+
+def test_conflicting_origin_rejected_before_merge_publishes_metadata():
+    one, two, output = scores('AB'), scores('AB'), scores('AB')
+    one.candidate_groups = (CandidateGroup(((('AB', Path('one')),),), (1,), origin_id=1),)
+    two.candidate_groups = (CandidateGroup(((('AB', Path('two')),),), (1,), origin_id=1),)
+    output.post_eval_hook_reports = {'AB': {'previous': True}}
+    with pytest.raises(ValueError, match='Conflicting candidate path'):
+        merge_evidence_metadata(output, [one, two])
+    assert output.post_eval_hook_reports == {'AB': {'previous': True}}
+    assert output.candidate_groups is None
+
+
+def test_attach_rolls_back_if_metadata_publication_fails():
+    class FailingScores(StandardScores):
+        def __setattr__(self, name, value):
+            if name == 'candidate_groups' and value is not None:
+                raise RuntimeError('cannot publish groups')
+            super().__setattr__(name, value)
+    bad = FailingScores(names=['AB'], plddt={'AB': [0.8]},
+                        complex_paths={'AB': Path('bad.cif')})
+    first = scores('AB')
+    wrapper = scores('AB')
+    wrapper.candidate_scores = [first, bad]
+    with pytest.raises(RuntimeError, match='cannot publish groups'):
+        attach_evaluation_records(wrapper, (InputObservation('AB', (), (5,)),),
+                                  invocation_id=10, step=1, committed_stage='s',
+                                  execution_stage='s', backend_alias='dummy')
+    for result in (wrapper, first, bad):
+        assert result.evaluation_records is None
+        assert result.candidate_groups is None
