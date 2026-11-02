@@ -386,6 +386,22 @@ def _build_opendde_evaluator(
     return OpenDDEEvaluator(model_runner, raw_model_results_dir / "opendde")
 
 
+@register_evaluator_factory("mol-1")
+@register_evaluator_factory("mol1")
+def _build_mol1_evaluator(term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf):
+    from astrolabe.evaluators.mol1 import Mol1Evaluator
+    from astrolabe.evaluators.mol1_resident import Mol1Runner
+
+    conf = _merge_conf_with_defaults(evaluator_conf, "mol1", term_conf, alias=alias)
+    if conf is None:
+        raise ValueError("Mol-1 configuration is missing")
+    values = OmegaConf.to_container(conf, resolve=True) if OmegaConf.is_config(conf) else dict(conf)
+    execution = values.pop("execution", "daemon")
+    if execution != "daemon":
+        raise ValueError("Mol-1 currently supports only daemon execution")
+    return Mol1Evaluator(Mol1Runner(**values), raw_model_results_dir / "mol1")
+
+
 @register_evaluator_factory("protenix")
 def _build_protenix_evaluator(
     term_conf,
