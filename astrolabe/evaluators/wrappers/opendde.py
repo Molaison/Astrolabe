@@ -306,6 +306,7 @@ class OpenDDERunner:
     foldcp_devices: str = ""
     foldcp_metrics_jsonl: str = ""
     timeout_seconds: float | None = None
+    execution: str = "legacy"
 
     @classmethod
     def from_config(cls, conf: Any) -> "OpenDDERunner":
@@ -357,6 +358,7 @@ class OpenDDERunner:
             foldcp_devices=str(get("foldcp_devices", "") or ""),
             foldcp_metrics_jsonl=str(get("foldcp_metrics_jsonl", "") or ""),
             timeout_seconds=float(get("timeout_seconds")) if get("timeout_seconds") is not None else None,
+            execution=str(get("execution", "legacy")),
         )
 
     def _env(self) -> dict[str, str]:
@@ -438,7 +440,14 @@ class OpenDDERunner:
                 cmd.extend([flag, str(value)])
         return cmd
 
-    def run_inference(self, *, input_json: Path, out_dir: Path) -> None:
+    def run_inference(self, *, input_json: Path, out_dir: Path) -> Path | None:
+        if self.execution == "daemon":
+            if not hasattr(self, "_resident"):
+                from astrolabe.evaluators.opendde_resident import OpenDDEResident
+                self._resident = OpenDDEResident(self)
+            return self._resident.run(input_json, out_dir)
+        if self.execution != "legacy":
+            raise ValueError("OpenDDE execution must be legacy or daemon")
         if not self.repo_path.exists():
             raise FileNotFoundError(
                 f"Vendored OpenDDE repo not found: {self.repo_path}. Initialize vendor/opendde."

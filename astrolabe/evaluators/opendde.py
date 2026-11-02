@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
@@ -43,12 +44,14 @@ class OpenDDEEvaluator(Evaluator):
         return prepared
 
     def run_function(self, input_feat):
-        for prepared in input_feat.values():
-            self.model_runner.run_inference(
+        result = {}
+        for name, prepared in input_feat.items():
+            actual_dir = self.model_runner.run_inference(
                 input_json=prepared.json_path,
                 out_dir=prepared.output_dir,
             )
-        return input_feat
+            result[name] = replace(prepared, output_dir=actual_dir) if actual_dir is not None else prepared
+        return result
 
     def prepare_output(self, output, inputs, runtime_config):
         structures_dir = Path(global_config.out_dir) / "structures"
