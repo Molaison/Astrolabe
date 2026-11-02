@@ -80,6 +80,22 @@ def _predocker_default_keys(predocker_type: str) -> list[str]:
     return keys
 
 
+def shutdown_structure_processors(processors) -> None:
+    """Release each processor once, without preventing other cleanup on error."""
+    seen = set()
+    for alias, processor in (processors or {}).items():
+        if id(processor) in seen:
+            continue
+        seen.add(id(processor))
+        shutdown = getattr(processor, "shutdown", None)
+        if not callable(shutdown):
+            continue
+        try:
+            shutdown()
+        except Exception:
+            logger.exception("Failed to shutdown structure processor '%s'.", alias)
+
+
 def assign_predocker_to_mutators(mutators, predocker_args):
     aliases = predocker_args["predocker_terms"]
     for mutator in mutators:

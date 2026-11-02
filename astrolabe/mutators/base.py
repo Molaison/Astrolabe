@@ -20,8 +20,16 @@ class Mutator:
     capabilities = MutatorCapabilities()
 
     def shutdown(self) -> None:
-        """Release external resources held by the mutator."""
-        return None
+        """Release an adapter-owned runner without stopping shared broker workers."""
+        if getattr(self, "_runner_shutdown_complete", False):
+            return
+        runner = getattr(self, "runner", None)
+        closer = getattr(runner, "close", None)
+        if not callable(closer):
+            closer = getattr(runner, "shutdown", None)
+        if callable(closer):
+            closer()
+        self._runner_shutdown_complete = True
 
     @abstractmethod
     def compute_mutation(self, input_feat):
