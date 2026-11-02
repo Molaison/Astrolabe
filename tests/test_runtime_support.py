@@ -178,3 +178,61 @@ def test_atomic_csv_with_real_pandas_consumer(tmp_path):
     with atomic_text_writer(path, newline="") as handle:
         frame.to_csv(handle, mode="w", header=True, index=False)
     pandas.testing.assert_frame_equal(pandas.read_csv(path), frame)
+
+
+def test_atomic_relative_symlink_updates_target_and_keeps_link(tmp_path, monkeypatch):
+    target_dir = tmp_path / "targets"
+    target_dir.mkdir()
+    target = target_dir / "scores.csv"
+    target.write_text("step,score\n0,1\n", encoding="utf-8")
+    target.chmod(0o640)
+    link = tmp_path / "scores.csv"
+    link.symlink_to("targets/scores.csv")
+    monkeypatch.chdir(tmp_path)
+    with atomic_text_writer("scores.csv", newline="") as handle:
+        csv.writer(handle).writerows([["step", "score"], [1, 2]])
+    assert link.is_symlink()
+    assert os.readlink(link) == "targets/scores.csv"
+    assert target.stat().st_mode & 0o777 == 0o640
+    with link.open(newline="", encoding="utf-8") as handle:
+        assert list(csv.reader(handle)) == [["step", "score"], ["1", "2"]]
+    assert list(target_dir.iterdir()) == [target]
+
+
+def test_atomic_dangling_symlink_creates_target_and_serialization_failure_preserves_old(tmp_path):
+    target = tmp_path / "actual.csv"
+    link = tmp_path / "link.csv"
+    link.symlink_to("actual.csv")
+    with atomic_text_writer(link, newline="") as handle:
+        csv.writer(handle).writerow(["original"])
+    assert link.is_symlink()
+    before = target.read_bytes()
+    class CannotSerialize:
+        def __str__(self):
+            raise ValueError("serialization failed")
+    with pytest.raises(ValueError, match="serialization failed"):
+        with atomic_text_writer(link, newline="") as handle:
+            csv.writer(handle).writerow(["partial", CannotSerialize()])
+    assert target.read_bytes() == before
+    assert link.is_symlink()
+    assert set(tmp_path.iterdir()) == {target, link}
+
+
+def test_atomic_close_failure_keeps_previous_file(tmp_path, monkeypatch):
+    path = tmp_path / "scores.csv"
+    path.write_text("old\n", encoding="utf-8")
+    original_fdopen = os.fdopen
+    class FailingClose:
+        def __init__(self, handle):
+            self.handle = handle
+        def __enter__(self):
+            return self.handle
+        def __exit__(self, *exc):
+            self.handle.close()
+            raise OSError("close failed")
+    monkeypatch.setattr(os, "fdopen", lambda *args, **kwargs: FailingClose(original_fdopen(*args, **kwargs)))
+    with pytest.raises(OSError, match="close failed"):
+        with atomic_text_writer(path) as handle:
+            handle.write("new\n")
+    assert path.read_text(encoding="utf-8") == "old\n"
+    assert list(tmp_path.iterdir()) == [path]

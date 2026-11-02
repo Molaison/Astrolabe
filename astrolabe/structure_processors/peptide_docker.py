@@ -233,6 +233,10 @@ class RAPiDockPeptideDockingProcessor(StructureProcessor):
         # Set output directory
         self.output_dir = global_config.out_dir / "predocker"
 
+    def shutdown(self) -> None:
+        """Release the existing runner using its idempotent shutdown contract."""
+        self.runner.shutdown()
+
     def preprocess(self, input_file) -> Any:
         """Preprocess input file."""
         # TODO: Handle PTM modifications that might interfere with docking

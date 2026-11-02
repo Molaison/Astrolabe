@@ -102,8 +102,11 @@ def ordered_cpu_overlap(
 def atomic_text_writer(
     path: str | os.PathLike[str], *, encoding: str = "utf-8", newline: str | None = None
 ) -> Iterator[TextIO]:
-    """Replace one text file only after the complete write and close succeed."""
-    destination = Path(path)
+    """Replace a file after writing; follow destination symlinks as open does.
+
+    Atomic replacement creates a new inode and is not a durability guarantee.
+    """
+    destination = Path(path).resolve()
     # Match ordinary open(..., 'w') permissions for a new destination, without
     # reading or changing the process-wide umask in this multithreaded program.
     while True:

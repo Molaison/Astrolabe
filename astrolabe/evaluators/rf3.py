@@ -935,6 +935,10 @@ class RoseTTAFold3Evaluator(Evaluator):
         self.output_dir = Path(output_dir)
         self.rf3_conf = rf3_conf or OmegaConf.create({})
 
+    def shutdown(self) -> None:
+        """Release the existing runner using its idempotent shutdown contract."""
+        self.model_runner.shutdown()
+
     def prepare_input(self, inputs, runtime_config=None):
         runtime_config = runtime_config or {}
         step = _get_current_step(runtime_config)
