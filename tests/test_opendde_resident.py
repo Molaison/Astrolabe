@@ -73,6 +73,10 @@ def infer_predict(runner, cfg):
         assert results[0] != results[1]
         assert (tmp_path / 'loads').read_text().splitlines() == ['load']
         assert runner._resident._client.hello['load_count'] == 1
+        runner.num_samples = 2
+        with pytest.raises(ValueError, match='configuration changed'):
+            runner.run_inference(input_json=input_json, out_dir=tmp_path / 'output')
+        runner.num_samples = 1
     finally:
         if hasattr(runner, '_resident'): runner._resident.close()
 

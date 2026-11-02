@@ -42,7 +42,9 @@ class OpenDDEResident:
             assets = json.loads(subprocess.run(cmd, check=True, capture_output=True, text=True, env=asset_env).stdout)['assets']
         else:
             assets = run_probe(cmd, env=env)['assets']
-        options = asdict(runner)
+        self._runner = runner
+        self._runner_snapshot = asdict(runner)
+        options = dict(self._runner_snapshot)
         options = {k: str(v) if isinstance(v, Path) else v for k, v in options.items()}
         for key in ('python_bin', 'repo_path', 'timeout_seconds', 'execution'):
             options.pop(key, None)
@@ -61,6 +63,8 @@ class OpenDDEResident:
         self.timeout = runner.timeout_seconds
 
     def run(self, input_json, output_dir):
+        if asdict(self._runner) != self._runner_snapshot:
+            raise ValueError('OpenDDE configuration changed after model initialization')
         data = json.loads(Path(input_json).read_text())
         if not isinstance(data, list) or len(data) != 1 or not data[0].get('modelSeeds'):
             raise ValueError('OpenDDE daemon requires one job with explicit modelSeeds')
