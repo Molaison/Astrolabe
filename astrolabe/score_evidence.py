@@ -126,7 +126,7 @@ def query_score(records, query, *, snapshots=None, generating_selector=False):
         raise ValueError('identity cannot discard axes')
     for i in reduce_axes:
         axis = rec.spec.axes[i]
-        if axis in {'context', 'chain', 'physical_chain'} and len(coords[i]) > 1 and axis not in weights:
+        if axis in {'context', 'chain', 'physical_chain', 'observation'} and len(coords[i]) > 1 and axis not in weights:
             raise ValueError(f'explicit weights required for {axis} reduction')
         if axis in {'position', 'target_position'} and axis not in weights:
             labels = [str(label).split(':') for label in coords[i]]
@@ -233,6 +233,31 @@ def records_from_standard_scores(scores, snapshot, *, protomers=None):
                 raise ValueError(f'unsupported {metric} shape {shape}')
             result.append(ScoreRecord(ScoreSpec(metric, 'evaluator', tuple(axes), context), snapshot,
                                       arr[np.newaxis, ...], tuple(coords)))
+    # Per-protomer arrays have already lost physical context identity. Expose
+    # only their actual canonical design positions and anonymous observations.
+    # Repeated observations require an explicit selection or weighting.
+    proto_metrics = []
+    for proto, values in (getattr(scores, 'per_proto_scores', None) or {}).items():
+        proto_metrics.append((str(proto), 'per_proto_score', values))
+    for proto, metrics in (getattr(scores, 'per_proto_score_terms', None) or {}).items():
+        for metric, values in (metrics or {}).items():
+            proto_metrics.append((str(proto), f'per_proto_term_{metric}', values))
+    for proto, metric, values in proto_metrics:
+        if proto not in protomers:
+            continue
+        length = int(protomers[proto].length)
+        items = values if isinstance(values, list) else [values]
+        if not items:
+            continue
+        try:
+            arrays = [np.asarray(item, dtype=float) for item in items]
+        except (TypeError, ValueError):
+            continue
+        if any(array.shape != (length,) for array in arrays):
+            continue
+        coordinates = (tuple(range(len(arrays))), tuple(f'{proto}:{i + 1}' for i in range(length)))
+        result.append(ScoreRecord(ScoreSpec(metric, 'evaluator', ('observation', 'design_position'), proto),
+                                  snapshot, np.stack(arrays), coordinates))
     return result
 
 

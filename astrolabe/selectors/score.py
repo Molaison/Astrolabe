@@ -42,9 +42,12 @@ def score_position_selector(evaluation_result, protomers, name, *, runtime_confi
         mapping = {}
         for label in labels:
             parts = str(label).split(':')
-            if len(parts) != 4 or not parts[2].isdigit():
-                raise ValueError('automatic mapping requires unambiguous physical residue labels')
-            mapping[label] = (parts[3], int(parts[2]) - 1)
+            if query.axes[0] == 'design_position' and len(parts) == 2 and parts[1].isdigit():
+                mapping[label] = (parts[0], int(parts[1]) - 1)
+            elif len(parts) == 4 and parts[2].isdigit():
+                mapping[label] = (parts[3], int(parts[2]) - 1)
+            else:
+                raise ValueError('automatic mapping requires unambiguous residue or design-position labels')
     if set(mapping) != set(labels):
         raise ValueError('position mapping must cover every selected physical coordinate')
     masks = {key: np.zeros(proto.length, dtype=bool) for key, proto in protomers.items()}

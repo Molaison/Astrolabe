@@ -141,3 +141,16 @@ def test_non_evaluator_record_requires_explicit_subject_identity():
     with pytest.raises(ValueError, match='actual input assessment'):
         ScoreRecord(ScoreSpec('dock','predocker.vina'), 's2', .5,
                     input_snapshot='s1', subject='predicted_structure', relation='measured_on')
+
+
+def test_canonical_protomer_observations_require_explicit_reduction():
+    from pathlib import Path
+    from astrolabe.score_evidence import records_from_standard_scores
+    from astrolabe.evaluators.utils import StandardScores
+    values = StandardScores(names=['A'], plddt={'A':[.8]}, complex_paths={'A':Path('x')},
+                            per_proto_scores={'A':[np.array([.2,.4]),np.array([.8,.6])]})
+    records = records_from_standard_scores(values, 's', protomers={'A':SimpleNamespace(length=2)})
+    with pytest.raises(ValueError, match='explicit weights required for observation'):
+        query_score(records, ScoreQuery('per_proto_score','evaluator',axes=('design_position',),entity='A'), snapshots={'last_accepted':'s'})
+    query = ScoreQuery('per_proto_score','evaluator',axes=('design_position',),entity='A', select={'observation':[1]})
+    np.testing.assert_allclose(query_score(records, query, snapshots={'last_accepted':'s'}), [.8,.6])

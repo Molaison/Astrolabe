@@ -240,3 +240,26 @@ def test_strict_unlabelled_non_evaluator_contribution_fails_closed(tmp_path):
     with pytest.raises(ValueError, match='requires measurement_snapshot'):
         decisions.make_mutation_decision(1, scores(.8), engine, runtime)
     global_config.reset()
+
+
+def test_canonical_protomer_selector_real_cli(tmp_path):
+    config = {
+        'task_name':'position_score_cli', 'out_dir':str(tmp_path/'output'), 'raw_model_results_dir':str(tmp_path/'raw'),
+        'repeats':1, 'seed':17, 'steps':2, 'ananas_path':None, 'seqs':{'A':'AAAA'},
+        'mutator':{'MCMC':{'mutation_method':'random','select_positions':'random'},
+                   'mutator_terms':{'MCMC':{'_type':'MCMC','position_selector':'score("positions")'}}},
+        'evaluator':{'evaluator_terms':{'Dummy':{'_type':'dummy'}}},
+        'loss':{'loss_terms':{}, 'score_queries':{'model_value':{'name':'plddt','source':'evaluator','entity':'A'}},
+                'score_selector_queries':{'positions':{'query':{'name':'per_proto_score','source':'evaluator',
+                   'entity':'A','axes':['design_position']}, 'mapping':'auto','threshold':.5,'comparison':'ge'}}},
+        'stages':{'default':{'oligo':['A'],'evaluator':'Dummy','mutation_num':1,'mutators':['MCMC'],
+                             'mutator_weights':[1.0], 'weighted_score_expression':'model_value','early_stopping':None}},
+    }
+    path = tmp_path/'position_score.yaml'
+    path.write_text(yaml.safe_dump(config))
+    result = subprocess.run([sys.executable,'-m','astrolabe','run','--standalone',str(path)], text=True, capture_output=True, timeout=90)
+    assert result.returncode == 0, result.stdout+'\n'+result.stderr
+    csv_path = next((tmp_path/'output'/'position_score_cli').glob('*/scores.csv'))
+    with csv_path.open() as handle: rows = list(csv.DictReader(handle))
+    assert [int(row['step']) for row in rows] == [0,1]
+    assert float(rows[1]['mutator_selector_MCMC_pA_selected_count']) == 4
