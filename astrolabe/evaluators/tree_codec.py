@@ -6,8 +6,13 @@ import sys
 from pathlib import Path
 import numpy as np
 
+from astrolabe.evaluators.artifact_budget import (
+    DEFAULT_MAX_BYTES, DEFAULT_MAX_METADATA_BYTES, validate_dump, validate_load,
+)
 
-def dump_tree(root, value):
+
+def dump_tree(root, value, *, max_bytes=DEFAULT_MAX_BYTES, max_metadata_bytes=DEFAULT_MAX_METADATA_BYTES):
+    validate_dump(value, max_bytes, max_metadata_bytes)
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)
     arrays = {}
@@ -46,13 +51,16 @@ def dump_tree(root, value):
             return {'t': 'dict', 'v': [[k, encode(v)] for k, v in x.items()]}
         raise TypeError(f'unsupported feature type: {type(x)!r}')
     metadata = {'version': 1, 'tree': encode(value)}
+    encoded = json.dumps(metadata, allow_nan=False)
+    if len(encoded.encode('utf-8')) > max_metadata_bytes:
+        raise ValueError('feature metadata exceeds byte budget')
     np.savez(root / 'arrays.npz', **arrays)
-    (root / 'tree.json').write_text(json.dumps(metadata, allow_nan=False), encoding='utf-8')
+    (root / 'tree.json').write_text(encoded, encoding='utf-8')
 
 
-def load_tree(root):
+def load_tree(root, *, max_bytes=DEFAULT_MAX_BYTES, max_metadata_bytes=DEFAULT_MAX_METADATA_BYTES):
     root = Path(root)
-    metadata = json.loads((root / 'tree.json').read_text(encoding='utf-8'))
+    metadata = validate_load(root, max_bytes, max_metadata_bytes)
     if metadata.get('version') != 1:
         raise ValueError('unsupported feature codec version')
     with np.load(root / 'arrays.npz', allow_pickle=False) as arrays:
