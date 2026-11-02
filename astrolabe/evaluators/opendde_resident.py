@@ -30,7 +30,10 @@ class OpenDDEResident:
         if not runner.load_checkpoint_path:
             raise ValueError('OpenDDE daemon requires an explicit local checkpoint')
         checkpoint = str(Path(runner.load_checkpoint_path).resolve(strict=True))
-        env = {'PYTHONPATH': os.pathsep.join([str(source)] + [str(Path(p).resolve()) for p in sys.path if p])}
+        roots = [str(source), str(Path(__file__).resolve().parents[2])]
+        if os.environ.get('PYTHONPATH'):
+            roots.append(os.environ['PYTHONPATH'])
+        env = {'PYTHONPATH': os.pathsep.join(roots)}
         if runner.opendde_root_dir is not None:
             env['OPENDDE_ROOT_DIR'] = str(runner.opendde_root_dir)
         device = probe_device(python, 'opendde', env=env)
