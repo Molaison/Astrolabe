@@ -16,7 +16,6 @@ import pickle
 import random
 import shutil
 import time
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple
 
@@ -34,6 +33,12 @@ if TYPE_CHECKING:  # pragma: no cover
 
 # Local imports
 from astrolabe import run_config_lifecycle
+from astrolabe.core.folding_input import snapshot_folding_inputs
+from astrolabe.evaluators.evidence import (
+    attach_evaluation_records, merge_evidence_metadata, observe_evaluation_inputs,
+)
+from astrolabe.execution_audit import EvaluationJournal, write_execution_audit
+from astrolabe.runtime_support import ResourceOwner, ordered_cpu_overlap
 from astrolabe.argparser import parse_arguments
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import (
@@ -1682,7 +1687,7 @@ def _apply_post_eval_hooks(
 
 
 def _standard_scores_field_names() -> set[str]:
-    return set(getattr(StandardScores, "__dataclass_fields__", {}).keys())
+    return StandardScores.score_field_names()
 
 
 def _merge_standard_scores(results: list[StandardScores]) -> StandardScores:
@@ -1750,7 +1755,7 @@ def _merge_standard_scores(results: list[StandardScores]) -> StandardScores:
     out = StandardScores(**merged)
     if hook_reports:
         out.post_eval_hook_reports = hook_reports
-    return out
+    return merge_evidence_metadata(out, results)
 
 
 def _should_evaluate_oligomers_incrementally(
@@ -2062,23 +2067,12 @@ def _execute_evaluation_work_items(
             for work_item in work_items
         ]
 
-    max_workers = _cpu_postprocess_workers(args, work_items)
-    finalized_items: list[EvaluationResultItem] = []
-    with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = []
-        for work_item in work_items:
-            result_item = _execute_evaluation_work_item(work_item)
-            futures.append(
-                executor.submit(
-                    _finalize_evaluation_result_item,
-                    args,
-                    result_item,
-                    loss_computer,
-                )
-            )
-        for future in futures:
-            finalized_items.append(future.result())
-    return finalized_items
+    return ordered_cpu_overlap(
+        work_items,
+        _execute_evaluation_work_item,
+        lambda item: _finalize_evaluation_result_item(args, item, loss_computer),
+        max_workers=_cpu_postprocess_workers(args, work_items),
+    )
 
 
 def _evaluation_artifact_summary(evaluation_result: Any) -> str | None:
@@ -2148,6 +2142,24 @@ def _evaluation_result_event_fields(evaluation_result: Any) -> dict[str, Any]:
     return fields
 
 
+def _evaluation_journal():
+    try:
+        return global_config.get_const("evaluation_journal")
+    except (RuntimeError, ValueError):
+        return None
+
+
+def _execution_stage_name(runtime_config):
+    if "_evaluation_execution_stage" in runtime_config:
+        return runtime_config["_evaluation_execution_stage"]
+    try:
+        manager = global_config.stage_manager
+    except RuntimeError:
+        return None
+    gate = getattr(manager, "transition_consistency_gate_context", None)
+    return getattr(gate, "target_stage", None) if gate is not None else _current_stage_name()
+
+
 def _evaluate_with_observability(
     evaluator: Any,
     inputs: Dict,
@@ -2157,16 +2169,37 @@ def _evaluate_with_observability(
     oligo_names: list[str] | None,
     detail: str,
 ) -> Any:
+    outgoing = snapshot_folding_inputs(inputs)
+    journal = _evaluation_journal()
+    invocation = None
+    if journal is not None:
+        invocation = journal.begin(
+            step=step, committed_stage=_current_stage_name(),
+            execution_stage=_execution_stage_name(runtime_config),
+            backend_alias=_evaluator_event_alias(evaluator),
+            inputs=observe_evaluation_inputs(outgoing),
+        )
     with event_span(
-        logger=logger,
-        component="evaluator",
-        alias=_evaluator_event_alias(evaluator),
-        stage=_current_stage_name(),
-        step=step,
-        oligo=_format_oligo_names(oligo_names),
-        detail=detail,
+        logger=logger, component="evaluator", alias=_evaluator_event_alias(evaluator),
+        stage=_current_stage_name(), step=step,
+        oligo=_format_oligo_names(oligo_names), detail=detail,
     ) as span:
-        evaluation_result = evaluator.evaluate(inputs, runtime_config)
+        try:
+            evaluation_result = evaluator.evaluate(outgoing, runtime_config)
+        except BaseException as exc:
+            if invocation is not None:
+                journal.finish(invocation, error=exc)
+            raise
+        if invocation is not None and isinstance(evaluation_result, StandardScores):
+            attach_evaluation_records(
+                evaluation_result, invocation.inputs,
+                invocation_id=invocation.invocation_id, step=step,
+                committed_stage=invocation.committed_stage,
+                execution_stage=invocation.execution_stage,
+                backend_alias=invocation.backend_alias,
+            )
+        if invocation is not None:
+            journal.finish(invocation, result=evaluation_result)
         span.finish(
             artifact=_evaluation_artifact_summary(evaluation_result),
             **_evaluation_result_event_fields(evaluation_result),
@@ -2441,10 +2474,16 @@ def _perform_stage_reevaluation(
     oligo: list[str],
     loss_computer: LossEngine | None = None,
 ):
+    evaluation_runtime = dict(runtime_config)
+    evaluation_runtime["_evaluation_execution_stage"] = next(
+        (name for name, unit in getattr(stage_manager, "stage_args", {}).items()
+         if unit is stage_unit),
+        None,
+    )
     return perform_evaluation(
         args,
         stage_manager.resolve_stage_evaluator_instance(stage_unit),
-        runtime_config,
+        evaluation_runtime,
         step,
         oligo,
         loss_computer=loss_computer,
@@ -2625,17 +2664,32 @@ def _handle_stage_entry(
     runtime_config: Dict,
     stage_manager,
 ):
-    transaction = begin_stage_entry_transaction(
-        stage_manager,
-        evaluation_result,
-        loss_computer,
-        clone_result=_clone_eval_result,
-    )
-    if transaction is None:
-        return None
+    journal = _evaluation_journal()
+    source_stage = getattr(stage_manager, "current_stage", None)
+    transaction = None
+    error_type = None
+    try:
+        transaction = begin_stage_entry_transaction(
+            stage_manager,
+            evaluation_result,
+            loss_computer,
+            clone_result=_clone_eval_result,
+        )
+        if transaction is None:
+            return None
 
-    if transaction.target_stage_has_gate:
-        return _handle_transition_gate_stage_entry(
+        if transaction.target_stage_has_gate:
+            return _handle_transition_gate_stage_entry(
+                args=args,
+                step=step,
+                decisions=decisions,
+                loss_computer=loss_computer,
+                runtime_config=runtime_config,
+                stage_manager=stage_manager,
+                stage_entry=transaction,
+            )
+
+        return _handle_direct_stage_entry(
             args=args,
             step=step,
             decisions=decisions,
@@ -2644,16 +2698,21 @@ def _handle_stage_entry(
             stage_manager=stage_manager,
             stage_entry=transaction,
         )
-
-    return _handle_direct_stage_entry(
-        args=args,
-        step=step,
-        decisions=decisions,
-        loss_computer=loss_computer,
-        runtime_config=runtime_config,
-        stage_manager=stage_manager,
-        stage_entry=transaction,
-    )
+    except BaseException as exc:
+        error_type = type(exc).__name__
+        raise
+    finally:
+        if journal is not None:
+            assessments = getattr(decisions, "assessments", ()) or ()
+            journal.transitions.append({
+                "step": int(step), "source_stage": source_stage,
+                "target_stage": getattr(transaction, "target_stage_name", None),
+                "committed_stage_after": getattr(stage_manager, "current_stage", None),
+                "gate_active_after": getattr(stage_manager, "transition_consistency_gate_context", None) is not None,
+                "accepted_step": getattr(decisions, "last_accepted", None),
+                "accepted_revision": assessments[-1].accepted_revision if assessments else None,
+                "error_type": error_type,
+            })
 
 
 def run_optimization_loop(
@@ -2866,19 +2925,16 @@ def run_optimization_loop(
 
 
 def _shutdown_pipeline_resources() -> None:
-    """Release per-run resources before the next repeat starts."""
-    try:
-        mutators = global_config.get_const("mutators")
-    except RuntimeError:
-        mutators = {}
-    for alias, mutator in (mutators or {}).items():
-        shutdown = getattr(mutator, "shutdown", None)
-        if not callable(shutdown):
-            continue
+    """Release explicitly owned component resources once per instance."""
+    owner = ResourceOwner()
+    for family in ("mutators", "evaluators", "predockers"):
         try:
-            shutdown()
-        except Exception:
-            logging.exception("Failed to shutdown mutator '%s'.", alias)
+            components = global_config.get_const(family)
+        except RuntimeError:
+            continue
+        for alias, component in (components or {}).items():
+            owner.add(component, f"{family}.{alias}")
+    owner.close()
 
 
 def _finish_run_provenance(
@@ -2888,6 +2944,16 @@ def _finish_run_provenance(
     if args is None:
         return
     run_config_lifecycle.finish_run_provenance(args, state, error=error)
+    try:
+        decisions = global_config.get_const("decisions")
+    except RuntimeError:
+        decisions = None
+    out_dir = getattr(args, "out_dir", None)
+    if out_dir is not None:
+        write_execution_audit(
+            out_dir, status=state, decisions=decisions,
+            journal=_evaluation_journal(),
+        )
 
 
 def _run_pipeline(cfg) -> None:
@@ -2901,6 +2967,9 @@ def _run_pipeline(cfg) -> None:
 
         # Initialize components
         loss_computer, stage_manager, inputs = initialize_pipeline_components(args)
+        global_config.init_const(
+            "evaluation_journal", EvaluationJournal(str(pathlib.Path(args.out_dir).resolve()))
+        )
         runtime_config = {}
         runtime_config["mutator_stack_pre_update"] = bool(
             getattr(getattr(args, "mutator", None), "stack_pre_update", False)

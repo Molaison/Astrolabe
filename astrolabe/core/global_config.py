@@ -29,6 +29,7 @@ constants_names = [
     "initializer_result",
     "evaluators",
     "decisions",
+    "evaluation_journal",
     "obabel_path",
     "molfile_to_params",
     "dssp_path",

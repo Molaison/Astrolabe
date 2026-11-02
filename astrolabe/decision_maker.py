@@ -1,3 +1,4 @@
+from astrolabe.runtime_support import atomic_text_writer
 import logging
 import csv
 from dataclasses import dataclass, field
@@ -768,7 +769,7 @@ class Decisions:
 
         Args:
             out_dir: Directory to save results
-            incremental: If True, append new data to existing file; if False, overwrite
+            incremental: Compatibility argument; the complete row history is atomically replaced.
         """
         csv_path = out_dir / "scores.csv"
         self._seed_row_history_from_state()
@@ -783,7 +784,7 @@ class Decisions:
                 key for key in all_keys if key not in set(preferred)
             )
             csv_path.parent.mkdir(parents=True, exist_ok=True)
-            with csv_path.open("w", newline="", encoding="utf-8") as f:
+            with atomic_text_writer(csv_path, newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for row in rows:
@@ -794,4 +795,5 @@ class Decisions:
         other_cols = [col for col in score.columns if col not in preferred]
         score = score.reindex(columns=preferred + sorted(other_cols))
         csv_path.parent.mkdir(parents=True, exist_ok=True)
-        score.to_csv(csv_path, mode="w", header=True, index=False)
+        with atomic_text_writer(csv_path, newline="") as handle:
+            score.to_csv(handle, mode="w", header=True, index=False)
