@@ -6,6 +6,7 @@ using configured structure predictors, sequence mutators and stage objectives.
 """
 
 import functools
+from contextlib import nullcontext
 import hashlib
 import json
 import logging
@@ -2149,9 +2150,10 @@ def _evaluation_journal():
         return None
 
 
-def _execution_stage_name(runtime_config):
-    if "_evaluation_execution_stage" in runtime_config:
-        return runtime_config["_evaluation_execution_stage"]
+def _execution_stage_name():
+    journal = _evaluation_journal()
+    if journal is not None and journal.has_execution_stage:
+        return journal.current_execution_stage
     try:
         manager = global_config.stage_manager
     except RuntimeError:
@@ -2175,7 +2177,7 @@ def _evaluate_with_observability(
     if journal is not None:
         invocation = journal.begin(
             step=step, committed_stage=_current_stage_name(),
-            execution_stage=_execution_stage_name(runtime_config),
+            execution_stage=_execution_stage_name(),
             backend_alias=_evaluator_event_alias(evaluator),
             inputs=observe_evaluation_inputs(outgoing),
         )
@@ -2474,20 +2476,22 @@ def _perform_stage_reevaluation(
     oligo: list[str],
     loss_computer: LossEngine | None = None,
 ):
-    evaluation_runtime = dict(runtime_config)
-    evaluation_runtime["_evaluation_execution_stage"] = next(
+    journal = _evaluation_journal()
+    stage_name = next(
         (name for name, unit in getattr(stage_manager, "stage_args", {}).items()
          if unit is stage_unit),
         None,
     )
-    return perform_evaluation(
-        args,
-        stage_manager.resolve_stage_evaluator_instance(stage_unit),
-        evaluation_runtime,
-        step,
-        oligo,
-        loss_computer=loss_computer,
-    )
+    scope = journal.execution_stage(stage_name) if journal is not None else nullcontext()
+    with scope:
+        return perform_evaluation(
+            args,
+            stage_manager.resolve_stage_evaluator_instance(stage_unit),
+            runtime_config,
+            step,
+            oligo,
+            loss_computer=loss_computer,
+        )
 
 
 def _handle_transition_gate_stage_entry(

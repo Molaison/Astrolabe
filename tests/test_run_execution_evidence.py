@@ -175,3 +175,23 @@ def test_stage_entry_observation_does_not_claim_an_acceptance(tmp_path, monkeypa
         "committed_stage_after": "source", "gate_active_after": True,
         "accepted_step": 4, "accepted_revision": None, "error_type": None,
     }]
+
+
+def test_stage_observation_scope_never_leaks_into_backend_runtime(tmp_path, monkeypatch):
+    journal = _journal(tmp_path)
+    target = object()
+    manager = SimpleNamespace(stage_args={"target": target}, resolve_stage_evaluator_instance=lambda unit: "backend")
+    runtime = {"existing": 1}
+
+    def evaluate(args, backend, observed_runtime, step, oligo, **kwargs):
+        assert observed_runtime is runtime
+        assert observed_runtime == {"existing": 1}
+        assert run._execution_stage_name() == "target"
+        raise ValueError("target failure")
+
+    monkeypatch.setattr(run, "perform_evaluation", evaluate)
+    with pytest.raises(ValueError, match="target failure"):
+        run._perform_stage_reevaluation(args=None, stage_manager=manager,
+            stage_unit=target, runtime_config=runtime, step=3, oligo=["A"])
+    assert not journal.has_execution_stage
+    assert runtime == {"existing": 1}

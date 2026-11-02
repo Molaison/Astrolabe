@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, fields, is_dataclass
+from contextlib import contextmanager
 import json
 import logging
 import math
@@ -33,6 +34,24 @@ class EvaluationJournal:
     run_id: str
     invocations: list[EvaluationInvocation] = field(default_factory=list)
     transitions: list[dict[str, Any]] = field(default_factory=list)
+    _execution_stages: list[str | None] = field(default_factory=list, repr=False)
+
+    @contextmanager
+    def execution_stage(self, stage: str | None):
+        """Keep observation-only context out of backend runtime dictionaries."""
+        self._execution_stages.append(stage)
+        try:
+            yield
+        finally:
+            self._execution_stages.pop()
+
+    @property
+    def has_execution_stage(self) -> bool:
+        return bool(self._execution_stages)
+
+    @property
+    def current_execution_stage(self) -> str | None:
+        return self._execution_stages[-1] if self._execution_stages else None
 
     def begin(self, *, step, committed_stage, execution_stage, backend_alias, inputs):
         invocation = EvaluationInvocation(
