@@ -195,3 +195,78 @@ def test_stage_observation_scope_never_leaks_into_backend_runtime(tmp_path, monk
             stage_unit=target, runtime_config=runtime, step=3, oligo=["A"])
     assert not journal.has_execution_stage
     assert runtime == {"existing": 1}
+
+
+@pytest.mark.parametrize("phase", ["observe_evaluation_inputs", "attach_evaluation_records"])
+def test_observer_failure_never_changes_completed_backend_result(tmp_path, monkeypatch, phase):
+    journal = _journal(tmp_path)
+    result = _scores()
+    calls = []
+
+    class Backend:
+        def evaluate(self, outgoing, runtime):
+            calls.append("called")
+            return result
+
+    def fail(*args, **kwargs):
+        raise ValueError("injected metadata failure")
+
+    monkeypatch.setattr(run, phase, fail)
+    observed = run._evaluate_with_observability(
+        Backend(), {"A": _input()}, {}, step=1, oligo_names=["A"], detail="review")
+    assert observed is result
+    assert calls == ["called"]
+    assert journal.observation_errors[0]["error_type"] == "ValueError"
+    if phase == "attach_evaluation_records":
+        assert journal.invocations[0].status == "completed"
+        assert journal.invocations[0].observation_errors
+    else:
+        assert journal.invocations == []
+
+
+def test_cached_origin_is_explicit_and_never_relabelled_a_fresh_prediction(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("DEBUG", "1")
+    monkeypatch.setattr(run, "_apply_post_eval_hooks", lambda args, result, **kwargs: result)
+    monkeypatch.setattr(run, "_finalize_evaluation_result", lambda args, result, loss: result)
+    calls = []
+
+    class Backend:
+        alias = "backend"
+        def evaluate(self, outgoing, runtime):
+            calls.append("predicted")
+            return _scores()
+
+    first_journal = _journal(tmp_path / "first")
+    first = run.load_or_evaluate_initial(None, Backend(), {"A": _input()}, {}, "cache_case")
+    origin = first.evaluation_records[0].invocation_id
+    global_config.reset()
+    second_journal = _journal(tmp_path / "second")
+    second = run.load_or_evaluate_initial(None, Backend(), {"A": _input()}, {}, "cache_case")
+    assert calls == ["predicted"]
+    assert second.evaluation_records[0].invocation_id == origin
+    assert second_journal.invocations == []
+    assert second_journal.cache_reuses == [{
+        "kind": "debug_initial_evaluation_cache", "step": 0,
+        "artifact": str(tmp_path / "cache_case_eval_rslt.pkl"),
+        "backend_alias": "backend", "origin_invocation_ids": [origin],
+        "executed_backend": False,
+    }]
+
+
+def test_run_cleanup_is_idempotent_until_store_reset():
+    closed = []
+
+    class Resource:
+        def close(self):
+            closed.append("closed")
+
+    resource = Resource()
+    global_config.init_const("evaluators", {"one": resource, "two": resource})
+    run._shutdown_pipeline_resources()
+    run._shutdown_pipeline_resources()
+    assert closed == ["closed"]
+    global_config.reset()
+    global_config.init_const("evaluators", {"new-run": Resource()})
+    run._shutdown_pipeline_resources()
+    assert closed == ["closed", "closed"]

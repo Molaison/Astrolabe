@@ -25,6 +25,7 @@ class EvaluationInvocation:
     status: str = "running"
     records: tuple[Any, ...] = ()
     error_type: str | None = None
+    observation_errors: list[dict[str, str]] = field(default_factory=list)
 
 
 @dataclass
@@ -34,6 +35,8 @@ class EvaluationJournal:
     run_id: str
     invocations: list[EvaluationInvocation] = field(default_factory=list)
     transitions: list[dict[str, Any]] = field(default_factory=list)
+    cache_reuses: list[dict[str, Any]] = field(default_factory=list)
+    observation_errors: list[dict[str, str]] = field(default_factory=list)
     _execution_stages: list[str | None] = field(default_factory=list, repr=False)
 
     @contextmanager
@@ -63,10 +66,20 @@ class EvaluationJournal:
         self.invocations.append(invocation)
         return invocation
 
+    def record_error(self, phase: str, error: Exception, invocation=None):
+        record = {"phase": phase, "error_type": type(error).__name__}
+        self.observation_errors.append(record)
+        if invocation is not None:
+            invocation.observation_errors.append(record)
+
     def finish(self, invocation, *, result=None, error: BaseException | None = None):
+        # Backend completion is independent of optional metadata collection.
         invocation.status = "failed" if error is not None else "completed"
         invocation.error_type = type(error).__name__ if error is not None else None
-        invocation.records = tuple(getattr(result, "evaluation_records", None) or ())
+        try:
+            invocation.records = tuple(getattr(result, "evaluation_records", None) or ())
+        except Exception as exc:
+            self.record_error("finish_evaluation_observation", exc, invocation)
 
 
 def _json_value(value: Any) -> Any:
@@ -95,7 +108,14 @@ def _json_value(value: Any) -> Any:
 def build_execution_audit(*, run_id: str, status: str, decisions=None, journal=None) -> dict:
     assessments = []
     for record in getattr(decisions, "assessments", ()) or ():
-        result = record.evaluation_result
+        snapshot = getattr(record, "evidence_snapshot", None)
+        # Compatibility with externally supplied historical records. New records
+        # always carry an observation-time snapshot, never a live result view.
+        if snapshot is None:
+            result = record.evaluation_result
+            snapshot = {name: getattr(result, name, None) for name in (
+                "evaluation_records", "complex_paths", "derived_structures", "candidate_groups"
+            )}
         assessments.append({
             "assessment_id": record.assessment_id,
             "attempt_id": record.attempt_id,
@@ -105,10 +125,10 @@ def build_execution_audit(*, run_id: str, status: str, decisions=None, journal=N
             "weighted_score": record.weighted_score,
             "score_details": record.score_details,
             "sequences": record.sequences,
-            "evaluation_records": getattr(result, "evaluation_records", None) or (),
-            "complex_paths": getattr(result, "complex_paths", None) or {},
-            "derived_structures": getattr(result, "derived_structures", None) or {},
-            "candidate_groups": getattr(result, "candidate_groups", None) or (),
+            "evaluation_records": snapshot.get("evaluation_records") or (),
+            "complex_paths": snapshot.get("complex_paths") or {},
+            "derived_structures": snapshot.get("derived_structures") or {},
+            "candidate_groups": snapshot.get("candidate_groups") or (),
         })
     return _json_value({
         "schema_version": 1, "run_id": run_id, "terminal_status": status,
@@ -118,6 +138,11 @@ def build_execution_audit(*, run_id: str, status: str, decisions=None, journal=N
         "sampling": "input seeds are observed, backend RNG/sample identity is not inferred",
         "invocations": getattr(journal, "invocations", ()) or (),
         "stage_entry_observations": getattr(journal, "transitions", ()) or (),
+        "cache_reuses": getattr(journal, "cache_reuses", ()) or (),
+        "observation_errors": (
+            list(getattr(journal, "observation_errors", ()) or ())
+            + list(getattr(decisions, "observation_errors", ()) or ())
+        ),
         "assessments": assessments,
     })
 

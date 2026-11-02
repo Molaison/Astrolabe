@@ -1772,13 +1772,15 @@ def _should_evaluate_oligomers_incrementally(
 def initialize_pipeline_components(args) -> Tuple[Any, Any, Any, Dict[str, "Input"]]:
     """Initialize all core pipeline components."""
     initialize_global_config(args)
+    resource_owner = ResourceOwner()
+    global_config.init_const("resource_owner", resource_owner)
     runtime_context = global_config.build_runtime_context()
     setup_protomers(args)
     apply_cyclization(args)
 
     mutators = None
     if _resolve_initializer_mode(args) in {"structure", "rfd3"}:
-        mutators = build_mutators(args.mutator, args.raw_model_results_dir)
+        mutators = build_mutators(args.mutator, args.raw_model_results_dir, resource_owner=resource_owner)
         global_config.init_const("mutators", mutators)
     initializer_result = (
         apply_initializer(args)
@@ -1789,7 +1791,7 @@ def initialize_pipeline_components(args) -> Tuple[Any, Any, Any, Dict[str, "Inpu
 
     # Initialize components
     if mutators is None:
-        mutators = build_mutators(args.mutator, args.raw_model_results_dir)
+        mutators = build_mutators(args.mutator, args.raw_model_results_dir, resource_owner=resource_owner)
         global_config.init_const("mutators", mutators)
     loss_computer = LossEngine(args.loss, runtime_context=runtime_context)
     global_config.init_const("loss_computer", loss_computer)
@@ -1806,6 +1808,7 @@ def initialize_pipeline_components(args) -> Tuple[Any, Any, Any, Dict[str, "Inpu
         args.raw_model_results_dir,
         stage_manager.all_oligos,
         enabled_aliases=getattr(args.evaluator, "enabled_aliases", None),
+        resource_owner=resource_owner,
     )
     global_config.init_const("evaluators", evaluators)
 
@@ -1820,7 +1823,7 @@ def initialize_pipeline_components(args) -> Tuple[Any, Any, Any, Dict[str, "Inpu
     global_config.init_const("num_tokens", num_tokens)
     global_config.set_variable("step", 0)
 
-    initialize_predockers(args.predocker)
+    initialize_predockers(args.predocker, resource_owner=resource_owner)
     # -------------------------
     global_config.init_const("obabel_path", args.obabel_path)
     needs_molfile_to_params = _needs_molfile_to_params(args)
@@ -2175,12 +2178,16 @@ def _evaluate_with_observability(
     journal = _evaluation_journal()
     invocation = None
     if journal is not None:
-        invocation = journal.begin(
-            step=step, committed_stage=_current_stage_name(),
-            execution_stage=_execution_stage_name(),
-            backend_alias=_evaluator_event_alias(evaluator),
-            inputs=observe_evaluation_inputs(outgoing),
-        )
+        try:
+            invocation = journal.begin(
+                step=step, committed_stage=_current_stage_name(),
+                execution_stage=_execution_stage_name(),
+                backend_alias=_evaluator_event_alias(evaluator),
+                inputs=observe_evaluation_inputs(outgoing),
+            )
+        except Exception as exc:
+            journal.record_error("begin_evaluation_observation", exc)
+            logger.exception("Could not observe evaluator input; evaluation continues")
     with event_span(
         logger=logger, component="evaluator", alias=_evaluator_event_alias(evaluator),
         stage=_current_stage_name(), step=step,
@@ -2192,15 +2199,19 @@ def _evaluate_with_observability(
             if invocation is not None:
                 journal.finish(invocation, error=exc)
             raise
-        if invocation is not None and isinstance(evaluation_result, StandardScores):
-            attach_evaluation_records(
-                evaluation_result, invocation.inputs,
-                invocation_id=invocation.invocation_id, step=step,
-                committed_stage=invocation.committed_stage,
-                execution_stage=invocation.execution_stage,
-                backend_alias=invocation.backend_alias,
-            )
         if invocation is not None:
+            if isinstance(evaluation_result, StandardScores):
+                try:
+                    attach_evaluation_records(
+                        evaluation_result, invocation.inputs,
+                        invocation_id=invocation.invocation_id, step=step,
+                        committed_stage=invocation.committed_stage,
+                        execution_stage=invocation.execution_stage,
+                        backend_alias=invocation.backend_alias,
+                    )
+                except Exception as exc:
+                    journal.record_error("attach_evaluation_records", exc, invocation)
+                    logger.exception("Could not attach evaluator evidence; returning scientific result")
             journal.finish(invocation, result=evaluation_result)
         span.finish(
             artifact=_evaluation_artifact_summary(evaluation_result),
@@ -2256,6 +2267,22 @@ def load_or_evaluate_initial(
         )
         with open(eval_file, "rb") as f:
             evaluation_result = pickle.load(f)
+            journal = _evaluation_journal()
+            if journal is not None:
+                try:
+                    journal.cache_reuses.append({
+                        "kind": "debug_initial_evaluation_cache", "step": 0,
+                        "artifact": str(pathlib.Path(eval_file).resolve()),
+                        "backend_alias": _evaluator_event_alias(evaluator),
+                        "origin_invocation_ids": list(dict.fromkeys(
+                            record.invocation_id
+                            for record in (getattr(evaluation_result, "evaluation_records", None) or ())
+                        )),
+                        "executed_backend": False,
+                    })
+                except Exception as exc:
+                    journal.record_error("cache_origin_observation", exc)
+                    logger.exception("Could not observe cached evaluation origin")
             # evaluation_result.complex_poses = ComplexPoses.construct_complex_poses(
             #     evaluation_result
             # )
@@ -2516,15 +2543,18 @@ def _handle_transition_gate_stage_entry(
         step=step,
     )
     if transition_plan.needs_stage_reevaluation:
-        evaluation_result = perform_evaluation(
-            args,
-            stage_manager.resolve_transition_consistency_gate_evaluator_instance(
-                target_stage_name
-            ),
-            transition_runtime,
-            step,
-            transition_plan.target_oligo,
-        )
+        journal = _evaluation_journal()
+        scope = journal.execution_stage(target_stage_name) if journal is not None else nullcontext()
+        with scope:
+            evaluation_result = perform_evaluation(
+                args,
+                stage_manager.resolve_transition_consistency_gate_evaluator_instance(
+                    target_stage_name
+                ),
+                transition_runtime,
+                step,
+                transition_plan.target_oligo,
+            )
     else:
         evaluation_result = _clone_eval_result(previous_stage_result)
 
@@ -2707,16 +2737,20 @@ def _handle_stage_entry(
         raise
     finally:
         if journal is not None:
-            assessments = getattr(decisions, "assessments", ()) or ()
-            journal.transitions.append({
-                "step": int(step), "source_stage": source_stage,
-                "target_stage": getattr(transaction, "target_stage_name", None),
-                "committed_stage_after": getattr(stage_manager, "current_stage", None),
-                "gate_active_after": getattr(stage_manager, "transition_consistency_gate_context", None) is not None,
-                "accepted_step": getattr(decisions, "last_accepted", None),
-                "accepted_revision": assessments[-1].accepted_revision if assessments else None,
-                "error_type": error_type,
-            })
+            try:
+                assessments = getattr(decisions, "assessments", ()) or ()
+                journal.transitions.append({
+                    "step": int(step), "source_stage": source_stage,
+                    "target_stage": getattr(transaction, "target_stage_name", None),
+                    "committed_stage_after": getattr(stage_manager, "current_stage", None),
+                    "gate_active_after": getattr(stage_manager, "transition_consistency_gate_context", None) is not None,
+                    "accepted_step": getattr(decisions, "last_accepted", None),
+                    "accepted_revision": assessments[-1].accepted_revision if assessments else None,
+                    "error_type": error_type,
+                })
+            except Exception as exc:
+                journal.record_error("stage_entry_observation", exc)
+                logger.exception("Could not observe stage entry; scientific outcome is preserved")
 
 
 def run_optimization_loop(
@@ -2742,6 +2776,7 @@ def run_optimization_loop(
         if not bool(getattr(step0_reference_gate, "passed", False)):
             decisions.row_history[-1]["accepted"] = False
             decisions.row_history[-1]["note"] = "reference gate failed"
+            decisions.reject_initial_assessment()
             decisions.dump_results(global_config.out_dir, incremental=True)
             raise ValueError(
                 "structure_start step0 reference gate failed: "
@@ -2930,7 +2965,11 @@ def run_optimization_loop(
 
 def _shutdown_pipeline_resources() -> None:
     """Release explicitly owned component resources once per instance."""
-    owner = ResourceOwner()
+    try:
+        owner = global_config.get_const("resource_owner")
+    except RuntimeError:
+        owner = ResourceOwner()
+        global_config.init_const("resource_owner", owner)
     for family in ("mutators", "evaluators", "predockers"):
         try:
             components = global_config.get_const(family)

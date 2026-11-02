@@ -30,6 +30,7 @@ constants_names = [
     "evaluators",
     "decisions",
     "evaluation_journal",
+    "resource_owner",
     "obabel_path",
     "molfile_to_params",
     "dssp_path",
