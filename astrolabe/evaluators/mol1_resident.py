@@ -56,8 +56,10 @@ class Mol1Resident:
             raise ValueError('invalid Molence Mol-1 source checkout')
         root_dir = Path(runner.mol_root_dir).resolve(strict=True)
         checkpoint = str(Path(runner.load_checkpoint_path).resolve(strict=True))
-        env = {'PYTHONPATH': os.pathsep.join([str(source)] + [str(Path(p).resolve()) for p in sys.path if p]),
-               'MOL_ROOT_DIR': str(root_dir)}
+        roots = [str(source), str(Path(__file__).resolve().parents[2])]
+        if os.environ.get('PYTHONPATH'):
+            roots.append(os.environ['PYTHONPATH'])
+        env = {'PYTHONPATH': os.pathsep.join(roots), 'MOL_ROOT_DIR': str(root_dir)}
         device = probe_device(python, 'mol1', env=env)
         cmd = [python, '-m', 'astrolabe.evaluators.mol1_assets', runner.model_name, checkpoint, '0']
         try:
