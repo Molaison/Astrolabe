@@ -12,6 +12,9 @@ from omegaconf import OmegaConf
 
 from astrolabe.core import global_config
 from astrolabe.evaluators.registry import EvaluatorRegistry, register_evaluator_factory
+from astrolabe.evaluators.evidence import (
+    CandidateGroup, DerivedStructure, EvaluationRecord, filter_candidate_groups,
+)
 from astrolabe.score_contributions import (
     filter_score_contributions,
     normalize_score_contributions,
@@ -582,13 +585,28 @@ class StandardScores:
     chain_pair_scores: dict[str, dict[str, list[np.ndarray]]] | None = None
     complex_poses: dict[str, typing.Any] | None = None
     score_contributions: typing.Any | None = None
-    # Metadata is excluded from dataclass fields so existing score merges do not
-    # accidentally pair candidates or change selection. See merge_evidence_metadata.
-    candidate_scores = None  # list[StandardScores] | None
-    post_eval_hook_reports = None  # dict[str, Any] | None
-    derived_structures = None  # dict[str, list[DerivedStructure]] | None
-    evaluation_records = None  # tuple[EvaluationRecord, ...] | None
-    candidate_groups = None  # tuple[CandidateGroup, ...] | None
+    # These fields are carried explicitly, never by the legacy score merge.
+    candidate_scores: list[StandardScores] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+    post_eval_hook_reports: dict[str, typing.Any] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+    derived_structures: dict[str, list[DerivedStructure]] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+    evaluation_records: tuple[EvaluationRecord, ...] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+    candidate_groups: tuple[CandidateGroup, ...] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+
+    @classmethod
+    def score_field_names(cls) -> set[str]:
+        """Fields used by the legacy score merge, including names and paths."""
+        return {field.name for field in dataclasses.fields(cls)
+                if not field.metadata.get("evidence", False)}
 
     @staticmethod
     def _wrap_dict_values_in_list(
@@ -753,7 +771,7 @@ class StandardScores:
 
         filtered_scores: dict[str, typing.Any] = {"names": filtered_names}
 
-        for key in self.__dataclass_fields__.keys() - {"names"}:
+        for key in self.score_field_names() - {"names"}:
             value = getattr(self, key, None)
             if value is None:
                 filtered_scores[key] = None
@@ -816,19 +834,14 @@ class StandardScores:
                 if record.input.oligomer in allowed_oligos
             )
         if self.candidate_groups is not None:
-            from astrolabe.evaluators.evidence import filter_candidate_groups
             result.candidate_groups = filter_candidate_groups(self.candidate_groups, allowed_oligos)
         return result
 
     def clone(self) -> StandardScores:
         """Create a new StandardScores instance that shares underlying data."""
-        result = dataclasses.replace(self)
-        result.candidate_scores = self.candidate_scores
-        result.post_eval_hook_reports = self.post_eval_hook_reports
-        result.derived_structures = self.derived_structures
-        result.evaluation_records = self.evaluation_records
-        result.candidate_groups = self.candidate_groups
-        return result
+        # replace carries every declared evidence field with the same shallow
+        # sharing semantics as the score fields.
+        return dataclasses.replace(self)
 
 
 # noinspection PyUnresolvedReferences

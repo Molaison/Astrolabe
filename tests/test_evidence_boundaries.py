@@ -1,10 +1,12 @@
+from dataclasses import fields, replace
 from pathlib import Path
 
 import pytest
 
 from astrolabe.core.folding_input import Input, ProteinChain, Template, snapshot_folding_inputs
 from astrolabe.evaluators.evidence import (
-    DerivedStructure, attach_evaluation_records, merge_evidence_metadata,
+    CandidateGroup, DerivedStructure, EvaluationRecord, InputObservation,
+    attach_evaluation_records, merge_evidence_metadata,
     observe_evaluation_inputs,
 )
 from astrolabe.evaluators.utils import StandardScores
@@ -79,11 +81,50 @@ def test_real_hook_tracks_only_changed_structures_and_keeps_scores(monkeypatch, 
     assert out.post_eval_hook_reports['AC']['ran'] is False
 
 
-def test_metadata_is_not_implicitly_merged_as_score_fields():
-    # run.py merges dataclass fields generically; metadata requires explicit wiring.
-    assert not {'candidate_scores', 'post_eval_hook_reports', 'derived_structures'} & set(
-        StandardScores.__dataclass_fields__
+def test_typed_evidence_construction_clone_filter_and_score_field_contract():
+    record = EvaluationRecord(
+        invocation_id=4, step=1, committed_stage='before', execution_stage='during',
+        backend_alias='dummy', input=InputObservation('AB', (('A', 'ProteinChain', 'AA'),), (1,)),
+        original_complex_path=Path('AB.cif'),
     )
+    derived = DerivedStructure(Path('AB.cif'), Path('AB.pdb'), 'repack')
+    groups = (CandidateGroup(((('AB', Path('first.cif')),),
+                              (('AB', Path('second.cif')),)), (4,)),)
+    candidates = [scores('AB', 'AC'), scores('AB', 'AC')]
+    result = StandardScores(
+        names=['AB', 'AC'], plddt={'AB': [0.8], 'AC': [0.7]},
+        complex_paths={'AB': Path('AB.cif'), 'AC': Path('AC.cif')},
+        candidate_scores=candidates, post_eval_hook_reports={'AB': {'ran': True}},
+        derived_structures={'AB': [derived]}, evaluation_records=(record,), candidate_groups=groups,
+    )
+    metadata_fields = {'candidate_scores', 'post_eval_hook_reports', 'derived_structures',
+                       'evaluation_records', 'candidate_groups'}
+    declared = {field.name: field for field in fields(StandardScores)}
+    assert {name for name, field in declared.items() if field.metadata.get('evidence')} == metadata_fields
+    assert StandardScores.score_field_names() == set(declared) - metadata_fields
+    assert StandardScores.score_field_names() == {
+        'names', 'plddt', 'complex_paths', 'per_proto_scores', 'per_proto_score_terms',
+        'ptm', 'pae', 'pde', 'iptm', 'chain_pair_scores', 'complex_poses',
+        'score_contributions',
+    }
+    assert all(not declared[name].repr and not declared[name].compare for name in metadata_fields)
+    assert 'candidate_scores=' not in repr(result)
+    clone = result.clone()
+    assert clone.candidate_scores is candidates
+    assert clone.evaluation_records == (record,)
+    assert replace(result).candidate_groups == groups
+    filtered = clone.filter_by_oligomer(['AB'])
+    assert [candidate.names for candidate in filtered.candidate_scores] == [['AB'], ['AB']]
+    assert filtered.candidate_groups == groups
+    assert filtered.evaluation_records == (record,)
+    assert filtered.derived_structures == {'AB': [derived]}
+    assert filtered.post_eval_hook_reports == {'AB': {'ran': True}}
+    merged = merge_evidence_metadata(scores('AB', 'AC'), [filtered, scores('AC')])
+    assert merged.candidate_scores is None
+    assert merged.evaluation_records == (record,)
+    assert merged.candidate_groups == groups
+    assert merged.derived_structures['AB'][0].source_path == record.original_complex_path
+    assert merged.evaluation_records[0].sample_identity is None
 
 
 def test_hook_failure_does_not_publish_partial_metadata(monkeypatch, tmp_path):
