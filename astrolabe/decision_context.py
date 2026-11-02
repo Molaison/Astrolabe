@@ -216,10 +216,19 @@ def build_decision_score_context(
     include_self_delta: bool = False,
     evaluate_decision_flags: bool = True,
     evaluate_acceptance_gate: bool = True,
+    score_decisions: Any = None,
+    initial_score: bool = False,
 ) -> DecisionScoreContext:
+    from astrolabe.score_identity import score_runtime_view
+
+    score_runtime = (
+        score_runtime_view(runtime_config, eval_result, decisions=score_decisions, initial=initial_score)
+        if getattr(loss_computer, "score_queries", None)
+        else runtime_config
+    )
     weighted_score, scores_detail = loss_computer.compute_loss(
         eval_result,
-        runtime_config,
+        score_runtime,
     )
     scores_detail = attach_reference_gate_details(scores_detail, runtime_config)
     scores_detail = attach_transition_consistency_gate_details(

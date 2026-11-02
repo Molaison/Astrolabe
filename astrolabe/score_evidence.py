@@ -69,11 +69,12 @@ class ScoreQuery:
 
 def query_score(records, query, *, snapshots=None, generating_selector=False):
     snapshots = snapshots or {}
-    if query.snapshot in {'last_accepted', 'current_proposal', 'proposal'} and query.snapshot not in snapshots:
+    if query.snapshot in {'last_accepted', 'current_proposal', 'proposal', 'reference'} and query.snapshot not in snapshots:
         raise ValueError(f'missing concrete identity for {query.snapshot}')
     target = snapshots.get(query.snapshot, query.snapshot)
+    permitted = snapshots.get('reference') if query.snapshot == 'reference' else snapshots.get('last_accepted')
     if generating_selector and (query.snapshot in {'current_proposal', 'proposal'} or
-                                target != snapshots.get('last_accepted')):
+                                target != permitted):
         raise ValueError('a selector must use the last accepted snapshot')
     matches = [r for r in records if r.spec.name == query.name and r.spec.source == query.source and r.snapshot == target and (query.entity is None or r.spec.entity == query.entity)]
     if len(matches) != 1:

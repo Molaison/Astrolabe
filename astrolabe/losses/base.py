@@ -405,6 +405,9 @@ class LossEngine:
         This is the public, non-cached entrypoint used by stage logic (e.g. stage
         entrance conditions). It intentionally does not expose registry internals.
         """
+        if runtime_config is None and self.score_queries:
+            from astrolabe.score_identity import score_runtime_view
+            runtime_config = score_runtime_view(None, eval_result)
         per_oligo_scores, per_terms_score = self._extract_scores_with_registry(eval_result)
         total_env = {**per_oligo_scores, **per_terms_score}
         self._merge_score_contribution_symbols(
@@ -425,7 +428,12 @@ class LossEngine:
             eval_result,
             loss_specs,
         )
-        return {**per_oligo_scores, **per_terms_score}
+        total_env = {**per_oligo_scores, **per_terms_score}
+        if self.score_queries:
+            from astrolabe.score_identity import score_runtime_view
+            runtime_config = score_runtime_view(None, eval_result)
+            self._merge_score_contribution_symbols(total_env, self._query_score_symbols(eval_result, runtime_config))
+        return total_env
 
     def weighted_score(self, total_env, expression):
         """Calculate weighted score based on the configured expression."""
@@ -535,19 +543,37 @@ class LossEngine:
         from astrolabe.score_evidence import ScoreQuery, query_score, records_from_contributions, records_from_standard_scores
 
         runtime_config = runtime_config or {}
-        records = list(getattr(eval_result, "score_records", None) or [])
-        records.extend(runtime_config.get("score_records", []) or [])
+        assessments = runtime_config.get("_score_evidence_assessments")
         snapshots = runtime_config.get("score_snapshots", {}) or {}
         snapshot = runtime_config.get("score_capture_snapshot")
-        if snapshot:
-            records.extend(records_from_standard_scores(eval_result, snapshot))
-        if self.score_catalog:
-            snapshot = runtime_config.get("score_capture_snapshot")
-            if not snapshot:
-                raise ValueError("score_capture_snapshot is required for catalog capture")
-            contributions = list(getattr(eval_result, "score_contributions", None) or [])
-            contributions.extend(score_contributions_from_runtime_config(runtime_config))
-            records.extend(records_from_contributions(contributions, self.score_catalog, snapshot))
+        records = list(runtime_config.get("score_records", []) or [])
+        if assessments is None:
+            assessments = (eval_result,)
+        for assessment in assessments:
+            records.extend(getattr(assessment, "score_records", None) or [])
+            assessment_snapshot = (getattr(assessment, "assessment_id", None)
+                                   if "_score_evidence_assessments" in runtime_config else snapshot)
+            if assessment_snapshot:
+                records.extend(records_from_standard_scores(assessment, assessment_snapshot))
+            if self.score_catalog:
+                if not assessment_snapshot:
+                    raise ValueError("score_capture_snapshot is required for catalog capture")
+                contributions = list(getattr(assessment, "score_contributions", None) or [])
+                records.extend(records_from_contributions(contributions, self.score_catalog, assessment_snapshot))
+                current_records = []
+                if assessment is eval_result:
+                    current_records = records_from_contributions(
+                        score_contributions_from_runtime_config(runtime_config), self.score_catalog, assessment_snapshot
+                    )
+                    records.extend(current_records)
+                owned = (runtime_config.get("_score_owned_records") or {}).get(str(assessment_snapshot), ())
+                for record in owned:
+                    same = [candidate for candidate in current_records if candidate.spec == record.spec]
+                    if same:
+                        if len(same) != 1 or same[0] != record:
+                            raise ValueError("runtime score evidence changed for an existing assessment")
+                    else:
+                        records.append(record)
         results = {}
         for alias, config in self.score_queries.items():
             query_config = dict(config)

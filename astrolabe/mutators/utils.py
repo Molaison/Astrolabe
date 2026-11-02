@@ -1022,8 +1022,10 @@ def prepare_exclude_sites(
         and "score" in extract_variables(position_selector)
     )
     if uses_score_selector:
+        from astrolabe.score_identity import score_runtime_view
+        selector_runtime = score_runtime_view(runtime_config, evaluation_result, selector=True)
         mutable_mask_selector = construct_position_selector(
-            position_selector, evaluation_result, protomers, runtime_config=runtime_config
+            position_selector, evaluation_result, protomers, runtime_config=selector_runtime
         )
     else:
         mutable_mask_selector = construct_position_selector(

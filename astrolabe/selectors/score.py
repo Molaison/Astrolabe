@@ -27,8 +27,10 @@ def score_position_selector(evaluation_result, protomers, name, *, runtime_confi
         if not capture:
             raise ValueError('score_capture_snapshot is required for catalog capture')
         contributions = list(getattr(evaluation_result, 'score_contributions', None) or [])
-        contributions.extend(score_contributions_from_runtime_config(runtime_config))
+        if '_score_owned_records' not in runtime_config:
+            contributions.extend(score_contributions_from_runtime_config(runtime_config))
         records.extend(records_from_contributions(contributions, catalog, capture))
+        records.extend((runtime_config.get('_score_owned_records') or {}).get(str(capture), ()))
     snapshots = runtime_config.get('score_snapshots') or getattr(evaluation_result, 'score_snapshots', None) or {}
     values = query_score(records, query, snapshots=snapshots, generating_selector=True)
     target = snapshots.get(query.snapshot, query.snapshot)

@@ -57,6 +57,8 @@ class Decisions:
     last_accepted: int
     stage_history: Dict[int, str]
     row_history: List[Dict[str, object]] = field(default_factory=list)
+    # Evidence is keyed by assessment, never by an independently maintained accepted pointer.
+    score_records_by_assessment: Dict[str, tuple] = field(default_factory=dict)
     NOISE_COMPONENT_KEYS = {
         "iteration",
         "step",
@@ -333,6 +335,24 @@ class Decisions:
         """
         return getattr(self, item)
 
+    def _remember_runtime_score_evidence(self, evaluation_result, runtime_config, loss_computer):
+        from astrolabe.score_contributions import score_contributions_from_runtime_config
+        from astrolabe.score_evidence import records_from_contributions
+
+        catalog = getattr(loss_computer, "score_catalog", None) or []
+        identity = getattr(evaluation_result, "assessment_id", None)
+        if not catalog or not identity:
+            return
+        records = tuple(records_from_contributions(
+            score_contributions_from_runtime_config(runtime_config), catalog, str(identity)
+        ))
+        if not records:
+            return
+        previous = self.score_records_by_assessment.get(str(identity))
+        if previous is not None and previous != records:
+            raise ValueError("runtime score evidence changed for an existing assessment")
+        self.score_records_by_assessment[str(identity)] = records
+
     @classmethod
     def create(
         cls,
@@ -351,6 +371,8 @@ class Decisions:
             Initialized Decisions instance
         """
         class _InitialLossComputer:
+            score_queries = getattr(getattr(score_func, "__self__", None), "score_queries", {})
+
             def compute_loss(self, eval_result, runtime):
                 return score_func(eval_result, runtime)
 
@@ -360,6 +382,7 @@ class Decisions:
             runtime_config=runtime_config,
             evaluate_decision_flags=False,
             evaluate_acceptance_gate=False,
+            initial_score=True,
         )
         score = context.weighted_score
         scores_detail = context.scores_detail
@@ -370,7 +393,7 @@ class Decisions:
             }
         }
         current_stage = getattr(global_config.stage_manager, "current_stage", "default")
-        return cls(
+        result = cls(
             sequences=sequences,
             scores={0: score},
             evaluation_results={0: evaluation_result},
@@ -390,6 +413,8 @@ class Decisions:
                 }
             ],
         )
+        result._remember_runtime_score_evidence(evaluation_result, runtime_config, getattr(score_func, "__self__", None))
+        return result
 
     def _evaluate_mutation(
         self,
@@ -406,9 +431,11 @@ class Decisions:
             runtime_config=runtime_config,
             include_mutator_selector_deltas=True,
             evaluate_acceptance_gate=False,
+            score_decisions=self,
         )
         score = context.weighted_score
         scores_detail = context.scores_detail
+        self._remember_runtime_score_evidence(eval_result, runtime_config, loss_computer)
         self.scores[step] = context.weighted_score
         self.scores_detail[step] = context.scores_detail
         current_stage = getattr(global_config.stage_manager, "current_stage", "unknown")
@@ -504,12 +531,14 @@ class Decisions:
             stage_entry=stage_entry,
             include_mutator_selector_deltas=True,
             include_previous_delta=True,
+            score_decisions=self,
         )
         score = context.weighted_score
         scores_detail = context.scores_detail
         standard_early_stop = context.early_stop
         soft_accepted = context.soft_accepted
         hard_gate_passed = context.hard_gate_passed
+        self._remember_runtime_score_evidence(eval_result, runtime_config, loss_computer)
         self.evaluation_results[step] = eval_result
         self.scores[step] = score
         self.scores_detail[step] = scores_detail
@@ -701,9 +730,11 @@ class Decisions:
             runtime_config=runtime_config,
             evaluate_decision_flags=False,
             evaluate_acceptance_gate=False,
+            score_decisions=self,
         )
         score = context.weighted_score
         scores_detail = context.scores_detail
+        self._remember_runtime_score_evidence(eval_result, runtime_config, loss_computer)
         self.scores[step] = score
         self.scores_detail[step] = scores_detail
         self.stage_history[step] = current_stage
