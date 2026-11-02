@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from astrolabe.core import global_config
+from astrolabe.runtime_support import ResourceOwner
 from astrolabe.utils.log_events import event_span, log_event
 
 
@@ -54,18 +55,35 @@ class StructureProcessorRegistry:
         return list(cls._registry.keys())
 
 
-def initialize_predockers(predocker_args):
+def initialize_predockers(
+    predocker_args, *, resource_owner: ResourceOwner | None = None
+):
+    """Build predockers; a shared owner is closed if construction fails."""
     predocker_terms = predocker_args.get("predocker_terms")
     global_config.init_const("predockers", {})
-    for alias, config in predocker_terms.items():
-        predocker_class = StructureProcessorRegistry.get(config._type)
-        kwargs = {}
-        for default_key in _predocker_default_keys(str(config._type)):
-            kwargs.update(predocker_args.get(default_key, {}))
-        kwargs.update(config)
-        predocker = predocker_class(**kwargs)
-        setattr(predocker, "alias", str(alias))
-        global_config.predockers[alias] = predocker
+    owner = resource_owner if resource_owner is not None else ResourceOwner()
+    try:
+        for alias, config in predocker_terms.items():
+            predocker_class = StructureProcessorRegistry.get(config._type)
+            kwargs = {}
+            for default_key in _predocker_default_keys(str(config._type)):
+                kwargs.update(predocker_args.get(default_key, {}))
+            kwargs.update(config)
+            predocker = predocker_class(**kwargs)
+            owner.add(predocker, f"predockers.{alias}")
+            setattr(predocker, "alias", str(alias))
+            global_config.predockers[alias] = predocker
+    except BaseException:
+        global_config.predockers.clear()
+        # ResourceOwner marks an object closed before calling it. If even a
+        # BaseException escapes a closer, retry to finish the other objects.
+        while True:
+            try:
+                owner.close()
+                break
+            except BaseException:
+                logging.exception("Failed to clean up predockers after construction error")
+        raise
 
 
 def _predocker_default_keys(predocker_type: str) -> list[str]:

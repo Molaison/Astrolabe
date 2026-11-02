@@ -1,8 +1,10 @@
+import logging
 import pathlib
 from abc import abstractmethod
 from typing import Any, Dict
 
 from astrolabe.core import global_config
+from astrolabe.runtime_support import ResourceOwner
 from astrolabe.mutators.capabilities import (
     MutatorCapabilities,
     validate_mutator_capabilities,
@@ -159,7 +161,11 @@ def _merge_runner_conf(base_conf, overrides):
     return OmegaConf.create(runner_dict), leftover
 
 
-def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path"):
+def build_mutators(
+    mutator_conf, raw_model_results_dir: "pathlib.Path", *,
+    resource_owner: ResourceOwner | None = None,
+):
+    """Build mutators; a shared owner is closed if construction fails."""
     enabled_aliases = getattr(mutator_conf, "enabled_aliases", None)
     if enabled_aliases is None:
         enabled_aliases = list((getattr(mutator_conf, "mutator_terms", {}) or {}).keys())
@@ -167,55 +173,66 @@ def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path"):
     enabled_set = set(enabled_aliases)
 
     mutators = {}
+    owner = resource_owner if resource_owner is not None else ResourceOwner()
+    try:
+        for alias, conf in mutator_conf.mutator_terms.items():
+            # Allow turning off mutators via config overlays by setting them to null.
+            if conf is None:
+                continue
+            # Build only mutators that are enabled for this run (derived from stages by
+            # argparser, or defaulting to all mutator_terms keys).
+            if enabled_set and str(alias) not in enabled_set:
+                continue
+            conf = dict(conf)
+            name = conf.pop("_type", None)
+            if not name:
+                raise ValueError(f"Mutator name must be specified for {alias} in `_type`")
 
-    for alias, conf in mutator_conf.mutator_terms.items():
-        # Allow turning off mutators via config overlays by setting them to null.
-        if conf is None:
-            continue
-        # Build only mutators that are enabled for this run (derived from stages by
-        # argparser, or defaulting to all mutator_terms keys).
-        if enabled_set and str(alias) not in enabled_set:
-            continue
-        conf = dict(conf)
-        name = conf.pop("_type", None)
-        if not name:
-            raise ValueError(f"Mutator name must be specified for {alias} in `_type`")
+            selector_override = conf.pop("position_selector", None)
 
-        selector_override = conf.pop("position_selector", None)
+            position_selector = selector_override
+            selectors = getattr(mutator_conf, "selectors", None)
+            if position_selector is None and selectors:
+                position_selector = selectors.get(alias, None)
+                if position_selector is None:
+                    position_selector = selectors.get(name, None)
+                if position_selector is None:
+                    position_selector = selectors.get(str(name).lower(), None)
+            if position_selector is not None:
+                conf["position_selector"] = position_selector
 
-        position_selector = selector_override
-        selectors = getattr(mutator_conf, "selectors", None)
-        if position_selector is None and selectors:
-            position_selector = selectors.get(alias, None)
-            if position_selector is None:
-                position_selector = selectors.get(name, None)
-            if position_selector is None:
-                position_selector = selectors.get(str(name).lower(), None)
-        if position_selector is not None:
-            conf["position_selector"] = position_selector
+            try:
+                factory = MutatorRegistry.get(name)
+            except KeyError as exc:
+                available = ", ".join(MutatorRegistry.list_available()) or "<none>"
+                raise ValueError(
+                    f"Unknown mutator name {name!r}. Available mutator types: {available}"
+                ) from exc
 
-        try:
-            factory = MutatorRegistry.get(name)
-        except KeyError as exc:
-            available = ", ".join(MutatorRegistry.list_available()) or "<none>"
-            raise ValueError(
-                f"Unknown mutator name {name!r}. Available mutator types: {available}"
-            ) from exc
-
-        mutator = factory(
-            conf,
-            alias=alias,
-            mutator_conf=mutator_conf,
-            raw_model_results_dir=raw_model_results_dir,
-        )
-        mutator.alias = str(alias)
-        try:
-            protomers = global_config.protomers
-        except RuntimeError:
-            protomers = {}
-        validate_mutator_capabilities(mutator, alias=str(alias), protomers=protomers)
-        mutators[alias] = mutator
-
+            mutator = factory(
+                conf,
+                alias=alias,
+                mutator_conf=mutator_conf,
+                raw_model_results_dir=raw_model_results_dir,
+            )
+            owner.add(mutator, f"mutators.{alias}")
+            mutator.alias = str(alias)
+            try:
+                protomers = global_config.protomers
+            except RuntimeError:
+                protomers = {}
+            validate_mutator_capabilities(mutator, alias=str(alias), protomers=protomers)
+            mutators[alias] = mutator
+    except BaseException:
+        # ResourceOwner marks an object closed before calling it. If even a
+        # BaseException escapes a closer, retry to finish the other objects.
+        while True:
+            try:
+                owner.close()
+                break
+            except BaseException:
+                logging.exception("Failed to clean up mutators after construction error")
+        raise
     return mutators
 
 
