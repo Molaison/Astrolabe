@@ -27,6 +27,7 @@ setup(
     py_modules=["run"],
     include_package_data=True,
     install_requires=[
+        "jsonschema>=4,<5",
         "absl-py>=2.1,<3",
         "biopython>=1.84,<2",
         "filelock>=3.12,<4",
