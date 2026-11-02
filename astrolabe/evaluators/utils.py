@@ -587,6 +587,8 @@ class StandardScores:
     candidate_scores = None  # list[StandardScores] | None
     post_eval_hook_reports = None  # dict[str, Any] | None
     derived_structures = None  # dict[str, list[DerivedStructure]] | None
+    evaluation_records = None  # tuple[EvaluationRecord, ...] | None
+    candidate_groups = None  # tuple[CandidateGroup, ...] | None
 
     @staticmethod
     def _wrap_dict_values_in_list(
@@ -808,6 +810,14 @@ class StandardScores:
             value = getattr(self, key)
             if value is not None:
                 setattr(result, key, {k: v for k, v in value.items() if k in allowed_oligos})
+        if self.evaluation_records is not None:
+            result.evaluation_records = tuple(
+                record for record in self.evaluation_records
+                if record.input.oligomer in allowed_oligos
+            )
+        if self.candidate_groups is not None:
+            from astrolabe.evaluators.evidence import filter_candidate_groups
+            result.candidate_groups = filter_candidate_groups(self.candidate_groups, allowed_oligos)
         return result
 
     def clone(self) -> StandardScores:
@@ -816,6 +826,8 @@ class StandardScores:
         result.candidate_scores = self.candidate_scores
         result.post_eval_hook_reports = self.post_eval_hook_reports
         result.derived_structures = self.derived_structures
+        result.evaluation_records = self.evaluation_records
+        result.candidate_groups = self.candidate_groups
         return result
 
 
