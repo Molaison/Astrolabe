@@ -41,6 +41,22 @@ if not hasattr(_pdbx_convert, "PDBX_BOND_TYPE_ID_TO_TYPE"):
 _PROTENIX_IMPORTED = False
 
 
+def configure_protenix_source(path):
+    """Select a checkout before importing Protenix; never replace a live import."""
+    global _VENDORED_PROTENIX
+    root = Path(path).expanduser().resolve(strict=True)
+    if not (root / "protenix" / "__init__.py").is_file():
+        raise ValueError(f"invalid Protenix source checkout: {root}")
+    existing = sys.modules.get("protenix")
+    if existing is not None and not Path(existing.__file__).resolve().is_relative_to(root):
+        raise RuntimeError("a different Protenix source is already imported")
+    if _PROTENIX_IMPORTED and root != _VENDORED_PROTENIX.resolve():
+        raise RuntimeError("cannot switch an initialized Protenix source")
+    _VENDORED_PROTENIX = root
+    if str(root) not in sys.path:
+        sys.path.insert(0, str(root))
+
+
 def _lazy_import_protenix() -> None:
     """Import Protenix modules only when the Protenix evaluator is enabled.
 

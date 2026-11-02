@@ -403,6 +403,15 @@ def _build_protenix_evaluator(
     )
     if protenix_conf is None:
         raise ValueError("Protenix configuration is missing.")
+    execution = protenix_conf.get("execution", "legacy")
+    if execution not in ("legacy", "daemon"):
+        raise ValueError("Protenix execution must be legacy or daemon")
+    source_dir = protenix_conf.get("source_dir", None)
+    startup_timeout = float(protenix_conf.get("daemon_startup_timeout", 600))
+    daemon_timeout = protenix_conf.get("daemon_timeout", None)
+    for option in ("execution", "source_dir", "daemon_startup_timeout", "daemon_timeout"):
+        if option in protenix_conf:
+            del protenix_conf[option]
     raw_use_constraints = protenix_conf.get("use_constraints", True)
     if not isinstance(raw_use_constraints, bool):
         raise ValueError(
@@ -499,7 +508,14 @@ def _build_protenix_evaluator(
             )
 
     protenix_conf.dump_dir = raw_model_results_dir / "protenix"
-    model_runner = ProtenixRunner(protenix_conf)
+    if execution == "daemon":
+        from astrolabe.evaluators.protenix_resident import ProtenixResident
+        if source_dir is None:
+            source_dir = pathlib.Path(__file__).resolve().parents[2] / "vendor" / "protenix"
+        model_runner = ProtenixResident(protenix_conf, source_dir=source_dir,
+                                        startup_timeout=startup_timeout, timeout=daemon_timeout)
+    else:
+        model_runner = ProtenixRunner(protenix_conf)
     evaluator = ProtenixEvaluator(model_runner, use_constraints=use_constraints)
     evaluator.requested_model_name = requested_model_name
     effective = protenix_conf.get("model_name", None)
