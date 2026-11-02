@@ -252,6 +252,23 @@ def test_unknown_implicit_loss_is_rejected(monkeypatch):
         validate_parallel(cfg)
 
 
+def test_known_loss_name_cannot_substitute_unknown_implementation(monkeypatch):
+    import pytest
+    from omegaconf import OmegaConf
+    from astrolabe.losses.base import loss_registry
+    from astrolabe.runtime.session import validate_parallel
+    def impostor(_):
+        return 1
+    impostor.__name__ = 'single_chain_rog'
+    monkeypatch.setitem(loss_registry._loss_functions, 'single_chain_rog', impostor)
+    cfg = OmegaConf.create({'stages': {'default': {'mutators': ['m'], 'evaluator': 'e'}},
+                            'loss': {'loss_terms': {'rg': {'_type': 'single_chain_rog'}}},
+                            'mutator': {'mutator_terms': {'m': {'_type': 'MCMC'}}},
+                            'evaluator': {'evaluator_terms': {'e': {'_type': 'dummy'}}}})
+    with pytest.raises(ValueError, match='cannot certify loss implementation'):
+        validate_parallel(cfg)
+
+
 def test_broker_serializes_distinct_workers_on_same_device(monkeypatch, tmp_path):
     import json
     from concurrent.futures import ThreadPoolExecutor
