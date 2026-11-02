@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
@@ -83,3 +84,8 @@ class Input:
     @property
     def ligands(self) -> list[Ligand]:
         return [c for c in self.chains if isinstance(c, Ligand)]
+
+
+def snapshot_folding_inputs(inputs: Mapping[str, Input]) -> dict[str, Input]:
+    """Isolate outgoing inputs while retaining their backend-compatible types."""
+    return deepcopy(dict(inputs))

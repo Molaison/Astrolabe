@@ -582,6 +582,11 @@ class StandardScores:
     chain_pair_scores: dict[str, dict[str, list[np.ndarray]]] | None = None
     complex_poses: dict[str, typing.Any] | None = None
     score_contributions: typing.Any | None = None
+    # Metadata is excluded from dataclass fields so existing score merges do not
+    # accidentally pair candidates or change selection. See merge_evidence_metadata.
+    candidate_scores = None  # list[StandardScores] | None
+    post_eval_hook_reports = None  # dict[str, Any] | None
+    derived_structures = None  # dict[str, list[DerivedStructure]] | None
 
     @staticmethod
     def _wrap_dict_values_in_list(
@@ -793,11 +798,25 @@ class StandardScores:
             else:
                 filtered_scores[key] = value
 
-        return StandardScores(**filtered_scores)
+        result = StandardScores(**filtered_scores)
+        if self.candidate_scores is not None:
+            result.candidate_scores = [
+                candidate.filter_by_oligomer(filtered_names)
+                for candidate in self.candidate_scores
+            ]
+        for key in ("post_eval_hook_reports", "derived_structures"):
+            value = getattr(self, key)
+            if value is not None:
+                setattr(result, key, {k: v for k, v in value.items() if k in allowed_oligos})
+        return result
 
     def clone(self) -> StandardScores:
         """Create a new StandardScores instance that shares underlying data."""
-        return dataclasses.replace(self)
+        result = dataclasses.replace(self)
+        result.candidate_scores = self.candidate_scores
+        result.post_eval_hook_reports = self.post_eval_hook_reports
+        result.derived_structures = self.derived_structures
+        return result
 
 
 # noinspection PyUnresolvedReferences
