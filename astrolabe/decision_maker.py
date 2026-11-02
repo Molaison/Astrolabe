@@ -539,6 +539,25 @@ class Decisions:
             span.finish(**finish_fields)
             return outcome
 
+    def _commit_mutation_decision(
+        self, *, step: int, accepted: bool, early_stop: bool,
+        acceptance_log: str | None = None, log_before_last: bool = False,
+    ):
+        """Commit a mutation decision; stage transitions have their own boundary."""
+        if accepted:
+            self.accepted_steps.append(step)
+            if acceptance_log is not None and log_before_last:
+                logging.info(acceptance_log)
+            self.last_accepted = step
+            if acceptance_log is not None and not log_before_last:
+                logging.info(acceptance_log)
+            global_config.segment_manager.apply_mutations()
+        else:
+            global_config.segment_manager.clear_mutations()
+        self._record_score_row(step=step, accepted=accepted)
+        self.dump_results(global_config.out_dir, incremental=True)
+        return early_stop, self.evaluation_results[self.last_accepted], accepted
+
     def _make_mutation_decision(
         self,
         step: int,
@@ -623,68 +642,51 @@ class Decisions:
                 f"hotspot_threshold={hotspot_threshold_text} "
                 f"hotspot_passed={getattr(reference_gate, 'hotspot_passed', None)}"
             )
-            global_config.segment_manager.clear_mutations()
-            self._record_score_row(step=step, accepted=False)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], False
+            return self._commit_mutation_decision(
+                step=step, accepted=False, early_stop=early_stop
+            )
 
         if not hard_gate_passed:
             logging.info(
                 f"step={step} decision=reject reason=acceptance_gate "
                 f"previous={last_score_text} current={current_score_text}"
             )
-            global_config.segment_manager.clear_mutations()
-            self._record_score_row(step=step, accepted=False)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], False
+            return self._commit_mutation_decision(
+                step=step, accepted=False, early_stop=early_stop
+            )
 
         if gate_active:
             passed = bool(getattr(consistency, "passed", False))
             score_text = format_metric_value(getattr(consistency, "score", None))
             threshold_text = format_metric_value(getattr(consistency, "threshold", None))
             if passed:
-                self.accepted_steps.append(step)
-                self.last_accepted = step
-                logging.info(
-                    f"step={step} decision=accept reason=transition_consistency_gate "
-                    f"previous={last_score_text} current={current_score_text} "
-                    f"consistency={score_text} threshold={threshold_text}"
+                return self._commit_mutation_decision(
+                    step=step, accepted=True, early_stop=early_stop,
+                    acceptance_log=(
+                        f"step={step} decision=accept reason=transition_consistency_gate "
+                        f"previous={last_score_text} current={current_score_text} "
+                        f"consistency={score_text} threshold={threshold_text}"
+                    ),
                 )
-                global_config.segment_manager.apply_mutations()
-                self._record_score_row(step=step, accepted=True)
-                self.dump_results(global_config.out_dir, incremental=True)
-                return early_stop, self.evaluation_results[self.last_accepted], True
 
             logging.info(
                 f"step={step} decision=reject reason=transition_consistency_gate "
                 f"previous={last_score_text} current={current_score_text} "
                 f"consistency={score_text} threshold={threshold_text}"
             )
-            global_config.segment_manager.clear_mutations()
-            self._record_score_row(step=step, accepted=False)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], False
+            return self._commit_mutation_decision(
+                step=step, accepted=False, early_stop=early_stop
+            )
 
-        if not hard_gate_passed:
-            logging.info(
-                f"step={step} decision=reject reason=acceptance_gate "
-                f"previous={last_score_text} current={current_score_text}"
-            )
-            global_config.segment_manager.clear_mutations()
-            self._record_score_row(step=step, accepted=False)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], False
         if force_accept:
-            self.accepted_steps.append(step)
-            logging.info(
-                f"step={step} decision=accept reason=stage_change "
-                f"previous={last_score_text} current={current_score_text}"
+            return self._commit_mutation_decision(
+                step=step, accepted=True, early_stop=early_stop,
+                acceptance_log=(
+                    f"step={step} decision=accept reason=stage_change "
+                    f"previous={last_score_text} current={current_score_text}"
+                ),
+                log_before_last=True,
             )
-            self.last_accepted = step
-            global_config.segment_manager.apply_mutations()
-            self._record_score_row(step=step, accepted=True)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], True
         delta = self.scores[self.last_accepted] - score
 
         ACCEPTED = True
@@ -724,19 +726,8 @@ class Decisions:
                     f"previous={last_score_text} current={current_score_text}"
                 )
                 ACCEPTED = False
-        if ACCEPTED:
-            self.accepted_steps.append(step)
-            self.last_accepted = step
-            global_config.segment_manager.apply_mutations()
-        else:
-            global_config.segment_manager.clear_mutations()
-
-        self._record_score_row(step=step, accepted=ACCEPTED)
-        self.dump_results(global_config.out_dir, incremental=True)
-        return (
-            early_stop,
-            self.evaluation_results[self.last_accepted],
-            ACCEPTED,
+        return self._commit_mutation_decision(
+            step=step, accepted=ACCEPTED, early_stop=early_stop
         )
 
     def recompute_last_score(self, loss_computer, runtime_config, eval_result=None):

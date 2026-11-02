@@ -1,11 +1,11 @@
 # astrolabe/core/global_config.py
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+import sys
+from types import ModuleType
 
 DEFAULT_MUTATION_FRACTION = 0.1
 
 
-# Track initialization state for each constant and variable
-_initialized_constants: dict[str, bool] = {}
 constants_names = [
     "num_tokens",
     "PARSED_FILE",
@@ -61,24 +61,64 @@ variable_names = [
     "pore_bottleneck_activation_index",
 ]
 
-# Initialize all constants and variables to None
-for name in constants_names:
-    globals()[f"_{name}"] = None
-    _initialized_constants[name] = False
+class RuntimeState:
+    """Storage for one run. Legacy module access points to one current instance."""
 
-for name in variable_names:
-    globals()[f"_{name}"] = None
+    def __init__(self):
+        self.constants = {name: None for name in constants_names}
+        self.initialized_constants = {name: False for name in constants_names}
+        self.variables = {name: None for name in variable_names}
+
+    def init_const(self, name, value):
+        if name not in constants_names:
+            raise ValueError(f"'{name}' is not a recognized constant name")
+        if self.initialized_constants[name]:
+            if self.constants[name] == value:
+                return
+            raise RuntimeError(
+                f"Constant '{name}' is already initialized. Call `global_config.reset()` before re-initializing constants."
+            )
+        self.constants[name] = value
+        self.initialized_constants[name] = True
+
+    def update_const(self, name, value):
+        if name not in constants_names:
+            raise ValueError(f"'{name}' is not a recognized constant name")
+        if not self.initialized_constants[name]:
+            raise RuntimeError(f"Constant '{name}' has not been initialized yet")
+        self.constants[name] = value
+
+    def get_const(self, name):
+        if name not in constants_names:
+            raise ValueError(f"'{name}' is not a recognized constant name")
+        if not self.initialized_constants[name]:
+            raise RuntimeError(f"Constant '{name}' has not been initialized yet")
+        return self.constants[name]
+
+    def set_variable(self, name, value):
+        if name not in variable_names:
+            raise ValueError(f"'{name}' is not a recognized variable name")
+        self.variables[name] = value
+
+    def get_variable(self, name):
+        if name not in variable_names:
+            raise ValueError(f"'{name}' is not a recognized variable name")
+        return self.variables[name]
+
+
+_current_state = RuntimeState()
 
 
 @dataclass(frozen=True)
 class RuntimeContext:
-    """Explicit runtime-state access object over global_config storage."""
+    """Explicit access to a particular run store, including across reset()."""
 
+    state: RuntimeState = field(default_factory=lambda: _current_state)
     _MISSING = object()
 
     def get_const(self, name: str, default=_MISSING):
         try:
-            return get_const(name)
+            return self.state.get_const(name)
         except RuntimeError:
             if default is not self._MISSING:
                 return default
@@ -106,124 +146,76 @@ class RuntimeContext:
 
     @property
     def step(self):
-        value = get_variable("step")
+        value = self.state.get_variable("step")
         return 0 if value is None else value
 
     def set_variable(self, name: str, value) -> None:
-        set_variable(name, value)
+        self.state.set_variable(name, value)
 
     def get_variable(self, name: str):
-        return get_variable(name)
+        return self.state.get_variable(name)
 
 
-def build_runtime_context() -> RuntimeContext:
-    return RuntimeContext()
+def build_runtime_context(state: RuntimeState | None = None) -> RuntimeContext:
+    return RuntimeContext(_current_state if state is None else state)
 
 
 def init_const(name, value):
-    """Initialize a constant with the given value.
-
-    Args:
-        name: The name of the constant to initialize
-        value: The value to assign to the constant
-
-    Raises:
-        ValueError: If the constant name is not in the predefined list
-    """
-    if name not in constants_names:
-        raise ValueError(f"'{name}' is not a recognized constant name")
-
-    if _initialized_constants[name]:
-        current = globals()[f"_{name}"]
-        if current == value:
-            return
-        raise RuntimeError(
-            f"Constant '{name}' is already initialized. Call `global_config.reset()` before re-initializing constants."
-        )
-    globals()[f"_{name}"] = value
-    _initialized_constants[name] = True
+    return _current_state.init_const(name, value)
 
 
 def update_const(name, value):
-    """Update an already initialized constant with an explicit runtime value."""
-    if name not in constants_names:
-        raise ValueError(f"'{name}' is not a recognized constant name")
-    if not _initialized_constants[name]:
-        raise RuntimeError(f"Constant '{name}' has not been initialized yet")
-    globals()[f"_{name}"] = value
+    return _current_state.update_const(name, value)
 
 
 def set_variable(name, value):
-    """Set a variable value.
-
-    Args:
-        name: The name of the variable to set
-        value: The value to assign to the variable
-
-    Raises:
-        ValueError: If the variable name is not in the predefined list
-    """
-    if name not in variable_names:
-        raise ValueError(f"'{name}' is not a recognized variable name")
-
-    globals()[f"_{name}"] = value
+    return _current_state.set_variable(name, value)
 
 
 def get_const(name):
-    """Get the value of a constant.
-
-    Args:
-        name: The name of the constant to retrieve
-
-    Returns:
-        The value of the constant
-
-    Raises:
-        ValueError: If the constant name is not in the predefined list
-        RuntimeError: If the constant has not been initialized yet
-    """
-    if name not in constants_names:
-        raise ValueError(f"'{name}' is not a recognized constant name")
-
-    if not _initialized_constants[name]:
-        raise RuntimeError(f"Constant '{name}' has not been initialized yet")
-
-    return globals()[f"_{name}"]
+    return _current_state.get_const(name)
 
 
 def get_variable(name):
-    """Get the value of a variable.
-
-    Args:
-        name: The name of the variable to retrieve
-
-    Returns:
-        The value of the variable
-
-    Raises:
-        ValueError: If the variable name is not in the predefined list
-    """
-    if name not in variable_names:
-        raise ValueError(f"'{name}' is not a recognized variable name")
-
-    return globals()[f"_{name}"]
+    return _current_state.get_variable(name)
 
 
 def __getattr__(name):
-    """Custom attribute access to make constants and variables available as module attributes."""
     if name in constants_names:
         return get_const(name)
     if name in variable_names:
         return get_variable(name)
+    # Compatibility with historical test monkeypatches, not a second store.
+    if name == "_initialized_constants":
+        return _current_state.initialized_constants
+    if name.startswith("_"):
+        key = name[1:]
+        if key in constants_names:
+            return _current_state.constants[key]
+        if key in variable_names:
+            return _current_state.variables[key]
     raise AttributeError(f"module 'global_config' has no attribute '{name}'")
 
 
 def reset():
-    """Reset all constants and variables to their uninitialized state."""
-    for name in constants_names:
-        globals().pop(name, None)
-        globals()[f"_{name}"] = None
-        _initialized_constants[name] = False
-    for name in variable_names:
-        globals().pop(name, None)
-        globals()[f"_{name}"] = None
+    """Start a new legacy run; previously created contexts keep their store."""
+    global _current_state
+    _current_state = RuntimeState()
+
+
+class _ConfigModule(ModuleType):
+    """Forward old private-field monkeypatches into the current run store."""
+
+    def __setattr__(self, name, value):
+        key = name[1:] if name.startswith("_") else None
+        if key in constants_names:
+            _current_state.constants[key] = value
+        elif key in variable_names:
+            _current_state.variables[key] = value
+        elif name in constants_names or name in variable_names:
+            raise AttributeError("Use init_const/update_const or set_variable")
+        else:
+            super().__setattr__(name, value)
+
+
+sys.modules[__name__].__class__ = _ConfigModule

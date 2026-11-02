@@ -84,3 +84,38 @@ def test_failed_decision_does_not_record_completed_assessment(tmp_path):
         decisions.make_mutation_decision(1, object(), Broken(), {})
     assert len(decisions.assessments) == 1
     global_config.reset()
+
+
+@pytest.mark.parametrize("failure", ["apply", "clear", "dump"])
+def test_commit_failure_keeps_existing_mutation_boundary(tmp_path, monkeypatch, failure):
+    global_config.reset()
+    events = []
+
+    def action(name):
+        events.append(name)
+        if name == failure:
+            raise RuntimeError(name)
+
+    for key, value in {
+        "stage_manager": SimpleNamespace(current_stage="one"),
+        "segment_manager": SimpleNamespace(
+            apply_mutations=lambda: action("apply"),
+            clear_mutations=lambda: action("clear"),
+        ),
+        "out_dir": tmp_path,
+        "protomers": {},
+        "use_metropolis_acceptance": False,
+    }.items():
+        global_config.init_const(key, value)
+    decisions = Decisions({0: {}}, {0: 1}, {0: "initial"}, {0: {}}, [0], 0, {0: "one"})
+    if failure == "dump":
+        monkeypatch.setattr(decisions, "dump_results", lambda *args, **kwargs: action("dump"))
+    score = 0 if failure == "clear" else 2
+    with pytest.raises(RuntimeError, match=failure):
+        decisions.make_mutation_decision(1, "candidate", Loss(score), {})
+    assert decisions.last_accepted == (0 if failure == "clear" else 1)
+    assert decisions.accepted_steps == ([0] if failure == "clear" else [0, 1])
+    assert events == (["apply", "dump"] if failure == "dump" else [failure])
+    assert len(decisions.row_history) == (1 if failure == "dump" else 0)
+    assert len(decisions.assessments) == 1
+    global_config.reset()
