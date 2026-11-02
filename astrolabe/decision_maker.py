@@ -36,6 +36,32 @@ from astrolabe.utils.logging_utils import (
 )
 
 
+def _copy_evidence(value):
+    """Copy score containers without copying backend/model objects."""
+    if isinstance(value, dict):
+        return {key: _copy_evidence(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_copy_evidence(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_copy_evidence(item) for item in value)
+    return value
+
+
+@dataclass(frozen=True)
+class DecisionAssessment:
+    assessment_id: int
+    kind: str
+    step: int
+    attempt_id: int | None
+    accepted_revision: int
+    accepted: bool
+    stage: str
+    weighted_score: float | None
+    score_details: dict
+    sequences: dict
+    evaluation_result: Any
+
+
 @dataclass
 class Decisions:
     """Class for managing protein mutation decisions and tracking mutation history.
@@ -57,6 +83,9 @@ class Decisions:
     last_accepted: int
     stage_history: Dict[int, str]
     row_history: List[Dict[str, object]] = field(default_factory=list)
+    assessments: List[DecisionAssessment] = field(default_factory=list, init=False)
+    _attempt_count: int = field(default=0, init=False, repr=False)
+    _accepted_attempt: int | None = field(default=None, init=False, repr=False)
     NOISE_COMPONENT_KEYS = {
         "iteration",
         "step",
@@ -69,6 +98,32 @@ class Decisions:
     SCORE_COMPONENT_MAX_INFO = 10
     SCORE_COMPONENT_MIN_INFO = 4
     SCORE_COMPONENT_MIN_ABS_DELTA = 1e-6
+
+    def __post_init__(self):
+        self._record_assessment("initial", self.last_accepted, True)
+
+    def _record_assessment(self, kind: str, step: int, accepted: bool) -> None:
+        previous = self.assessments[-1] if self.assessments else None
+        revision = previous.accepted_revision if previous else 0
+        if kind == "mutation":
+            self._attempt_count += 1
+            attempt_id = self._attempt_count
+            if accepted:
+                revision += 1
+                self._accepted_attempt = attempt_id
+        elif kind == "stage_reassessment":
+            attempt_id = self._accepted_attempt
+        else:
+            attempt_id = None
+        self.assessments.append(DecisionAssessment(
+            assessment_id=len(self.assessments), kind=kind, step=step,
+            attempt_id=attempt_id, accepted_revision=revision, accepted=accepted,
+            stage=self.stage_history.get(step, ""),
+            weighted_score=self.scores.get(step),
+            score_details=_copy_evidence(self.scores_detail.get(step, {}) or {}),
+            sequences=dict(self.sequences.get(step, {}) or {}),
+            evaluation_result=self.evaluation_results.get(step),
+        ))
 
     @staticmethod
     def _merge_default_score_details(
@@ -466,6 +521,7 @@ class Decisions:
                 stage_entry=stage_entry,
             )
             early_stop, _accepted_eval_result, accepted = outcome
+            self._record_assessment("mutation", step, accepted)
             finish_fields = {
                 "result": "accept" if accepted else "reject",
                 "accepted": accepted,
@@ -714,6 +770,7 @@ class Decisions:
                 note="re-evaluate due to stage change",
             )
         self.dump_results(global_config.out_dir, incremental=False)
+        self._record_assessment("stage_reassessment", step, True)
 
     def dump_results(self, out_dir: Path, incremental: bool = True) -> None:
         """Saves results to a CSV file.
