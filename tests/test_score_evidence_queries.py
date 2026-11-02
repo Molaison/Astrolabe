@@ -11,7 +11,7 @@ def test_directed_pair_selector_and_shared_chain_mapping():
     # Direction matters: position -> target. Two physical copies map to A:0.
     values = np.array([[1., 3.], [7., 9.], [4., 6.]])
     record = ScoreRecord(ScoreSpec('pae', 'evaluator.af3', ('position', 'target')), 's1', values,
-                         (('A0', 'B0', 'A1'), ('X0', 'X1')))
+                         (('A0', 'B0', 'A1'), ('X0', 'X1')), input_snapshot='s1', subject='predicted_structure', relation='measured_on')
     values[:] = 99
     cfg = {'query': {'name': 'pae', 'source': 'evaluator.af3', 'axes': ['position'],
                      'select': {'target': ['X1']}},
@@ -29,13 +29,13 @@ def test_directed_pair_selector_and_shared_chain_mapping():
 
 def test_stale_duplicate_invalid_and_weighted_context():
     spec = ScoreSpec('x', 'mutator.m', ('context', 'residue'))
-    rec = ScoreRecord(spec, 'old', [[1, 2], [5, 6]], (('c1', 'c2'), (0, 1)))
+    rec = ScoreRecord(spec, 'old', [[1, 2], [5, 6]], (('c1', 'c2'), (0, 1)), input_snapshot='old', subject='predicted_structure', relation='measured_on')
     q = ScoreQuery('x', 'mutator.m', axes=('residue',), weights={'context': {'c1': 3, 'c2': 1}})
     np.testing.assert_allclose(query_score([rec], q, snapshots={'last_accepted':'old'}), [2, 3])
     with pytest.raises(ValueError): query_score([rec], q, snapshots={'last_accepted':'new'})
     with pytest.raises(ValueError): query_score([rec, rec], q, snapshots={'last_accepted':'old'})
     with pytest.raises(ValueError): query_score([rec], ScoreQuery('x','mutator.m',axes=('residue',)), snapshots={'last_accepted':'old'})
-    bad = ScoreRecord(spec, 'old', [[1, np.nan], [2, 3]], (('c1', 'c2'), (0, 1)))
+    bad = ScoreRecord(spec, 'old', [[1, np.nan], [2, 3]], (('c1', 'c2'), (0, 1)), input_snapshot='old', subject='predicted_structure', relation='measured_on')
     with pytest.raises(ValueError): query_score([bad], q, snapshots={'last_accepted':'old'})
     with pytest.raises(ValueError): query_score([rec], ScoreQuery('x','mutator.m',snapshot='current_proposal'), generating_selector=True)
 
@@ -47,8 +47,8 @@ def test_real_loss_engine_multi_producer_catalog():
     engine.setup('a + b', None, None, validate_config=False)
     engine._extract_scores_with_registry = lambda _: ({}, {})
     engine._default_expression_symbols = lambda: {}
-    scores = SimpleNamespace(score_contributions=[ScoreContribution(source='evaluator.a',metric_name='q',value=2)])
-    runtime = {'score_contributions':[ScoreContribution(source='predocker.b',metric_name='q',value=3,flatten_as='legacy_b')],
+    scores = SimpleNamespace(score_contributions=[ScoreContribution(source='evaluator.a',metric_name='q',value=2,measurement_snapshot='s1',input_snapshot='s1',subject='predicted_structure',relation='measured_on')])
+    runtime = {'score_contributions':[ScoreContribution(source='predocker.b',metric_name='q',value=3,flatten_as='legacy_b',measurement_snapshot='s1',input_snapshot='s1',subject='predicted_structure',relation='measured_on')],
                'score_capture_snapshot':'s1', 'score_snapshots':{'current_proposal':'s1'}}
     score, details = engine.compute_loss(scores, runtime)
     assert score == 5 and details['a'] == 2 and details['b'] == 3
@@ -66,8 +66,8 @@ score_catalog:
   - {name: energy, source: predocker.vina}
 score_queries:
   model_value: {name: iptm, source: evaluator, entity: AB, snapshot: current_proposal}
-  mutation_value: {name: confidence, source: mutator.mpnn, snapshot: current_proposal}
-  docking_value: {name: energy, source: predocker.vina, snapshot: current_proposal}
+  mutation_value: {name: confidence, source: mutator.mpnn, snapshot: last_accepted, subject: proposal, relation: proposal_on_reference}
+  docking_value: {name: energy, source: predocker.vina, snapshot: last_accepted, subject: reference_structure, relation: measured_on}
 score_selector_queries:
   directed:
     query:
@@ -87,16 +87,18 @@ score_selector_queries:
     scores = StandardScores(names=['AB'], plddt={'AB':[0.8]}, iptm={'AB':[0.7]},
                             pae={'AB':[np.array([[0, 2, 3], [2, 0, 7], [9, 9, 0]])]},
                             complex_paths={'AB':Path('ab.cif')})
-    contributions = [ScoreContribution('mutator.mpnn','confidence',0.2),
-                     ScoreContribution('predocker.vina','energy',0.3)]
+    reference = StandardScores(names=['AB'], plddt={'AB':[0.8]}, complex_paths={'AB':Path('reference.cif')})
+    a, b = reference.assessment_id, scores.assessment_id
+    contributions = [ScoreContribution('mutator.mpnn','confidence',0.2, measurement_snapshot=a, input_snapshot=a, subject='proposal', relation='proposal_on_reference'),
+                     ScoreContribution('predocker.vina','energy',0.3, measurement_snapshot=a, input_snapshot=a, subject='reference_structure', relation='measured_on')]
     engine = LossEngine(config, validate_config=False)
     engine.setup('model_value + mutation_value + docking_value', None, None, validate_config=False)
-    current = {'score_contributions': contributions, 'score_capture_snapshot':'proposal-1',
-               'score_snapshots': {'current_proposal':'proposal-1'}}
+    current = {'score_contributions': contributions, 'score_capture_snapshot':b,
+               'score_snapshots': {'current_proposal':b, 'last_accepted':a}}
     value, _ = engine.compute_loss(scores, current)
     assert value == pytest.approx(1.2)
     accepted = {'score_selector_queries': config.score_selector_queries, 'score_catalog':config.score_catalog,
-                'score_capture_snapshot':'accepted-0', 'score_snapshots':{'last_accepted':'accepted-0'}}
+                'score_capture_snapshot':b, 'score_snapshots':{'last_accepted':b}}
     masks = construct_position_selector('score("directed")', scores, protomers, runtime_config=accepted)
     assert masks['A'].tolist() == [True, False]
     assert masks['B'].tolist() == [True]
@@ -110,13 +112,14 @@ score_selector_queries:
 def test_yaml_selector_consumes_runtime_producer_evidence(source):
     from omegaconf import OmegaConf
     scores = SimpleNamespace(names=[], score_contributions=[])
+    subject, relation = ('proposal','proposal_on_reference') if source.startswith('mutator') else ('reference_structure','measured_on')
     cfg = OmegaConf.create({'score_selector_queries': {'p': {
-        'query': {'name':'per_position','source':source,'axes':['position']},
+        'query': {'name':'per_position','source':source,'axes':['position'],'subject':subject,'relation':relation},
         'mapping': {'p0':['A',0], 'p1':['A',1]}, 'threshold':0.5}},
         'score_catalog':[{'name':'per_position','source':source,
                           'axes':['position'], 'coordinates':[['p0','p1']]}]})
     runtime = {'score_selector_queries':cfg.score_selector_queries, 'score_catalog':cfg.score_catalog,
-               'score_contributions':[ScoreContribution(source,'per_position',[0.3,0.8])],
+               'score_contributions':[ScoreContribution(source,'per_position',[0.3,0.8],measurement_snapshot='s0',input_snapshot='s0',subject=subject,relation=relation)],
                'score_capture_snapshot':'s0', 'score_snapshots':{'last_accepted':'s0'}}
     masks = construct_position_selector('score("p")', scores, {'A':SimpleNamespace(length=2)}, runtime_config=runtime)
     assert masks['A'].tolist() == [False, True]
@@ -130,3 +133,11 @@ def test_cross_chain_reduction_needs_explicit_physical_weights():
         query_score([record], query, snapshots={'last_accepted':'s'})
     weighted = ScoreQuery('pae','evaluator', weights={'position':{'AB:A:1:A':3, 'AB:B:1:B':1}})
     assert query_score([record], weighted, snapshots={'last_accepted':'s'}) == 3
+
+
+def test_non_evaluator_record_requires_explicit_subject_identity():
+    with pytest.raises(ValueError, match='explicit input_snapshot'):
+        ScoreRecord(ScoreSpec('probability','mutator.mpnn'), 's1', .5)
+    with pytest.raises(ValueError, match='actual input assessment'):
+        ScoreRecord(ScoreSpec('dock','predocker.vina'), 's2', .5,
+                    input_snapshot='s1', subject='predicted_structure', relation='measured_on')

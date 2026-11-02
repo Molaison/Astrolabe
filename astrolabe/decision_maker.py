@@ -348,10 +348,15 @@ class Decisions:
         ))
         if not records:
             return
-        previous = self.score_records_by_assessment.get(str(identity))
-        if previous is not None and previous != records:
-            raise ValueError("runtime score evidence changed for an existing assessment")
-        self.score_records_by_assessment[str(identity)] = records
+        for record in records:
+            previous = list(self.score_records_by_assessment.get(record.snapshot, ()))
+            matching = [item for item in previous if item.spec == record.spec and item.subject == record.subject and item.relation == record.relation and item.input_snapshot == record.input_snapshot]
+            if matching:
+                if len(matching) != 1 or matching[0] != record:
+                    raise ValueError("runtime score evidence changed for an existing measurement")
+            else:
+                previous.append(record)
+                self.score_records_by_assessment[record.snapshot] = tuple(previous)
 
     @classmethod
     def create(

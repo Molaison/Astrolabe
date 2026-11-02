@@ -549,6 +549,11 @@ class LossEngine:
         records = list(runtime_config.get("score_records", []) or [])
         if assessments is None:
             assessments = (eval_result,)
+        live_runtime_records = []
+        if self.score_catalog:
+            live_runtime_records = records_from_contributions(
+                score_contributions_from_runtime_config(runtime_config), self.score_catalog, snapshot
+            )
         for assessment in assessments:
             records.extend(getattr(assessment, "score_records", None) or [])
             assessment_snapshot = (getattr(assessment, "assessment_id", None)
@@ -560,18 +565,16 @@ class LossEngine:
                     raise ValueError("score_capture_snapshot is required for catalog capture")
                 contributions = list(getattr(assessment, "score_contributions", None) or [])
                 records.extend(records_from_contributions(contributions, self.score_catalog, assessment_snapshot))
-                current_records = []
                 if assessment is eval_result:
-                    current_records = records_from_contributions(
-                        score_contributions_from_runtime_config(runtime_config), self.score_catalog, assessment_snapshot
-                    )
-                    records.extend(current_records)
+                    records.extend(live_runtime_records)
                 owned = (runtime_config.get("_score_owned_records") or {}).get(str(assessment_snapshot), ())
                 for record in owned:
-                    same = [candidate for candidate in current_records if candidate.spec == record.spec]
+                    same = [candidate for candidate in live_runtime_records
+                            if (candidate.spec, candidate.snapshot, candidate.subject, candidate.relation, candidate.input_snapshot)
+                            == (record.spec, record.snapshot, record.subject, record.relation, record.input_snapshot)]
                     if same:
                         if len(same) != 1 or same[0] != record:
-                            raise ValueError("runtime score evidence changed for an existing assessment")
+                            raise ValueError("runtime score evidence changed for an existing measurement")
                     else:
                         records.append(record)
         results = {}

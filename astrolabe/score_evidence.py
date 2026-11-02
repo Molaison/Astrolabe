@@ -30,17 +30,33 @@ class ScoreRecord:
     execution: str
     validity: str
     disposition: str
+    input_snapshot: str
+    subject: str
+    relation: str
 
-    def __init__(self, spec, snapshot, value, coordinates=(), *, execution='completed', validity='valid', disposition='undecided'):
+    def __init__(self, spec, snapshot, value, coordinates=(), *, execution='completed', validity='valid', disposition='undecided', input_snapshot=None, subject=None, relation=None):
         arr = np.asarray(value, dtype=np.float64)
         coords = tuple(tuple(x) for x in coordinates)
         if not snapshot or arr.ndim != len(spec.axes) or len(coords) != arr.ndim:
             raise ValueError('snapshot and coordinates matching the score axes are required')
         if any(len(c) != n or len(set(c)) != n for c, n in zip(coords, arr.shape)):
             raise ValueError('coordinate labels must be unique and match their axis')
+        if spec.source == 'evaluator':
+            subject = subject or 'predicted_structure'
+            relation = relation or 'measured_on'
+            input_snapshot = input_snapshot or snapshot
+        elif not all((input_snapshot, subject, relation)):
+            raise ValueError('non-evaluator score records require explicit input_snapshot, subject and relation')
+        if subject not in {'predicted_structure', 'reference_structure', 'proposal'} or relation not in {'measured_on', 'proposal_on_reference'}:
+            raise ValueError('unknown score subject or relation')
+        if (subject == 'proposal') != (relation == 'proposal_on_reference'):
+            raise ValueError('incompatible score subject and relation')
+        input_snapshot = str(input_snapshot or snapshot)
+        if relation == 'measured_on' and input_snapshot != str(snapshot):
+            raise ValueError('structure measurement must identify its actual input assessment')
         if execution not in {'completed', 'failed', 'pending'} or validity not in {'valid', 'invalid', 'missing'} or disposition not in {'undecided', 'accepted', 'rejected'}:
             raise ValueError('invalid evidence status')
-        for name, val in [('spec', spec), ('snapshot', str(snapshot)), ('coordinates', coords), ('_data', arr.tobytes()), ('shape', arr.shape), ('execution', execution), ('validity', validity), ('disposition', disposition)]:
+        for name, val in [('spec', spec), ('snapshot', str(snapshot)), ('coordinates', coords), ('_data', arr.tobytes()), ('shape', arr.shape), ('execution', execution), ('validity', validity), ('disposition', disposition), ('input_snapshot', input_snapshot), ('subject', subject), ('relation', relation)]:
             object.__setattr__(self, name, val)
 
     @property
@@ -58,6 +74,8 @@ class ScoreQuery:
     select: Mapping | None = None
     weights: Mapping | None = None
     entity: str | None = None
+    subject: str = 'predicted_structure'
+    relation: str = 'measured_on'
 
     def __post_init__(self):
         object.__setattr__(self, 'axes', tuple(self.axes))
@@ -76,7 +94,7 @@ def query_score(records, query, *, snapshots=None, generating_selector=False):
     if generating_selector and (query.snapshot in {'current_proposal', 'proposal'} or
                                 target != permitted):
         raise ValueError('a selector must use the last accepted snapshot')
-    matches = [r for r in records if r.spec.name == query.name and r.spec.source == query.source and r.snapshot == target and (query.entity is None or r.spec.entity == query.entity)]
+    matches = [r for r in records if r.spec.name == query.name and r.spec.source == query.source and r.snapshot == target and r.subject == query.subject and r.relation == query.relation and (query.entity is None or r.spec.entity == query.entity)]
     if len(matches) != 1:
         raise ValueError(f'expected one current score record, found {len(matches)}')
     rec = matches[0]
@@ -165,7 +183,11 @@ def records_from_contributions(contributions, catalog, snapshot):
         key = (contribution.source, contribution.metric_name, contribution.entity)
         if contribution.enabled and key in specs:
             spec, coordinates = specs[key]
-            records.append(ScoreRecord(spec, snapshot, contribution.value, coordinates))
+            if not all((contribution.measurement_snapshot, contribution.input_snapshot, contribution.subject, contribution.relation)):
+                raise ValueError(f'strict score contribution {key!r} requires measurement_snapshot, input_snapshot, subject and relation')
+            records.append(ScoreRecord(spec, contribution.measurement_snapshot, contribution.value, coordinates,
+                                       input_snapshot=contribution.input_snapshot, subject=contribution.subject,
+                                       relation=contribution.relation))
     return records
 
 

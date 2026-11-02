@@ -34,7 +34,7 @@ def score_position_selector(evaluation_result, protomers, name, *, runtime_confi
     snapshots = runtime_config.get('score_snapshots') or getattr(evaluation_result, 'score_snapshots', None) or {}
     values = query_score(records, query, snapshots=snapshots, generating_selector=True)
     target = snapshots.get(query.snapshot, query.snapshot)
-    rec = next(r for r in records if r.spec.name == query.name and r.spec.source == query.source and r.snapshot == target and (query.entity is None or r.spec.entity == query.entity))
+    rec = next(r for r in records if r.spec.name == query.name and r.spec.source == query.source and r.snapshot == target and r.subject == query.subject and r.relation == query.relation and (query.entity is None or r.spec.entity == query.entity))
     axis = rec.spec.axes.index(query.axes[0])
     labels = tuple((query.select or {}).get(query.axes[0], rec.coordinates[axis]))
     mapping = config['mapping']

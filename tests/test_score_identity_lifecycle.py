@@ -171,8 +171,8 @@ def test_runtime_contribution_is_frozen_with_accepted_assessment(tmp_path):
     engine.score_catalog = [{'name':'energy', 'source':'predocker.vina',
                              'axes':['position'], 'coordinates':[['p0','p1']]}]
     value = [.2, .8]
-    runtime = {'score_contributions':[ScoreContribution('predocker.vina','energy',value,aggregation='mean')]}
     accepted = scores(.8)
+    runtime = {'score_contributions':[ScoreContribution('predocker.vina','energy',value,aggregation='mean', measurement_snapshot=accepted.assessment_id, input_snapshot=accepted.assessment_id, subject='predicted_structure', relation='measured_on')]}
     decisions.make_mutation_decision(1, accepted, engine, runtime, force_accept=True)
     assert accepted.assessment_id in decisions.score_records_by_assessment
     value[0] = 100
@@ -193,4 +193,50 @@ def test_decision_query_can_explicitly_use_transition_reference(tmp_path):
     decisions.make_mutation_decision(1, proposal, engine, {}, force_accept=True)
     assert decisions.scores_detail[1]['gate_reference'] == pytest.approx(.45)
     assert decisions.scores_detail[1]['accepted'] == pytest.approx(.6)
+    global_config.reset()
+
+
+def test_reference_producer_is_never_retagged_as_new_prediction(tmp_path):
+    from astrolabe.score_contributions import ScoreContribution, score_contributions_to_snapshot
+    decisions, engine, a, _ = init_decisions(tmp_path)
+    engine.score_catalog = [{'name':'likelihood','source':'mutator.mpnn'},
+                            {'name':'dock','source':'predocker.vina'}]
+    measured = [
+        ScoreContribution('mutator.mpnn','likelihood',.7,measurement_snapshot=a.assessment_id,
+                          input_snapshot=a.assessment_id,subject='proposal',relation='proposal_on_reference'),
+        ScoreContribution('predocker.vina','dock',.4,measurement_snapshot=a.assessment_id,
+                          input_snapshot=a.assessment_id,subject='reference_structure',relation='measured_on'),
+    ]
+    runtime = {'score_contributions':measured}
+    b = scores(.8)
+    engine.score_queries['bad'] = {'name':'likelihood','source':'mutator.mpnn'}
+    with pytest.raises(ValueError, match='expected one current score record'):
+        decisions.make_mutation_decision(1, b, engine, runtime, force_accept=True)
+    engine.score_queries.pop('bad')
+    engine.score_queries['proposal_on_reference'] = {'name':'likelihood','source':'mutator.mpnn',
+        'snapshot':'last_accepted','subject':'proposal','relation':'proposal_on_reference'}
+    engine.score_queries['reference_dock'] = {'name':'dock','source':'predocker.vina',
+        'snapshot':'last_accepted','subject':'reference_structure','relation':'measured_on'}
+    _, _, accepted = decisions.make_mutation_decision(1, b, engine, runtime, force_accept=True)
+    assert accepted
+    assert decisions.scores_detail[1]['proposal_on_reference'] == pytest.approx(.7)
+    assert decisions.scores_detail[1]['reference_dock'] == pytest.approx(.4)
+    assert a.assessment_id in decisions.score_records_by_assessment
+    assert b.assessment_id not in decisions.score_records_by_assessment
+    c = scores(.9)
+    engine.score_queries = {'stale':{'name':'likelihood','source':'mutator.mpnn'}}
+    with pytest.raises(ValueError, match='expected one current score record'):
+        decisions.make_mutation_decision(2, c, engine, runtime, force_accept=True)
+    assert score_contributions_to_snapshot([ScoreContribution('mutator.mpnn','legacy',.6)]) == {'legacy':.6}
+    global_config.reset()
+
+
+def test_strict_unlabelled_non_evaluator_contribution_fails_closed(tmp_path):
+    from astrolabe.score_contributions import ScoreContribution
+    decisions, engine, _, _ = init_decisions(tmp_path)
+    engine.score_catalog = [{'name':'entropy','source':'mutator.mpnn'}]
+    engine.score_queries['entropy_strict'] = {'name':'entropy','source':'mutator.mpnn'}
+    runtime = {'score_contributions':[ScoreContribution('mutator.mpnn','entropy',.2)]}
+    with pytest.raises(ValueError, match='requires measurement_snapshot'):
+        decisions.make_mutation_decision(1, scores(.8), engine, runtime)
     global_config.reset()

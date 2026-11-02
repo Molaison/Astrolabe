@@ -21,6 +21,10 @@ class ScoreContribution:
     flatten_as: str | None = None
     provenance: str | None = None
     enabled: bool = True
+    measurement_snapshot: str | None = None
+    input_snapshot: str | None = None
+    subject: str | None = None
+    relation: str | None = None
 
     def __post_init__(self) -> None:
         if not str(self.source or "").strip():
@@ -136,6 +140,10 @@ def _contribution_from_mapping(raw: Mapping[str, Any]) -> ScoreContribution:
         if raw.get("provenance") is None
         else str(raw.get("provenance")),
         enabled=bool(raw.get("enabled", True)),
+        measurement_snapshot=raw.get("measurement_snapshot"),
+        input_snapshot=raw.get("input_snapshot"),
+        subject=raw.get("subject"),
+        relation=raw.get("relation"),
     )
 
 
