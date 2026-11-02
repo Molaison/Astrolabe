@@ -119,3 +119,134 @@ def test_commit_failure_keeps_existing_mutation_boundary(tmp_path, monkeypatch, 
     assert len(decisions.row_history) == (1 if failure == "dump" else 0)
     assert len(decisions.assessments) == 1
     global_config.reset()
+
+
+def test_observation_failure_does_not_undo_decision_and_marks_revision_unknown(tmp_path, monkeypatch):
+    import json
+    import astrolabe.decision_maker as module
+
+    global_config.reset()
+    events = []
+    for key, value in {
+        "stage_manager": SimpleNamespace(current_stage="one"),
+        "segment_manager": SimpleNamespace(apply_mutations=lambda: events.append("apply"),
+                                           clear_mutations=lambda: events.append("clear")),
+        "out_dir": tmp_path, "protomers": {}, "use_metropolis_acceptance": False,
+    }.items():
+        global_config.init_const(key, value)
+    decisions = Decisions({0: {}}, {0: 1}, {0: object()}, {0: {}}, [0], 0, {0: "one"})
+    original_snapshot = module._snapshot_result
+    monkeypatch.setattr(module, "_snapshot_result", lambda _: (_ for _ in ()).throw(RuntimeError("snapshot failed")))
+    result = decisions.make_mutation_decision(1, object(), Loss(2), {})
+    assert result[2] is True
+    assert events == ["apply"]
+    assert decisions.last_accepted == 1
+    assert decisions.accepted_steps == [0, 1]
+    assert decisions.row_history[-1]["accepted"] is True
+    assert (tmp_path / "scores.csv").exists()
+    assert len(decisions.assessments) == 1
+    assert decisions._attempt_count == 0
+    assert json.loads(json.dumps(decisions.observation_errors))[0]["error_type"] == "RuntimeError"
+    monkeypatch.setattr(module, "_snapshot_result", original_snapshot)
+    assert decisions.make_mutation_decision(2, object(), Loss(3), {})[2] is True
+    assert decisions.assessments[-1].attempt_id == 1
+    assert decisions.assessments[-1].accepted_revision is None
+    assert decisions._attempt_count == 1
+    global_config.reset()
+
+
+def test_evidence_snapshot_detaches_result_and_numpy_values():
+    import numpy as np
+    from pathlib import Path
+    from astrolabe.evaluators.evidence import CandidateGroup, DerivedStructure, EvaluationRecord, InputObservation
+    from astrolabe.evaluators.utils import StandardScores
+
+    array = np.array([1.0, 2.0])
+    record = EvaluationRecord(1, 0, "one", "one", "eval", InputObservation("A", (), (1,)), Path("old.cif"))
+    derived = {"A": [DerivedStructure(Path("old.cif"), Path("new.cif"), "min")]}
+    groups = (CandidateGroup(((("A", Path("candidate.cif")),),), (1,)),)
+    result = StandardScores(names=["A"], plddt={"A": [0.5]}, complex_paths={"A": Path("old.cif")},
+                            evaluation_records=(record,), derived_structures=derived, candidate_groups=groups)
+    decisions = Decisions({0: {}}, {0: 1}, {0: result}, {0: {"array": array}}, [0], 0, {0: "one"})
+    assessment = decisions.assessments[0]
+    result.complex_paths["A"] = Path("changed.cif")
+    result.evaluation_records = ()
+    result.derived_structures["A"].clear()
+    result.candidate_groups = ()
+    array[0] = 99
+    assert assessment.score_details["array"].tolist() == [1., 2.]
+    snapshot = assessment.evidence_snapshot
+    assert snapshot["complex_paths"]["A"] == Path("old.cif")
+    assert snapshot["evaluation_records"][0]["original_complex_path"] == Path("old.cif")
+    assert snapshot["derived_structures"]["A"][0]["output_path"] == Path("new.cif")
+    assert snapshot["candidate_groups"][0]["candidate_paths"][0][0][1] == Path("candidate.cif")
+
+
+def test_initial_rejection_corrects_observation_only():
+    decisions = Decisions({0: {}}, {0: 1}, {0: object()}, {0: {}}, [0], 0, {0: "one"})
+    decisions.reject_initial_assessment()
+    assert decisions.assessments[0].accepted is False
+    assert decisions.assessments[0].accepted_revision is None
+    assert decisions.last_accepted == 0 and decisions.accepted_steps == [0]
+    assert decisions.observation_errors == []
+
+
+def test_initial_and_stage_observation_failures_are_nonfatal(tmp_path, monkeypatch):
+    import astrolabe.decision_maker as module
+    global_config.reset()
+    global_config.init_const("stage_manager", SimpleNamespace(current_stage="one"))
+    global_config.init_const("out_dir", tmp_path)
+    snapshot = module._snapshot_result
+    monkeypatch.setattr(module, "_snapshot_result", lambda _: (_ for _ in ()).throw(ValueError("bad evidence")))
+    decisions = Decisions({0: {}}, {0: 1}, {0: object()}, {0: {}}, [0], 0, {0: "one"})
+    assert decisions.assessments == []
+    decisions.reject_initial_assessment()
+    assert [error["operation"] for error in decisions.observation_errors] == ["initial", "reject_initial_assessment"]
+    monkeypatch.setattr(module, "_snapshot_result", snapshot)
+    decisions.recompute_last_score(Loss(3), {})
+    assert decisions.scores[0] == 3
+    assert decisions.assessments[0].accepted_revision is None
+    monkeypatch.setattr(module, "_snapshot_result", lambda _: (_ for _ in ()).throw(ValueError("bad evidence")))
+    decisions.recompute_last_score(Loss(4), {})
+    assert decisions.scores[0] == 4
+    assert len(decisions.assessments) == 1
+    assert decisions.observation_errors[-1]["operation"] == "stage_reassessment"
+    global_config.reset()
+
+
+def test_observation_failure_preserves_rng_and_policy_outcome(tmp_path, monkeypatch):
+    import numpy as np
+    import astrolabe.decision_maker as module
+
+    monkeypatch.setattr(module, "calculate_temperature", lambda step: 1.)
+    original_snapshot = module._snapshot_result
+
+    def run_case(fail_observation):
+        global_config.reset()
+        operations = []
+        for key, value in {
+            "stage_manager": SimpleNamespace(current_stage="one"),
+            "segment_manager": SimpleNamespace(apply_mutations=lambda: operations.append("apply"),
+                                               clear_mutations=lambda: operations.append("clear")),
+            "out_dir": tmp_path, "protomers": {}, "use_metropolis_acceptance": True,
+        }.items():
+            global_config.init_const(key, value)
+        monkeypatch.setattr(module, "_snapshot_result", original_snapshot)
+        decisions = Decisions({0: {}}, {0: 1}, {0: object()}, {0: {}}, [0], 0, {0: "one"})
+        if fail_observation:
+            monkeypatch.setattr(module, "_snapshot_result", lambda _: (_ for _ in ()).throw(RuntimeError("observer")))
+        np.random.seed(12)
+        early, _, accepted = decisions.make_mutation_decision(1, object(), Loss(0), {})
+        return early, accepted, decisions.last_accepted, decisions.row_history, operations, float(np.random.uniform())
+
+    assert run_case(False) == run_case(True)
+    global_config.reset()
+
+
+def test_initial_rejection_is_visible_to_existing_audit_builder():
+    from astrolabe.execution_audit import build_execution_audit
+    decisions = Decisions({0: {}}, {0: 1}, {0: object()}, {0: {}}, [0], 0, {0: "one"})
+    decisions.reject_initial_assessment()
+    audit = build_execution_audit(run_id="test", status="failed", decisions=decisions)
+    assert audit["assessments"][0]["accepted"] is False
+    assert audit["assessments"][0]["accepted_revision"] is None
