@@ -1692,7 +1692,9 @@ def _merge_standard_scores(results: list[StandardScores]) -> StandardScores:
         return results[0]
 
     merged: dict[str, Any] = {"names": []}
-    field_names = _standard_scores_field_names()
+    # An aggregate is a new assessment; only a single-result pass-through
+    # retains the original scientific identity.
+    field_names = _standard_scores_field_names() - {"assessment_id"}
     for field in field_names - {"names"}:
         merged[field] = None
 

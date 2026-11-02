@@ -74,6 +74,64 @@ def test_session_broker_shares_resident_worker(monkeypatch, tmp_path):
             b.close()
 
 
+def test_owner_hides_gpu_broker_preserves_allocation(monkeypatch, tmp_path):
+    import json
+    from astrolabe.runtime.session import BrokerSession
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'mock-device')
+    monkeypatch.setenv('GH_CUDA_PREINITIALIZE', '1')
+    with BrokerSession() as session:
+        program = """
+import json,os,sys
+import jax
+from astrolabe.runtime.admission import run_probe
+from astrolabe.runtime.client import DaemonClient
+identity={'environment':'test','code':'test','weights':'none',
+          'device':{'platform':'mock','visible':'mock-device'}}
+env=dict(os.environ,RUNTIME_TEST_IDENTITY=json.dumps(identity),RUNTIME_PROBE_LOG=sys.argv[2])
+probe=run_probe([sys.executable,sys.argv[3]],env=env,timeout=10)
+with DaemonClient([sys.executable,sys.argv[1]],identity,env=env) as c:
+    worker=c.call({'value':1},timeout=10)
+print(json.dumps({'owner':os.environ.get('CUDA_VISIBLE_DEVICES'),
+ 'allocated':os.environ.get('ASTROLABE_ALLOCATED_CUDA_DEVICES'),
+ 'preinit':os.environ.get('GH_CUDA_PREINITIALIZE'),
+ 'jax_platforms':os.environ.get('JAX_PLATFORMS'),
+ 'jax_devices':[d.platform for d in jax.devices()],
+ 'probe':probe['visible'],'worker':worker['visible']}))
+"""
+        result = subprocess.run([sys.executable, '-c', program, str(ROOT / 'tests/runtime_fixture.py'),
+                                 str(tmp_path / 'probe.jsonl'), str(ROOT / 'tests/runtime_probe_fixture.py')],
+                                env=session.env, capture_output=True, text=True, timeout=30, check=True)
+        data = json.loads(result.stdout)
+        assert data['jax_devices'] and set(data.pop('jax_devices')) == {'cpu'}
+        assert data == {'owner': '', 'allocated': 'mock-device', 'preinit': '0',
+                        'jax_platforms': 'cpu', 'probe': 'mock-device', 'worker': 'mock-device'}
+
+
+def test_broker_rejects_wrong_owner_allocation(monkeypatch):
+    import pytest
+    from astrolabe.runtime.session import BrokerSession
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'mock-device')
+    with BrokerSession() as session:
+        monkeypatch.setenv('ASTROLABE_EXECUTION_ENDPOINT', session.endpoint)
+        monkeypatch.setenv('ASTROLABE_EXECUTION_TOKEN', session.token)
+        monkeypatch.setenv('ASTROLABE_ALLOCATED_CUDA_DEVICES', 'different-device')
+        with pytest.raises(WorkerError, match='allocation differs'):
+            DaemonClient(COMMAND, IDENTITY)
+
+
+def test_merge_assessment_identity():
+    from astrolabe.app import _load_run_module
+    from astrolabe.evaluators.utils import StandardScores
+    first = StandardScores(names=['A'], plddt={'A': [0.8]}, complex_paths={})
+    second = StandardScores(names=['B'], plddt={'B': [0.9]}, complex_paths={})
+    run = _load_run_module()
+    assert run._merge_standard_scores([first]) is first
+    merged = run._merge_standard_scores([first, second])
+    assert merged.assessment_id not in {first.assessment_id, second.assessment_id}
+    assert merged.clone().assessment_id == merged.assessment_id
+    assert merged.plddt == {'A': [0.8], 'B': [0.9]}
+
+
 def test_cpu_output_bound_and_cleanup():
     import pytest
     executor = CPUExecutor(1, max_pending_bytes=1024)
@@ -119,6 +177,63 @@ def test_unsupported_parallel_component_is_rejected():
                             'mutator': {'mutator_terms': {'bad': {'_type': 'LigandMPNN'}}},
                             'evaluator': {'evaluator_terms': {'dummy': {'_type': 'dummy'}}}})
     with pytest.raises(ValueError, match='does not support mutator'):
+        validate_parallel(cfg)
+
+
+def test_real_release_and_binder_configs_validate_capabilities(monkeypatch):
+    import types
+    import pytest
+    from omegaconf import open_dict
+    from astrolabe.cli import _compose_hydra_config
+    from astrolabe.runtime.session import validate_parallel
+    # Marker stands in for the separately integrated B adapter in this tree.
+    monkeypatch.setitem(sys.modules, 'astrolabe.evaluators.af3_resident',
+                        types.SimpleNamespace(BROKER_SHARED_ROOT=True, BROKER_ADMITTED_PROBE=True))
+    def compose(name):
+        return _compose_hydra_config(config_dir=ROOT / 'config', config_name=name,
+                                     overrides=['env=env'])
+    release = compose('release_protein')
+    with open_dict(release):
+        release.evaluator.evaluator_terms.Alphafold3.execution = 'daemon'
+        release.structure_start = {}
+        release.pre_eval_hooks = {'af3_antibody_msa_cache': {'enabled': False}}
+        release.post_eval_hooks = {'rosetta_minimize': {'enabled': False}}
+        release.selector.selector_terms = {'unused': {'_type': 'unknown_gpu_plugin'}}
+        release.mutator.mutator_terms.unused = {'_type': 'unknown_gpu_mutator'}
+    validate_parallel(release)
+
+    binder = compose('benchmark_binder_v1_4')
+    with pytest.raises(ValueError, match='CPU-only initializer'):
+        validate_parallel(binder)
+    # Qualification-only variant retains the template's binder CPU losses.
+    # Its evaluator, initializer and mutators differ from the actual template.
+    with open_dict(binder):
+        binder.initializer.mode = 'random'
+        binder.evaluator.evaluator_terms.Alphafold3.execution = 'daemon'
+        binder.mutator.mutator_terms.MCMC = {'_type': 'MCMC'}
+        binder.mutator.selector_expression = 'interface(interface_distance=8.0)'
+        for stage in binder.stages.values():
+            if stage:
+                stage.evaluator = 'Alphafold3'
+                stage.mutators = ['MCMC']
+    validate_parallel(binder)
+    with open_dict(binder):
+        binder.mutator.selector_expression = 'unknown_gpu_selector()'
+    with pytest.raises(ValueError, match='cannot certify selectors'):
+        validate_parallel(binder)
+
+
+def test_unknown_implicit_loss_is_rejected(monkeypatch):
+    import pytest
+    from omegaconf import OmegaConf
+    from astrolabe.losses.base import loss_registry
+    from astrolabe.runtime.session import validate_parallel
+    monkeypatch.setitem(loss_registry._loss_functions, 'new_gpu_loss', lambda _: 1)
+    cfg = OmegaConf.create({'stages': {'default': {'mutators': ['m'], 'evaluator': 'e',
+                                                   'weighted_score_expression': 'new_gpu_loss'}},
+                            'mutator': {'mutator_terms': {'m': {'_type': 'MCMC'}}},
+                            'evaluator': {'evaluator_terms': {'e': {'_type': 'dummy'}}}})
+    with pytest.raises(ValueError, match='does not support loss new_gpu_loss'):
         validate_parallel(cfg)
 
 

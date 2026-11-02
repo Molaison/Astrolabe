@@ -58,12 +58,10 @@ def run_probe(command, *, env=None, timeout=60):
         if env:
             child_env.update(env)
         return _execute_probe(command, child_env, timeout)
-    from .broker_client import BrokerClient
+    from .broker_client import BrokerClient, worker_overrides
     proxy = object.__new__(BrokerClient)
     proxy.endpoint, proxy.token, proxy.limit = endpoint, token, 1048576
-    overrides = dict(env or {})
-    overrides.pop('ASTROLABE_EXECUTION_ENDPOINT', None)
-    overrides.pop('ASTROLABE_EXECUTION_TOKEN', None)
+    overrides = worker_overrides(env)
     return proxy._rpc({'op': 'probe', 'command': command, 'env': overrides, 'timeout': timeout,
                        'epoch': uuid.uuid4().hex, 'request_id': uuid.uuid4().hex},
                       timeout + 5, submitted=True)['result']

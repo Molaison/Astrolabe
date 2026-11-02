@@ -216,6 +216,8 @@ class Handler(socketserver.StreamRequestHandler):
             req = json.loads(raw)
             if req.get('token') != self.server.state.token:
                 raise ValueError('unauthorized')
+            if req.get('allocated_cuda_devices') != (os.environ.get('CUDA_VISIBLE_DEVICES') or ''):
+                raise ValueError('request allocation differs from broker allocation')
             if req.get('op') == 'register':
                 result = self.server.state.register(req)
             elif req.get('op') == 'call':

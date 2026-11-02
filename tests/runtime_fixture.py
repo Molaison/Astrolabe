@@ -29,7 +29,8 @@ def daemon_handler(payload):
         time.sleep(payload['sleep'])
     event('forward_end')
     return {'value': payload.get('value'), 'pid': os.getpid(),
-            'artifact_root': os.environ.get('ASTROLABE_EXECUTION_ARTIFACT_ROOT')}
+            'artifact_root': os.environ.get('ASTROLABE_EXECUTION_ARTIFACT_ROOT'),
+            'visible': os.environ.get('CUDA_VISIBLE_DEVICES')}
 
 
 if __name__ == '__main__':

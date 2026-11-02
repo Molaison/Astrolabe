@@ -8,6 +8,8 @@ import socket
 import time
 import uuid
 import importlib
+import importlib.util
+import ast
 from concurrent.futures import ThreadPoolExecutor, FIRST_COMPLETED, wait
 from omegaconf import OmegaConf
 
@@ -26,12 +28,15 @@ class BrokerSession:
         self.max_resident_models = max_resident_models
 
     def __enter__(self):
+        if os.environ.get('ASTROLABE_CPU_OWNER') == '1' or os.environ.get('ASTROLABE_EXECUTION_ENDPOINT'):
+            raise RuntimeError('nested execution broker sessions are not supported')
         self.directory = tempfile.TemporaryDirectory(prefix='astrolabe-session-')
         self.endpoint = '@astrolabe-' + uuid.uuid4().hex
         self.token = uuid.uuid4().hex + uuid.uuid4().hex
         read_fd, self.write_fd = os.pipe()
         token_read, token_write = os.pipe()
         self.env = _child_env()
+        allocation = self.env.get('CUDA_VISIBLE_DEVICES') or ''
         # A broker must never accidentally connect to a parent broker.
         for key in ('ASTROLABE_EXECUTION_ENDPOINT', 'ASTROLABE_EXECUTION_TOKEN'):
             self.env.pop(key, None)
@@ -76,7 +81,12 @@ class BrokerSession:
             raise
         self.env.update(ASTROLABE_EXECUTION_ENDPOINT=self.endpoint,
                         ASTROLABE_EXECUTION_TOKEN=self.token,
-                        ASTROLABE_EXECUTION_ARTIFACT_ROOT=self.directory.name)
+                        ASTROLABE_EXECUTION_ARTIFACT_ROOT=self.directory.name,
+                        ASTROLABE_ALLOCATED_CUDA_DEVICES=allocation,
+                        ASTROLABE_CPU_OWNER='1',
+                        CUDA_VISIBLE_DEVICES='', NVIDIA_VISIBLE_DEVICES='void',
+                        HIP_VISIBLE_DEVICES='', ROCR_VISIBLE_DEVICES='',
+                        JAX_PLATFORMS='cpu', GH_CUDA_PREINITIALIZE='0')
         return self
 
     def __exit__(self, *_):
@@ -89,30 +99,82 @@ class BrokerSession:
 
 def validate_parallel(cfg):
     """Reject any component that has not explicitly opted into this path."""
-    if cfg.get('structure_start') is not None:
+    from .capabilities import CPU_LOSSES, CPU_SELECTORS
+    from astrolabe.losses.base import extract_loss_terms, loss_registry
+    from astrolabe.selectors.utils import extract_variables
+
+    def plain(value):
+        return OmegaConf.to_container(value, resolve=False) if OmegaConf.is_config(value) else value
+
+    def inactive_hooks(value, known):
+        value = plain(value)
+        if value in (None, {}, [], 'null', 'None'):
+            return True
+        if not isinstance(value, dict):
+            return False
+        for name, config in value.items():
+            if name not in known:
+                return False
+            if config not in (None, {}, 'null', 'None'):
+                if not isinstance(config, dict) or config.get('enabled', False):
+                    return False
+        return True
+
+    if plain(cfg.get('structure_start')) not in (None, {}, 'null', 'None'):
         raise ValueError('parallel runtime does not support structure_start')
     initializer = cfg.get('initializer') or {}
     if initializer.get('mode', 'random') not in ('random', 'all_a', 'aa_set', 'pssm', 'mask_mix', 'x_mix'):
         raise ValueError('parallel runtime requires a CPU-only initializer')
     if (cfg.get('predocker') or {}).get('predocker_terms'):
         raise ValueError('parallel runtime does not support predockers')
-    if (cfg.get('selector') or {}).get('selector_terms'):
-        raise ValueError('parallel runtime does not support custom selectors')
     if (cfg.get('per_residue_scores') or {}).get('enabled', False):
         raise ValueError('parallel runtime does not support per-residue plugins')
-    if cfg.get('pre_eval_hooks') or cfg.get('post_eval_hooks'):
+    if not inactive_hooks(cfg.get('pre_eval_hooks'), {'af3_antibody_msa_cache'}):
         raise ValueError('parallel runtime does not support evaluation hooks')
-    if (cfg.get('evaluator') or {}).get('pre_eval_hooks'):
+    if not inactive_hooks((cfg.get('evaluator') or {}).get('pre_eval_hooks'), {'af3_antibody_msa_cache'}):
+        raise ValueError('parallel runtime does not support evaluation hooks')
+    if not inactive_hooks(cfg.get('post_eval_hooks'), {'rosetta_minimize', 'rosetta_repack'}):
         raise ValueError('parallel runtime does not support evaluation hooks')
     stages = cfg.get('stages') or {}
-    allowed_losses = {'sequence_residue_fraction', 'sequence_region_identity',
-                      'sequence_edge_region_identity', 'plddt', 'ptm', 'iptm', 'pae', 'pde'}
-    for alias, term in ((cfg.get('loss') or {}).get('loss_terms') or {}).items():
-        if term and str(term.get('_type', '')).lower() not in allowed_losses:
+    loss_cfg = cfg.get('loss') or {}
+    loss_terms = loss_cfg.get('loss_terms') or {}
+    registered = set(loss_registry.valid_losses)
+
+    def check_loss(kind, alias):
+        expected_module = CPU_LOSSES.get(kind)
+        if expected_module is None:
             raise ValueError(f'parallel runtime does not support loss {alias}')
+        if kind in registered:
+            function = loss_registry.get_function(kind)
+            if function.__module__ != expected_module or function.__name__ != kind:
+                raise ValueError(f'parallel runtime cannot certify loss implementation {alias}')
+
+    for alias, term in loss_terms.items():
+        if term is not None:
+            if not hasattr(term, 'get'):
+                raise ValueError(f'parallel runtime cannot certify loss {alias}')
+            check_loss(str(term.get('_type', '')), alias)
+
+    # Param-free loss names are also selected directly from stage expressions.
+    expression_terms = loss_cfg.get('expression_terms') or {}
+    pending = [str(stage.get(key)) for stage in stages.values() if stage
+               for key in ('weighted_score_expression', 'early_stopping',
+                           'prefix_early_stopping', 'acceptance_threshold', 'acceptance_gate')
+               if stage.get(key) not in (None, '', 'null', 'None')]
+    referenced, seen_expr = set(), set()
+    while pending:
+        names = set(extract_loss_terms([pending.pop()]))
+        referenced.update(names)
+        for name in names:
+            if name in expression_terms and name not in seen_expr:
+                seen_expr.add(name)
+                pending.append(str(expression_terms[name]))
+    for name in (referenced & registered) - set(loss_terms):
+        check_loss(name, name)
     evaluators = (cfg.get('evaluator') or {}).get('evaluator_terms') or {}
     mutators = (cfg.get('mutator') or {}).get('mutator_terms') or {}
     default_stage = stages.get('default') or {}
+    active_mutators = set()
     for stage in stages.values():
         if not stage:
             continue
@@ -120,6 +182,7 @@ def validate_parallel(cfg):
             term = mutators.get(alias) or {}
             if str(term.get('_type', '')).lower() != 'mcmc':
                 raise ValueError(f'parallel runtime does not support mutator {alias}')
+            active_mutators.add(str(alias))
         aliases = [stage.get('evaluator') or default_stage.get('evaluator')]
         gate = stage.get('transition_consistency_gate') or {}
         if gate.get('evaluator'):
@@ -130,7 +193,12 @@ def validate_parallel(cfg):
             if typ == 'dummy':
                 continue
             if typ == 'alphafold3':
-                mode = term.get('execution', (cfg.get('evaluator') or {}).get('alphafold3', {}).get('execution', 'legacy'))
+                if not inactive_hooks(term.get('pre_eval_hooks'), {'af3_antibody_msa_cache'}):
+                    raise ValueError('parallel runtime does not support evaluation hooks')
+                default_af3 = (cfg.get('evaluator') or {}).get('alphafold3', {})
+                if not inactive_hooks(default_af3.get('pre_eval_hooks'), {'af3_antibody_msa_cache'}):
+                    raise ValueError('parallel runtime does not support evaluation hooks')
+                mode = term.get('execution', default_af3.get('execution', 'legacy'))
                 if mode == 'daemon':
                     try:
                         mod = importlib.import_module('astrolabe.evaluators.af3_resident')
@@ -140,6 +208,35 @@ def validate_parallel(cfg):
                     except ImportError:
                         pass
             raise ValueError(f'parallel runtime does not support evaluator {alias}')
+
+    mutator_cfg = cfg.get('mutator') or {}
+    expressions = mutator_cfg.get('selector_expression')
+    selector_by_alias = {}
+    if expressions is not None and ':' in str(expressions):
+        for part in str(expressions).split(';'):
+            name, *value = part.split(':')
+            selector_by_alias[name.strip()] = ''.join(value).strip()
+    elif expressions is not None:
+        selector_by_alias = {alias: str(expressions) for alias in active_mutators}
+    for alias in active_mutators:
+        term = mutators.get(alias) or {}
+        expression = term.get('position_selector')
+        if expression is None:
+            expression = selector_by_alias.get(alias, selector_by_alias.get('MCMC'))
+        if expression in (None, '', 'None'):
+            continue
+        selected = extract_variables(str(expression))
+        unknown = selected - set(CPU_SELECTORS)
+        if unknown:
+            raise ValueError(f'parallel runtime cannot certify selectors {sorted(unknown)}')
+        for name in selected:
+            module, cls = CPU_SELECTORS[name]
+            spec = importlib.util.find_spec(f'astrolabe.selectors.{module}')
+            if spec is None or not spec.origin:
+                raise ValueError(f'parallel runtime cannot find selector implementation {name}')
+            tree = ast.parse(pathlib.Path(spec.origin).read_text(encoding='utf-8'))
+            if not any(isinstance(node, ast.ClassDef) and node.name == cls for node in tree.body):
+                raise ValueError(f'parallel runtime cannot certify selector implementation {name}')
 
 
 def run_parallel(configs, max_active, stop_requested, on_completed, *, max_resident_models=1):

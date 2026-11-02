@@ -1,10 +1,26 @@
 """Synchronous broker proxy retaining the DaemonClient API."""
 import json
+import os
 import socket
 import threading
 import uuid
 
 from .client import OutcomeUnknown, WorkerError, _encode
+
+
+def worker_overrides(env):
+    """Strip owner-only masks; broker supplies the actual allocated devices."""
+    result = dict(env or {})
+    if os.environ.get('ASTROLABE_CPU_OWNER') == '1':
+        for key, hidden in (('CUDA_VISIBLE_DEVICES', ''), ('NVIDIA_VISIBLE_DEVICES', 'void'),
+                            ('HIP_VISIBLE_DEVICES', ''), ('ROCR_VISIBLE_DEVICES', ''),
+                            ('JAX_PLATFORMS', 'cpu'), ('GH_CUDA_PREINITIALIZE', '0')):
+            if result.get(key) == hidden:
+                result.pop(key, None)
+    for key in ('ASTROLABE_EXECUTION_ENDPOINT', 'ASTROLABE_EXECUTION_TOKEN',
+                'ASTROLABE_ALLOCATED_CUDA_DEVICES', 'ASTROLABE_CPU_OWNER'):
+        result.pop(key, None)
+    return result
 
 
 class BrokerClient:
@@ -15,12 +31,19 @@ class BrokerClient:
         self._used = set()
         self._closed = False
         response = self._rpc({'op': 'register', 'command': command, 'identity': identity,
-                              'env': env or {}, 'limit': max_message_bytes,
+                              'env': worker_overrides(env), 'limit': max_message_bytes,
                               'startup_timeout': startup_timeout}, startup_timeout + 10, submitted=False)
         self.handle, self.hello = response['handle'], response['hello']
 
     def _rpc(self, request, timeout, *, submitted):
         request['token'] = self.token
+        allocation = os.environ.get('ASTROLABE_ALLOCATED_CUDA_DEVICES')
+        if allocation is None:
+            # Compatibility for explicit broker clients living in the launcher.
+            allocation = os.environ.get('CUDA_VISIBLE_DEVICES') or ''
+        if os.environ.get('ASTROLABE_CPU_OWNER') == '1' and os.environ.get('CUDA_VISIBLE_DEVICES') != '':
+            raise WorkerError('trajectory owner CUDA visibility is not hidden')
+        request['allocated_cuda_devices'] = allocation
         data = _encode(request, self.limit + 65536)
         try:
             with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
