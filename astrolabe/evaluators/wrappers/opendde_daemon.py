@@ -91,7 +91,7 @@ def main():
         for seed in seeds:
             directory = out / name / f'seed_{int(seed)}' / 'predictions'
             summaries = sorted(directory.glob(f'{name}_summary_confidence_sample_*.json'))
-            if not summaries or any(not p.with_name(p.name.replace('_summary_confidence', '')).with_suffix('.cif').is_file() for p in summaries):
+            if len(summaries) != options['num_samples'] or any(not p.with_name(p.name.replace('_summary_confidence', '')).with_suffix('.cif').is_file() for p in summaries):
                 raise RuntimeError(f'OpenDDE missing outputs for {name} seed {seed}')
         if (out / 'ERR').exists() and any((out / 'ERR').iterdir()):
             raise RuntimeError('OpenDDE reported inference errors')

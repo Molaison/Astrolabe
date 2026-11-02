@@ -32,7 +32,7 @@ def download_inference_cache(configs): raise AssertionError('must not download')
 def get_default_runner(**kwargs):
     base = build_inference_config(kwargs['model_name'])
     cfg = SimpleNamespace(data=base.data, model_name=kwargs['model_name'], load_checkpoint_path=kwargs['load_checkpoint_path'], use_template=kwargs['use_template'], seeds=None, dump_dir=kwargs['dump_dir'])
-    assert kwargs['n_cycle'] == 10 and kwargs['n_step'] == 200 and kwargs['n_sample'] == 5
+    assert kwargs['n_cycle'] == 10 and kwargs['n_step'] == 200 and kwargs['n_sample'] == 1
     download_inference_cache(cfg)
     with open(os.environ['FAKE_OPENDDE_LOADS'], 'a') as f: f.write('load\\n')
     return SimpleNamespace(configs=cfg, device=torch.device('cpu'), dumper=SimpleNamespace(base_dir=cfg.dump_dir))
@@ -54,7 +54,7 @@ def infer_predict(runner, cfg):
     monkeypatch.delenv('ASTROLABE_EXECUTION_ENDPOINT', raising=False)
     monkeypatch.delenv('ASTROLABE_EXECUTION_TOKEN', raising=False)
     runner = OpenDDERunner(python_bin=sys.executable, repo_path=root, opendde_root_dir=assets,
-                           load_checkpoint_path=str(assets / 'model.pt'), execution='daemon')
+                           load_checkpoint_path=str(assets / 'model.pt'), num_samples=1, execution='daemon')
     try:
         results = []
         for seed, sequence in ((11, 'AAA'), (22, 'CCC')):
