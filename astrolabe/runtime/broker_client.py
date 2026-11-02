@@ -38,11 +38,18 @@ class BrokerClient:
     def _rpc(self, request, timeout, *, submitted):
         request['token'] = self.token
         allocation = os.environ.get('ASTROLABE_ALLOCATED_CUDA_DEVICES')
+        is_owner = os.environ.get('ASTROLABE_CPU_OWNER') == '1'
+        if is_owner and allocation is None:
+            raise WorkerError('trajectory owner allocation assertion is missing')
         if allocation is None:
             # Compatibility for explicit broker clients living in the launcher.
             allocation = os.environ.get('CUDA_VISIBLE_DEVICES') or ''
-        if os.environ.get('ASTROLABE_CPU_OWNER') == '1' and os.environ.get('CUDA_VISIBLE_DEVICES') != '':
-            raise WorkerError('trajectory owner CUDA visibility is not hidden')
+        if is_owner:
+            masks = {'CUDA_VISIBLE_DEVICES': '', 'NVIDIA_VISIBLE_DEVICES': 'void',
+                     'HIP_VISIBLE_DEVICES': '', 'ROCR_VISIBLE_DEVICES': '',
+                     'JAX_PLATFORMS': 'cpu', 'GH_CUDA_PREINITIALIZE': '0'}
+            if any(os.environ.get(key) != value for key, value in masks.items()):
+                raise WorkerError('trajectory owner device isolation was changed')
         request['allocated_cuda_devices'] = allocation
         data = _encode(request, self.limit + 65536)
         try:

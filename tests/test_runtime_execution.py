@@ -119,6 +119,21 @@ def test_broker_rejects_wrong_owner_allocation(monkeypatch):
             DaemonClient(COMMAND, IDENTITY)
 
 
+def test_broker_client_rejects_owner_with_changed_device_mask(monkeypatch):
+    import pytest
+    from astrolabe.runtime.session import BrokerSession
+    with BrokerSession() as session:
+        for key in ('ASTROLABE_EXECUTION_ENDPOINT', 'ASTROLABE_EXECUTION_TOKEN',
+                    'ASTROLABE_ALLOCATED_CUDA_DEVICES', 'ASTROLABE_CPU_OWNER',
+                    'CUDA_VISIBLE_DEVICES', 'NVIDIA_VISIBLE_DEVICES',
+                    'HIP_VISIBLE_DEVICES', 'ROCR_VISIBLE_DEVICES',
+                    'JAX_PLATFORMS', 'GH_CUDA_PREINITIALIZE'):
+            monkeypatch.setenv(key, session.env[key])
+        monkeypatch.setenv('CUDA_VISIBLE_DEVICES', '0')
+        with pytest.raises(WorkerError, match='device isolation was changed'):
+            DaemonClient(COMMAND, IDENTITY)
+
+
 def test_merge_assessment_identity():
     from astrolabe.app import _load_run_module
     from astrolabe.evaluators.utils import StandardScores
