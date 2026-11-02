@@ -100,7 +100,7 @@ astrolabe/cli_command_definitions.py
 astrolabe/cli_interactive.py config compose/scaffold 等交互 builder
 astrolabe/shell_completion.py Bash/Zsh 共用 completion engine
 astrolabe/app.py             repeat lifecycle；延迟加载 run.py
-run.py                           单次 run 的薄 orchestration
+run.py                           单次 run 的编排与兼容接线
 astrolabe/argparser.py       runtime normalization、schema validation、run dir
 astrolabe/run_config_lifecycle.py
                                  persisted config normalization/pruning
@@ -236,11 +236,11 @@ task-private overlay 不放 repo root；可复用 overlay/example 放 `examples/
 
 `astrolabe.app.run_from_cfg()`：
 
-1. 将组合 config 序列化为未 resolve 的 YAML，作为每次 repeat 的干净基线。
+1. 保留未 resolve 的组合 config，作为每次 repeat 的干净基线。
 2. 校验 `repeats > 0`。
 3. 每个 repeat 重建 config、设置 `repeat_index` 并隔离显式
-   `raw_model_results_dir` 子目录；当前 runtime 会在显式 `seed` 非零时逐 repeat
-   复用它，只有 seed 缺失/为零时才为该 repeat 生成随机值。
+   `raw_model_results_dir` 子目录；显式 seed 使用 `base_seed + repeat_index`。
+   seed 缺失时由 `task_name:repeat_index` 的 SHA-256 确定性派生；显式零值不合法。
 4. `global_config.reset()` 后调用 `run._run_pipeline()`。
 5. graceful stop 只在一个 repeat 完成后停止后续 repeat。
 
@@ -1006,3 +1006,7 @@ git diff --check
 
 测试通过只是证据，不是定义本身；只有测试覆盖真实 requirement，输出合同也满足，
 修改才算完成。
+
+## 状态与证据边界增量
+
+运行状态由 `RuntimeState` 持有，`RuntimeContext` 绑定具体实例，legacy facade 仍为进程级入口。评估 metadata 与数值字段分别处理；execution audit 不承诺精确恢复。参见 [Repository Mental Model](repository_mental_model.md) 和 [实施及验证边界](architecture_convergence.md)。

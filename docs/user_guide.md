@@ -505,10 +505,10 @@ homologies:
 
 ### 5.2 Chain 与 protomer
 
-多数 loss/constraint 中的 `chain_*` token 默认按 protomer 解析：如果 protomer
-在 `oligo` 中重复，会匹配其所有拷贝。需要精确指定复杂结构 chain 时写
-`chain:<ID>`，例如 `chain:B`。这对 binding site、interface、ligand-contact
-和 post-hoc 计算都很重要。
+共享 chain selector 解析器的裸 token 优先匹配物理 chain ID；没有匹配时才回退到
+protomer。`chain:<ID>` 严格选择物理链，`protomer:<name>` 显式选择该 protomer
+的全部拷贝。例如 `AAB` 中，裸 `A` 只选物理链 A，`protomer:A` 选择 A、B 两条链。
+具体 loss/constraint 的 selector 仍应核对该字段是否使用共享解析器。
 
 ### 5.3 Stage
 
