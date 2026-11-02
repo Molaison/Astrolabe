@@ -91,6 +91,16 @@ class AlphaFold3Evaluator(Evaluator):
             else None
         )
 
+    def _feature_static_identity(self, source_dir, ccd_path):
+        # Loaded source modules and the native CCD cache are fixed for this
+        # evaluator lifetime. Mutable request templates are hashed separately.
+        identity = getattr(self, "_pinned_feature_assets", None)
+        if identity is None:
+            from astrolabe.evaluators.worker_identity import digest_path
+            identity = {"source": digest_path(source_dir), "ccd": digest_path(ccd_path)}
+            self._pinned_feature_assets = identity
+        return identity
+
     @staticmethod
     def _get_config_value(config, key, default=None):
         if config is None:
@@ -276,11 +286,14 @@ class AlphaFold3Evaluator(Evaluator):
                     options = dict(self.kwargs[oligo])
                     if "init_guess_path" in options:
                         options["init_guess_path"] = digest_path(options["init_guess_path"])
-                    dependencies = {"schema": 1, "source": digest_path(Path(alphafold3.__file__).parent),
+                    static_identity = self._feature_static_identity(
+                        Path(alphafold3.__file__).parent, chemical_components._CCD_PICKLE_FILE
+                    )
+                    dependencies = {"schema": 1, "source": static_identity["source"],
                         "chains": raw.get("sequences"), "chain_order": [str(c.id) for c in feat.chains],
                         "topology": raw.get("bondedAtomPairs"), "constraints": options,
                         "seed": list(feat.rng_seeds), "msa": raw.get("sequences"),
-                        "templates": raw.get("sequences"), "ccd": [raw.get("userCCD"), digest_path(chemical_components._CCD_PICKLE_FILE)],
+                        "templates": raw.get("sequences"), "ccd": [raw.get("userCCD"), static_identity["ccd"]],
                         "options": {"buckets": self.buckets.get(oligo)}}
                     key = feature_key(dependencies)
                     cached = getattr(self, "_last_feature_cache", None)

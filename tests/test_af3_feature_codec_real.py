@@ -88,3 +88,28 @@ wrapper.alphafold3_setup = lambda config: Runner()
     finally:
         if worker.poll() is None: worker.kill(); worker.wait()
         worker.stdin.close(); worker.stdout.close(); worker.stderr.close()
+
+
+def test_static_feature_assets_are_pinned_per_evaluator_lifetime(tmp_path, monkeypatch):
+    from astrolabe.evaluators.alphafold3 import AlphaFold3Evaluator
+    import astrolabe.evaluators.worker_identity as fingerprints
+    source = tmp_path / 'model.py'
+    ccd = tmp_path / 'ccd.bin'
+    source.write_text('source-one')
+    ccd.write_text('ccd-one')
+    real_digest = fingerprints.digest_path
+    calls = []
+    def traced(path):
+        calls.append(str(path))
+        return real_digest(path)
+    monkeypatch.setattr(fingerprints, 'digest_path', traced)
+    first = AlphaFold3Evaluator.__new__(AlphaFold3Evaluator)
+    before = first._feature_static_identity(source, ccd)
+    assert first._feature_static_identity(source, ccd) == before
+    assert calls == [str(source), str(ccd)]
+    # Model source/CCD updates require a new evaluator/worker, not hot reload.
+    ccd.write_text('ccd-two')
+    second = AlphaFold3Evaluator.__new__(AlphaFold3Evaluator)
+    after = second._feature_static_identity(source, ccd)
+    assert after['ccd'] != before['ccd']
+    assert after['source'] == before['source']
