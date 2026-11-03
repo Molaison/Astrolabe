@@ -30,6 +30,7 @@ def alphafold_setup(
     suffix="multimer_v3",
     data_dir=None,
     initial_guess=None,
+    prepare_only=False,
 ) -> model.RunModel:
     """Setup AlphaFold2 models."""
 
@@ -64,7 +65,7 @@ def alphafold_setup(
         model_config.data.eval.num_ensemble = 1
     else:
         model_config.model.global_config.multimer_mode = True
-    model_params = data.get_model_haiku_params(model_name=mod, data_dir=data_dir)
+    model_params = None if prepare_only else data.get_model_haiku_params(model_name=mod, data_dir=data_dir)
     model_runner = model.RunModel(model_config, model_params)
     # Keep evaluator-facing AF2 extras on runner without changing vendor API.
     model_runner._gh_initial_guess_cfg = initial_guess  # type: ignore[attr-defined]

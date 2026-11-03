@@ -14,7 +14,7 @@ class BackendCapability:
 
 
 BACKENDS = {entry.identity: entry for entry in (
-    BackendCapability("af2", "adapter", "unsupported", "in-process"),
+    BackendCapability("af2", "adapter", "daemon-forward", "trajectory-exclusive; unverified on real GPU"),
     BackendCapability("af3", "adapter", "daemon-forward", "one resident runner per client"),
     BackendCapability("protenix-v0.5", "adapter", "daemon-forward", "trajectory-exclusive; unverified on real GPU"),
     BackendCapability("protenix-v0.5-constraint", "adapter", "daemon-forward", "trajectory-exclusive; unverified on real GPU"),

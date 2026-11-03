@@ -228,15 +228,19 @@ def _build_alphafold2_evaluator(
     af2_kwargs = {}
     if af2_conf is not None:
         af2_kwargs = OmegaConf.to_container(af2_conf, resolve=True)
+    execution = af2_kwargs.pop('execution', 'legacy')
+    if execution not in ('legacy', 'daemon'):
+        raise ValueError('AlphaFold2 execution must be legacy or daemon')
     _ensure_alphafold2_import_path(af2_kwargs.get("data_dir"))
 
     from astrolabe.evaluators.alphafold2 import AlphaFold2Evaluator
     from astrolabe.evaluators.wrappers.alphafold import alphafold_setup
 
-    model_runner = alphafold_setup(
-        oligo_names=oligo_names,
-        **af2_kwargs,
-    )
+    if execution == 'daemon':
+        from astrolabe.evaluators.af2_resident import AF2Resident
+        model_runner = AF2Resident.runners(oligo_names, af2_kwargs)
+    else:
+        model_runner = alphafold_setup(oligo_names=oligo_names, **af2_kwargs)
     return AlphaFold2Evaluator(model_runner, raw_model_results_dir / "alphafold2")
 
 
