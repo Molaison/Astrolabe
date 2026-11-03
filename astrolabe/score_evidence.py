@@ -14,11 +14,17 @@ class ScoreSpec:
     axes: tuple[str, ...] = ()
     entity: str | None = None
     entity_scope: str | None = None
+    units: str | None = None
+    direction: str | None = None
 
     def __post_init__(self):
         object.__setattr__(self, 'axes', tuple(self.axes))
         if self.entity_scope not in {None, 'oligo', 'protomer'} or (self.entity_scope is not None and not self.entity):
             raise ValueError('score entity_scope requires an oligo or protomer entity')
+        if self.direction not in {None, 'higher', 'lower'}:
+            raise ValueError('score direction must be higher or lower')
+        if self.units is not None and not str(self.units).strip():
+            raise ValueError('score units cannot be empty')
         if not self.name or not self.source or len(set(self.axes)) != len(self.axes):
             raise ValueError('ScoreSpec requires a name, source, and unique axes')
 
@@ -50,7 +56,7 @@ class ScoreRecord:
             input_snapshot = input_snapshot or snapshot
         elif not all((input_snapshot, subject, relation)):
             raise ValueError('non-evaluator score records require explicit input_snapshot, subject and relation')
-        if subject not in {'predicted_structure', 'reference_structure', 'proposal'} or relation not in {'measured_on', 'proposal_on_reference'}:
+        if subject not in {'predicted_structure', 'reference_structure', 'sequence', 'proposal'} or relation not in {'measured_on', 'proposal_on_reference'}:
             raise ValueError('unknown score subject or relation')
         if (subject == 'proposal') != (relation == 'proposal_on_reference'):
             raise ValueError('incompatible score subject and relation')
@@ -80,6 +86,8 @@ class ScoreQuery:
     entity_scope: str | None = None
     subject: str = 'predicted_structure'
     relation: str = 'measured_on'
+    units: str | None = None
+    direction: str | None = None
 
     def __post_init__(self):
         object.__setattr__(self, 'axes', tuple(self.axes))
@@ -109,6 +117,12 @@ def query_score(records, query, *, snapshots=None, generating_selector=False, se
     if len(matches) != 1:
         raise ValueError(f'expected one current score record, found {len(matches)}')
     rec = matches[0]
+    if query.units is not None and query.units != rec.spec.units:
+        raise ValueError('score units do not match query')
+    if query.direction is not None and query.direction != rec.spec.direction:
+        raise ValueError('score direction does not match query')
+    if generating_selector and rec.disposition == 'rejected':
+        raise ValueError('rejected evidence cannot generate a selector')
     if rec.execution != 'completed' or rec.validity != 'valid':
         raise ValueError('score evidence is not valid and completed')
     if not set(query.axes) <= set(rec.spec.axes):
@@ -201,7 +215,8 @@ def records_from_contributions(contributions, catalog, snapshot):
                 raise ValueError(f'strict score contribution {key!r} requires measurement_snapshot, input_snapshot, subject and relation')
             records.append(ScoreRecord(spec, contribution.measurement_snapshot, contribution.value, coordinates,
                                        input_snapshot=contribution.input_snapshot, subject=contribution.subject,
-                                       relation=contribution.relation))
+                                       relation=contribution.relation, execution=contribution.execution,
+                                       validity=contribution.validity, disposition=contribution.disposition))
     return records
 
 

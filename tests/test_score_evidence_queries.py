@@ -154,3 +154,26 @@ def test_canonical_protomer_observations_require_explicit_reduction():
         query_score(records, ScoreQuery('per_proto_score','evaluator',axes=('design_position',),entity='A'), snapshots={'last_accepted':'s'})
     query = ScoreQuery('per_proto_score','evaluator',axes=('design_position',),entity='A', select={'observation':[1]})
     np.testing.assert_allclose(query_score(records, query, snapshots={'last_accepted':'s'}), [.8,.6])
+
+
+def test_sequence_contribution_units_status_and_selector_disposition():
+    from astrolabe.score_contributions import ScoreContribution
+    from astrolabe.score_evidence import ScoreQuery, query_score, records_from_contributions
+    catalog = [{'source': 'loss.sequence', 'name': 'entropy', 'units': 'nats', 'direction': 'lower'}]
+    base = dict(source='loss.sequence', metric_name='entropy', value=0.5,
+                measurement_snapshot='seq1', input_snapshot='seq1', subject='sequence', relation='measured_on')
+    query = ScoreQuery('entropy', 'loss.sequence', subject='sequence', units='nats', direction='lower')
+    snapshots = {'last_accepted': 'seq1'}
+    records = records_from_contributions([ScoreContribution(**base)], catalog, 'unrelated')
+    assert query_score(records, query, snapshots=snapshots) == 0.5
+    for key, value, message in [('units', 'bits', 'units'), ('direction', 'higher', 'direction')]:
+        from dataclasses import replace
+        with pytest.raises(ValueError, match=message):
+            query_score(records, replace(query, **{key: value}), snapshots=snapshots)
+    for status in ('failed', 'pending'):
+        records = records_from_contributions([ScoreContribution(**base, execution=status)], catalog, 'seq1')
+        with pytest.raises(ValueError, match='not valid and completed'):
+            query_score(records, query, snapshots=snapshots)
+    records = records_from_contributions([ScoreContribution(**base, disposition='rejected')], catalog, 'seq1')
+    with pytest.raises(ValueError, match='rejected evidence'):
+        query_score(records, query, snapshots=snapshots, generating_selector=True)

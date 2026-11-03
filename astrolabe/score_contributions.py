@@ -25,6 +25,9 @@ class ScoreContribution:
     input_snapshot: str | None = None
     subject: str | None = None
     relation: str | None = None
+    execution: str = "completed"
+    validity: str = "valid"
+    disposition: str = "undecided"
 
     def __post_init__(self) -> None:
         if not str(self.source or "").strip():
@@ -144,6 +147,9 @@ def _contribution_from_mapping(raw: Mapping[str, Any]) -> ScoreContribution:
         input_snapshot=raw.get("input_snapshot"),
         subject=raw.get("subject"),
         relation=raw.get("relation"),
+        execution=raw.get("execution", "completed"),
+        validity=raw.get("validity", "valid"),
+        disposition=raw.get("disposition", "undecided"),
     )
 
 
