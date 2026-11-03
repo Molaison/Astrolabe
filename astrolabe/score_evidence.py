@@ -99,20 +99,15 @@ class ScoreQuery:
             raise ValueError('invalid query axes or reduction')
 
 
-def query_score(records, query, *, snapshots=None, generating_selector=False, selector_member_snapshot=None):
+def query_score(records, query, *, snapshots=None, generating_selector=False):
     snapshots = snapshots or {}
-    if query.snapshot in {'last_accepted', 'current_proposal', 'proposal', 'reference', 'member'} and query.snapshot not in snapshots:
+    if query.snapshot in {'last_accepted', 'current_proposal', 'proposal', 'reference'} and query.snapshot not in snapshots:
         raise ValueError(f'missing concrete identity for {query.snapshot}')
     target = snapshots.get(query.snapshot, query.snapshot)
-    if query.snapshot == 'reference':
-        permitted = snapshots.get('reference')
-    elif query.snapshot == 'member':
-        permitted = selector_member_snapshot
-    else:
-        permitted = snapshots.get('last_accepted')
+    permitted = snapshots.get('reference') if query.snapshot == 'reference' else snapshots.get('last_accepted')
     if generating_selector and (query.snapshot in {'current_proposal', 'proposal'} or
-                                permitted is None or target != permitted):
-        raise ValueError('a selector must use the last accepted snapshot or an explicitly scoped member')
+                                target != permitted):
+        raise ValueError('a selector must use the last accepted snapshot')
     matches = [r for r in records if r.spec.name == query.name and r.spec.source == query.source and r.snapshot == target and r.subject == query.subject and r.relation == query.relation and (query.entity is None or r.spec.entity == query.entity) and (query.entity_scope is None or r.spec.entity_scope == query.entity_scope)]
     if len(matches) != 1:
         raise ValueError(f'expected one current score record, found {len(matches)}')

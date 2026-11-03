@@ -28,7 +28,7 @@ def config_for(context, labels, target, n, weight):
             'mapping':'auto'}
 
 
-@pytest.mark.parametrize('producer', ['stored_records', 'standard_scores', 'merged_member_records'])
+@pytest.mark.parametrize('producer', ['stored_records', 'standard_scores'])
 def test_weighted_directed_pair_selector_reaches_real_builder_and_mutate(tmp_path, monkeypatch, producer):
     protomers, scores, _ = setup_case(tmp_path, monkeypatch, 'probability_mean')
     ab = ['AB:A:1:A','AB:A:2:A','AB:A:3:A','AB:B:1:B','AB:B:2:B']
@@ -37,18 +37,8 @@ def test_weighted_directed_pair_selector_reaches_real_builder_and_mutate(tmp_pat
                pair_record('AC',ac,ac[3],[7,3,2],scores.assessment_id))
     if producer == 'stored_records':
         scores.score_records = records
-    elif producer == 'standard_scores':
-        scores.pae = {'AB':[records[0].value], 'AC':[records[1].value]}
     else:
-        from astrolabe.evaluators.utils import StandardScores
-        from astrolabe.score_merge import merge_standard_scores
-        members = []
-        for context, labels, target, values in [('AB',ab,ab[3],[1,9,2]), ('AC',ac,ac[3],[7,3,2])]:
-            member = StandardScores(names=[context],plddt={context:[.8]},complex_paths={context:scores.complex_paths[context]})
-            member.score_records = (pair_record(context,labels,target,values,member.assessment_id),)
-            members.append(member)
-        scores = merge_standard_scores(members)
-        assert [record.snapshot for record in scores.score_records] == [member.assessment_id for member in members]
+        scores.pae = {'AB':[records[0].value], 'AC':[records[1].value]}
     global_config.init_const('decisions', SimpleNamespace(last_accepted=0,evaluation_results={0:scores}))
     global_config.init_const('stage_manager', SimpleNamespace(current_stage='default', transition_consistency_gate_context=None))
     spec = {'observations':[config_for('AB',ab,ab[3],3,1),config_for('AC',ac,ac[3],3,3)],
@@ -57,10 +47,7 @@ def test_weighted_directed_pair_selector_reaches_real_builder_and_mutate(tmp_pat
     if producer == 'standard_scores':
         for observation in spec['observations']:
             observation['query']['name'] = 'pae'
-    elif producer == 'merged_member_records':
-        for observation in spec['observations']:
-            observation['query']['snapshot'] = 'member'
-    runtime = {'score_selector_queries':OmegaConf.create({'two':spec}),'oligo':['AB','AC'],
+    runtime = {'score_selector_queries':{'two':spec},'oligo':['AB','AC'],
                'ignored_complexes':[], 'negative_design_complexes':[]}
     cfg = OmegaConf.create({'enabled_aliases':['random'],
         'mutator_terms':{'random':{'_type':'MCMC', 'position_selector':'score("two")',
@@ -151,23 +138,3 @@ def test_shared_segment_aliases_project_selection_to_each_protomer(tmp_path, mon
     assert masks['A'].tolist() == [True,False,False]
     assert masks['X'].tolist() == [True]
     global_config.reset()
-
-
-def test_member_snapshot_cannot_be_used_against_stale_aggregate():
-    global_config.reset()
-    protomers={'A':SimpleNamespace(length=1),'B':SimpleNamespace(length=1),'C':SimpleNamespace(length=1)}
-    ab=['AB:A:1:A','AB:B:1:B']; ac=['AC:A:1:A','AC:B:1:C']
-    scores=SimpleNamespace(assessment_id='candidate',member_assessment_ids={'AB':'a','AC':'b'}, names=[],
-        score_records=[pair_record('AB',ab,ab[1],[1],'a'),pair_record('AC',ac,ac[1],[2],'b')])
-    first=config_for('AB',ab,ab[1],1,1); second=config_for('AC',ac,ac[1],1,1)
-    first['query']['snapshot']=second['query']['snapshot']='member'
-    spec={'observations':[first,second],'aggregation':{'reduction':'mean','missing':'error','count':'context'},
-          'threshold':3,'comparison':'lt'}
-    runtime={'score_selector_queries':{'two':spec},'score_snapshots':{'last_accepted':'other'}}
-    with pytest.raises(ValueError, match='actual last accepted assessment'):
-        construct_position_selector('score("two")',scores,protomers,runtime_config=runtime)
-    runtime['score_snapshots']['last_accepted']='candidate'
-    assert construct_position_selector('score("two")',scores,protomers,runtime_config=runtime)['A'].tolist() == [True]
-    del scores.member_assessment_ids['AC']
-    with pytest.raises(ValueError, match='no member identity'):
-        construct_position_selector('score("two")',scores,protomers,runtime_config=runtime)

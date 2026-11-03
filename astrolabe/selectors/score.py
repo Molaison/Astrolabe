@@ -29,12 +29,11 @@ def _records(evaluation_result, protomers, runtime_config):
     return records, snapshots
 
 
-def _observation(config, records, snapshots, protomers, *, allow_equal_weights=False, selector_member_snapshot=None):
+def _observation(config, records, snapshots, protomers, *, allow_equal_weights=False):
     query = ScoreQuery(**dict(config['query']))
     if len(query.axes) != 1:
         raise ValueError('score selector must retain exactly one physical position axis')
-    values = query_score(records, query, snapshots=snapshots, generating_selector=True,
-                         selector_member_snapshot=selector_member_snapshot)
+    values = query_score(records, query, snapshots=snapshots, generating_selector=True)
     target = snapshots.get(query.snapshot, query.snapshot)
     record = next(r for r in records if r.spec.name == query.name and r.spec.source == query.source
                   and r.snapshot == target and r.subject == query.subject and r.relation == query.relation
@@ -101,7 +100,7 @@ def _canonical_positions(protomers):
     return positions
 
 
-def _multi_context(config, records, snapshots, protomers, evaluation_result):
+def _multi_context(config, records, snapshots, protomers):
     observations = config['observations']
     if not isinstance(observations, (list, tuple)) and not hasattr(observations, '__iter__'):
         raise ValueError('observations must be a nonempty sequence')
@@ -126,23 +125,10 @@ def _multi_context(config, records, snapshots, protomers, evaluation_result):
         context_weight = float(item['weight'])
         if not np.isfinite(context_weight) or context_weight < 0:
             raise ValueError('context weights must be finite and nonnegative')
-        query_config = dict(item['query'])
-        observation_snapshots = snapshots
-        member_snapshot = None
-        if query_config.get('snapshot') == 'member':
-            if getattr(evaluation_result, 'assessment_id', None) != snapshots.get('last_accepted'):
-                raise ValueError('member evidence requires the actual last accepted assessment')
-            member_snapshot = (getattr(evaluation_result, 'member_assessment_ids', None) or {}).get(context)
-            if not member_snapshot:
-                raise ValueError(f'accepted assessment has no member identity for {context!r}')
-            observation_snapshots = dict(snapshots)
-            observation_snapshots['member'] = member_snapshot
-        record, entries, explicit_position_weights = _observation(
-            item, records, observation_snapshots, protomers, allow_equal_weights=True,
-            selector_member_snapshot=member_snapshot,
-        )
+        record, entries, explicit_position_weights = _observation(item, records, snapshots, protomers, allow_equal_weights=True)
         if record.spec.entity_scope == 'oligo' and record.spec.entity != context:
             raise ValueError('observation context differs from score entity')
+        query_config = dict(item['query'])
         selected_axes = query_config.get('select') or {}
         if 'context' in record.spec.axes:
             axis = record.spec.axes.index('context')
@@ -212,7 +198,7 @@ def score_position_selector(evaluation_result, protomers, name, *, runtime_confi
     if 'observations' in config:
         if 'query' in config:
             raise ValueError('choose either a single query or multiple observations')
-        return _multi_context(config, records, snapshots, protomers, evaluation_result)
+        return _multi_context(config, records, snapshots, protomers)
     _, entries, explicit_weights = _observation(config, records, snapshots, protomers)
     destinations = [(proto, index) for proto, index, _, _ in entries]
     if len(set(destinations)) != len(destinations) and not explicit_weights:
