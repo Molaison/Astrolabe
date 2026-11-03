@@ -255,6 +255,8 @@ def _esmfold_kwargs_from_config(config) -> dict[str, typing.Any]:
             kwargs["model_name"] = str(model_name)
         if device is not None:
             kwargs["device"] = str(device)
+        if container.get("execution") is not None:
+            kwargs["execution"] = str(container["execution"])
     return kwargs
 
 

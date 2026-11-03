@@ -16,7 +16,7 @@ def discover(backend, requested=None):
             d = devices[0]  # exactly the selection used by alphafold3_setup
             return {'platform': str(d.platform), 'id': int(d.id),
                     'device_kind': str(d.device_kind), 'visible': os.environ.get('CUDA_VISIBLE_DEVICES')}
-        if backend in ('esmfold2', 'protenix', 'opendde', 'mol1'):
+        if backend in ('esmfold1', 'esmfold2', 'protenix', 'opendde', 'mol1'):
             import torch
             name = requested or (('cuda:0' if backend in ('protenix', 'opendde', 'mol1') else 'cuda') if torch.cuda.is_available() else 'cpu')
             kind = torch.cuda.get_device_name(torch.device(name)) if name.startswith('cuda') else 'cpu'

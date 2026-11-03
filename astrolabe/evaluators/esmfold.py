@@ -105,10 +105,17 @@ class ESMFoldEvaluator(Evaluator):
         model: Any | None = None,
         model_name: str = "esmfold_3B_v1",
         device: str | None = None,
+        execution: str = "legacy",
     ):
+        if execution not in ("legacy", "daemon"):
+            raise ValueError("ESMFold execution must be legacy or daemon")
+        if execution == "daemon" and model is not None:
+            raise ValueError("ESMFold daemon cannot use an injected model")
         self._model = model
         self._model_name = model_name
         self._device = device
+        self._execution = execution
+        self._resident = None
 
     def _ensure_model(self):
         if self._model is not None:
@@ -163,6 +170,8 @@ class ESMFoldEvaluator(Evaluator):
     def prepare_input(self, inputs, runtime_config):
         input_feat = {}
         for k, v in inputs.items():
+            if self._execution == "daemon" and (getattr(v, "cyclic_chain_ids", None) or getattr(v, "cyclic_relative_patches", None) or getattr(v, "bonded_atom_pairs", None)):
+                raise ValueError("ESMFold1 daemon does not support topology constraints")
             if not all(
                 global_config.protomers[c].type == ProtomerTypes.PROTEIN for c in k
             ):
@@ -174,16 +183,26 @@ class ESMFoldEvaluator(Evaluator):
         return output
 
     def run_function(self, input_feat):
+        if self._execution == "daemon":
+            if self._resident is None:
+                from astrolabe.evaluators.esmfold_resident import ESMFoldResident
+                self._resident = ESMFoldResident(self._model_name, self._device)
+            return self._resident.run(input_feat)
         with torch.no_grad():
             names = list(input_feat.keys())
             model = self._ensure_model()
             output = model.infer([input_feat[n] for n in names])
+            pdbs = model.output_to_pdb(output)
+        return self._format_scores(names, output, pdbs)
+
+    @staticmethod
+    def _format_scores(names, output, pdbs):
         structure_path = global_config.out_dir / "structures"
         results = defaultdict(dict)
         for i, oligo_name in enumerate(names):
             jobname = f"step_{global_config.step:03d}_{oligo_name}"
             with open(structure_path / f"{jobname}_model.pdb", "w") as f:
-                f.write(renumber_each_chain(model.output_to_pdb(output)[i]))
+                f.write(renumber_each_chain(pdbs[i]))
             results["complex_paths"][oligo_name] = (
                 structure_path / f"{jobname}_model.pdb"
             )
@@ -208,3 +227,8 @@ class ESMFoldEvaluator(Evaluator):
             )
 
         return StandardScores(names=names, **results)
+
+    def close(self):
+        if self._resident is not None:
+            self._resident.close()
+            self._resident = None

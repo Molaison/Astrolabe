@@ -20,7 +20,7 @@ BACKENDS = {entry.identity: entry for entry in (
     BackendCapability("protenix-v0.5-constraint", "adapter", "daemon-forward", "trajectory-exclusive; unverified on real GPU"),
     BackendCapability("protenix-v1", "adapter", "daemon-forward", "trajectory-exclusive; unverified on real GPU"),
     BackendCapability("protenix-v2", "adapter", "daemon-forward", "trajectory-exclusive; unverified on real GPU"),
-    BackendCapability("esmfold1", "adapter", "unsupported", "in-process lazy model"),
+    BackendCapability("esmfold1", "adapter", "resident-atomic", "trajectory-exclusive; unverified on real GPU"),
     BackendCapability("esmfold2", "adapter", "resident-atomic", "one resident model and builder per client"),
     BackendCapability("opendde", "adapter", "resident-atomic", "trajectory-exclusive; unverified on real GPU"),
     BackendCapability("mol-1", "adapter", "resident-atomic", "protein only; trajectory-exclusive; unverified on real GPU"),
