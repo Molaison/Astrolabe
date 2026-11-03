@@ -245,7 +245,7 @@ def test_strict_unlabelled_non_evaluator_contribution_fails_closed(tmp_path):
 def test_canonical_protomer_selector_real_cli(tmp_path):
     config = {
         'task_name':'position_score_cli', 'out_dir':str(tmp_path/'output'), 'raw_model_results_dir':str(tmp_path/'raw'),
-        'repeats':1, 'seed':17, 'steps':2, 'ananas_path':None, 'seqs':{'A':'AAAA'},
+        'repeats':1, 'seed':17, 'steps':3, 'ananas_path':None, 'seqs':{'A':'AAAA'},
         'mutator':{'MCMC':{'mutation_method':'random','select_positions':'random'},
                    'mutator_terms':{'MCMC':{'_type':'MCMC','position_selector':'score("positions")'}}},
         'evaluator':{'evaluator_terms':{'Dummy':{'_type':'dummy'}}},
@@ -253,7 +253,8 @@ def test_canonical_protomer_selector_real_cli(tmp_path):
                 'score_selector_queries':{'positions':{'query':{'name':'per_proto_score','source':'evaluator',
                    'entity':'A','axes':['design_position']}, 'mapping':'auto','threshold':.5,'comparison':'ge'}}},
         'stages':{'default':{'oligo':['A'],'evaluator':'Dummy','mutation_num':1,'mutators':['MCMC'],
-                             'mutator_weights':[1.0], 'weighted_score_expression':'model_value','early_stopping':None}},
+                             'mutator_weights':[1.0], 'weighted_score_expression':'model_value','early_stopping':None,
+                             'acceptance_gate':'step < 2', 'acceptance_threshold':'model_value > 0.8'}},
     }
     path = tmp_path/'position_score.yaml'
     path.write_text(yaml.safe_dump(config))
@@ -261,5 +262,6 @@ def test_canonical_protomer_selector_real_cli(tmp_path):
     assert result.returncode == 0, result.stdout+'\n'+result.stderr
     csv_path = next((tmp_path/'output'/'position_score_cli').glob('*/scores.csv'))
     with csv_path.open() as handle: rows = list(csv.DictReader(handle))
-    assert [int(row['step']) for row in rows] == [0,1]
+    assert [int(row['step']) for row in rows] == [0,1,2]
+    assert [row['accepted'].lower() for row in rows] == ['true', 'true', 'false']
     assert float(rows[1]['mutator_selector_MCMC_pA_selected_count']) == 4

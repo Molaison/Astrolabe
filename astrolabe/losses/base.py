@@ -357,7 +357,7 @@ class LossEngine:
         }
         self._merge_reference_symbols(total_env, reference_symbols)
         self._merge_score_contribution_symbols(total_env, contribution_symbols)
-        self._merge_score_contribution_symbols(total_env, self._query_score_symbols(eval_result, runtime_config))
+        self._merge_score_contribution_symbols(total_env, self._query_score_symbols(eval_result, runtime_config, per_oligo_scores, per_terms_score))
         required_expression_terms = self._ordered_expression_terms_for_expressions(
             [
                 self.weighted_score_expression,
@@ -414,7 +414,7 @@ class LossEngine:
             total_env,
             self._runtime_score_contribution_symbols(runtime_config),
         )
-        self._merge_score_contribution_symbols(total_env, self._query_score_symbols(eval_result, runtime_config))
+        self._merge_score_contribution_symbols(total_env, self._query_score_symbols(eval_result, runtime_config, per_oligo_scores, per_terms_score))
         return total_env
 
     def score_context_for_expressions(
@@ -432,7 +432,7 @@ class LossEngine:
         if self.score_queries:
             from astrolabe.score_identity import score_runtime_view
             runtime_config = score_runtime_view(None, eval_result)
-            self._merge_score_contribution_symbols(total_env, self._query_score_symbols(eval_result, runtime_config))
+            self._merge_score_contribution_symbols(total_env, self._query_score_symbols(eval_result, runtime_config, per_oligo_scores, per_terms_score))
         return total_env
 
     def weighted_score(self, total_env, expression):
@@ -537,7 +537,7 @@ class LossEngine:
 
         return reference_gate_score_context(result)
 
-    def _query_score_symbols(self, eval_result, runtime_config):
+    def _query_score_symbols(self, eval_result, runtime_config, per_oligo_scores=None, per_terms_score=None):
         if not self.score_queries:
             return {}
         from astrolabe.score_evidence import ScoreQuery, query_score, records_from_contributions, records_from_standard_scores
@@ -547,6 +547,23 @@ class LossEngine:
         snapshots = runtime_config.get("score_snapshots", {}) or {}
         snapshot = runtime_config.get("score_capture_snapshot")
         records = list(runtime_config.get("score_records", []) or [])
+        # Registered loss functions have already run on this exact assessment.
+        # Only capture explicitly catalogued, actually present oligomer values;
+        # the legacy empty-dictionary mean of zero is not evidence.
+        if snapshot and per_oligo_scores is not None:
+            from astrolabe.score_evidence import ScoreRecord, ScoreSpec
+            for entry in self.score_catalog:
+                config = dict(entry)
+                if config.get("source") != "loss":
+                    continue
+                coordinates = config.pop("coordinates", ())
+                spec = ScoreSpec(**config)
+                if spec.entity is None or spec.name not in per_oligo_scores.get(spec.entity, {}):
+                    continue
+                if spec.entity_scope not in (None, "oligo"):
+                    raise ValueError("loss score entity must identify an oligomer")
+                records.append(ScoreRecord(spec, snapshot, per_oligo_scores[spec.entity][spec.name], coordinates,
+                                           input_snapshot=snapshot, subject="predicted_structure", relation="measured_on"))
         if assessments is None:
             assessments = (eval_result,)
         live_runtime_records = []

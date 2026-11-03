@@ -134,3 +134,17 @@ class TestLossEngineOligomerSpecific(unittest.TestCase):
         )
 
         self.assertEqual(per_terms["dummy"], 0.0)
+
+
+def test_catalog_queries_actual_registered_loss_and_missing_is_not_zero():
+    import pytest
+    engine = LossEngine({'loss_terms': {'dummy': {'_type': '__unittest_dummy_loss__', '_for': 'AB'}},
+                         'score_catalog': [{'name': 'dummy', 'source': 'loss', 'entity': 'AB', 'entity_scope': 'oligo'}],
+                         'score_queries': {'typed_loss': {'name': 'dummy', 'source': 'loss', 'entity': 'AB'}}},
+                        validate_config=False)
+    engine.setup('typed_loss', None, None, validate_config=False)
+    runtime = {'score_capture_snapshot': 'assessment', 'score_snapshots': {'current_proposal': 'assessment'}}
+    value, details = engine.compute_loss(_EvalResult(['AB'], counter={'calls': 0}), runtime)
+    assert value == 1.0 and details['typed_loss'] == 1.0
+    with pytest.raises(ValueError, match='expected one current score record'):
+        engine.compute_loss(_EvalResult(['AC'], counter={'calls': 0}), runtime)

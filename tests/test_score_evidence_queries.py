@@ -177,3 +177,23 @@ def test_sequence_contribution_units_status_and_selector_disposition():
     records = records_from_contributions([ScoreContribution(**base, disposition='rejected')], catalog, 'seq1')
     with pytest.raises(ValueError, match='rejected evidence'):
         query_score(records, query, snapshots=snapshots, generating_selector=True)
+
+
+def test_serializable_query_operation():
+    from astrolabe.score_evidence import query_score_operation
+    item = {'records': [{'spec': {'name': 'x', 'source': 'evaluator', 'axes': ['position']},
+                         'snapshot': 'one', 'value': [1., 3.], 'coordinates': [['a', 'b']]}],
+            'query': {'name': 'x', 'source': 'evaluator'}, 'snapshots': {'last_accepted': 'one'}}
+    assert query_score_operation(item) == 2.
+    item['records'][0]['value'][0] = float('nan')
+    with pytest.raises(ValueError, match='nonfinite'):
+        query_score_operation(item)
+
+
+def test_serializable_query_runs_in_cpu_executor():
+    from astrolabe.runtime.cpu import CPUExecutor
+    item = {'records': [{'spec': {'name': 'x', 'source': 'evaluator', 'axes': ['position']},
+                         'snapshot': 'one', 'value': [1., 3.], 'coordinates': [['a', 'b']]}],
+            'query': {'name': 'x', 'source': 'evaluator'}, 'snapshots': {'last_accepted': 'one'}}
+    with CPUExecutor(1, max_pending_bytes=16384, task_timeout=30) as pool:
+        assert list(pool.map('astrolabe.score_evidence:query_score_operation', [item])) == [2.]

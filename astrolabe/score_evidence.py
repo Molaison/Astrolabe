@@ -356,3 +356,20 @@ def filter_score_records(records, *, original_oligos, allowed_oligos, allowed_pr
                     execution=record.execution, validity=record.validity, disposition=record.disposition,
                     input_snapshot=record.input_snapshot, subject=record.subject, relation=record.relation))
     return tuple(filtered)
+
+
+def query_score_operation(item):
+    """Evaluate one JSON-serializable score query without trajectory globals.
+
+    The caller owns assessment identity and admission; this operation only reads
+    the supplied immutable evidence and returns JSON-compatible numeric values.
+    """
+    records = []
+    for raw in item['records']:
+        raw = dict(raw)
+        spec = ScoreSpec(**raw.pop('spec'))
+        records.append(ScoreRecord(spec, **raw))
+    result = query_score(records, ScoreQuery(**item['query']),
+                         snapshots=item.get('snapshots'),
+                         generating_selector=item.get('generating_selector', False))
+    return result.tolist() if isinstance(result, np.ndarray) else result
