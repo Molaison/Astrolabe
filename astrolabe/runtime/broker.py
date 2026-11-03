@@ -10,7 +10,7 @@ import threading
 import time
 import uuid
 from .client import DaemonClient, OutcomeUnknown, WorkerError
-from .admission import _execute_probe
+from .admission import _execute_probe, allocated_devices
 
 MAX_CONTROL = 4 * 1024 * 1024
 
@@ -28,12 +28,11 @@ class State:
         self.used = set()
         self.poisoned = set()
         self.stopping = False
+        self.metrics = {'waiting': 0, 'completed': 0, 'wait_seconds': 0.0, 'service_seconds': 0.0}
 
     def select_device(self, requested):
         allocation = os.environ.get('CUDA_VISIBLE_DEVICES') or ''
-        devices = allocation.split(',') if allocation else []
-        if any(not d or d.strip() != d for d in devices) or len(set(devices)) != len(devices):
-            raise ValueError('invalid or duplicate CUDA allocation')
+        devices = allocated_devices(allocation)
         if requested is None:
             if len(devices) > 1:
                 raise ValueError('explicit allocated device required for multiple GPUs')
@@ -69,6 +68,8 @@ class State:
                 if visible != '':
                     raise ValueError('CPU workers must declare empty CUDA visibility')
             else:
+                if not isinstance(visible, str) or not visible:
+                    raise ValueError('GPU workers must declare an allocated device')
                 self.select_device(visible)
             if platform not in ('cpu', 'gpu', 'cuda:0', 'mock') or (
                 platform == 'gpu' and device.get('id', 0) != 0
@@ -162,9 +163,16 @@ class State:
         if timeout is not None and (not isinstance(timeout, (int, float)) or timeout <= 0):
             raise ValueError('invalid timeout')
         start = time.monotonic()
-        acquired = device_lock.acquire() if timeout is None else device_lock.acquire(timeout=timeout)
+        with self.lock:
+            self.metrics['waiting'] += 1
+        try:
+            acquired = device_lock.acquire() if timeout is None else device_lock.acquire(timeout=timeout)
+        finally:
+            with self.lock:
+                self.metrics['waiting'] -= 1
         if not acquired:
             raise TimeoutError('compute admission timed out before submission')
+        admitted = time.monotonic()
         try:
             with self.lock:
                 if record['device'] in self.poisoned or self.stopping:
@@ -173,7 +181,12 @@ class State:
             if remaining is not None and remaining <= 0:
                 raise TimeoutError('compute admission timed out before submission')
             try:
-                return record['client'].call(req['payload'], timeout=remaining, request_id=uuid.uuid4().hex)
+                result = record['client'].call(req['payload'], timeout=remaining, request_id=uuid.uuid4().hex)
+                with self.lock:
+                    self.metrics['completed'] += 1
+                    self.metrics['wait_seconds'] += admitted - start
+                    self.metrics['service_seconds'] += time.monotonic() - admitted
+                return result
             except WorkerError:
                 with self.lock:
                     self.poisoned.add(record['device'])
@@ -247,6 +260,9 @@ class Handler(socketserver.StreamRequestHandler):
                 result = {'result': self.server.state.call(req)}
             elif req.get('op') == 'probe':
                 result = {'result': self.server.state.probe(req)}
+            elif req.get('op') == 'metrics':
+                with self.server.state.lock:
+                    result = {'metrics': dict(self.server.state.metrics)}
             else:
                 raise ValueError('unknown broker operation')
             result['ok'] = True

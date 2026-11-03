@@ -35,6 +35,8 @@ class BrokerSession:
     def __enter__(self):
         if os.environ.get('ASTROLABE_CPU_OWNER') == '1' or os.environ.get('ASTROLABE_EXECUTION_ENDPOINT'):
             raise RuntimeError('nested execution broker sessions are not supported')
+        from .admission import allocated_devices
+        allocated_devices(os.environ.get('CUDA_VISIBLE_DEVICES') or '')
         self.directory = tempfile.TemporaryDirectory(prefix='astrolabe-session-')
         self.endpoint = '@astrolabe-' + uuid.uuid4().hex
         self.token = uuid.uuid4().hex + uuid.uuid4().hex
@@ -245,14 +247,32 @@ def validate_parallel(cfg):
                 raise ValueError(f'parallel runtime cannot certify selector implementation {name}')
 
 
-def run_parallel(configs, max_active, stop_requested, on_completed, *, max_resident_models=1):
-    """Conservative online admission, increasing on completions and reducing under CPU pressure."""
+def _next_limit(limit, maximum, *, pressure, slowed, metrics, previous):
+    n = metrics['completed'] - previous['completed']
+    queued = metrics['wait_seconds'] - previous['wait_seconds']
+    service = metrics['service_seconds'] - previous['service_seconds']
+    pressure |= bool(n and queued > service) or metrics['waiting'] >= max(1, limit)
+    return max(1, limit - 1) if pressure or slowed else min(maximum, limit + 1)
+
+
+def run_parallel(configs, max_active, stop_requested, on_completed, *, max_resident_models=1,
+                 max_resident_per_device=None):
+    """Adapt admission at trajectory completions using observed work and pressure."""
+    from .admission import allocated_devices, available_cpus, resource_pressure
+    from .broker_client import BrokerClient
+    from .client import WorkerError
     remaining = iter(configs)
     exhausted = False
     limit = min(2, max_active)
     active = {}
     completed = 0
-    with BrokerSession(max_resident_models) as session, ThreadPoolExecutor(max_workers=max_active) as pool:
+    previous_metrics = {'completed': 0, 'wait_seconds': 0.0, 'service_seconds': 0.0}
+    duration_ema = None
+    with BrokerSession(max_resident_models, max_resident_per_device=max_resident_per_device) as session, ThreadPoolExecutor(max_workers=max_active) as pool:
+        devices = allocated_devices(session.env['ASTROLABE_ALLOCATED_CUDA_DEVICES'])
+        admitted = 0
+        monitor = object.__new__(BrokerClient)
+        monitor.endpoint, monitor.token, monitor.limit = session.endpoint, session.token, 1048576
         while not exhausted or active:
             while not exhausted and len(active) < limit and not stop_requested():
                 try:
@@ -260,22 +280,34 @@ def run_parallel(configs, max_active, stop_requested, on_completed, *, max_resid
                 except StopIteration:
                     exhausted = True
                     break
-                future = pool.submit(run_trajectory, cfg, env=session.env)
-                active[future] = cfg
+                env = session.env.copy()
+                if devices:
+                    env['ASTROLABE_PREFERRED_CUDA_DEVICE'] = devices[admitted % len(devices)]
+                else:
+                    env.pop('ASTROLABE_PREFERRED_CUDA_DEVICE', None)
+                admitted += 1
+                future = pool.submit(run_trajectory, cfg, env=env)
+                active[future] = time.monotonic()
             if not active:
                 break
             done, _ = wait(active, return_when=FIRST_COMPLETED)
+            durations = []
             for future in done:
-                active.pop(future)
+                durations.append(time.monotonic() - active.pop(future))
                 future.result()
                 completed += 1
                 on_completed(completed)
-            cpus = len(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else (os.cpu_count() or 1)
+            observed = sum(durations) / len(durations)
+            slowed = duration_ema is not None and observed > duration_ema * 1.5
+            duration_ema = observed if duration_ema is None else .75 * duration_ema + .25 * observed
+            pressure = resource_pressure(available_cpus())
             try:
-                busy = os.getloadavg()[0] >= cpus
-            except OSError:
-                busy = True
-            limit = max(1, limit - 1) if busy else min(max_active, limit + 1)
+                metrics = monitor._rpc({'op': 'metrics'}, 2, submitted=False)['metrics']
+                limit = _next_limit(limit, max_active, pressure=pressure, slowed=slowed,
+                                    metrics=metrics, previous=previous_metrics)
+                previous_metrics = metrics
+            except (WorkerError, KeyError, TypeError):
+                limit = max(1, limit - 1)
     return completed
 
 

@@ -386,6 +386,88 @@ def test_per_device_resident_limit(monkeypatch):
         assert start('b', 'two').call({}, timeout=2)['visible'] == 'b'
 
 
+def test_auto_limit_uses_affinity_quota_and_slurm(monkeypatch, tmp_path):
+    import pytest
+    from astrolabe.runtime import admission
+    (tmp_path / 'cpu.max').write_text('250000 100000')
+    monkeypatch.setattr(admission, '_cgroup_v2_dirs', lambda: [tmp_path])
+    monkeypatch.setattr(admission.os, 'sched_getaffinity', lambda _: set(range(8)))
+    monkeypatch.setenv('SLURM_CPUS_PER_TASK', '3')
+    assert admission.resolve_active_limit('auto', 20) == 2
+    assert admission.resolve_active_limit('auto', 1) == 1
+    assert admission.resolve_active_limit(10, 3) == 3
+    with pytest.raises(ValueError):
+        admission.resolve_active_limit(True, 3)
+    assert admission.resolve_resident_limit('auto', '0,1') == 2
+    assert admission.resolve_resident_limit('auto', '') == 1
+    for allocation in ('0,00', '0,GPU-123', 'GPU-abc', '1,1'):
+        with pytest.raises(ValueError):
+            admission.allocated_devices(allocation)
+
+
+def test_adaptive_limit_responds_to_queue_and_pressure():
+    from astrolabe.runtime.session import _next_limit
+    previous = {'completed': 0, 'wait_seconds': 0., 'service_seconds': 0.}
+    normal = {'completed': 2, 'wait_seconds': .1, 'service_seconds': 2., 'waiting': 0}
+    congested = {'completed': 2, 'wait_seconds': 3., 'service_seconds': 2., 'waiting': 0}
+    assert _next_limit(2, 4, pressure=False, slowed=False, metrics=normal, previous=previous) == 3
+    assert _next_limit(2, 4, pressure=False, slowed=False, metrics=congested, previous=previous) == 1
+    assert _next_limit(2, 4, pressure=True, slowed=False, metrics=normal, previous=previous) == 1
+    assert _next_limit(2, 4, pressure=False, slowed=True, metrics=normal, previous=previous) == 1
+
+
+def test_trajectory_preference_drives_admitted_probe(monkeypatch, tmp_path):
+    import json
+    from astrolabe.runtime import admission, session
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'a,b')
+    monkeypatch.setattr(admission, 'resource_pressure', lambda _: False)
+    observed = []
+    def trajectory(cfg, *, env):
+        program = ("import json,sys; from astrolabe.runtime.admission import run_probe; "
+                   "print(json.dumps(run_probe([sys.executable,sys.argv[1]],env={'RUNTIME_PROBE_LOG':sys.argv[2]})))")
+        output = subprocess.check_output([sys.executable, '-c', program,
+                                          str(ROOT / 'tests/runtime_probe_fixture.py'),
+                                          str(tmp_path / 'probe-log')], env=env, text=True)
+        observed.append((cfg, env['CUDA_VISIBLE_DEVICES'], json.loads(output)['visible']))
+    monkeypatch.setattr(session, 'run_trajectory', trajectory)
+    assert session.run_parallel(range(4), 2, lambda: False, lambda _: None, max_resident_models=2) == 4
+    assert sorted(observed) == [(0, '', 'a'), (1, '', 'b'), (2, '', 'a'), (3, '', 'b')]
+
+
+def test_broker_reports_actual_compute_queue(monkeypatch, tmp_path):
+    import json
+    import time
+    from concurrent.futures import ThreadPoolExecutor
+    from astrolabe.runtime.broker_client import BrokerClient
+    from astrolabe.runtime.session import BrokerSession
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'a')
+    with BrokerSession(max_resident_models=2) as session:
+        monkeypatch.setenv('ASTROLABE_EXECUTION_ENDPOINT', session.endpoint)
+        monkeypatch.setenv('ASTROLABE_EXECUTION_TOKEN', session.token)
+        clients = []
+        for weight in ('one', 'two'):
+            ident = {**IDENTITY, 'weights': weight, 'device': {'platform': 'mock', 'visible': 'a'}}
+            clients.append(DaemonClient(COMMAND, ident, env={'RUNTIME_TEST_IDENTITY': json.dumps(ident)}))
+        monitor = object.__new__(BrokerClient)
+        monitor.endpoint, monitor.token, monitor.limit = session.endpoint, session.token, 1048576
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            first = pool.submit(clients[0].call, {'sleep': .4}, timeout=3)
+            time.sleep(.1)
+            second = pool.submit(clients[1].call, {'sleep': .05}, timeout=3)
+            deadline = time.monotonic() + 2
+            while True:
+                snapshot = monitor._rpc({'op': 'metrics'}, 2, submitted=False)['metrics']
+                if snapshot['waiting'] == 1:
+                    break
+                assert time.monotonic() < deadline
+                time.sleep(.01)
+            first.result()
+            second.result()
+        metrics = monitor._rpc({'op': 'metrics'}, 2, submitted=False)['metrics']
+        assert metrics['completed'] == 2
+        assert metrics['wait_seconds'] > .1 and metrics['service_seconds'] > .4
+
+
 def test_parent_exit_interrupts_active_worker_without_replay(tmp_path):
     import json
     import time
