@@ -47,7 +47,7 @@ def _execute_probe(command, env, timeout, limit=65536):
         p.stdout.close()
 
 
-def run_probe(command, *, env=None, timeout=60):
+def run_probe(command, *, env=None, timeout=60, device=None):
     """Return a small JSON device descriptor; never replay uncertain work."""
     endpoint = os.environ.get('ASTROLABE_EXECUTION_ENDPOINT')
     token = os.environ.get('ASTROLABE_EXECUTION_TOKEN')
@@ -57,11 +57,16 @@ def run_probe(command, *, env=None, timeout=60):
         child_env = os.environ.copy()
         if env:
             child_env.update(env)
+        if device is not None:
+            allocation = (os.environ.get('CUDA_VISIBLE_DEVICES') or '').split(',')
+            if not isinstance(device, str) or not device or device not in allocation:
+                raise ValueError('device is not in process allocation')
+            child_env['CUDA_VISIBLE_DEVICES'] = device
         return _execute_probe(command, child_env, timeout)
     from .broker_client import BrokerClient, worker_overrides
     proxy = object.__new__(BrokerClient)
     proxy.endpoint, proxy.token, proxy.limit = endpoint, token, 1048576
     overrides = worker_overrides(env)
-    return proxy._rpc({'op': 'probe', 'command': command, 'env': overrides, 'timeout': timeout,
+    return proxy._rpc({'op': 'probe', 'command': command, 'env': overrides, 'timeout': timeout, 'device': device,
                        'epoch': uuid.uuid4().hex, 'request_id': uuid.uuid4().hex},
                       timeout + 5, submitted=True)['result']

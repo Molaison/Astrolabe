@@ -16,16 +16,31 @@ MAX_CONTROL = 4 * 1024 * 1024
 
 
 class State:
-    def __init__(self, token, max_resident_models):
+    def __init__(self, token, max_resident_models, max_resident_per_device):
         self.token = token
         self.max_resident_models = max_resident_models
+        self.max_resident_per_device = max_resident_per_device
         self.lock = threading.Lock()
-        self.start_lock = threading.Lock()
+        self.start_locks = {}
+        self.starting = {}
         self.workers = {}
         self.devices = {}
         self.used = set()
         self.poisoned = set()
         self.stopping = False
+
+    def select_device(self, requested):
+        allocation = os.environ.get('CUDA_VISIBLE_DEVICES') or ''
+        devices = allocation.split(',') if allocation else []
+        if any(not d or d.strip() != d for d in devices) or len(set(devices)) != len(devices):
+            raise ValueError('invalid or duplicate CUDA allocation')
+        if requested is None:
+            if len(devices) > 1:
+                raise ValueError('explicit allocated device required for multiple GPUs')
+            return devices[0] if devices else ''
+        if not isinstance(requested, str) or requested not in devices:
+            raise ValueError('device is not in session allocation')
+        return requested
 
     def register(self, req):
         identity = req['identity']
@@ -53,10 +68,8 @@ class State:
             if platform == 'cpu':
                 if visible != '':
                     raise ValueError('CPU workers must declare empty CUDA visibility')
-            elif visible != os.environ.get('CUDA_VISIBLE_DEVICES'):
-                raise ValueError('worker device visibility differs from session allocation')
-            if platform != 'cpu' and (not visible or len(visible.split(',')) != 1):
-                raise ValueError('GPU broker requires exactly one allocated visible device')
+            else:
+                self.select_device(visible)
             if platform not in ('cpu', 'gpu', 'cuda:0', 'mock') or (
                 platform == 'gpu' and device.get('id', 0) != 0
             ):
@@ -73,9 +86,13 @@ class State:
         else:
             for env_key in ('CUDA_VISIBLE_DEVICES', 'NVIDIA_VISIBLE_DEVICES',
                             'HIP_VISIBLE_DEVICES', 'ROCR_VISIBLE_DEVICES'):
-                if env_key in launch_env and launch_env[env_key] != os.environ.get(env_key):
+                allowed = (os.environ.get(env_key), visible) if env_key == 'CUDA_VISIBLE_DEVICES' else (os.environ.get(env_key),)
+                if env_key in launch_env and launch_env[env_key] not in allowed:
                     raise ValueError('worker environment changes allocated device visibility')
-        if not self.start_lock.acquire(timeout=timeout):
+            launch_env['CUDA_VISIBLE_DEVICES'] = visible
+        with self.lock:
+            start_lock = self.start_locks.setdefault(key, threading.Lock())
+        if not start_lock.acquire(timeout=timeout):
             raise TimeoutError('worker startup admission timed out')
         try:
             with self.lock:
@@ -86,8 +103,13 @@ class State:
                     if record['spec'] != spec:
                         raise ValueError('identity reused with different launch command or environment')
                     return {'handle': key, 'hello': record['client'].hello}
-                if len(self.workers) >= self.max_resident_models:
+                if len(self.workers) + len(self.starting) >= self.max_resident_models:
                     raise ValueError('resident model limit reached')
+                residents = sum(record['device'] == device_key for record in self.workers.values())
+                residents += sum(device == device_key for device in self.starting.values())
+                if residents >= self.max_resident_per_device:
+                    raise ValueError('per-device resident model limit reached')
+                self.starting[key] = device_key
                 device_lock = self.devices.setdefault(device_key, threading.Lock())
             # Model load may initialize the device. Keep the compute lease
             # during startup without holding the registry mutex.
@@ -116,7 +138,9 @@ class State:
                 device_lock.release()
             return {'handle': key, 'hello': record['client'].hello}
         finally:
-            self.start_lock.release()
+            with self.lock:
+                self.starting.pop(key, None)
+            start_lock.release()
 
     def call(self, req):
         ident = (req['epoch'], req['request_id'])
@@ -170,12 +194,11 @@ class State:
                         'ASTROLABE_EXECUTION_ARTIFACT_ROOT'):
             if env_key in overrides and overrides[env_key] != os.environ.get(env_key):
                 raise ValueError('probe environment changes allocated resources')
-        visible = os.environ.get('CUDA_VISIBLE_DEVICES')
-        if visible and len(visible.split(',')) != 1:
-            raise ValueError('device probe requires exactly one allocated GPU')
+        visible = self.select_device(req.get('device'))
         device_key = 'gpu:' + visible if visible else 'cpu'
         env = os.environ.copy()
         env.update(overrides)
+        env['CUDA_VISIBLE_DEVICES'] = visible
         if not visible:
             env.update(CUDA_VISIBLE_DEVICES='', NVIDIA_VISIBLE_DEVICES='void',
                        HIP_VISIBLE_DEVICES='', ROCR_VISIBLE_DEVICES='')
@@ -267,7 +290,7 @@ def main():
     server = Server(address, Handler)
     if not endpoint.startswith('@'):
         os.chmod(endpoint, 0o600)
-    server.state = State(token, max_resident_models)
+    server.state = State(token, max_resident_models, int(sys.argv[6]))
     def watch():
         # EOF means the owning session exited. In-flight calls retain their
         # leases until complete or the underlying worker has been terminated.

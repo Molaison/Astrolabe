@@ -22,10 +22,15 @@ def _child_env():
 
 
 class BrokerSession:
-    def __init__(self, max_resident_models=1):
+    def __init__(self, max_resident_models=1, *, max_resident_per_device=None):
         if type(max_resident_models) is not int or max_resident_models < 1:
             raise ValueError('max_resident_models must be a positive integer')
         self.max_resident_models = max_resident_models
+        if max_resident_per_device is None:
+            max_resident_per_device = max_resident_models
+        if type(max_resident_per_device) is not int or max_resident_per_device < 1:
+            raise ValueError('max_resident_per_device must be a positive integer')
+        self.max_resident_per_device = max_resident_per_device
 
     def __enter__(self):
         if os.environ.get('ASTROLABE_CPU_OWNER') == '1' or os.environ.get('ASTROLABE_EXECUTION_ENDPOINT'):
@@ -44,7 +49,8 @@ class BrokerSession:
         try:
             self.process = subprocess.Popen(
                 [sys.executable, '-m', 'astrolabe.runtime.broker', self.endpoint,
-                 str(token_read), str(read_fd), self.directory.name, str(self.max_resident_models)], env=self.env,
+                 str(token_read), str(read_fd), self.directory.name, str(self.max_resident_models),
+                 str(self.max_resident_per_device)], env=self.env,
                 pass_fds=(read_fd, token_read))
         except BaseException:
             os.close(read_fd)

@@ -331,6 +331,61 @@ def test_device_probe_uses_same_admission(monkeypatch, tmp_path):
                           ['forward_start', 'forward_end', 'probe_start', 'probe_end'])
 
 
+def test_allocated_devices_are_isolated_and_fenced_independently(monkeypatch, tmp_path):
+    import json
+    import pytest
+    from concurrent.futures import ThreadPoolExecutor
+    from astrolabe.runtime.admission import run_probe
+    from astrolabe.runtime.session import BrokerSession
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'mock-a,mock-b')
+    with BrokerSession(max_resident_models=2) as session:
+        monkeypatch.setenv('ASTROLABE_EXECUTION_ENDPOINT', session.endpoint)
+        monkeypatch.setenv('ASTROLABE_EXECUTION_TOKEN', session.token)
+        def client(device):
+            identity = {**IDENTITY, 'device': {'platform': 'mock', 'visible': device}}
+            return DaemonClient(COMMAND, identity, env={'RUNTIME_TEST_IDENTITY': json.dumps(identity)})
+        a, b = client('mock-a'), client('mock-b')
+        with pytest.raises(WorkerError, match='not in session allocation'):
+            client('mock-c')
+        with pytest.raises(WorkerError, match='explicit allocated device'):
+            run_probe([sys.executable, str(ROOT / 'tests/runtime_probe_fixture.py')],
+                      env={'RUNTIME_PROBE_LOG': str(tmp_path / 'probe')}, timeout=3)
+        assert run_probe([sys.executable, str(ROOT / 'tests/runtime_probe_fixture.py')],
+                         env={'RUNTIME_PROBE_LOG': str(tmp_path / 'probe')},
+                         device='mock-b', timeout=3) == {'visible': 'mock-b'}
+        log = tmp_path / 'parallel.jsonl'
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            futures = [pool.submit(c.call, {'sleep': .35, 'event_log': str(log), 'owner': n}, timeout=3)
+                       for n, c in enumerate((a, b))]
+            assert [f.result()['visible'] for f in futures] == ['mock-a', 'mock-b']
+        events = [json.loads(line) for line in log.read_text().splitlines()]
+        starts = [e['time'] for e in events if e['kind'] == 'forward_start']
+        ends = [e['time'] for e in events if e['kind'] == 'forward_end']
+        assert max(starts) < min(ends)
+        with pytest.raises(OutcomeUnknown):
+            a.call({'sleep': 1}, timeout=.1)
+        with pytest.raises(OutcomeUnknown, match='fenced'):
+            a.call({}, timeout=2)
+        assert b.call({}, timeout=2)['visible'] == 'mock-b'
+
+
+def test_per_device_resident_limit(monkeypatch):
+    import json
+    import pytest
+    from astrolabe.runtime.session import BrokerSession
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'a,b')
+    with BrokerSession(max_resident_models=3, max_resident_per_device=1) as session:
+        monkeypatch.setenv('ASTROLABE_EXECUTION_ENDPOINT', session.endpoint)
+        monkeypatch.setenv('ASTROLABE_EXECUTION_TOKEN', session.token)
+        def start(device, weights):
+            ident = {**IDENTITY, 'weights': weights, 'device': {'platform': 'mock', 'visible': device}}
+            return DaemonClient(COMMAND, ident, env={'RUNTIME_TEST_IDENTITY': json.dumps(ident)})
+        start('a', 'one')
+        with pytest.raises(WorkerError, match='per-device resident'):
+            start('a', 'two')
+        assert start('b', 'two').call({}, timeout=2)['visible'] == 'b'
+
+
 def test_parent_exit_interrupts_active_worker_without_replay(tmp_path):
     import json
     import time
