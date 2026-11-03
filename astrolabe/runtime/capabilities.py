@@ -35,3 +35,18 @@ CPU_SELECTORS = {
     'long_loop': ('sse', 'LongLoopPositionSelector'),
     'rosetta_interface_energy': ('rosetta_interface_energy', 'RosettaInterfaceEnergyPositionSelector'),
 }
+
+# Exact source identities for the reviewed fixed dispatch and its implementations.
+# Changing either requires a fresh review and an explicit digest update.
+SELECTOR_SOURCE_SHA256 = {
+    'utils': 'd34d6ba2f90b8769fd02cb609d82b462e77e868a56d278bad464f5ed5a53908e',
+    'sse': '6ac98187f175df20512eaaa81a3b9cb540037b14cb19446abbf7c03ab3cae919',
+    'cdr': '4cc16c1f7c959a93ebe6d471c4e618f6cf9e70e9bf4ef5ee6b2f675389211924',
+    'bfactor': '32c8beadf78afe376148025997b5e3bf683cd7cebe240e7e06a3db71e9795f40',
+    'interface': 'da84c5d26d9377495c45ca9ce4fd3d9bfffdb3e4d71efdfe795ba29988389494',
+    'surface': '997542ccdd084af20cc5b4ebf0db157b828e2542620dcd7fd741e428dcf8a7e6',
+    'protein_quality': '15e0b10273fa03f8095f5f0d60fa6387df62990679698a04573b30bbf697e502',
+    'ligand': 'da72d8d091bbdd766a9a6994ebce02548caec68b21e0e1a3dfdef4933844f6ab',
+    'hotspot': '9fd0abf8b43b7d174c7e36bb811ead8f511edbe11a8a5299255be9f6351e3a63',
+    'rosetta_interface_energy': '64625bf1dd7e1549ce4839e06ec53eaf58e63b85a429604536bd7fe1de5ec1a1',
+}

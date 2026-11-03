@@ -9,7 +9,7 @@ import time
 import uuid
 import importlib
 import importlib.util
-import ast
+import hashlib
 from concurrent.futures import ThreadPoolExecutor, FIRST_COMPLETED, wait
 from omegaconf import OmegaConf
 
@@ -107,7 +107,7 @@ class BrokerSession:
 
 def validate_parallel(cfg):
     """Reject any component that has not explicitly opted into this path."""
-    from .capabilities import CPU_LOSSES, CPU_SELECTORS
+    from .capabilities import CPU_LOSSES, CPU_SELECTORS, SELECTOR_SOURCE_SHA256
     from astrolabe.losses.base import extract_loss_terms, loss_registry
     from astrolabe.selectors.utils import extract_variables
 
@@ -237,14 +237,13 @@ def validate_parallel(cfg):
         unknown = selected - set(CPU_SELECTORS)
         if unknown:
             raise ValueError(f'parallel runtime cannot certify selectors {sorted(unknown)}')
-        for name in selected:
-            module, cls = CPU_SELECTORS[name]
+        for module in ({'utils'} | {CPU_SELECTORS[name][0] for name in selected}):
             spec = importlib.util.find_spec(f'astrolabe.selectors.{module}')
             if spec is None or not spec.origin:
-                raise ValueError(f'parallel runtime cannot find selector implementation {name}')
-            tree = ast.parse(pathlib.Path(spec.origin).read_text(encoding='utf-8'))
-            if not any(isinstance(node, ast.ClassDef) and node.name == cls for node in tree.body):
-                raise ValueError(f'parallel runtime cannot certify selector implementation {name}')
+                raise ValueError(f'parallel runtime cannot find selector implementation {module}')
+            digest = hashlib.sha256(pathlib.Path(spec.origin).read_bytes()).hexdigest()
+            if digest != SELECTOR_SOURCE_SHA256.get(module):
+                raise ValueError(f'parallel runtime cannot certify selector implementation {module}')
 
 
 def _next_limit(limit, maximum, *, pressure, slowed, metrics, previous):

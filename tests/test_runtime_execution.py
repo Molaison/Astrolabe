@@ -267,6 +267,21 @@ def test_unknown_implicit_loss_is_rejected(monkeypatch):
         validate_parallel(cfg)
 
 
+def test_selector_requires_exact_source_identity(monkeypatch):
+    import pytest
+    from omegaconf import OmegaConf
+    from astrolabe.runtime.capabilities import SELECTOR_SOURCE_SHA256
+    from astrolabe.runtime.session import validate_parallel
+    cfg = OmegaConf.create({'stages': {'default': {'mutators': ['m'], 'evaluator': 'e'}},
+                            'mutator': {'selector_expression': 'interface()',
+                                        'mutator_terms': {'m': {'_type': 'MCMC'}}},
+                            'evaluator': {'evaluator_terms': {'e': {'_type': 'dummy'}}}})
+    validate_parallel(cfg)
+    monkeypatch.setitem(SELECTOR_SOURCE_SHA256, 'interface', '0' * 64)
+    with pytest.raises(ValueError, match='cannot certify selector implementation interface'):
+        validate_parallel(cfg)
+
+
 def test_known_loss_name_cannot_substitute_unknown_implementation(monkeypatch):
     import pytest
     from omegaconf import OmegaConf
