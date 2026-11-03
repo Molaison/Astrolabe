@@ -11,6 +11,7 @@ import json
 import logging
 import math
 import os
+import sys
 import pathlib
 import pickle
 import random
@@ -304,13 +305,14 @@ def _suppress_external_logging() -> None:
     os.environ["PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION"] = "python"
     os.environ["GLOG_minloglevel"] = "3"
 
-    # Optional: make ProDy quiet if available (used by some docking utilities).
-    try:
-        import prody  # type: ignore
-
-        prody.utilities.logger.PackageLogger.verbosity = None
-    except Exception:
-        pass
+    # Never import optional scientific libraries merely to configure logging.
+    # ProDy import can consume NumPy RNG state and change fresh-worker sampling.
+    prody = sys.modules.get("prody")
+    if prody is not None:
+        try:
+            prody.utilities.logger.PackageLogger.verbosity = None
+        except AttributeError:
+            pass
 
 
 def initialize_global_config(args) -> None:
