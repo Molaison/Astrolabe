@@ -376,11 +376,20 @@ def _normalize_explicit_chai_restraints(
 
 
 class Chai1Evaluator(Evaluator):
-    def __init__(self, model_config, output_dir):
+    def __init__(self, model_config, output_dir, *, execution='legacy'):
+        if execution not in ('legacy', 'daemon'):
+            raise ValueError(f'unsupported Chai1 execution mode {execution!r}')
         self.output_dir = output_dir
         self.model_config = model_config
+        self.execution = execution
+        self._resident = None
 
     def run_function(self, input_feat):
+        if self.execution == 'daemon':
+            if self._resident is None:
+                from astrolabe.evaluators.chai1_resident import Chai1Resident
+                self._resident = Chai1Resident(self.model_config)
+            return self._resident.run(input_feat)
         output = {}
         start = time.time()
         import torch
@@ -404,6 +413,11 @@ class Chai1Evaluator(Evaluator):
         end = time.time()
         logging.info(f"Chai1 inference took {end - start:.2f} seconds")
         return output
+
+    def close(self):
+        if self._resident is not None:
+            self._resident.close()
+            self._resident = None
 
     def prepare_input(self, inputs, runtime_config):
         step = global_config.step
