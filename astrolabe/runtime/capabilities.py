@@ -40,7 +40,7 @@ CPU_SELECTORS = {
 # Exact source identities for the reviewed fixed dispatch and its implementations.
 # Changing either requires a fresh review and an explicit digest update.
 SELECTOR_SOURCE_SHA256 = {
-    'score': '92d8b3484914acb5d9b81269ce723ed71626144f6857dba6ec65f96b2b8a659d',
+    'score': 'e5314c9d50a82475e858506602fd8a7f8ee296534346503b547e47369e427460',
     'utils': '07fa7c38bbfab7858f3dd253e3813385b27e5cb35e71ec85ce96f850257e4a74',
     'sse': '6ac98187f175df20512eaaa81a3b9cb540037b14cb19446abbf7c03ab3cae919',
     'cdr': '4cc16c1f7c959a93ebe6d471c4e618f6cf9e70e9bf4ef5ee6b2f675389211924',

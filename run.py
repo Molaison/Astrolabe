@@ -1688,73 +1688,9 @@ def _standard_scores_field_names() -> set[str]:
 
 
 def _merge_standard_scores(results: list[StandardScores]) -> StandardScores:
-    if not results:
-        raise ValueError("Cannot merge empty evaluation results.")
-    if len(results) == 1:
-        return results[0]
+    from astrolabe.score_merge import merge_standard_scores
 
-    merged: dict[str, Any] = {"names": []}
-    # An aggregate is a new assessment; only a single-result pass-through
-    # retains the original scientific identity.
-    field_names = _standard_scores_field_names() - {"assessment_id"}
-    for field in field_names - {"names"}:
-        merged[field] = None
-
-    per_proto_scores: dict[str, Any] = {}
-    per_proto_score_terms: dict[str, Any] = {}
-    score_contributions: list[Any] = []
-    complex_pose_dict: dict[str, Any] = {}
-    hook_reports: dict[str, Any] = {}
-    for result in results:
-        merged["names"].extend(list(getattr(result, "names", []) or []))
-        for field in field_names - {
-            "names",
-            "per_proto_scores",
-            "complex_poses",
-            "score_contributions",
-        }:
-            value = getattr(result, field, None)
-            if isinstance(value, dict):
-                if merged[field] is None:
-                    merged[field] = {}
-                merged[field].update(value)
-            elif value is not None and merged[field] is None:
-                merged[field] = value
-
-        for proto, scores in (getattr(result, "per_proto_scores", None) or {}).items():
-            per_proto_scores.setdefault(proto, scores)
-
-        for proto, term_map in (getattr(result, "per_proto_score_terms", None) or {}).items():
-            target = per_proto_score_terms.setdefault(proto, {})
-            if isinstance(term_map, dict):
-                target.update(term_map)
-
-        score_contributions.extend(
-            normalize_score_contributions(getattr(result, "score_contributions", None))
-        )
-
-        complex_poses = getattr(result, "complex_poses", None)
-        poses = getattr(complex_poses, "poses", None)
-        if isinstance(poses, dict):
-            complex_pose_dict.update(poses)
-
-        reports = getattr(result, "post_eval_hook_reports", None)
-        if isinstance(reports, dict):
-            hook_reports.update(reports)
-
-    if per_proto_scores:
-        merged["per_proto_scores"] = per_proto_scores
-    if per_proto_score_terms:
-        merged["per_proto_score_terms"] = per_proto_score_terms
-    if score_contributions:
-        merged["score_contributions"] = score_contributions
-    if complex_pose_dict:
-        merged["complex_poses"] = ComplexPoses(complex_pose_dict)
-
-    out = StandardScores(**merged)
-    if hook_reports:
-        out.post_eval_hook_reports = hook_reports
-    return out
+    return merge_standard_scores(results)
 
 
 def _should_evaluate_oligomers_incrementally(
