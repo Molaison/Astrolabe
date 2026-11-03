@@ -43,6 +43,10 @@ class ESMFold2Resident:
         device = probe_device(python, 'esmfold2', runner.device, env=env)
         self._artifacts = WorkerArtifacts()
         root = self._artifacts.root
+        self._request_settings = json.dumps(
+            {k: v for k, v in payload.items() if k not in ('jobs', 'output_dir')},
+            sort_keys=True, allow_nan=False,
+        )
         fixed = {k: v for k, v in payload.items() if k not in ('jobs', 'output_dir')}
         fixed['device'] = device['name']
         fixed['_verify_sources'] = True
@@ -54,6 +58,10 @@ class ESMFold2Resident:
         self.timeout = runner.timeout_seconds
 
     def run(self, payload, output_dir):
+        settings = json.dumps({k: v for k, v in payload.items() if k not in ('jobs', 'output_dir')},
+                              sort_keys=True, allow_nan=False)
+        if settings != self._request_settings:
+            raise ValueError('ESMFold2 settings changed after model initialization')
         root = self._artifacts.root
         # Output must outlive prepare_output and must not alias prior requests.
         target = Path(output_dir).resolve() / ('request-' + uuid.uuid4().hex)

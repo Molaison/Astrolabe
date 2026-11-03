@@ -126,7 +126,8 @@ def test_af3_cache_and_constraints_are_on_execution_path(monkeypatch):
     monkeypatch.setattr(AlphaFold3Evaluator, 'finalize_features', staticmethod(lambda runner, feat, examples, result: result))
     monkeypatch.setattr(ModelRunner, 'extract_structures', lambda *a, **kw: [])
     evaluator = AlphaFold3Evaluator(None, Path('.'), {'feature_cache': True})
-    evaluator.resident = SimpleNamespace(forward=lambda seeds, examples, cyclic, patches: examples)
+    evaluator.resident = SimpleNamespace(forward=lambda seeds, examples, cyclic, patches: examples,
+                                         feature_identity={'weights': ['w1'], 'model_config': {}})
     evaluator.buckets = {'A': None}
     def feat(seq):
         return SimpleNamespace(sequence=seq, rng_seeds=[1], chains=[SimpleNamespace(id='A')],
@@ -135,8 +136,14 @@ def test_af3_cache_and_constraints_are_on_execution_path(monkeypatch):
     evaluator.run_function({'A': feat('AAA')})
     evaluator.run_function({'A': feat('AAC')})
     assert count == ['AAA', 'AAC']
+    evaluator.resident.feature_identity['weights'] = ['w2']
+    evaluator.run_function({'A': feat('AAC')})
+    assert count == ['AAA', 'AAC', 'AAC']
     evaluator.af3_conf = {'daemon_constraints': [{'kind': 'hard', 'mechanism': 'contact'}]}
-    with pytest.raises(ValueError, match='Unsupported constraint'):
+    with pytest.raises(ValueError, match='not compiled'):
+        evaluator.run_function({'A': feat('AAC')})
+    evaluator.af3_conf = {'daemon_constraints': [{'kind': 'topology', 'mechanism': 'cyclic_asym_ids', 'payload': [1]}]}
+    with pytest.raises(ValueError, match='not compiled'):
         evaluator.run_function({'A': feat('AAC')})
 
 

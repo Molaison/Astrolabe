@@ -266,7 +266,12 @@ class AlphaFold3Evaluator(Evaluator):
             if getattr(self, "resident", None) is not None:
                 from astrolabe.constraints import Constraint, ConstraintKind, validate_constraints
                 declared = self._get_config_value(self.af3_conf, "daemon_constraints", ()) or ()
-                constraints = [Constraint(ConstraintKind(item["kind"]), item.get("payload"), item["mechanism"]) for item in declared]
+                # These declarations have no corresponding compiler into AF3
+                # features. Accepting even a known mechanism here would silently
+                # ignore its payload; use the concrete topology options below.
+                if declared:
+                    raise ValueError("AF3 daemon_constraints are not compiled; use supported concrete topology options")
+                constraints = []
                 for mechanism in ("cyclic_asym_ids", "cyclic_relative_patches", "query_residue_index_jumps"):
                     if self.kwargs[oligo].get(mechanism):
                         constraints.append(Constraint(ConstraintKind.TOPOLOGY, None, mechanism))
