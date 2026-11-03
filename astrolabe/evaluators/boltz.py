@@ -27,7 +27,10 @@ class BoltzEvaluator(Evaluator):
 
     def run_function(self, input_feat):
         for oligo_name, cplx_input in input_feat.items():
-            self.model_runner.run_inference(cplx_input["data"], cplx_input["out_dir"])
+            if getattr(self.model_runner, 'resident_atomic', False):
+                self.model_runner.run_request(cplx_input['data'], cplx_input['request_dir'], cplx_input['out_dir'])
+            else:
+                self.model_runner.run_inference(cplx_input["data"], cplx_input["out_dir"])
         return input_feat
 
     def prepare_input(self, inputs, runtime_config):
@@ -44,11 +47,20 @@ class BoltzEvaluator(Evaluator):
             runtime_config["chain2input_chain"][oligo_name] = chain2input_chain
             with open(sequence_dir / yaml_file, "w") as f:
                 omegaconf.OmegaConf.save(data_input, f)
-            data = self.model_runner.featurize_data(sequence_dir / yaml_file, out_dir)
+            if getattr(self.model_runner, 'resident_atomic', False):
+                data, request_dir = self.model_runner.prepare_request(sequence_dir / yaml_file, out_dir)
+                result[oligo_name]['request_dir'] = request_dir
+            else:
+                data = self.model_runner.featurize_data(sequence_dir / yaml_file, out_dir)
             result[oligo_name]["out_dir"] = out_dir
             result[oligo_name]["data"] = data
         input_feat = result
         return result
+
+    def close(self):
+        close = getattr(self.model_runner, 'close', None)
+        if close is not None:
+            close()
 
     def prepare_output(self, output, inputs, runtime_config):
         step = global_config.step
