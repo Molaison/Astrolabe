@@ -267,3 +267,42 @@ def test_canonical_protomer_selector_real_cli(tmp_path, execution):
     assert [int(row['step']) for row in rows] == [0,1,2]
     assert [row['accepted'].lower() for row in rows] == ['true', 'true', 'false']
     assert float(rows[1]['mutator_selector_MCMC_pA_selected_count']) == 4
+
+
+def test_multicontext_loss_to_accepted_selector_real_cli(tmp_path):
+    def observation(context, chain):
+        return {'context': context, 'weight': 1.0,
+                'query': {'name': 'quality', 'source': 'loss', 'entity': context,
+                          'entity_scope': 'oligo'},
+                'broadcast': True,
+                'mapping': {f'{context}:A:{i}:A': ['A', i - 1] for i in range(1, 5)}}
+    config = {
+        'task_name': 'loss_selector_cli', 'out_dir': str(tmp_path/'out'),
+        'raw_model_results_dir': str(tmp_path/'raw'), 'repeats': 1, 'seed': 17,
+        'steps': 3, 'ananas_path': None, 'seqs': {'A': 'AAAA', 'B': 'CCCC', 'C': 'DDDD'},
+        'mutator': {'MCMC': {'mutation_method': 'random', 'select_positions': 'random'},
+                    'mutator_terms': {'MCMC': {'_type': 'MCMC', 'position_selector': 'score("from_loss")'}}},
+        'evaluator': {'evaluator_terms': {'Dummy': {'_type': 'dummy'}}},
+        'loss': {'loss_terms': {'quality': {'_type': 'plddt'}},
+                 'score_catalog': [{'source': 'loss', 'name': 'quality', 'entity': c, 'entity_scope': 'oligo'} for c in ['AB','AC']],
+                 'score_queries': {'typed_quality': {'source': 'loss', 'name': 'quality', 'entity': 'AB'}},
+                 'score_selector_queries': {'from_loss': {
+                     'observations': [observation('AB', 'B'), observation('AC', 'C')],
+                     'aggregation': {'reduction': 'mean', 'missing': 'error', 'count': 'context'},
+                     'threshold': .5, 'comparison': 'ge'}}},
+        'stages': {'default': {'oligo': ['AB','AC'], 'evaluator': 'Dummy', 'mutation_num': 1,
+                               'mutators': ['MCMC'], 'mutator_weights': [1.0],
+                               'weighted_score_expression': 'typed_quality', 'early_stopping': None,
+                               'acceptance_gate': 'step < 2', 'acceptance_threshold': 'typed_quality > 0.8'}}}
+    path = tmp_path/'config.yaml'
+    path.write_text(yaml.safe_dump(config))
+    result = subprocess.run([sys.executable, '-m', 'astrolabe', 'run', '--standalone', str(path)],
+                            text=True, capture_output=True, timeout=90)
+    assert result.returncode == 0, result.stdout + '\n' + result.stderr
+    csv_path = next((tmp_path/'out'/'loss_selector_cli').glob('*/scores.csv'))
+    with csv_path.open() as handle:
+        rows = list(csv.DictReader(handle))
+    assert [int(row['step']) for row in rows] == [0, 1, 2]
+    assert [row['accepted'].lower() for row in rows] == ['true', 'true', 'false']
+    assert all(float(row['typed_quality']) == pytest.approx(.9) for row in rows)
+    assert all(float(row['mutator_selector_MCMC_pA_selected_count']) == 4 for row in rows[1:])

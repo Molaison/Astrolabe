@@ -31,8 +31,9 @@ def _records(evaluation_result, protomers, runtime_config):
 
 def _observation(config, records, snapshots, protomers, *, allow_equal_weights=False, selector_member_snapshot=None):
     query = ScoreQuery(**dict(config['query']))
-    if len(query.axes) != 1:
-        raise ValueError('score selector must retain exactly one physical position axis')
+    broadcast = config.get('broadcast', False)
+    if (broadcast and query.axes) or (not broadcast and len(query.axes) != 1):
+        raise ValueError('score selector needs one position axis or an explicit scalar broadcast')
     values = query_score(records, query, snapshots=snapshots, generating_selector=True,
                          selector_member_snapshot=selector_member_snapshot)
     target = snapshots.get(query.snapshot, query.snapshot)
@@ -40,9 +41,15 @@ def _observation(config, records, snapshots, protomers, *, allow_equal_weights=F
                   and r.snapshot == target and r.subject == query.subject and r.relation == query.relation
                   and (query.entity is None or r.spec.entity == query.entity)
                   and (query.entity_scope is None or r.spec.entity_scope == query.entity_scope))
-    axis = record.spec.axes.index(query.axes[0])
-    labels = tuple((query.select or {}).get(query.axes[0], record.coordinates[axis]))
     mapping = config['mapping']
+    if broadcast:
+        if not isinstance(mapping, Mapping) or not mapping:
+            raise ValueError('scalar broadcast requires an explicit nonempty position mapping')
+        labels = tuple(mapping)
+        values = np.full(len(labels), values)
+    else:
+        axis = record.spec.axes.index(query.axes[0])
+        labels = tuple((query.select or {}).get(query.axes[0], record.coordinates[axis]))
     if mapping == 'auto':
         mapping = {}
         for label in labels:

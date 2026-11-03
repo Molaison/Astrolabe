@@ -343,9 +343,12 @@ class Decisions:
         identity = getattr(evaluation_result, "assessment_id", None)
         if not catalog or not identity:
             return
-        records = tuple(records_from_contributions(
+        records = list(records_from_contributions(
             score_contributions_from_runtime_config(runtime_config), catalog, str(identity)
         ))
+        capture_losses = getattr(loss_computer, "loss_score_records", None)
+        if callable(capture_losses):
+            records.extend(capture_losses(evaluation_result, snapshot=str(identity)))
         if not records:
             return
         for record in records:

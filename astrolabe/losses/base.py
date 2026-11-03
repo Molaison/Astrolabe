@@ -537,6 +537,29 @@ class LossEngine:
 
         return reference_gate_score_context(result)
 
+    def loss_score_records(self, eval_result, *, per_oligo_scores=None, snapshot=None):
+        """Freeze configured, actually returned oligomer losses for the owner."""
+        from astrolabe.score_evidence import ScoreRecord, ScoreSpec
+        snapshot = snapshot or getattr(eval_result, "assessment_id", None)
+        if not snapshot:
+            raise ValueError("loss evidence requires a concrete assessment identity")
+        if per_oligo_scores is None:
+            per_oligo_scores, _ = self._extract_scores_with_registry(eval_result)
+        records = []
+        for entry in self.score_catalog:
+            config = dict(entry)
+            if config.get("source") != "loss":
+                continue
+            coordinates = config.pop("coordinates", ())
+            spec = ScoreSpec(**config)
+            if spec.entity is None or spec.name not in per_oligo_scores.get(spec.entity, {}):
+                continue
+            if spec.entity_scope not in (None, "oligo"):
+                raise ValueError("loss score entity must identify an oligomer")
+            records.append(ScoreRecord(spec, snapshot, per_oligo_scores[spec.entity][spec.name], coordinates,
+                                       input_snapshot=snapshot, subject="predicted_structure", relation="measured_on"))
+        return records
+
     def _query_score_symbols(self, eval_result, runtime_config, per_oligo_scores=None, per_terms_score=None):
         if not self.score_queries:
             return {}
@@ -547,23 +570,9 @@ class LossEngine:
         snapshots = runtime_config.get("score_snapshots", {}) or {}
         snapshot = runtime_config.get("score_capture_snapshot")
         records = list(runtime_config.get("score_records", []) or [])
-        # Registered loss functions have already run on this exact assessment.
-        # Only capture explicitly catalogued, actually present oligomer values;
-        # the legacy empty-dictionary mean of zero is not evidence.
         if snapshot and per_oligo_scores is not None:
-            from astrolabe.score_evidence import ScoreRecord, ScoreSpec
-            for entry in self.score_catalog:
-                config = dict(entry)
-                if config.get("source") != "loss":
-                    continue
-                coordinates = config.pop("coordinates", ())
-                spec = ScoreSpec(**config)
-                if spec.entity is None or spec.name not in per_oligo_scores.get(spec.entity, {}):
-                    continue
-                if spec.entity_scope not in (None, "oligo"):
-                    raise ValueError("loss score entity must identify an oligomer")
-                records.append(ScoreRecord(spec, snapshot, per_oligo_scores[spec.entity][spec.name], coordinates,
-                                           input_snapshot=snapshot, subject="predicted_structure", relation="measured_on"))
+            records.extend(self.loss_score_records(eval_result, per_oligo_scores=per_oligo_scores,
+                                                   snapshot=snapshot))
         if assessments is None:
             assessments = (eval_result,)
         live_runtime_records = []
@@ -586,7 +595,7 @@ class LossEngine:
                     records.extend(live_runtime_records)
                 owned = (runtime_config.get("_score_owned_records") or {}).get(str(assessment_snapshot), ())
                 for record in owned:
-                    same = [candidate for candidate in live_runtime_records
+                    same = [candidate for candidate in records
                             if (candidate.spec, candidate.snapshot, candidate.subject, candidate.relation, candidate.input_snapshot)
                             == (record.spec, record.snapshot, record.subject, record.relation, record.input_snapshot)]
                     if same:
@@ -773,11 +782,21 @@ class LossEngine:
         self._extract_scores_with_registry_cached.cache_clear()
 
     def _score_cache_token(self):
+        # Some losses read the working sequence directly, even when a mutation
+        # stack intentionally reuses the previous evaluator result.
+        try:
+            protomers = getattr(global_config, "protomers", {}) or {}
+            sequences = tuple(sorted(
+                (str(name), _freeze_cache_value(getattr(protomer, "mutated_sequence", None)))
+                for name, protomer in protomers.items()
+            ))
+        except RuntimeError:
+            sequences = ()
         if not any(
             spec == DYNAMIC_BINDING_SITE_LOSS
             for spec, _loss_func, _params in getattr(self, "loss_specs", {}).values()
         ):
-            return None
+            return ("working-sequences", sequences)
         try:
             dynamic_binding_site = getattr(global_config, "dynamic_binding_site", None)
         except RuntimeError:
@@ -785,6 +804,7 @@ class LossEngine:
         return (
             DYNAMIC_BINDING_SITE_LOSS,
             _freeze_cache_value(dynamic_binding_site),
+            sequences,
         )
 
     @functools.lru_cache(maxsize=4)
