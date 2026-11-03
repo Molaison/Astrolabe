@@ -92,8 +92,10 @@ initializer:
 # exclusive, and repeats retain their original order and seed derivation.
 execution:
   enabled: false
-  max_active: 1
-  max_resident_models: 1
+  max_active: auto
+  max_resident_models: auto
+  # Safety bound per allocated device, not a declaration of available VRAM.
+  max_resident_per_device: 1
 # runtime fullfillment
 raw_model_results_dir: null
 loss:

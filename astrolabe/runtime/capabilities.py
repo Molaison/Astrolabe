@@ -19,6 +19,7 @@ CPU_LOSSES = {
 # construct_position_selector has a fixed dispatch table. These implementations
 # use NumPy, file parsers, DSSP or PyRosetta; they do not launch GPU models.
 CPU_SELECTORS = {
+    'score': ('score', 'score_position_selector'),
     'sse': ('sse', 'SecondaryStructurePositionSelector'),
     'cdr': ('cdr', 'CDRPositionSelector'),
     'bfactor': ('bfactor', 'BFactorPositionSelector'),
@@ -39,7 +40,8 @@ CPU_SELECTORS = {
 # Exact source identities for the reviewed fixed dispatch and its implementations.
 # Changing either requires a fresh review and an explicit digest update.
 SELECTOR_SOURCE_SHA256 = {
-    'utils': 'd34d6ba2f90b8769fd02cb609d82b462e77e868a56d278bad464f5ed5a53908e',
+    'score': '92d8b3484914acb5d9b81269ce723ed71626144f6857dba6ec65f96b2b8a659d',
+    'utils': '07fa7c38bbfab7858f3dd253e3813385b27e5cb35e71ec85ce96f850257e4a74',
     'sse': '6ac98187f175df20512eaaa81a3b9cb540037b14cb19446abbf7c03ab3cae919',
     'cdr': '4cc16c1f7c959a93ebe6d471c4e618f6cf9e70e9bf4ef5ee6b2f675389211924',
     'bfactor': '32c8beadf78afe376148025997b5e3bf683cd7cebe240e7e06a3db71e9795f40',

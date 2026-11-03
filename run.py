@@ -3089,20 +3089,31 @@ def run_repeats(
         yield run_cfg
 
     execution = lifecycle_cfg.get("execution") or {}
-    max_active = execution.get("max_active", 1)
-    max_resident_models = execution.get("max_resident_models", 1)
-    if type(max_active) is not int or max_active < 1:
-        raise ValueError("execution.max_active must be a positive integer")
-    if type(max_resident_models) is not int or max_resident_models < 1:
-        raise ValueError("execution.max_resident_models must be a positive integer")
-    if not execution.get("enabled", False) and (max_active != 1 or max_resident_models != 1):
+    enabled = execution.get("enabled", False)
+    if type(enabled) is not bool:
+        raise ValueError("execution.enabled must be boolean")
+    active_setting = execution.get("max_active", "auto")
+    resident_setting = execution.get("max_resident_models", "auto")
+    for name, value in (("max_active", active_setting), ("max_resident_models", resident_setting)):
+        if value != "auto" and (type(value) is not int or value < 1):
+            raise ValueError(f"execution.{name} must be a positive integer or auto")
+    per_device = execution.get("max_resident_per_device", 1)
+    if type(per_device) is not int or per_device < 1:
+        raise ValueError("execution.max_resident_per_device must be a positive integer")
+    if not enabled and (active_setting not in (1, "auto") or resident_setting not in (1, "auto") or per_device != 1):
         raise ValueError("nondefault execution limits require execution.enabled=true")
-    if execution.get("enabled", False):
+    if enabled:
+        from astrolabe.runtime.admission import resolve_active_limit, resolve_resident_limit
         from astrolabe.runtime.session import run_parallel, validate_parallel
         validate_parallel(lifecycle_cfg)
-        completed = run_parallel(repeat_configs(), min(max_active, repeats), stop_requested,
+        max_active = resolve_active_limit(active_setting, repeats)
+        max_resident_models = resolve_resident_limit(resident_setting)
+        logging.info("Execution admission bounds: trajectories=%d resident_models=%d per_device=%d",
+                     max_active, max_resident_models, per_device)
+        completed = run_parallel(repeat_configs(), max_active, stop_requested,
                                  lambda count: print(f"=== Completed {count}/{repeats} repeats ==="),
-                                 max_resident_models=max_resident_models)
+                                 max_resident_models=max_resident_models,
+                                 max_resident_per_device=per_device)
         if stop_requested():
             if on_stop_requested is not None:
                 on_stop_requested(completed, repeats)

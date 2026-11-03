@@ -242,7 +242,8 @@ def test_strict_unlabelled_non_evaluator_contribution_fails_closed(tmp_path):
     global_config.reset()
 
 
-def test_canonical_protomer_selector_real_cli(tmp_path):
+@pytest.mark.parametrize("execution", [False, True])
+def test_canonical_protomer_selector_real_cli(tmp_path, execution):
     config = {
         'task_name':'position_score_cli', 'out_dir':str(tmp_path/'output'), 'raw_model_results_dir':str(tmp_path/'raw'),
         'repeats':1, 'seed':17, 'steps':3, 'ananas_path':None, 'seqs':{'A':'AAAA'},
@@ -256,6 +257,7 @@ def test_canonical_protomer_selector_real_cli(tmp_path):
                              'mutator_weights':[1.0], 'weighted_score_expression':'model_value','early_stopping':None,
                              'acceptance_gate':'step < 2', 'acceptance_threshold':'model_value > 0.8'}},
     }
+    config['execution'] = {'enabled': execution, 'max_active': 'auto', 'max_resident_models': 'auto'}
     path = tmp_path/'position_score.yaml'
     path.write_text(yaml.safe_dump(config))
     result = subprocess.run([sys.executable,'-m','astrolabe','run','--standalone',str(path)], text=True, capture_output=True, timeout=90)
