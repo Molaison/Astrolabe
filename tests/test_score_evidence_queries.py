@@ -197,3 +197,19 @@ def test_serializable_query_runs_in_cpu_executor():
             'query': {'name': 'x', 'source': 'evaluator'}, 'snapshots': {'last_accepted': 'one'}}
     with CPUExecutor(1, max_pending_bytes=16384, task_timeout=30) as pool:
         assert list(pool.map('astrolabe.score_evidence:query_score_operation', [item])) == [2.]
+
+
+def test_position_selector_factory_registration():
+    from astrolabe.selectors import utils
+    from astrolabe.selectors.base import ExplicitPositionSelector
+    name = '_test_registered_score_selector'
+    def factory(evaluation_result, protomers, runtime_config, complex_poses):
+        return lambda: ExplicitPositionSelector({'A': np.array([True, False])})
+    utils.register_position_selector(name, factory)
+    try:
+        masks = utils.construct_position_selector(name + '()', object(), {'A': SimpleNamespace(length=2)})
+        assert masks['A'].tolist() == [True, False]
+        with pytest.raises(ValueError, match='duplicate'):
+            utils.register_position_selector(name, factory)
+    finally:
+        del utils._POSITION_SELECTOR_FACTORIES[name]

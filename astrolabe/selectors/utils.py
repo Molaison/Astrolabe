@@ -21,6 +21,25 @@ _POSE_SELECTOR_VARS = {
 }
 
 
+# Explicit registrations declare their data requirements. A registered factory
+# receives the same trajectory-local inputs as built-in selectors.
+_POSITION_SELECTOR_FACTORIES = {}
+
+
+def register_position_selector(name, factory, *, requires_pose=False):
+    if not name.isidentifier() or name in _POSITION_SELECTOR_FACTORIES:
+        raise ValueError(f"invalid or duplicate position selector: {name!r}")
+    _POSITION_SELECTOR_FACTORIES[name] = (factory, bool(requires_pose))
+
+
+def _score_factory(evaluation_result, protomers, runtime_config, complex_poses):
+    from astrolabe.selectors.score import score_position_selector
+    return partial(score_position_selector, evaluation_result, protomers, runtime_config=runtime_config)
+
+
+register_position_selector('score', _score_factory)
+
+
 class _SelectorExpressionTransformer(ast.NodeTransformer):
     def visit_BoolOp(self, node):
         values = [self.visit(v) for v in node.values]
@@ -55,7 +74,7 @@ def construct_position_selector(
     position_vars = extract_variables(expression)
     complex_poses = getattr(evaluation_result, "complex_poses", None)
     if complex_poses is None:
-        if position_vars & _POSE_SELECTOR_VARS:
+        if position_vars & (_POSE_SELECTOR_VARS | {name for name, (_, needs_pose) in _POSITION_SELECTOR_FACTORIES.items() if needs_pose}):
             complex_paths = getattr(evaluation_result, "complex_paths", None)
             if not complex_paths:
                 raise ValueError(
@@ -86,10 +105,9 @@ def construct_position_selector(
 
     env = {}
     for var in position_vars:
-        if var == "score":
-            from astrolabe.selectors.score import score_position_selector
-
-            env[var] = partial(score_position_selector, evaluation_result, protomers, runtime_config=runtime_config)
+        if var in _POSITION_SELECTOR_FACTORIES:
+            factory, _ = _POSITION_SELECTOR_FACTORIES[var]
+            env[var] = factory(evaluation_result, protomers, runtime_config, complex_poses)
         elif var == "sse":
             from astrolabe.selectors.sse import SecondaryStructurePositionSelector
 
