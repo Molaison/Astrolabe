@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import logging
 import pathlib
 import sys
 import typing
@@ -11,7 +12,11 @@ import numpy as np
 from omegaconf import OmegaConf
 
 from astrolabe.core import global_config
+from astrolabe.runtime_support import ResourceOwner
 from astrolabe.evaluators.registry import EvaluatorRegistry, register_evaluator_factory
+from astrolabe.evaluators.evidence import (
+    CandidateGroup, DerivedStructure, EvaluationRecord, filter_candidate_groups,
+)
 from astrolabe.score_contributions import (
     filter_score_contributions,
     normalize_score_contributions,
@@ -101,7 +106,9 @@ def construct_evaluators(
     oligo_names=None,
     *,
     enabled_aliases: list[str] | None = None,
+    resource_owner: ResourceOwner | None = None,
 ):
+    """Build evaluators; a shared owner is closed if construction fails."""
     if isinstance(evaluator_conf, list):
         raise NotImplementedError("Multiple evaluators are not supported yet")
     selected_aliases = (
@@ -109,48 +116,61 @@ def construct_evaluators(
     )
 
     evaluators = {}
-    for alias, conf in evaluator_conf.evaluator_terms.items():
-        # Allow turning off evaluators via config overlays by setting them to null.
-        if conf is None:
-            continue
-        if selected_aliases is not None and str(alias) not in selected_aliases:
-            continue
-        name = conf.get("_type") if hasattr(conf, "get") else None
-        if not name:
-            continue
+    owner = resource_owner if resource_owner is not None else ResourceOwner()
+    try:
+        for alias, conf in evaluator_conf.evaluator_terms.items():
+            # Allow turning off evaluators via config overlays by setting them to null.
+            if conf is None:
+                continue
+            if selected_aliases is not None and str(alias) not in selected_aliases:
+                continue
+            name = conf.get("_type") if hasattr(conf, "get") else None
+            if not name:
+                continue
 
-        # Factories expect a config without the `_type` discriminator.
-        term_conf = conf
-        if isinstance(conf, dict):
-            term_container: typing.Any = dict(conf)
-        else:
+            # Factories expect a config without the `_type` discriminator.
+            term_conf = conf
+            if isinstance(conf, dict):
+                term_container: typing.Any = dict(conf)
+            else:
+                try:
+                    term_container = OmegaConf.to_container(conf, resolve=True)
+                except Exception as exc:
+                    raise ValueError(
+                        f"Failed to resolve evaluator config for alias {alias!r}: {exc}"
+                    ) from exc
+            if isinstance(term_container, dict):
+                term_container.pop("_type", None)
+                term_conf = OmegaConf.create(term_container)
+
             try:
-                term_container = OmegaConf.to_container(conf, resolve=True)
-            except Exception as exc:
+                factory = EvaluatorRegistry.get(name)
+            except KeyError as exc:
+                available = ", ".join(EvaluatorRegistry.list_available()) or "<none>"
                 raise ValueError(
-                    f"Failed to resolve evaluator config for alias {alias!r}: {exc}"
+                    f"Unknown evaluator name {name!r}. Available evaluator types: {available}"
                 ) from exc
-        if isinstance(term_container, dict):
-            term_container.pop("_type", None)
-            term_conf = OmegaConf.create(term_container)
 
-        try:
-            factory = EvaluatorRegistry.get(name)
-        except KeyError as exc:
-            available = ", ".join(EvaluatorRegistry.list_available()) or "<none>"
-            raise ValueError(
-                f"Unknown evaluator name {name!r}. Available evaluator types: {available}"
-            ) from exc
-
-        evaluator = factory(
-            term_conf,
-            alias=alias,
-            raw_model_results_dir=raw_model_results_dir,
-            oligo_names=oligo_names,
-            evaluator_conf=evaluator_conf,
-        )
-        setattr(evaluator, "alias", str(alias))
-        evaluators[alias] = evaluator
+            evaluator = factory(
+                term_conf,
+                alias=alias,
+                raw_model_results_dir=raw_model_results_dir,
+                oligo_names=oligo_names,
+                evaluator_conf=evaluator_conf,
+            )
+            owner.add(evaluator, f"evaluators.{alias}")
+            setattr(evaluator, "alias", str(alias))
+            evaluators[alias] = evaluator
+    except BaseException:
+        # ResourceOwner marks an object closed before calling it. If even a
+        # BaseException escapes a closer, retry to finish the other objects.
+        while True:
+            try:
+                owner.close()
+                break
+            except BaseException:
+                logging.exception("Failed to clean up evaluators after construction error")
+        raise
     return evaluators
 
 
@@ -582,6 +602,28 @@ class StandardScores:
     chain_pair_scores: dict[str, dict[str, list[np.ndarray]]] | None = None
     complex_poses: dict[str, typing.Any] | None = None
     score_contributions: typing.Any | None = None
+    # These fields are carried explicitly, never by the legacy score merge.
+    candidate_scores: list[StandardScores] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+    post_eval_hook_reports: dict[str, typing.Any] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+    derived_structures: dict[str, list[DerivedStructure]] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+    evaluation_records: tuple[EvaluationRecord, ...] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+    candidate_groups: tuple[CandidateGroup, ...] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
+
+    @classmethod
+    def score_field_names(cls) -> set[str]:
+        """Fields used by the legacy score merge, including names and paths."""
+        return {field.name for field in dataclasses.fields(cls)
+                if not field.metadata.get("evidence", False)}
 
     @staticmethod
     def _wrap_dict_values_in_list(
@@ -746,7 +788,7 @@ class StandardScores:
 
         filtered_scores: dict[str, typing.Any] = {"names": filtered_names}
 
-        for key in self.__dataclass_fields__.keys() - {"names"}:
+        for key in self.score_field_names() - {"names"}:
             value = getattr(self, key, None)
             if value is None:
                 filtered_scores[key] = None
@@ -793,10 +835,29 @@ class StandardScores:
             else:
                 filtered_scores[key] = value
 
-        return StandardScores(**filtered_scores)
+        result = StandardScores(**filtered_scores)
+        if self.candidate_scores is not None:
+            result.candidate_scores = [
+                candidate.filter_by_oligomer(filtered_names)
+                for candidate in self.candidate_scores
+            ]
+        for key in ("post_eval_hook_reports", "derived_structures"):
+            value = getattr(self, key)
+            if value is not None:
+                setattr(result, key, {k: v for k, v in value.items() if k in allowed_oligos})
+        if self.evaluation_records is not None:
+            result.evaluation_records = tuple(
+                record for record in self.evaluation_records
+                if record.input.oligomer in allowed_oligos
+            )
+        if self.candidate_groups is not None:
+            result.candidate_groups = filter_candidate_groups(self.candidate_groups, allowed_oligos)
+        return result
 
     def clone(self) -> StandardScores:
         """Create a new StandardScores instance that shares underlying data."""
+        # replace carries every declared evidence field with the same shallow
+        # sharing semantics as the score fields.
         return dataclasses.replace(self)
 
 

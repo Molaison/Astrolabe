@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
+from astrolabe.evaluators.evidence import DerivedStructure
 
 
 _PYROSETTA_INITED = False
@@ -180,6 +181,8 @@ def apply_rosetta_minimize_hook(
 
     new_paths = dict(getattr(evaluation_result, "complex_paths", {}) or {})
     reports: dict[str, dict[str, float | str | bool]] = {}
+    derived = {key: list(records) for key, records in
+               (getattr(evaluation_result, "derived_structures", None) or {}).items()}
     for oligo_name, complex_path in list(new_paths.items()):
         source_path = Path(complex_path)
         suffix = ".pdb"
@@ -194,6 +197,11 @@ def apply_rosetta_minimize_hook(
         )
         new_paths[oligo_name] = chosen
         reports[oligo_name] = report
+        if report["ran"]:
+            derived.setdefault(oligo_name, []).append(
+                DerivedStructure(source_path=source_path, output_path=Path(chosen),
+                                 operation=f"rosetta_minimize:{mode}")
+            )
         logging.info(
             "post_eval rosetta_minimize oligo=%s mode=%s ran=%s energy %.3f -> %.3f",
             oligo_name,
@@ -205,4 +213,5 @@ def apply_rosetta_minimize_hook(
 
     evaluation_result.complex_paths = new_paths
     evaluation_result.post_eval_hook_reports = reports
+    evaluation_result.derived_structures = derived or None
     return evaluation_result

@@ -1,6 +1,7 @@
+from astrolabe.runtime_support import atomic_text_writer
 import logging
 import csv
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields, replace
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -22,6 +23,9 @@ from astrolabe.evaluators.score_snapshot import (
     merge_score_details,
 )
 from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.evidence import (
+    CandidateGroup, DerivedStructure, EvaluationRecord, InputObservation,
+)
 from astrolabe.losses.base import LossTerms
 from astrolabe.utils.base import calculate_temperature
 from astrolabe.utils.log_events import (
@@ -34,6 +38,54 @@ from astrolabe.utils.logging_utils import (
     format_metric_value,
     to_numeric,
 )
+
+
+def _copy_evidence(value):
+    """Detach observable values without copying backend or pose objects."""
+    if isinstance(value, np.ndarray):
+        if value.dtype.hasobject:
+            return _copy_evidence(value.tolist())
+        return value.copy()
+    if isinstance(value, np.generic):
+        return _copy_evidence(value.item())
+    if isinstance(value, dict):
+        return {key: _copy_evidence(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_copy_evidence(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_copy_evidence(item) for item in value)
+    if isinstance(value, (CandidateGroup, DerivedStructure, EvaluationRecord, InputObservation)):
+        return {item.name: _copy_evidence(getattr(value, item.name))
+                for item in fields(value)}
+    if value is None or isinstance(value, (str, bool, int, float, Path)):
+        return value
+    return {"unserialized_type": f"{type(value).__module__}.{type(value).__qualname__}"}
+
+
+def _snapshot_result(result):
+    return {
+        name: _copy_evidence(getattr(result, name, None) or default)
+        for name, default in (
+            ("complex_paths", {}), ("evaluation_records", ()),
+            ("derived_structures", {}), ("candidate_groups", ()),
+        )
+    }
+
+
+@dataclass(frozen=True)
+class DecisionAssessment:
+    assessment_id: int
+    kind: str
+    step: int
+    attempt_id: int | None
+    accepted_revision: int | None
+    accepted: bool
+    stage: str
+    weighted_score: float | None
+    score_details: dict
+    sequences: dict
+    evaluation_result: Any
+    evidence_snapshot: dict
 
 
 @dataclass
@@ -57,6 +109,11 @@ class Decisions:
     last_accepted: int
     stage_history: Dict[int, str]
     row_history: List[Dict[str, object]] = field(default_factory=list)
+    assessments: List[DecisionAssessment] = field(default_factory=list, init=False)
+    observation_errors: List[dict] = field(default_factory=list, init=False)
+    _attempt_count: int = field(default=0, init=False, repr=False)
+    _accepted_attempt: int | None = field(default=None, init=False, repr=False)
+    _revision_known: bool = field(default=True, init=False, repr=False)
     NOISE_COMPONENT_KEYS = {
         "iteration",
         "step",
@@ -69,6 +126,72 @@ class Decisions:
     SCORE_COMPONENT_MAX_INFO = 10
     SCORE_COMPONENT_MIN_INFO = 4
     SCORE_COMPONENT_MIN_ABS_DELTA = 1e-6
+
+    def __post_init__(self):
+        self._observe_assessment("initial", self.last_accepted, True)
+
+    def _observation_error(self, operation: str, step: int, exc: Exception) -> None:
+        try:
+            message = str(exc)
+        except Exception:
+            message = "<unprintable exception>"
+        self.observation_errors.append({
+            "operation": operation, "step": int(step),
+            "error_type": type(exc).__name__, "message": message,
+        })
+        try:
+            logging.warning("Decision observation failed: %s step=%s error=%s", operation, step, message)
+        except Exception:
+            pass
+
+    def _observe_assessment(self, kind: str, step: int, accepted: bool) -> None:
+        try:
+            self._record_assessment(kind, step, accepted)
+        except Exception as exc:
+            if kind == "initial" or (kind == "mutation" and accepted):
+                self._revision_known = False
+                self._accepted_attempt = None
+            self._observation_error(kind, step, exc)
+
+    def reject_initial_assessment(self) -> None:
+        """Correct step-zero gate evidence without changing the decision state."""
+        self._revision_known = False
+        try:
+            index = next(i for i, item in enumerate(self.assessments)
+                         if item.kind == "initial")
+            self.assessments[index] = replace(
+                self.assessments[index], accepted=False, accepted_revision=None
+            )
+        except Exception as exc:
+            self._observation_error("reject_initial_assessment", self.last_accepted, exc)
+
+    def _record_assessment(self, kind: str, step: int, accepted: bool) -> None:
+        previous = self.assessments[-1] if self.assessments else None
+        revision = (previous.accepted_revision if previous else 0) if self._revision_known else None
+        if kind == "mutation":
+            attempt_id = self._attempt_count + 1
+            if accepted and revision is not None:
+                revision += 1
+        elif kind == "stage_reassessment":
+            attempt_id = self._accepted_attempt
+        else:
+            attempt_id = None
+        result = self.evaluation_results.get(step)
+        record = DecisionAssessment(
+            assessment_id=len(self.assessments), kind=kind, step=step,
+            attempt_id=attempt_id, accepted_revision=revision, accepted=accepted,
+            stage=self.stage_history.get(step, ""),
+            weighted_score=_copy_evidence(self.scores.get(step)),
+            score_details=_copy_evidence(self.scores_detail.get(step, {}) or {}),
+            sequences=dict(self.sequences.get(step, {}) or {}),
+            evaluation_result=result,
+            evidence_snapshot=_snapshot_result(result),
+        )
+        self.assessments.append(record)
+        if kind == "mutation":
+            self._attempt_count = attempt_id
+            if accepted:
+                self._accepted_attempt = attempt_id
 
     @staticmethod
     def _merge_default_score_details(
@@ -466,6 +589,7 @@ class Decisions:
                 stage_entry=stage_entry,
             )
             early_stop, _accepted_eval_result, accepted = outcome
+            self._observe_assessment("mutation", step, accepted)
             finish_fields = {
                 "result": "accept" if accepted else "reject",
                 "accepted": accepted,
@@ -482,6 +606,25 @@ class Decisions:
                 )
             span.finish(**finish_fields)
             return outcome
+
+    def _commit_mutation_decision(
+        self, *, step: int, accepted: bool, early_stop: bool,
+        acceptance_log: str | None = None, log_before_last: bool = False,
+    ):
+        """Commit a mutation decision; stage transitions have their own boundary."""
+        if accepted:
+            self.accepted_steps.append(step)
+            if acceptance_log is not None and log_before_last:
+                logging.info(acceptance_log)
+            self.last_accepted = step
+            if acceptance_log is not None and not log_before_last:
+                logging.info(acceptance_log)
+            global_config.segment_manager.apply_mutations()
+        else:
+            global_config.segment_manager.clear_mutations()
+        self._record_score_row(step=step, accepted=accepted)
+        self.dump_results(global_config.out_dir, incremental=True)
+        return early_stop, self.evaluation_results[self.last_accepted], accepted
 
     def _make_mutation_decision(
         self,
@@ -567,68 +710,51 @@ class Decisions:
                 f"hotspot_threshold={hotspot_threshold_text} "
                 f"hotspot_passed={getattr(reference_gate, 'hotspot_passed', None)}"
             )
-            global_config.segment_manager.clear_mutations()
-            self._record_score_row(step=step, accepted=False)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], False
+            return self._commit_mutation_decision(
+                step=step, accepted=False, early_stop=early_stop
+            )
 
         if not hard_gate_passed:
             logging.info(
                 f"step={step} decision=reject reason=acceptance_gate "
                 f"previous={last_score_text} current={current_score_text}"
             )
-            global_config.segment_manager.clear_mutations()
-            self._record_score_row(step=step, accepted=False)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], False
+            return self._commit_mutation_decision(
+                step=step, accepted=False, early_stop=early_stop
+            )
 
         if gate_active:
             passed = bool(getattr(consistency, "passed", False))
             score_text = format_metric_value(getattr(consistency, "score", None))
             threshold_text = format_metric_value(getattr(consistency, "threshold", None))
             if passed:
-                self.accepted_steps.append(step)
-                self.last_accepted = step
-                logging.info(
-                    f"step={step} decision=accept reason=transition_consistency_gate "
-                    f"previous={last_score_text} current={current_score_text} "
-                    f"consistency={score_text} threshold={threshold_text}"
+                return self._commit_mutation_decision(
+                    step=step, accepted=True, early_stop=early_stop,
+                    acceptance_log=(
+                        f"step={step} decision=accept reason=transition_consistency_gate "
+                        f"previous={last_score_text} current={current_score_text} "
+                        f"consistency={score_text} threshold={threshold_text}"
+                    ),
                 )
-                global_config.segment_manager.apply_mutations()
-                self._record_score_row(step=step, accepted=True)
-                self.dump_results(global_config.out_dir, incremental=True)
-                return early_stop, self.evaluation_results[self.last_accepted], True
 
             logging.info(
                 f"step={step} decision=reject reason=transition_consistency_gate "
                 f"previous={last_score_text} current={current_score_text} "
                 f"consistency={score_text} threshold={threshold_text}"
             )
-            global_config.segment_manager.clear_mutations()
-            self._record_score_row(step=step, accepted=False)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], False
+            return self._commit_mutation_decision(
+                step=step, accepted=False, early_stop=early_stop
+            )
 
-        if not hard_gate_passed:
-            logging.info(
-                f"step={step} decision=reject reason=acceptance_gate "
-                f"previous={last_score_text} current={current_score_text}"
-            )
-            global_config.segment_manager.clear_mutations()
-            self._record_score_row(step=step, accepted=False)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], False
         if force_accept:
-            self.accepted_steps.append(step)
-            logging.info(
-                f"step={step} decision=accept reason=stage_change "
-                f"previous={last_score_text} current={current_score_text}"
+            return self._commit_mutation_decision(
+                step=step, accepted=True, early_stop=early_stop,
+                acceptance_log=(
+                    f"step={step} decision=accept reason=stage_change "
+                    f"previous={last_score_text} current={current_score_text}"
+                ),
+                log_before_last=True,
             )
-            self.last_accepted = step
-            global_config.segment_manager.apply_mutations()
-            self._record_score_row(step=step, accepted=True)
-            self.dump_results(global_config.out_dir, incremental=True)
-            return early_stop, self.evaluation_results[self.last_accepted], True
         delta = self.scores[self.last_accepted] - score
 
         ACCEPTED = True
@@ -668,19 +794,8 @@ class Decisions:
                     f"previous={last_score_text} current={current_score_text}"
                 )
                 ACCEPTED = False
-        if ACCEPTED:
-            self.accepted_steps.append(step)
-            self.last_accepted = step
-            global_config.segment_manager.apply_mutations()
-        else:
-            global_config.segment_manager.clear_mutations()
-
-        self._record_score_row(step=step, accepted=ACCEPTED)
-        self.dump_results(global_config.out_dir, incremental=True)
-        return (
-            early_stop,
-            self.evaluation_results[self.last_accepted],
-            ACCEPTED,
+        return self._commit_mutation_decision(
+            step=step, accepted=ACCEPTED, early_stop=early_stop
         )
 
     def recompute_last_score(self, loss_computer, runtime_config, eval_result=None):
@@ -714,13 +829,14 @@ class Decisions:
                 note="re-evaluate due to stage change",
             )
         self.dump_results(global_config.out_dir, incremental=False)
+        self._observe_assessment("stage_reassessment", step, True)
 
     def dump_results(self, out_dir: Path, incremental: bool = True) -> None:
         """Saves results to a CSV file.
 
         Args:
             out_dir: Directory to save results
-            incremental: If True, append new data to existing file; if False, overwrite
+            incremental: Compatibility argument; the complete row history is atomically replaced.
         """
         csv_path = out_dir / "scores.csv"
         self._seed_row_history_from_state()
@@ -735,7 +851,7 @@ class Decisions:
                 key for key in all_keys if key not in set(preferred)
             )
             csv_path.parent.mkdir(parents=True, exist_ok=True)
-            with csv_path.open("w", newline="", encoding="utf-8") as f:
+            with atomic_text_writer(csv_path, newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=fieldnames)
                 writer.writeheader()
                 for row in rows:
@@ -746,4 +862,5 @@ class Decisions:
         other_cols = [col for col in score.columns if col not in preferred]
         score = score.reindex(columns=preferred + sorted(other_cols))
         csv_path.parent.mkdir(parents=True, exist_ok=True)
-        score.to_csv(csv_path, mode="w", header=True, index=False)
+        with atomic_text_writer(csv_path, newline="") as handle:
+            score.to_csv(handle, mode="w", header=True, index=False)

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from astrolabe.runtime_support import atomic_text_writer
+
 import hashlib
 import importlib.metadata
 import json
@@ -790,13 +792,10 @@ def _provenance_path(args: Any) -> pathlib.Path | None:
 
 
 def _write_provenance(path: pathlib.Path, payload: dict[str, Any]) -> None:
-    """Atomically replace `provenance.json` (temp file beside it, then `os.replace`)."""
-    temporary = path.with_name(f"{path.name}.tmp-{os.getpid()}")
-    temporary.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, default=str) + "\n",
-        encoding="utf-8",
-    )
-    os.replace(temporary, path)
+    """Atomically publish provenance without leaving a partial file on failure."""
+    with atomic_text_writer(path) as handle:
+        json.dump(payload, handle, indent=2, sort_keys=True, default=str)
+        handle.write("\n")
 
 
 def _load_provenance(path: pathlib.Path) -> dict[str, Any] | None:
