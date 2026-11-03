@@ -1,0 +1,628 @@
+{
+  "all_allocated_gpu_hours": 0,
+  "attempts": [
+    {
+      "allocation": "",
+      "complete": false,
+      "coordinate_gate": {
+        "certified": null,
+        "reason": "workflow emitted no structure artifacts; model coordinate parity not measured"
+      },
+      "cpu_affinity": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "direct_source_manifest_sha256": "aa95f56eb849a3eaa9edba48d33271ebe843b8291452f46f84bdd94e806fac57",
+      "experiment": {
+        "allocated_gpu_hours": 0,
+        "scope": "entire comparison loop, including between-trial analysis and failed work; per-mode GPU cost includes each trial's observation envelope",
+        "wall_seconds": 214.46087118900323,
+        "walltime_budget_seconds": 900.0
+      },
+      "fixed_identities": [
+        {
+          "repeat_index": 0,
+          "seed": 17
+        },
+        {
+          "repeat_index": 1,
+          "seed": 18
+        },
+        {
+          "repeat_index": 2,
+          "seed": 19
+        }
+      ],
+      "modes": {
+        "direct": {
+          "allocated_gpu_hours": 0.0,
+          "completed_trajectories": 9,
+          "effective_trajectories_per_second": null,
+          "failed_or_incomplete_runs": 0,
+          "median_end_to_end_seconds": 9.687961333998828,
+          "peak_device_vram_bytes": null,
+          "peak_process_tree_rss_bytes": 1206669312,
+          "peak_process_tree_rss_gib": 1.1237983703613281,
+          "runs": 3,
+          "sampled_cpu_seconds_lower_bound": 26.46,
+          "sampled_peak_cpu_core_equivalents": 1.047654474773527,
+          "valid_runs": 3,
+          "workload_completions_per_second": 0.26946888977971667
+        },
+        "resident_adaptive": {
+          "allocated_gpu_hours": 0.0,
+          "completed_trajectories": 9,
+          "effective_trajectories_per_second": null,
+          "failed_or_incomplete_runs": 0,
+          "median_end_to_end_seconds": 33.33076237900241,
+          "peak_device_vram_bytes": null,
+          "peak_process_tree_rss_bytes": 2399760384,
+          "peak_process_tree_rss_gib": 2.2349510192871094,
+          "runs": 3,
+          "sampled_cpu_seconds_lower_bound": 93.19,
+          "sampled_peak_cpu_core_equivalents": 1.1236269244983712,
+          "valid_runs": 3,
+          "workload_completions_per_second": 0.09044382966641502
+        },
+        "resident_serial": {
+          "allocated_gpu_hours": 0.0,
+          "completed_trajectories": 7,
+          "effective_trajectories_per_second": null,
+          "failed_or_incomplete_runs": 1,
+          "median_end_to_end_seconds": 32.918471662997035,
+          "peak_device_vram_bytes": null,
+          "peak_process_tree_rss_bytes": 2402275328,
+          "peak_process_tree_rss_gib": 2.237293243408203,
+          "runs": 3,
+          "sampled_cpu_seconds_lower_bound": 75.69,
+          "sampled_peak_cpu_core_equivalents": 1.1042045270503258,
+          "valid_runs": 2,
+          "workload_completions_per_second": 0.07377391720487289
+        }
+      },
+      "protocol_sha256": "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5",
+      "report": "cpu-three-mode-01/report.json",
+      "report_sha256": "2b469940dc43d0e339dd934c455aecb9646e26f74c031f6a40d3ea04d608fb41",
+      "runs": [
+        {
+          "completed": 3,
+          "controller_reasons": {},
+          "maximum_controller_limit": null,
+          "mode": "direct",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 1,
+          "sampled_peak_cpu_core_equivalents": 1.011728983645581,
+          "seconds": 14.211376624996774,
+          "stage_counts": {},
+          "stage_wall_seconds": {},
+          "telemetry_sha256": "15cdbdfa646c92fa99f318c618163b5e1ba8d982cfde728760438cb8b134c20e",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 26
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_serial",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 2,
+          "sampled_peak_cpu_core_equivalents": 1.1042045270503258,
+          "seconds": 33.16324810899823,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.6908008547034115e-05,
+            "cpu_finalize": 0.0024037560069700703,
+            "cpu_prepare": 7.409013051073998e-06
+          },
+          "telemetry_sha256": "a694d168fd0e9c30b7afa82aa98ae1e58bcc5e9ae6f026af9760ac9228d86707",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 25
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_adaptive",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 3,
+          "sampled_peak_cpu_core_equivalents": 1.1067211474200207,
+          "seconds": 32.30877528400015,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.5933990653138608e-05,
+            "cpu_finalize": 0.001634091982850805,
+            "cpu_prepare": 8.240007446147501e-06
+          },
+          "telemetry_sha256": "3a695ffa963d4a65126257eed5c7aabb9bfde0002c12e33214f5c4f3b2fa28ab",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 26
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_serial",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 4,
+          "sampled_peak_cpu_core_equivalents": 1.0874264981032178,
+          "seconds": 32.67369521699584,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.6662008420098573e-05,
+            "cpu_finalize": 0.0017418930001440458,
+            "cpu_prepare": 7.659997208975255e-06
+          },
+          "telemetry_sha256": "4d1f3f85e127d0e642940d7f7ad4a1f6c63a0a09a27abf0bfa7531a472e11888",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 26
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_adaptive",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 5,
+          "sampled_peak_cpu_core_equivalents": 1.1236269244983712,
+          "seconds": 33.33076237900241,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 2.074400254059583e-05,
+            "cpu_finalize": 0.008136815995385405,
+            "cpu_prepare": 8.019997039809823e-06
+          },
+          "telemetry_sha256": "aa9d4aaac936b3475cdaff277e1aa411aef02173242a11e3b2dd32ee0785fff2",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {},
+          "maximum_controller_limit": null,
+          "mode": "direct",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 6,
+          "sampled_peak_cpu_core_equivalents": 1.0473420767951012,
+          "seconds": 9.687961333998828,
+          "stage_counts": {},
+          "stage_wall_seconds": {},
+          "telemetry_sha256": "c6f1bc245f50b69b7ead3bf8f8774ec198aba041e0a8c03ef5f46d957739eb1b",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 26
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_adaptive",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 7,
+          "sampled_peak_cpu_core_equivalents": 1.0721425684608619,
+          "seconds": 33.86973824000597,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 2.3272012185771018e-05,
+            "cpu_finalize": 0.0031017170040286146,
+            "cpu_prepare": 8.574010280426592e-06
+          },
+          "telemetry_sha256": "26fa955eb99376cb0c40183d2e778f9fd96adb093c6da1480f05268513923634",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {},
+          "maximum_controller_limit": null,
+          "mode": "direct",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 8,
+          "sampled_peak_cpu_core_equivalents": 1.047654474773527,
+          "seconds": 9.499693771002057,
+          "stage_counts": {},
+          "stage_wall_seconds": {},
+          "telemetry_sha256": "381d63a2f56f8309a724adec9be273fbbfc5c17d84cff17138a9f588eea1b613",
+          "valid_workload": true
+        },
+        {
+          "completed": 1,
+          "controller_reasons": {
+            "observing_steady_work": 8,
+            "telemetry_unavailable": 1
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_serial",
+          "observed_model_start_events": 0,
+          "release_confirmed": false,
+          "run": 9,
+          "sampled_peak_cpu_core_equivalents": 1.0873448577120082,
+          "seconds": 15.492613613998401,
+          "stage_counts": {
+            "cpu_execute": 3,
+            "cpu_finalize": 3,
+            "cpu_prepare": 3
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 5.389993020799011e-06,
+            "cpu_finalize": 0.000517584994668141,
+            "cpu_prepare": 2.658998710103333e-06
+          },
+          "telemetry_sha256": "eab53dca843dee19abc3e549b8a6a282d09bb10da2bf089e9ef335a1afb12aef",
+          "valid_workload": false
+        }
+      ],
+      "score_decision_gate": false,
+      "source_manifest_sha256": "3774799b21a463b1b6cc2f22950e26dd90bd3260690eaed7c6e9695a59a8a74d"
+    },
+    {
+      "allocation": "",
+      "complete": true,
+      "coordinate_gate": {
+        "certified": null,
+        "reason": "workflow emitted no structure artifacts; model coordinate parity not measured"
+      },
+      "cpu_affinity": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "direct_source_manifest_sha256": "aa95f56eb849a3eaa9edba48d33271ebe843b8291452f46f84bdd94e806fac57",
+      "experiment": {
+        "allocated_gpu_hours": 0,
+        "scope": "entire comparison loop, including between-trial analysis and failed work; per-mode GPU cost includes each trial's observation envelope",
+        "wall_seconds": 230.65802215500298,
+        "walltime_budget_seconds": 600.0
+      },
+      "fixed_identities": [
+        {
+          "repeat_index": 0,
+          "seed": 17
+        },
+        {
+          "repeat_index": 1,
+          "seed": 18
+        },
+        {
+          "repeat_index": 2,
+          "seed": 19
+        }
+      ],
+      "modes": {
+        "direct": {
+          "allocated_gpu_hours": 0.0,
+          "completed_trajectories": 9,
+          "effective_trajectories_per_second": 0.27362225781701466,
+          "failed_or_incomplete_runs": 0,
+          "median_end_to_end_seconds": 9.691447201999836,
+          "peak_device_vram_bytes": null,
+          "peak_process_tree_rss_bytes": 1194344448,
+          "peak_process_tree_rss_gib": 1.1123199462890625,
+          "runs": 3,
+          "sampled_cpu_seconds_lower_bound": 26.270000000000003,
+          "sampled_peak_cpu_core_equivalents": 1.0394688957640912,
+          "valid_runs": 3,
+          "workload_completions_per_second": 0.27362225781701466
+        },
+        "resident_adaptive": {
+          "allocated_gpu_hours": 0.0,
+          "completed_trajectories": 9,
+          "effective_trajectories_per_second": 0.09000887508660185,
+          "failed_or_incomplete_runs": 0,
+          "median_end_to_end_seconds": 33.45451171800232,
+          "peak_device_vram_bytes": null,
+          "peak_process_tree_rss_bytes": 2402631680,
+          "peak_process_tree_rss_gib": 2.2376251220703125,
+          "runs": 3,
+          "sampled_cpu_seconds_lower_bound": 93.68,
+          "sampled_peak_cpu_core_equivalents": 1.1471031440559547,
+          "valid_runs": 3,
+          "workload_completions_per_second": 0.09000887508660185
+        },
+        "resident_serial": {
+          "allocated_gpu_hours": 0.0,
+          "completed_trajectories": 9,
+          "effective_trajectories_per_second": 0.092256344493838,
+          "failed_or_incomplete_runs": 0,
+          "median_end_to_end_seconds": 32.4175906820019,
+          "peak_device_vram_bytes": null,
+          "peak_process_tree_rss_bytes": 2403733504,
+          "peak_process_tree_rss_gib": 2.2386512756347656,
+          "runs": 3,
+          "sampled_cpu_seconds_lower_bound": 91.74000000000001,
+          "sampled_peak_cpu_core_equivalents": 1.1438728620815983,
+          "valid_runs": 3,
+          "workload_completions_per_second": 0.092256344493838
+        }
+      },
+      "protocol_sha256": "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5",
+      "report": "cpu-three-mode-02/report.json",
+      "report_sha256": "57a45fe94dc06bd5f3c55948899bc364305d8b2a0f4aaf7a0dfc23d99a5bfecf",
+      "runs": [
+        {
+          "completed": 3,
+          "controller_reasons": {},
+          "maximum_controller_limit": null,
+          "mode": "direct",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 1,
+          "sampled_peak_cpu_core_equivalents": 1.007179317010255,
+          "seconds": 13.968717568997818,
+          "stage_counts": {},
+          "stage_wall_seconds": {},
+          "telemetry_sha256": "0f678ab0a99713514006bb487baa73eda0e672fd81a0d0126a101bcf19d9c848",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 26
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_serial",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 2,
+          "sampled_peak_cpu_core_equivalents": 1.081440222049264,
+          "seconds": 32.4175906820019,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.6999008948914707e-05,
+            "cpu_finalize": 0.002228885998192709,
+            "cpu_prepare": 1.116697967518121e-05
+          },
+          "telemetry_sha256": "35aa259585fa415c966098cc4b6ace261cf952afe53f19cb26f4a70a0617438f",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 26
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_adaptive",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 3,
+          "sampled_peak_cpu_core_equivalents": 1.1383699256603612,
+          "seconds": 33.62440651399811,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.7745995137374848e-05,
+            "cpu_finalize": 0.002730739986873232,
+            "cpu_prepare": 9.38901212066412e-06
+          },
+          "telemetry_sha256": "813b4731a07a8fcf34cc1c82ce0d053e4289a1f0602c3d3c5edd25713e4624e2",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 26
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_serial",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 4,
+          "sampled_peak_cpu_core_equivalents": 1.1438728620815983,
+          "seconds": 33.3047003899992,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.749198418110609e-05,
+            "cpu_finalize": 0.0025920839980244637,
+            "cpu_prepare": 8.083006832748652e-06
+          },
+          "telemetry_sha256": "1427b34f784ca2de7f6d7473530fe0addbc8fde931efe1d92f7c00db5b775c09",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 25
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_adaptive",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 5,
+          "sampled_peak_cpu_core_equivalents": 1.1370063734477684,
+          "seconds": 33.45451171800232,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.7577018297743052e-05,
+            "cpu_finalize": 0.003134467995550949,
+            "cpu_prepare": 8.248003723565489e-06
+          },
+          "telemetry_sha256": "48df558c09436349a1c4d4f79ffad38e47053737e0b1f1f5fd79bb41737fc638",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {},
+          "maximum_controller_limit": null,
+          "mode": "direct",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 6,
+          "sampled_peak_cpu_core_equivalents": 1.0394688957640912,
+          "seconds": 9.691447201999836,
+          "stage_counts": {},
+          "stage_wall_seconds": {},
+          "telemetry_sha256": "aa1ae2eee421f93125b05b2ac067451e5fede0a962906f7270f863e42327baf1",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 25
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_adaptive",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 7,
+          "sampled_peak_cpu_core_equivalents": 1.1471031440559547,
+          "seconds": 32.91122153300239,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.9635983335319906e-05,
+            "cpu_finalize": 0.002285599992319476,
+            "cpu_prepare": 8.754002919886261e-06
+          },
+          "telemetry_sha256": "aaadd9ee48d72011161564d7060be2ee6ecf3f9c1fb932bd7dfe3684514f4ac3",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {},
+          "maximum_controller_limit": null,
+          "mode": "direct",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 8,
+          "sampled_peak_cpu_core_equivalents": 1.0285169920346426,
+          "seconds": 9.231896247001714,
+          "stage_counts": {},
+          "stage_wall_seconds": {},
+          "telemetry_sha256": "da2ca3ac198a5acddd3a5d74a90627c48b0fcdd107c6fce8bea5c7f4f5825585",
+          "valid_workload": true
+        },
+        {
+          "completed": 3,
+          "controller_reasons": {
+            "cold_start_observed": 1,
+            "observing_steady_work": 24
+          },
+          "maximum_controller_limit": 1,
+          "mode": "resident_serial",
+          "observed_model_start_events": 0,
+          "release_confirmed": true,
+          "run": 9,
+          "sampled_peak_cpu_core_equivalents": 1.092806028571743,
+          "seconds": 31.831975242996123,
+          "stage_counts": {
+            "cpu_execute": 9,
+            "cpu_finalize": 9,
+            "cpu_prepare": 9
+          },
+          "stage_wall_seconds": {
+            "cpu_execute": 1.4442004612646997e-05,
+            "cpu_finalize": 0.0020664909825427458,
+            "cpu_prepare": 7.5749921961687505e-06
+          },
+          "telemetry_sha256": "da7a60a0c270d075fe290a577cd195cfd236046f6ea577d3c731cff7a23942ca",
+          "valid_workload": true
+        }
+      ],
+      "score_decision_gate": true,
+      "source_manifest_sha256": "6a9b9c93e40ca3a931d3310e0470487254de8b15b18da07f6bd2e904e3512e3e"
+    }
+  ],
+  "metric_definitions": {
+    "cold_steady": "All CLI trials start fresh. No neural model in this fixture; GPU model cold/steady throughput and residency are not applicable.",
+    "cpu_peak": "Maximum delta of sampled cumulative process-tree CPU seconds / elapsed sample interval. Approximate 0.5 s windows; not instantaneous peak; discovery and short-lived children limit accuracy.",
+    "model_loads": "Dummy has no inference weights; zero model-start events are not evidence about any GPU backend.",
+    "rss_peak": "Sum of sampled process RSS, which can double-count shared pages; not physical RAM/PSS.",
+    "throughput": "Completed trajectories in valid fixed trials / total trial completion seconds, gated by repeated-direct score/decision equivalence."
+  },
+  "original_total_walltime_budget_seconds": 900,
+  "scope": "CPU Dummy/MCMC workflow only; no pretrained model or GPU certification",
+  "total_completed_trajectories_including_uncertified_attempt": 52,
+  "total_experiment_wall_seconds_including_failure": 445.1188933440062
+}

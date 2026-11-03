@@ -18,7 +18,8 @@ def main():
         if len(json.dumps(result, allow_nan=False, separators=(',', ':')).encode()) > payload['result_limit']:
             raise ValueError('CPU result exceeds byte limit')
         return {'value': result}
-    serve(invoke, {'worker': 'cpu', 'protocol': 1}, max_message_bytes=limit + 65536)
+    serve(invoke, {'worker': 'cpu', 'protocol': 1}, load_count=0,
+          lifecycle={'weights_loaded': False, 'gpu_resident': False}, max_message_bytes=limit + 65536)
 
 
 if __name__ == '__main__':

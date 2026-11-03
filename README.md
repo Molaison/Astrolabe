@@ -107,6 +107,18 @@ This API example runs AF3 and requires its configured runtime and assets.
 See the [user guide](docs/user_guide.md) for configuration and the
 [developer guide](docs/developer_guide.md) for the design loop and component APIs.
 
+## Resource-managed execution
+
+The optional [unified execution runtime](docs/runtime_execution_guide.md) separates
+model ownership from individual requests and admits existing independent repeats
+within the job's CPU, RAM and allocated GPU budgets. It preserves the scientific
+configuration and starts conservatively; uncertified same-device batching stays
+disabled. The [implementation and evidence report](docs/runtime_implementation_report.md)
+and the [evaluator](docs/evaluator_lifecycle_matrix.md) / [mutator](docs/mutator_lifecycle_matrix.md)
+matrices distinguish implemented lifecycle contracts from real backend and GPU
+performance certification. The guide includes reproducible, fixed-workload
+direct / resident serial / resident adaptive comparisons.
+
 ## Repository layout
 
 ```text

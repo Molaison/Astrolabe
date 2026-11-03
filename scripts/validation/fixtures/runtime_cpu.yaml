@@ -1,0 +1,27 @@
+# Protocol integration fixture only; this does not measure a model or GPU.
+task_name: runtime_cpu_protocol
+out_dir: /tmp/astrolabe-runtime-protocol
+repeats: 3
+seed: 17
+steps: 3
+ananas_path: null
+seqs: {A: AAAA}
+mutator:
+  MCMC: {mutation_method: random, select_positions: random}
+  mutator_terms:
+    MCMC: {_type: MCMC}
+evaluator:
+  evaluator_terms:
+    Dummy: {_type: dummy}
+loss:
+  loss_terms:
+    plddt: {_type: sequence_residue_fraction, included_protomers: A, residues: A}
+stages:
+  default:
+    oligo: [A]
+    evaluator: Dummy
+    mutation_num: 1
+    mutators: [MCMC]
+    mutator_weights: [1.0]
+    weighted_score_expression: plddt
+    early_stopping: null

@@ -12,6 +12,14 @@ from astrolabe.evaluators.artifact_budget import (
 
 
 def dump_tree(root, value, *, max_bytes=DEFAULT_MAX_BYTES, max_metadata_bytes=DEFAULT_MAX_METADATA_BYTES):
+    # Workers obtain their output allowance from the same resource owner that
+    # admitted the computation. A live request may not allocate the codec's
+    # larger standalone default by accident.
+    from astrolabe.runtime.server import current_request
+    context = current_request()
+    if context and context.get('output_limit_bytes') is not None:
+        max_bytes = min(max_bytes, context['output_limit_bytes'])
+        max_metadata_bytes = min(max_metadata_bytes, max_bytes)
     validate_dump(value, max_bytes, max_metadata_bytes)
     root = Path(root)
     root.mkdir(parents=True, exist_ok=True)

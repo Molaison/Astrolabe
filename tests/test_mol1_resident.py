@@ -45,12 +45,20 @@ def get_default_runner(**kwargs):
     cfg = SimpleNamespace(data=data, model_name=kwargs['model_name'], load_checkpoint_path=kwargs['load_checkpoint_path'], dump_dir=inference_configs['dump_dir'])
     download_inference_cache(cfg)
     with open(os.environ['FAKE_MOL1_LOADS'], 'a') as f: f.write('load\\n')
-    return SimpleNamespace(configs=cfg, device=torch.device('cpu'), dumper=SimpleNamespace(base_dir=cfg.dump_dir))
+    from mol.runner.inference import InferenceRunner
+    runner = InferenceRunner()
+    runner.configs, runner.device, runner.dumper = cfg, torch.device('cpu'), SimpleNamespace(base_dir=cfg.dump_dir)
+    runner.load_checkpoint()
+    return runner
 def preprocess_input(input_json, **kwargs): return input_json
 ''')
     (package / 'runner' / 'inference.py').write_text('''\
 import json
 from pathlib import Path
+class InferenceRunner:
+    def load_checkpoint(self):
+        import torch
+        self.model = torch.nn.Linear(1, 1)
 def infer_predict(runner, cfg):
     job = json.loads(Path(cfg.input_json_path).read_text())[0]
     if job['sequences'][0]['proteinChain']['sequence'] == 'GG': return

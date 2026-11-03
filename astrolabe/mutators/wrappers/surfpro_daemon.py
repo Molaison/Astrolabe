@@ -78,14 +78,15 @@ def _write(stream, payload: dict[str, Any]) -> None:
     stream.flush()
 
 
-def _seed_everything(seed: int) -> None:
+def _seed_everything(seed: int, *, cuda: bool = True) -> None:
     import numpy as np
     import torch
 
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
+    torch.random.default_generator.manual_seed(seed)
+    if cuda:
+        torch.cuda.manual_seed_all(seed)
 
 
 def _load_runtime(args: argparse.Namespace) -> Runtime:
@@ -226,8 +227,11 @@ class SurfaceBuilder:
 
     @staticmethod
     def _binary_fingerprint(path: Path) -> str:
-        stat = path.stat()
-        return f"{path}:{stat.st_size}:{stat.st_mtime_ns}"
+        digest = hashlib.sha256()
+        with path.open("rb") as stream:
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                digest.update(block)
+        return digest.hexdigest()
 
     def _surface_cache_key(self, protein: ProteinInput, seed: int) -> str:
         digest = hashlib.sha256()
@@ -235,6 +239,10 @@ class SurfaceBuilder:
         digest.update(self._binary_fingerprint(self.msms_bin).encode("utf-8"))
         digest.update(self._binary_fingerprint(self.pdb_to_xyzrn_bin).encode("utf-8"))
         digest.update(f"{self.max_surface_vertices}:{seed}".encode("utf-8"))
+        digest.update(Path(__file__).read_bytes())
+        source = getattr(self.prepare_surface, "__file__", None)
+        if source is not None:
+            digest.update(Path(source).read_bytes())
         return digest.hexdigest()
 
     @staticmethod
@@ -466,13 +474,13 @@ def _decode_sequence(
     return probabilities, "".join(generated)
 
 
-def _infer(
+def _prepare(
     runtime: Runtime,
     surface_builder: SurfaceBuilder,
     pdb_path: Path,
     fixed_residues: str,
     seed: int,
-) -> tuple[list[list[float]], str]:
+):
     protein, coordinates, aa_indices = surface_builder.build(pdb_path, seed)
     if len(protein.sequence) > 1024:
         raise ValueError(
@@ -481,6 +489,11 @@ def _infer(
     fixed_indices = _fixed_flat_indices(
         fixed_residues, protein.chain_order, protein.chain_lengths
     )
+    return protein, coordinates, aa_indices, fixed_indices
+
+
+def _execute(runtime: Runtime, prepared):
+    protein, coordinates, aa_indices, fixed_indices = prepared
     with runtime.torch.no_grad():
         encoder_out, src_lengths = _encode_surface(
             runtime, coordinates, aa_indices
@@ -494,12 +507,20 @@ def _infer(
         )
 
 
+
+def _infer(runtime, surface_builder, pdb_path, fixed_residues, seed):
+    return _execute(runtime, _prepare(runtime, surface_builder, pdb_path, fixed_residues, seed))
+
 def main() -> int:
     args = _parse_args()
-    protocol_out = sys.stdout
+    protocol_out = os.fdopen(os.dup(1), "w", buffering=1)
+    os.dup2(2, 1)
+    sys.stdout = sys.stderr
     repo_path = Path(args.repo_path).resolve()
+    load_count = 0
     with contextlib.redirect_stdout(sys.stderr):
         runtime = _load_runtime(args)
+        load_count += 1
         surface_builder = SurfaceBuilder(
             repo_path=repo_path,
             work_dir=Path(args.work_dir),
@@ -509,37 +530,56 @@ def main() -> int:
         )
     _write(
         protocol_out,
-        {"type": "ready", "pid": os.getpid(), "model_load_count": 1},
+        {"type": "ready", "pid": os.getpid(), "model_load_count": load_count, "weights_loaded": True,
+         "gpu_resident": runtime.device.startswith("cuda"), "device": runtime.device,
+         "phases": ["prepare", "infer_prepared"]},
     )
 
     request_count = 0
+    prepared = None
+    prepared_id = None
+    prepared_seed = None
     for raw in sys.stdin:
         message = json.loads(raw)
         message_type = message.get("type")
         if message_type == "shutdown":
             _write(protocol_out, {"type": "ok", "message": "bye"})
             return 0
-        if message_type != "infer":
+        if message_type == "prepare":
+            if prepared is not None:
+                raise ValueError("a SurfPro request is already prepared")
+            prepared_seed = int(message.get("seed", 0))
+            _seed_everything(prepared_seed, cuda=False)
+            with contextlib.redirect_stdout(sys.stderr):
+                prepared = _prepare(runtime, surface_builder, Path(message["pdb_path"]).resolve(),
+                                    str(message.get("fixed_residues") or ""), prepared_seed)
+            prepared_id = message.get("id")
+            _write(protocol_out, {"type": "prepared", "id": prepared_id})
+            continue
+        if message_type not in ("infer", "infer_prepared"):
             raise ValueError(f"Unknown SurfPro daemon message type: {message_type!r}")
 
         request_count += 1
-        seed = int(message.get("seed", 0))
-        _seed_everything(seed)
-        with contextlib.redirect_stdout(sys.stderr):
-            probabilities, sequence = _infer(
-                runtime,
-                surface_builder,
-                Path(message["pdb_path"]).resolve(),
-                str(message.get("fixed_residues") or ""),
-                seed,
-            )
+        if message_type == "infer_prepared":
+            if prepared is None or message.get("id") != prepared_id:
+                raise ValueError("SurfPro prepared request identity mismatch")
+            runtime.torch.cuda.manual_seed_all(prepared_seed)
+            with contextlib.redirect_stdout(sys.stderr):
+                probabilities, sequence = _execute(runtime, prepared)
+            prepared = prepared_id = prepared_seed = None
+        else:
+            seed = int(message.get("seed", 0))
+            _seed_everything(seed)
+            with contextlib.redirect_stdout(sys.stderr):
+                probabilities, sequence = _infer(runtime, surface_builder,
+                    Path(message["pdb_path"]).resolve(), str(message.get("fixed_residues") or ""), seed)
         _write(
             protocol_out,
             {
                 "type": "result",
                 "id": message.get("id"),
                 "pid": os.getpid(),
-                "model_load_count": 1,
+                "model_load_count": load_count,
                 "request_count": request_count,
                 "probabilities": probabilities,
                 "sequence": sequence,

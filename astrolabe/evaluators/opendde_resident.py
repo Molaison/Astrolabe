@@ -9,14 +9,17 @@ import sys
 import tempfile
 import uuid
 
+from astrolabe.evaluators.lifecycle import request_runtime
 from astrolabe.evaluators.worker_identity import identity, probe_device
-from astrolabe.evaluators.worker_session import WorkerArtifacts
+from astrolabe.evaluators.worker_session import WorkerArtifacts, request_artifacts
+
+
+BROKER_SHARED_ROOT = True
+BROKER_ADMITTED_PROBE = True
 
 
 class OpenDDEResident:
     def __init__(self, runner):
-        if os.environ.get('ASTROLABE_EXECUTION_ENDPOINT') or os.environ.get('ASTROLABE_EXECUTION_TOKEN'):
-            raise ValueError('OpenDDE daemon currently requires trajectory-exclusive direct execution')
         if int(os.environ.get('WORLD_SIZE', '1')) != 1 or int(os.environ.get('LOCAL_RANK', '0')) != 0:
             raise ValueError('OpenDDE daemon supports one local device only')
         if runner.foldcp_mode != 'single' or runner.foldcp_size_dp != 1 or runner.foldcp_size_cp != 1:
@@ -57,12 +60,12 @@ class OpenDDEResident:
         code = [str(base / p) for p in ('opendde_assets.py', 'worker_identity.py', 'request_path.py', 'device_probe.py', 'wrappers/opendde_daemon.py')]
         code += [str(source / 'opendde'), str(source / 'runner')]
         semantics = {'options': options, 'trajectory': uuid.uuid4().hex}
-        expected = identity(python, code, assets, device, semantics)
+        expected = identity(python, code, assets, device, semantics, env=env)
         spec = {'source': str(source), 'options': options, 'semantics': semantics,
                 'code_paths': code, 'weight_paths': assets, 'device': device,
-                'bootstrap_dir': str(root / 'bootstrap')}
+                'bootstrap_dir': tempfile.mkdtemp(prefix='bootstrap-', dir=root)}
         spec_path = self._artifacts.specification(expected, spec)
-        self._client = DaemonClient([python, '-m', 'astrolabe.evaluators.wrappers.opendde_daemon', str(spec_path)], expected, env=env, startup_timeout=600)
+        self._client = self._artifacts.start_client([python, '-m', 'astrolabe.evaluators.wrappers.opendde_daemon', str(spec_path)], expected, env=env, startup_timeout=600)
         self.timeout = runner.timeout_seconds
 
     def run(self, input_json, output_dir):
@@ -74,10 +77,10 @@ class OpenDDEResident:
         name = data[0].get('name')
         if not isinstance(name, str) or not name or Path(name).name != name or name in ('.', '..'):
             raise ValueError('invalid OpenDDE job name')
-        with tempfile.TemporaryDirectory(prefix='request-', dir=self._artifacts.root) as tmp:
+        with request_artifacts(self._artifacts.root) as tmp:
             request = Path(tmp)
             (request / 'input.json').write_text(json.dumps(data))
-            reply = self._client.call({'request_dir': str(request)}, timeout=self.timeout)
+            reply = self._client.call({'request_dir': str(request), 'method': 'run'}, timeout=self.timeout, runtime=request_runtime(request, 'managed', data))
             if reply != {'request': request.name}: raise ValueError('OpenDDE request mismatch')
             source = request / 'output' / name
             if not source.is_dir(): raise RuntimeError('OpenDDE output is missing')
@@ -88,7 +91,7 @@ class OpenDDEResident:
 
     def close(self):
         if getattr(self, '_client', None) is not None:
-            self._client.close(); self._client = None
+            self._artifacts.close_client(self._client, release=True); self._client = None
         if getattr(self, '_artifacts', None) is not None:
             self._artifacts.close(); self._artifacts = None
 

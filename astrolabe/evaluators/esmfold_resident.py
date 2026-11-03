@@ -10,15 +10,18 @@ import uuid
 import torch
 
 from astrolabe.evaluators.tree_codec import dump_tree, load_tree
-from astrolabe.evaluators.torch_rng import capture, restore
+from astrolabe.evaluators.torch_rng import capture, restore, capture_settings
+from astrolabe.evaluators.lifecycle import request_runtime
 from astrolabe.evaluators.worker_identity import identity, probe_device
-from astrolabe.evaluators.worker_session import WorkerArtifacts
+from astrolabe.evaluators.worker_session import WorkerArtifacts, request_artifacts
+
+
+BROKER_SHARED_ROOT = True
+BROKER_ADMITTED_PROBE = True
 
 
 class ESMFoldResident:
     def __init__(self, model_name, device):
-        if os.environ.get('ASTROLABE_EXECUTION_ENDPOINT') or os.environ.get('ASTROLABE_EXECUTION_TOKEN'):
-            raise ValueError('ESMFold1 daemon requires trajectory-exclusive direct execution')
         from astrolabe.runtime.client import DaemonClient
         checkpoint = Path(model_name).expanduser() if model_name.endswith('.pt') else Path(torch.hub.get_dir()) / 'checkpoints' / (model_name + '.pt')
         checkpoint = checkpoint.resolve(strict=True)
@@ -53,23 +56,24 @@ print(json.dumps({'class_file': inspect.getfile(cls), 'roots': roots}))
         self._device = device_info['name']
         self._artifacts = WorkerArtifacts()
         root = self._artifacts.root
-        boot = root / 'request-bootstrap'; boot.mkdir(mode=0o700)
+        boot = Path(tempfile.mkdtemp(prefix='request-bootstrap-', dir=root))
         dump_tree(boot / 'initial', capture(self._device))
-        settings = {'model_name': str(checkpoint), 'trajectory': uuid.uuid4().hex}
-        expected = identity(sys.executable, code, weights, device_info, settings)
+        settings = {'model_name': str(checkpoint), 'trajectory': uuid.uuid4().hex,
+                    'torch_settings': capture_settings()}
+        expected = identity(sys.executable, code, weights, device_info, settings, env=env)
         spec = {'settings': settings, 'code_paths': code, 'weight_paths': weights,
                 'device': device_info, 'class_file': str(cls_file), 'bootstrap': str(boot)}
         path = self._artifacts.specification(expected, spec)
-        self._client = DaemonClient([sys.executable, '-m', 'astrolabe.evaluators.wrappers.esmfold_daemon', str(path)], expected, env=env, startup_timeout=600)
+        self._client = self._artifacts.start_client([sys.executable, '-m', 'astrolabe.evaluators.wrappers.esmfold_daemon', str(path)], expected, env=env, startup_timeout=600)
         restore(load_tree(boot / 'ready'), self._device)
 
     def run(self, input_feat):
         from astrolabe.evaluators.esmfold import ESMFoldEvaluator
         names = list(input_feat)
-        with tempfile.TemporaryDirectory(prefix='request-', dir=self._artifacts.root) as tmp:
+        with request_artifacts(self._artifacts.root) as tmp:
             request = Path(tmp)
             dump_tree(request / 'input', {'sequences': [input_feat[n] for n in names], 'rng': capture(self._device)})
-            reply = self._client.call({'request_dir': str(request)})
+            reply = self._client.call({'request_dir': str(request), 'method': 'infer'}, runtime=request_runtime(request, 'managed', input_feat, execution_settings=capture_settings()))
             if reply != {'request': request.name}: raise ValueError('ESMFold1 response request mismatch')
             result = load_tree(request / 'output')
             restore(result['rng'], self._device)
@@ -77,7 +81,7 @@ print(json.dumps({'class_file': inspect.getfile(cls), 'roots': roots}))
 
     def close(self):
         if getattr(self, '_client', None) is not None:
-            self._client.close(); self._client = None
+            self._artifacts.close_client(self._client, release=True); self._client = None
         if getattr(self, '_artifacts', None) is not None:
             self._artifacts.close(); self._artifacts = None
 

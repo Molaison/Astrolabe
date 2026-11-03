@@ -111,17 +111,29 @@ class ESMIF1Mutator(Mutator):
         supports_shared_selection_policy=True,
     )
 
-    def __init__(self, position_selector=None, predocker=None):
+    def __init__(self, position_selector=None, predocker=None, device=None):
+        from astrolabe.mutators.resident import uses_resident, ResidentRunner
+        self._resident = None
+        self.position_selector = position_selector
+        self.predocker = predocker
+        if uses_resident():
+            self._resident = ResidentRunner("esmif", {"device": device}, keyword_constructor=True)
+            self.runner = self._resident
+            self.aa_order = self._resident.metadata["aa_order"]
+            return
         self.predocker = None
         model, self.alphabet = esm2.pretrained.esm_if1_gvp4_t16_142M_UR50()
         # use eval mode for deterministic mutation_output e.g. without random dropout
         model.eval()
         self.predocker = predocker
-        self.runner = model.cuda()
+        self.runner = model.to(device or "cuda")
+        self.model_load_count = 1
         self.position_selector = position_selector
         self.aa_order = self.alphabet.all_toks[4:24]
 
     def compute_mutation(self, mutation_input_features: Tuple[Any, Any]):
+        if self._resident is not None:
+            return self._resident.compute_mutation(mutation_input_features)
         mutation_output = {}
         for oligo_name, input_feat in mutation_input_features.items():
             oligo_output = esm_extract_probs(model=self.runner, **input_feat)
@@ -129,6 +141,13 @@ class ESMIF1Mutator(Mutator):
             mutation_output[oligo_name] = oligo_output
 
         return mutation_output
+
+    def shutdown(self):
+        if self._resident is not None:
+            self._resident.close()
+        elif getattr(self, "runner", None) is not None:
+            self.runner.to("cpu")
+            self.runner = None
 
     def prepare_mutation_input(
         self,

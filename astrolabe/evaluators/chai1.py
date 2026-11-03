@@ -415,9 +415,7 @@ class Chai1Evaluator(Evaluator):
         return output
 
     def close(self):
-        if self._resident is not None:
-            self._resident.close()
-            self._resident = None
+        super().close()
 
     def prepare_input(self, inputs, runtime_config):
         step = global_config.step

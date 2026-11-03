@@ -1,0 +1,26 @@
+
+task_name: parallel_smoke
+out_dir: /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot04-pytest/test_real_cli_parallel_repeat_0/unused
+raw_model_results_dir: /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot04-pytest/test_real_cli_parallel_repeat_0/raw
+repeats: 2
+seed: 17
+steps: 5
+ananas_path: null
+seqs: {A: AAAA}
+mutator:
+  MCMC: {mutation_method: random, select_positions: random}
+  mutator_terms: {MCMC: {_type: MCMC}}
+evaluator:
+  evaluator_terms: {Dummy: {_type: dummy}}
+loss:
+  loss_terms:
+    plddt: {_type: sequence_residue_fraction, included_protomers: A, residues: A}
+stages:
+  default:
+    oligo: [A]
+    evaluator: Dummy
+    mutation_num: 1
+    mutators: [MCMC]
+    mutator_weights: [1.0]
+    weighted_score_expression: plddt
+    early_stopping: null

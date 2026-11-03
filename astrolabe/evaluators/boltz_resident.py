@@ -11,18 +11,21 @@ import uuid
 from omegaconf import OmegaConf
 
 from astrolabe.evaluators.tree_codec import dump_tree, load_tree
-from astrolabe.evaluators.torch_rng import capture, restore
+from astrolabe.evaluators.torch_rng import capture, restore, capture_settings
+from astrolabe.evaluators.lifecycle import request_runtime
 from astrolabe.evaluators.worker_identity import identity
 from astrolabe.evaluators.worker_session import WorkerArtifacts
 from astrolabe.runtime.admission import run_probe
+
+
+BROKER_SHARED_ROOT = True
+BROKER_ADMITTED_PROBE = True
 
 
 class Boltz1Resident:
     resident_atomic = True
 
     def __init__(self, config):
-        if os.environ.get('ASTROLABE_EXECUTION_ENDPOINT') or os.environ.get('ASTROLABE_EXECUTION_TOKEN'):
-            raise ValueError('Boltz1 resident requires trajectory-exclusive direct execution')
         from astrolabe.runtime.client import DaemonClient
         if OmegaConf.is_config(config):
             config = OmegaConf.to_container(config, resolve=True)
@@ -52,14 +55,16 @@ if acc in ('gpu','cuda') and not torch.cuda.is_available(): raise RuntimeError('
 name='cpu' if acc=='cpu' or not torch.cuda.is_available() else 'cuda:0'
 print(json.dumps({'name':name,'device_kind':torch.cuda.get_device_name(0) if name.startswith('cuda') else 'cpu','visible':os.environ.get('CUDA_VISIBLE_DEVICES')}))
 """
-        device = run_probe([sys.executable, '-c', probe, self.config['accelerator']], env=env)
+        device = run_probe([sys.executable, '-c', probe, self.config['accelerator']], env=env,
+                           device='cpu' if self.config['accelerator'] == 'cpu' else None)
         self.device = device['name']
         self._artifacts = WorkerArtifacts()
-        settings = {'config': self.config, 'trajectory': uuid.uuid4().hex}
-        expected = identity(sys.executable, code, [str(p) for p in weights], device, settings)
+        settings = {'config': self.config, 'trajectory': uuid.uuid4().hex,
+                    'torch_settings': capture_settings()}
+        expected = identity(sys.executable, code, [str(p) for p in weights], device, settings, env=env)
         spec = {'settings': settings, 'code_paths': code, 'weight_paths': [str(p) for p in weights], 'device': device}
         path = self._artifacts.specification(expected, spec)
-        self._client = DaemonClient([sys.executable, '-m', 'astrolabe.evaluators.wrappers.boltz_daemon', str(path)],
+        self._client = self._artifacts.start_client([sys.executable, '-m', 'astrolabe.evaluators.wrappers.boltz_daemon', str(path)],
                                     expected, env=env, startup_timeout=600)
 
     def prepare_request(self, yaml_path, destination):
@@ -86,10 +91,12 @@ print(json.dumps({'name':name,'device_kind':torch.cuda.get_device_name(0) if nam
             raise
 
     def run_request(self, data, request, destination):
+        from astrolabe.runtime.client import OutcomeUnknown
         request = Path(request)
+        uncertain = False
         try:
             dump_tree(request / 'input', {'data': [str(p) for p in data], 'rng': capture(self.device)})
-            response = self._client.call({'request_dir': str(request)})
+            response = self._client.call({'request_dir': str(request), 'method': 'predict'}, runtime=request_runtime(request, 'managed', data, execution_settings=capture_settings()))
             if response != {'request': request.name}:
                 raise ValueError('Boltz1 response request mismatch')
             restore(load_tree(request / 'output')['rng'], self.device)
@@ -99,12 +106,17 @@ print(json.dumps({'name':name,'device_kind':torch.cuda.get_device_name(0) if nam
                 raise ValueError('Boltz1 resident output already exists')
             shutil.copytree(request, destination,
                             ignore=lambda path, names: {'input', 'output'} & set(names) if Path(path) == request else set())
+        except OutcomeUnknown as exc:
+            uncertain = True
+            exc.retained_request_dir = str(request)
+            raise
         finally:
-            shutil.rmtree(request, ignore_errors=True)
+            if not uncertain:
+                shutil.rmtree(request, ignore_errors=True)
 
     def close(self):
         if getattr(self, '_client', None) is not None:
-            self._client.close(); self._client = None
+            self._artifacts.close_client(self._client, release=True); self._client = None
         if getattr(self, '_artifacts', None) is not None:
             self._artifacts.close(); self._artifacts = None
 

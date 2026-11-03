@@ -1,0 +1,395 @@
+.....................s.................................................. [ 22%]
+...................................................................F.... [ 44%]
+.........FF............................................................. [ 66%]
+.........................................F.............................. [ 88%]
+......................................                                   [100%]
+=================================== FAILURES ===================================
+_______________ test_unsupported_parallel_component_is_rejected ________________
+
+    def test_unsupported_parallel_component_is_rejected():
+        import pytest
+        from omegaconf import OmegaConf
+        from astrolabe.runtime.session import validate_parallel
+        cfg = OmegaConf.create({'stages': {'default': {'mutators': ['bad'], 'evaluator': 'dummy'}},
+                                'mutator': {'mutator_terms': {'bad': {'_type': 'DynamicMPNN'}}},
+                                'evaluator': {'evaluator_terms': {'dummy': {'_type': 'dummy'}}}})
+>       with pytest.raises(ValueError, match='does not support mutator'):
+E       Failed: DID NOT RAISE ValueError
+
+tests/test_runtime_execution.py:209: Failed
+___________________ test_cli_isolated_repeat_matches_legacy ____________________
+
+tmp_path = PosixPath('/tmp/pytest-of-zpzeng/pytest-1315/test_cli_isolated_repeat_match0')
+
+    def test_cli_isolated_repeat_matches_legacy(tmp_path):
+        """Exercise the public CLI and compare real trajectory score/history rows."""
+        config = tmp_path / 'run.yaml'
+        config.write_text('''
+    task_name: runtime_smoke
+    out_dir: OUTPUT
+    raw_model_results_dir: RAW
+    repeats: 1
+    seed: 17
+    steps: 2
+    ananas_path: null
+    seqs: {A: AAAA}
+    mutator:
+      MCMC: {mutation_method: random, select_positions: random}
+      mutator_terms: {MCMC: {_type: MCMC}}
+    evaluator:
+      evaluator_terms: {Dummy: {_type: dummy}}
+    loss:
+      loss_terms:
+        plddt: {_type: sequence_residue_fraction, included_protomers: A, residues: A}
+    stages:
+      default:
+        oligo: [A]
+        evaluator: Dummy
+        mutation_num: 1
+        mutators: [MCMC]
+        mutator_weights: [1.0]
+        weighted_score_expression: plddt
+        early_stopping: null
+    '''.replace('OUTPUT', str(tmp_path / 'out')).replace('RAW', str(tmp_path / 'raw')))
+        env = dict(os.environ, PYTHONPATH=str(ROOT) + os.pathsep + os.environ.get('PYTHONPATH', ''))
+        scores = []
+        for enabled in ('false', 'true'):
+            out = tmp_path / enabled
+            cmd = [sys.executable, '-m', 'astrolabe', 'run', '--standalone', str(config),
+                   '--overrides', f'execution.enabled={enabled} out_dir={out}']
+>           subprocess.run(cmd, cwd=ROOT, env=env, check=True, capture_output=True, text=True, timeout=90)
+
+tests/test_runtime_execution.py:547: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = 90, check = True
+popenargs = (['/alphafold3_venv/bin/python', '-m', 'astrolabe', 'run', '--standalone', '/tmp/pytest-of-zpzeng/pytest-1315/test_cli_isolated_repeat_match0/run.yaml', ...],)
+kwargs = {'cwd': PosixPath('/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test'), 'env'...e_arena/astrolabe_runtime_20261102_implementation', 'APPTAINER_COMMAND': 'exec', ...}, 'text': True, 'stdout': -1, ...}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/alphafold3_venv/bin/python', '-m', 'astrolabe', 'run', '--standalone', '/tmp/pytest-of-zpzeng/pytest-1315/test_cli_isolated_repeat_match0/run.yaml', '--overrides', 'execution.enabled=true out_dir=/tmp/pytest-of-zpzeng/pytest-1315/test_cli_isolated_repeat_match0/true']' returned non-zero exit status 1.
+
+/alphafold3_venv/lib/python3.11/subprocess.py:571: CalledProcessError
+___________ test_real_cli_parallel_repeat_broker_and_scientific_rows ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-zpzeng/pytest-1315/test_real_cli_parallel_repeat_0')
+
+    def test_real_cli_parallel_repeat_broker_and_scientific_rows(tmp_path):
+        import json
+        config = tmp_path / 'parallel.yaml'
+        config.write_text(f"""
+    task_name: parallel_smoke
+    out_dir: {tmp_path / 'unused'}
+    raw_model_results_dir: {tmp_path / 'raw'}
+    repeats: 2
+    seed: 17
+    steps: 2
+    ananas_path: null
+    seqs: {{A: AAAA}}
+    mutator:
+      MCMC: {{mutation_method: random, select_positions: random}}
+      mutator_terms: {{MCMC: {{_type: MCMC}}}}
+    evaluator:
+      evaluator_terms: {{Dummy: {{_type: dummy}}}}
+    loss:
+      loss_terms:
+        plddt: {{_type: sequence_residue_fraction, included_protomers: A, residues: A}}
+    stages:
+      default:
+        oligo: [A]
+        evaluator: Dummy
+        mutation_num: 1
+        mutators: [MCMC]
+        mutator_weights: [1.0]
+        weighted_score_expression: plddt
+        early_stopping: null
+    """)
+        root_env = dict(os.environ, PYTHONPATH=str(ROOT) + os.pathsep + os.environ.get('PYTHONPATH', ''))
+        log = tmp_path / 'events.jsonl'
+        rows = []
+        for enabled in (False, True):
+            out = tmp_path / ('runtime' if enabled else 'legacy')
+            env = root_env.copy()
+            if enabled:
+                env.update(ASTROLABE_TEST_BROKER='1', ASTROLABE_TEST_EVENTS=str(log),
+                           ASTROLABE_TEST_FIXTURE=str(ROOT / 'tests/runtime_fixture.py'),
+                           PYTHONPATH=str(ROOT / 'tests/runtime_hook') + os.pathsep + root_env['PYTHONPATH'])
+            overrides = f'execution.enabled={str(enabled).lower()} execution.max_active={2 if enabled else 1} out_dir={out}'
+>           subprocess.run([sys.executable, '-m', 'astrolabe', 'run', '--standalone', str(config),
+                            '--overrides', overrides], cwd=ROOT, env=env, check=True,
+                           capture_output=True, text=True, timeout=120)
+
+tests/test_runtime_execution.py:593: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+input = None, capture_output = True, timeout = 120, check = True
+popenargs = (['/alphafold3_venv/bin/python', '-m', 'astrolabe', 'run', '--standalone', '/tmp/pytest-of-zpzeng/pytest-1315/test_real_cli_parallel_repeat_0/parallel.yaml', ...],)
+kwargs = {'cwd': PosixPath('/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test'), 'env'...e_arena/astrolabe_runtime_20261102_implementation', 'APPTAINER_COMMAND': 'exec', ...}, 'text': True, 'stdout': -1, ...}
+
+    def run(*popenargs,
+            input=None, capture_output=False, timeout=None, check=False, **kwargs):
+        """Run command with arguments and return a CompletedProcess instance.
+    
+        The returned instance will have attributes args, returncode, stdout and
+        stderr. By default, stdout and stderr are not captured, and those attributes
+        will be None. Pass stdout=PIPE and/or stderr=PIPE in order to capture them,
+        or pass capture_output=True to capture both.
+    
+        If check is True and the exit code was non-zero, it raises a
+        CalledProcessError. The CalledProcessError object will have the return code
+        in the returncode attribute, and output & stderr attributes if those streams
+        were captured.
+    
+        If timeout is given, and the process takes too long, a TimeoutExpired
+        exception will be raised.
+    
+        There is an optional argument "input", allowing you to
+        pass bytes or a string to the subprocess's stdin.  If you use this argument
+        you may not also use the Popen constructor's "stdin" argument, as
+        it will be used internally.
+    
+        By default, all communication is in bytes, and therefore any "input" should
+        be bytes, and the stdout and stderr will be bytes. If in text mode, any
+        "input" should be a string, and stdout and stderr will be strings decoded
+        according to locale encoding, or by "encoding" if set. Text mode is
+        triggered by setting any of text, encoding, errors or universal_newlines.
+    
+        The other arguments are the same as for the Popen constructor.
+        """
+        if input is not None:
+            if kwargs.get('stdin') is not None:
+                raise ValueError('stdin and input arguments may not both be used.')
+            kwargs['stdin'] = PIPE
+    
+        if capture_output:
+            if kwargs.get('stdout') is not None or kwargs.get('stderr') is not None:
+                raise ValueError('stdout and stderr arguments may not be used '
+                                 'with capture_output.')
+            kwargs['stdout'] = PIPE
+            kwargs['stderr'] = PIPE
+    
+        with Popen(*popenargs, **kwargs) as process:
+            try:
+                stdout, stderr = process.communicate(input, timeout=timeout)
+            except TimeoutExpired as exc:
+                process.kill()
+                if _mswindows:
+                    # Windows accumulates the output in a single blocking
+                    # read() call run on child threads, with the timeout
+                    # being done in a join() on those threads.  communicate()
+                    # _after_ kill() is required to collect that and add it
+                    # to the exception.
+                    exc.stdout, exc.stderr = process.communicate()
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['/alphafold3_venv/bin/python', '-m', 'astrolabe', 'run', '--standalone', '/tmp/pytest-of-zpzeng/pytest-1315/test_real_cli_parallel_repeat_0/parallel.yaml', '--overrides', 'execution.enabled=true execution.max_active=2 out_dir=/tmp/pytest-of-zpzeng/pytest-1315/test_real_cli_parallel_repeat_0/runtime']' returned non-zero exit status 1.
+
+/alphafold3_venv/lib/python3.11/subprocess.py:571: CalledProcessError
+_______________ test_canonical_protomer_selector_real_cli[True] ________________
+
+tmp_path = PosixPath('/tmp/pytest-of-zpzeng/pytest-1315/test_canonical_protomer_select1')
+execution = True
+
+    @pytest.mark.parametrize("execution", [False, True])
+    def test_canonical_protomer_selector_real_cli(tmp_path, execution):
+        config = {
+            'task_name':'position_score_cli', 'out_dir':str(tmp_path/'output'), 'raw_model_results_dir':str(tmp_path/'raw'),
+            'repeats':1, 'seed':17, 'steps':3, 'ananas_path':None, 'seqs':{'A':'AAAA'},
+            'mutator':{'MCMC':{'mutation_method':'random','select_positions':'random'},
+                       'mutator_terms':{'MCMC':{'_type':'MCMC','position_selector':'score("positions")'}}},
+            'evaluator':{'evaluator_terms':{'Dummy':{'_type':'dummy'}}},
+            'loss':{'loss_terms':{}, 'score_queries':{'model_value':{'name':'plddt','source':'evaluator','entity':'A'}},
+                    'score_selector_queries':{'positions':{'query':{'name':'per_proto_score','source':'evaluator',
+                       'entity':'A','axes':['design_position']}, 'mapping':'auto','threshold':.5,'comparison':'ge'}}},
+            'stages':{'default':{'oligo':['A'],'evaluator':'Dummy','mutation_num':1,'mutators':['MCMC'],
+                                 'mutator_weights':[1.0], 'weighted_score_expression':'model_value','early_stopping':None,
+                                 'acceptance_gate':'step < 2', 'acceptance_threshold':'model_value > 0.8'}},
+        }
+        config['execution'] = {'enabled': execution, 'max_active': 'auto', 'max_resident_models': 'auto'}
+        path = tmp_path/'position_score.yaml'
+        path.write_text(yaml.safe_dump(config))
+        result = subprocess.run([sys.executable,'-m','astrolabe','run','--standalone',str(path)], text=True, capture_output=True, timeout=90)
+>       assert result.returncode == 0, result.stdout+'\n'+result.stderr
+E       AssertionError: 
+E         No site-local environment: using env=env. Configure model paths before inference (see README installation).
+E         Starting protein astrolabe pipeline
+E         event=span_start span_id=b35d40641f8a4051a2aee5d4dcb965c8 component=initializer alias=random stage=initialization step=0 status=start detail_level=summary detail=RandomInitializer
+E         event=span_end span_id=b35d40641f8a4051a2aee5d4dcb965c8 component=initializer alias=random stage=initialization step=0 status=success duration_ms=0.226 result=random detail_level=summary detail=RandomInitializer sequence_count=0
+E         stage_enter stage=default evaluator=Dummy oligo=['A'] mutators=['MCMC'] mutation_num=1
+E         Performing initial evaluation
+E         event=span_start span_id=cb332898df2744349734920e899e4bf8 component=evaluator alias=Dummy stage=default step=0 status=start detail_level=summary detail=initial oligo=A
+E         event=span_error span_id=cb332898df2744349734920e899e4bf8 component=evaluator alias=Dummy stage=default step=0 status=error duration_ms=14.471 error=WorkerError detail_level=summary detail="ValueError: invalid stage phase" oligo=A
+E         Traceback (most recent call last):
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/run.py", line 2112, in _evaluate_with_observability
+E             evaluation_result = evaluator.evaluate(inputs, runtime_config)
+E                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/evaluators/base.py", line 22, in evaluate
+E             stage_event(self.execution_phase, duration=time.perf_counter() - start, identity=identity)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/admission.py", line 227, in stage_event
+E             proxy._rpc({'op': 'stage', 'event': event}, 5, submitted=False)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/broker_client.py", line 87, in _rpc
+E             raise WorkerError(response.get('error', 'broker request failed'))
+E         astrolabe.runtime.client.WorkerError: ValueError: invalid stage phase
+E         Pipeline failed
+E         Traceback (most recent call last):
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/run.py", line 2900, in _run_pipeline
+E             initial_result = load_or_evaluate_initial(
+E                              ^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/run.py", line 2173, in load_or_evaluate_initial
+E             evaluation_result = _evaluate_with_observability(
+E                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/run.py", line 2112, in _evaluate_with_observability
+E             evaluation_result = evaluator.evaluate(inputs, runtime_config)
+E                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/evaluators/base.py", line 22, in evaluate
+E             stage_event(self.execution_phase, duration=time.perf_counter() - start, identity=identity)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/admission.py", line 227, in stage_event
+E             proxy._rpc({'op': 'stage', 'event': event}, 5, submitted=False)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/broker_client.py", line 87, in _rpc
+E             raise WorkerError(response.get('error', 'broker request failed'))
+E         astrolabe.runtime.client.WorkerError: ValueError: invalid stage phase
+E         Traceback (most recent call last):
+E           File "<frozen runpy>", line 198, in _run_module_as_main
+E           File "<frozen runpy>", line 88, in _run_code
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/trajectory.py", line 15, in <module>
+E             main()
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/trajectory.py", line 11, in main
+E             run._run_pipeline(cfg)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/run.py", line 2900, in _run_pipeline
+E             initial_result = load_or_evaluate_initial(
+E                              ^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/run.py", line 2173, in load_or_evaluate_initial
+E             evaluation_result = _evaluate_with_observability(
+E                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/run.py", line 2112, in _evaluate_with_observability
+E             evaluation_result = evaluator.evaluate(inputs, runtime_config)
+E                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/evaluators/base.py", line 22, in evaluate
+E             stage_event(self.execution_phase, duration=time.perf_counter() - start, identity=identity)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/admission.py", line 227, in stage_event
+E             proxy._rpc({'op': 'stage', 'event': event}, 5, submitted=False)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/broker_client.py", line 87, in _rpc
+E             raise WorkerError(response.get('error', 'broker request failed'))
+E         astrolabe.runtime.client.WorkerError: ValueError: invalid stage phase
+E         Traceback (most recent call last):
+E           File "<frozen runpy>", line 198, in _run_module_as_main
+E           File "<frozen runpy>", line 88, in _run_code
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/__main__.py", line 7, in <module>
+E             raise SystemExit(main())
+E                              ^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/cli.py", line 7691, in main
+E             code = int(handler(ns))
+E                        ^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/cli.py", line 702, in _cmd_run
+E             _run_from_config(cfg, autoselect_gpu=bool(getattr(ns, "autoselect_gpu", False)))
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/cli.py", line 401, in _run_from_config
+E             run_from_cfg(cfg)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/app.py", line 55, in run_from_cfg
+E             Astrolabe(cfg).run()
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/app.py", line 50, in run
+E             run.run_repeats(self.config, on_stop_requested=report_graceful_stop)
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/run.py", line 3100, in run_repeats
+E             completed = run_parallel(repeat_configs(), max_active, stop_requested,
+E                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/session.py", line 316, in run_parallel
+E             future.result()
+E           File "/alphafold3_venv/lib/python3.11/concurrent/futures/_base.py", line 449, in result
+E             return self.__get_result()
+E                    ^^^^^^^^^^^^^^^^^^^
+E           File "/alphafold3_venv/lib/python3.11/concurrent/futures/_base.py", line 401, in __get_result
+E             raise self._exception
+E           File "/alphafold3_venv/lib/python3.11/concurrent/futures/thread.py", line 58, in run
+E             result = self.fn(*self.args, **self.kwargs)
+E                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E           File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/session.py", line 357, in run_trajectory
+E             raise subprocess.CalledProcessError(result, process.args)
+E         subprocess.CalledProcessError: Command '['/alphafold3_venv/bin/python', '-m', 'astrolabe.runtime.trajectory', '/tmp/astrolabe-trajectory-3bmva335/config.yaml']' returned non-zero exit status 1.
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/alphafold3_venv/bin/python', '-m', 'astrolabe', 'run', '--standalone', '/tmp/pytest-of-zpzeng...rolabe.runtime.trajectory\', \'/tmp/astrolabe-trajectory-3bmva335/config.yaml\']\' returned non-zero exit status 1.\n').returncode
+
+tests/test_score_identity_lifecycle.py:264: AssertionError
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_backend_daemons.py:200: covered by runtime broker admission tests after integration
+FAILED tests/test_runtime_execution.py::test_unsupported_parallel_component_is_rejected
+FAILED tests/test_runtime_execution.py::test_cli_isolated_repeat_matches_legacy
+FAILED tests/test_runtime_execution.py::test_real_cli_parallel_repeat_broker_and_scientific_rows
+FAILED tests/test_score_identity_lifecycle.py::test_canonical_protomer_selector_real_cli[True]
+4 failed, 321 passed, 1 skipped, 7 warnings in 278.78s (0:04:38)

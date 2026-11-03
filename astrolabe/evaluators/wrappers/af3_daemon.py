@@ -4,6 +4,7 @@ import contextlib
 import json
 from pathlib import Path
 import sys
+import time
 
 
 def main():
@@ -35,17 +36,34 @@ def main():
         if actual_device != config['device']:
             raise RuntimeError(f'AF3 device mismatch: {actual_device}')
         _ = runner.model_params
+        if hasattr(runner, 'ensure_resident'):
+            runner.ensure_resident()
     from astrolabe.evaluators.tree_codec import load_tree, dump_tree
     from astrolabe.runtime.server import serve
+    from astrolabe.runtime.admission import operation, stage_event
     from astrolabe.evaluators.request_path import request_directory
     def handle(payload):
         request = request_directory(payload['request_dir'])
+        started = time.perf_counter()
         batch = load_tree(request / 'input')
-        with contextlib.redirect_stdout(sys.stderr):
+        stage_event('cpu_prepare', duration=time.perf_counter() - started, identity=actual,
+                    stage='feature_decode')
+        with contextlib.redirect_stdout(sys.stderr), operation(actual, phase='device') as lease:
             result = AlphaFold3Evaluator.forward_features(runner, batch['seeds'], batch['examples'], batch['cyclic'], batch['patches'])
+            if hasattr(runner, 'lifecycle'):
+                lease.update_lifecycle(**runner.lifecycle())
+        started = time.perf_counter()
         dump_tree(request / 'output', result)
+        stage_event('cpu_finalize', duration=time.perf_counter() - started, identity=actual,
+                    stage='result_encode')
         return {'request': request.name}
-    serve(handle, actual)
+    try:
+        serve(handle, actual, load_count=getattr(runner, '_weight_load_count', 1),
+              lifecycle=getattr(runner, 'lifecycle', None),
+              capabilities={'managed_device': True, 'managed_methods': ['forward']})
+    finally:
+        if hasattr(runner, 'close'):
+            runner.close()
 
 
 if __name__ == '__main__': main()

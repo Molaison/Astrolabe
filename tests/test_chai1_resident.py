@@ -75,7 +75,8 @@ module._load_chai1_module = patched
             assert record['constraint'] == f'contact-{i}' and record['cycles'] == ['A']
             assert record['recycles'] == 4 and record['steps'] == 17 and record['seed'] == 23
             assert result.plddt.tolist() == [[.8]]
-        assert evaluator._resident._client.hello['load_count'] == 1
+        assert evaluator._resident._client.hello['load_count'] == 0
+        assert evaluator._resident._client.lifecycle['load_count'] == 1
         assert (tmp_path/'loads').read_text().splitlines() == ['trunk.pt']
         fasta=tmp_path/'fail.fasta'; fasta.write_text('FAIL')
         with pytest.raises(WorkerError):

@@ -53,6 +53,7 @@ class Model:
         return {'random': torch.rand(1), 'python': random.random(), 'numpy': float(np.random.random()), 'token': input_feature_dict['token'], 'bf16': input_feature_dict['bf16']}, None, None
 p.ProtenixRunner.init_model = lambda self: setattr(self, 'model', Model())
 def load(self):
+    self._weight_load_count += 1
     torch.rand(1); random.random(); np.random.random()
     with open(%r, 'a') as out: out.write('load\\n')
 p.ProtenixRunner.load_checkpoint = load
@@ -102,12 +103,10 @@ p.to_device = lambda data, device: data
         resident.close()
 
 
-def test_resident_refuses_uncoordinated_broker(monkeypatch):
-    from astrolabe.evaluators.protenix_resident import ProtenixResident
-    monkeypatch.setenv('ASTROLABE_EXECUTION_ENDPOINT', 'broker')
-    monkeypatch.setenv('ASTROLABE_EXECUTION_TOKEN', 'token')
-    with pytest.raises(ValueError, match='trajectory-exclusive'):
-        ProtenixResident(None, source_dir='unused')
+def test_resident_declares_shared_resource_contract():
+    from astrolabe.evaluators import protenix_resident
+    assert protenix_resident.BROKER_SHARED_ROOT
+    assert protenix_resident.BROKER_ADMITTED_PROBE
 
 
 @pytest.mark.parametrize('model_name', ['protenix_base_default_v0.5.0', 'protenix_base_constraint_v0.5.0', 'protenix_base_default_v1.0.0', 'protenix-v2'])

@@ -1,0 +1,202 @@
+.......................s................................................ [ 18%]
+........................................................................ [ 37%]
+.....................F.................................................. [ 56%]
+........................................................................ [ 75%]
+........................................................................ [ 94%]
+...................F                                                     [100%]
+=================================== FAILURES ===================================
+___________ test_real_cli_parallel_repeat_broker_and_scientific_rows ___________
+
+tmp_path = PosixPath('/tmp/pytest-of-zpzeng/pytest-1318/test_real_cli_parallel_repeat_0')
+
+    def test_real_cli_parallel_repeat_broker_and_scientific_rows(tmp_path):
+        import json
+        config = tmp_path / 'parallel.yaml'
+        config.write_text(f"""
+    task_name: parallel_smoke
+    out_dir: {tmp_path / 'unused'}
+    raw_model_results_dir: {tmp_path / 'raw'}
+    repeats: 2
+    seed: 17
+    steps: 2
+    ananas_path: null
+    seqs: {{A: AAAA}}
+    mutator:
+      MCMC: {{mutation_method: random, select_positions: random}}
+      mutator_terms: {{MCMC: {{_type: MCMC}}}}
+    evaluator:
+      evaluator_terms: {{Dummy: {{_type: dummy}}}}
+    loss:
+      loss_terms:
+        plddt: {{_type: sequence_residue_fraction, included_protomers: A, residues: A}}
+    stages:
+      default:
+        oligo: [A]
+        evaluator: Dummy
+        mutation_num: 1
+        mutators: [MCMC]
+        mutator_weights: [1.0]
+        weighted_score_expression: plddt
+        early_stopping: null
+    """)
+        root_env = dict(os.environ, PYTHONPATH=str(ROOT) + os.pathsep + os.environ.get('PYTHONPATH', ''))
+        log = tmp_path / 'events.jsonl'
+        rows = []
+        for enabled in (False, True):
+            out = tmp_path / ('runtime' if enabled else 'legacy')
+            env = root_env.copy()
+            if enabled:
+                env.update(ASTROLABE_TEST_BROKER='1', ASTROLABE_TEST_EVENTS=str(log),
+                           ASTROLABE_TEST_FIXTURE=str(ROOT / 'tests/runtime_fixture.py'),
+                           PYTHONPATH=str(ROOT / 'tests/runtime_hook') + os.pathsep + root_env['PYTHONPATH'])
+            overrides = f'execution.enabled={str(enabled).lower()} execution.max_active={2 if enabled else 1} out_dir={out}'
+            subprocess.run([sys.executable, '-m', 'astrolabe', 'run', '--standalone', str(config),
+                            '--overrides', overrides], cwd=ROOT, env=env, check=True,
+                           capture_output=True, text=True, timeout=120)
+            by_seed = {}
+            for provenance in out.glob('parallel_smoke/*_run/provenance.json'):
+                record = json.loads(provenance.read_text())
+                assert record['state'] == 'completed'
+                by_seed[record['run']['seed']] = (provenance.parent / 'scores.csv').read_bytes()
+            rows.append(by_seed)
+        assert set(rows[0]) == {17, 18}
+        assert rows[0] == rows[1]
+        events = [json.loads(line) for line in log.read_text().splitlines()]
+        residents = [e for e in events if e['kind'] == 'resident']
+        assert len({e['owner'] for e in residents}) == 2
+        assert len({e['worker'] for e in residents}) == 1
+        assert {e['loads'] for e in residents} == {1}
+        prepares = {}
+        forwards = {}
+        overlap = False
+        for event in events:
+            owner, kind = event.get('owner'), event['kind']
+            if kind == 'prepare_start':
+                prepares[owner] = event['time']
+            elif kind == 'prepare_end':
+                start = prepares.pop(owner)
+                for other, (begin, end) in forwards.items():
+                    if owner != other and max(start, begin) < min(event['time'], end):
+                        overlap = True
+            elif kind == 'forward_start':
+                forwards[owner] = (event['time'], float('inf'))
+            elif kind == 'forward_end':
+                forwards[owner] = (forwards[owner][0], event['time'])
+        # Also compare completed prepare intervals against completed forward intervals,
+        # irrespective of the order in which their end records were observed.
+        prepare_intervals, forward_intervals, starts = [], [], {}
+        for e in events:
+            kind, owner = e['kind'], e.get('owner')
+            if kind in ('prepare_start', 'forward_start'):
+                starts[(kind.split('_')[0], owner)] = e['time']
+            elif kind in ('prepare_end', 'forward_end'):
+                phase = kind.split('_')[0]
+                (prepare_intervals if phase == 'prepare' else forward_intervals).append(
+                    (owner, starts.pop((phase, owner)), e['time']))
+>       assert overlap or any(a != b and max(s, u) < min(t, v)
+                              for a, s, t in prepare_intervals
+                              for b, u, v in forward_intervals)
+E       assert (False or False)
+E        +  where False = any(<generator object test_real_cli_parallel_repeat_broker_and_scientific_rows.<locals>.<genexpr> at 0x7ff5680e0ee0>)
+
+tests/test_runtime_execution.py:636: AssertionError
+______________ test_two_owners_share_af2_and_worker_death_fences _______________
+
+tmp_path = PosixPath('/tmp/pytest-of-zpzeng/pytest-1318/test_two_owners_share_af2_and_0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff3dabba0d0>
+
+    def test_two_owners_share_af2_and_worker_death_fences(tmp_path, monkeypatch):
+        from astrolabe.runtime.session import BrokerSession
+        fake = tmp_path / 'fake_af2.py'
+        fake.write_text('''\
+    import os
+    import jax.numpy as jnp
+    from alphafold.model.model import RunModel
+    import alphafold.model.model as model
+    class CPU:
+        multimer_mode = False
+        def __init__(self, initial): self._gh_initial_guess_cfg = initial
+        def process_features(self, feat, random_seed): return feat
+    
+    def setup(oligo_names, prepare_only=False, **cfg):
+        if prepare_only:
+            runner = CPU(cfg.get('initial_guess'))
+        else:
+            with open(os.environ['AF2_BROKER_LOADS'], 'a') as f: f.write('load\\n')
+            runner = RunModel.__new__(RunModel)
+            runner.params = {'loaded': 1}; runner.multimer_mode = False
+            def apply(params, key, features):
+                if int(features['value']) < 0: os._exit(19)
+                return {'value': jnp.asarray(features['value']) + key[1], 'initial': jnp.asarray(features['initial_prev_pos'])}
+            runner.apply = apply
+            model.get_confidence_metrics = lambda result, multimer_mode: {}
+        return {name: runner for name in oligo_names}
+    ''')
+        (tmp_path / 'sitecustomize.py').write_text('''\
+    import astrolabe.evaluators.wrappers.alphafold as wrapper
+    from fake_af2 import setup
+    wrapper.alphafold_setup = setup
+    ''')
+        (tmp_path / 'params').mkdir()
+        (tmp_path / 'params' / 'params_model_3_ptm.npz').write_bytes(b'fake')
+        monkeypatch.syspath_prepend(str(tmp_path))
+        monkeypatch.setenv('PYTHONPATH', str(tmp_path) + os.pathsep + os.environ.get('PYTHONPATH', ''))
+        monkeypatch.setenv('AF2_BROKER_LOADS', str(tmp_path / 'loads'))
+        script = '''\
+    import json, os, sys
+    import numpy as np
+    from astrolabe.evaluators.af2_resident import AF2Resident
+    from astrolabe.runtime.client import OutcomeUnknown
+    owner=int(sys.argv[1]); root=sys.argv[2]
+    r=AF2Resident.runners(['A'], {'data_dir':root,'suffix':'ptm','initial_guess':{'path':'owner-'+str(owner)}})['A']
+    if owner == 9:
+        try: r.predict({'value':np.asarray(-1),'initial_prev_pos':np.asarray([0])}, 7)
+        except OutcomeUnknown: pass
+        else: raise AssertionError('worker death was not uncertain')
+        try: r.predict({'value':np.asarray(1),'initial_prev_pos':np.asarray([0])}, 7)
+        except OutcomeUnknown as e: assert 'fenced' in str(e)
+        else: raise AssertionError('device not fenced')
+        print(json.dumps({'fenced':True}))
+    else:
+        rows=[]
+        for seed in (11,17):
+            feat=r.process_features({'value':np.asarray(owner), 'initial_prev_pos':np.asarray([owner,seed])}, seed)
+            out=r.predict(feat,seed)
+            rows.append([int(out['value']),out['initial'].tolist()])
+        print(json.dumps({'owner':owner,'pid':r._client.hello['pid'], 'guess':r._gh_initial_guess_cfg, 'rows':rows}))
+    r.close()
+    '''
+        with BrokerSession() as session:
+            processes = [subprocess.Popen([sys.executable, '-c', script, str(owner), str(tmp_path)], env=session.env,
+                                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) for owner in (1, 2)]
+            results = []
+            for proc in processes:
+                out, err = proc.communicate(timeout=120)
+>               assert proc.returncode == 0, err
+E               AssertionError: Traceback (most recent call last):
+E                   File "<string>", line 19, in <module>
+E                   File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/evaluators/af2_resident.py", line 60, in predict
+E                     if self._client is None: self._start()
+E                                              ^^^^^^^^^^^^^
+E                   File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/evaluators/af2_resident.py", line 47, in _start
+E                     device = probe_device(sys.executable, 'af3', env=env)
+E                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/evaluators/worker_identity.py", line 109, in probe_device
+E                     return run_probe(args, env=env, device='cpu' if requested == 'cpu' else None)
+E                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/admission.py", line 199, in run_probe
+E                     return proxy._rpc({'op': 'probe', 'command': command, 'env': overrides, 'timeout': timeout, 'device': device,
+E                            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E                   File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/runtime/broker_client.py", line 87, in _rpc
+E                     raise WorkerError(response.get('error', 'broker request failed'))
+E                 astrolabe.runtime.client.WorkerError: RuntimeError: cannot resolve allocated GPU to a physical UUID; no GPU was admitted
+E                 
+E               assert 1 == 0
+E                +  where 1 = <Popen: returncode: 1 args: ['/alphafold3_venv/bin/python', '-c', "import js...>.returncode
+
+tests/test_af2_broker_resident.py:76: AssertionError
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_backend_daemons.py:200: covered by runtime broker admission tests after integration
+FAILED tests/test_runtime_execution.py::test_real_cli_parallel_repeat_broker_and_scientific_rows
+FAILED tests/test_af2_broker_resident.py::test_two_owners_share_af2_and_worker_death_fences
+2 failed, 377 passed, 1 skipped, 7 warnings in 408.65s (0:06:48)

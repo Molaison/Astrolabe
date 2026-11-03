@@ -67,6 +67,7 @@ def alphafold_setup(
         model_config.model.global_config.multimer_mode = True
     model_params = None if prepare_only else data.get_model_haiku_params(model_name=mod, data_dir=data_dir)
     model_runner = model.RunModel(model_config, model_params)
+    model_runner._astrolabe_weight_load_count = int(not prepare_only)
     # Keep evaluator-facing AF2 extras on runner without changing vendor API.
     model_runner._gh_initial_guess_cfg = initial_guess  # type: ignore[attr-defined]
     # model_runner.model_params = model_params

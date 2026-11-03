@@ -6,8 +6,9 @@ import sys
 import tempfile
 
 from astrolabe.evaluators.tree_codec import dump_tree, load_tree
+from astrolabe.evaluators.lifecycle import request_runtime
 from astrolabe.evaluators.worker_identity import identity, probe_device
-from astrolabe.evaluators.worker_session import WorkerArtifacts
+from astrolabe.evaluators.worker_session import WorkerArtifacts, request_artifacts
 
 BROKER_SHARED_ROOT = True
 BROKER_ADMITTED_PROBE = True
@@ -48,25 +49,25 @@ class AF2Resident:
         # features; they are not model initialization or shared state.
         model_config = {k: v for k, v in self._config.items() if k != 'initial_guess'}
         semantics = {'config': model_config}
-        expected = identity(sys.executable, code, [str(weight)], device, semantics)
+        expected = identity(sys.executable, code, [str(weight)], device, semantics, env=env)
         self._artifacts = WorkerArtifacts()
         spec = {'semantics': semantics, 'code_paths': code, 'weight_paths': [str(weight)], 'device': device,
                 'broker_safe': self._artifacts.shared}
         path = self._artifacts.specification(expected, spec)
-        self._client = DaemonClient([sys.executable, '-m', 'astrolabe.evaluators.wrappers.af2_daemon', str(path)], expected, env=env, startup_timeout=600)
+        self._client = self._artifacts.start_client([sys.executable, '-m', 'astrolabe.evaluators.wrappers.af2_daemon', str(path)], expected, env=env, startup_timeout=600)
 
     def predict(self, processed_features, random_seed):
         if self._client is None: self._start()
-        with tempfile.TemporaryDirectory(prefix='request-', dir=self._artifacts.root) as tmp:
+        with request_artifacts(self._artifacts.root) as tmp:
             request = Path(tmp)
             dump_tree(request / 'input', {'features': processed_features, 'seed': int(random_seed)})
-            answer = self._client.call({'request_dir': str(request)})
+            answer = self._client.call({'request_dir': str(request), 'method': 'forward'}, runtime=request_runtime(request, 'managed', processed_features))
             if answer != {'request': request.name}: raise ValueError('AF2 response request mismatch')
             return load_tree(request / 'output')
 
     def close(self):
         if getattr(self, '_client', None) is not None:
-            self._client.close(); self._client = None
+            self._artifacts.close_client(self._client); self._client = None
         if getattr(self, '_artifacts', None) is not None:
             self._artifacts.close(); self._artifacts = None
 

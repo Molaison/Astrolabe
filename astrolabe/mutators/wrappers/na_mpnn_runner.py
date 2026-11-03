@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import logging
+import json
 import os
 import pathlib
 import re
 import subprocess
 import sys
+import tempfile
+import threading
+import uuid
 from typing import Dict, List, Sequence
 
 import numpy as np
@@ -30,9 +34,117 @@ class NAMPNNRunner:
         self.na_shared_tokens = int(self._get("na_shared_tokens", 0))
         self.output_pdbs = int(self._get("output_pdbs", 0))
         self.job_name = self._get("job_name")
-        self.extra_args = dict(self._get("extra_args", {}) or {})
+        self.extra_args = {str(key).strip().replace("-", "_"): value
+                           for key, value in dict(self._get("extra_args", {}) or {}).items()}
+        if {"pdb_path", "out_folder"}.intersection(self.extra_args):
+            raise ValueError("NA-MPNN input/output paths belong to the scientific request, not extra_args")
+        if self.extra_args.get("model_type", "na_mpnn") != "na_mpnn" or self.extra_args.get("mode", "design") != "design":
+            raise ValueError("NA-MPNN mutator requires native na_mpnn/design mode")
+        if self.extra_args.get("checkpoint_na_mpnn"):
+            self.checkpoint = self._resolve_checkpoint(self.extra_args["checkpoint_na_mpnn"])
+        for key, cast in (("temperature", float), ("batch_size", int), ("number_of_batches", int),
+                          ("design_na_only", int), ("parse_na_only", int), ("na_shared_tokens", int), ("output_pdbs", int)):
+            if self.extra_args.get(key) is not None:
+                setattr(self, key, cast(self.extra_args[key]))
         self.output_root = pathlib.Path(output_root).expanduser().resolve()
         self.output_root.mkdir(parents=True, exist_ok=True)
+        fixed_seed = int(self.extra_args.get("seed", 0) or 0) != 0
+        self.daemon = bool(self._get("daemon", os.environ.get("ASTROLABE_MUTATOR_WORKER") == "1" and fixed_seed))
+        self.startup_timeout = float(self._get("startup_timeout", 600))
+        self.request_timeout = self._get("request_timeout")
+        self._lock = threading.RLock()
+        self._proc = None
+        self._ready = None
+        self._buffer = bytearray()
+        self._closed = False
+        self._started = False
+        self._bootstrap = None
+        # A one-shot subprocess's successful exit is not a model load counter.
+        self.model_load_count = None
+
+    def _extra_arguments(self):
+        result = []
+        for key, value in self.extra_args.items():
+            if value is None:
+                continue
+            # Native NA-MPNN argparse spells these options with underscores.
+            key = str(key).strip().replace("-", "_")
+            if key:
+                result.extend(["--" + key, str(value)])
+        return result
+
+    def _ensure_daemon(self):
+        from astrolabe.mutators.wrappers.subprocess_protocol import read_message, stop_process
+        with self._lock:
+            if self._closed:
+                raise RuntimeError("NA-MPNN runner is closed")
+            if self._proc is not None and self._proc.poll() is None:
+                return
+            if self._started:
+                raise RuntimeError("NA-MPNN process exited; implicit reload would alter request lifecycle")
+            self._bootstrap = tempfile.TemporaryDirectory(prefix="nampnn-init-", dir=self.output_root)
+            root = pathlib.Path(self._bootstrap.name)
+            argv = ["--mode", "design", "--model_type", "na_mpnn", "--pdb_path", "",
+                    "--out_folder", str(root / "initial"), "--checkpoint_na_mpnn", str(self.checkpoint),
+                    "--batch_size", str(self.batch_size), "--temperature", str(self.temperature),
+                    "--na_shared_tokens", str(self.na_shared_tokens), "--output_pdbs", "0"]
+            argv.extend(self._extra_arguments())
+            spec = root / "spec.json"
+            spec.write_text(json.dumps({"native_path": str(self.repo_path / "inference/run.py"), "argv": argv}))
+            script = pathlib.Path(__file__).with_name("na_mpnn_daemon.py")
+            self._proc = subprocess.Popen([self.python, str(script), str(spec)],
+                                          stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                          stderr=None, cwd=str(self.repo_path), env=self._patched_env(),
+                                          text=True, bufsize=1)
+            self._started = True
+            try:
+                ready = read_message(self._proc, self._buffer, timeout=self.startup_timeout)
+                if (ready.get("type") != "ready" or ready.get("pid") != self._proc.pid
+                        or ready.get("model_load_count") != 1 or ready.get("weights_loaded") is not True):
+                    raise RuntimeError("invalid NA-MPNN loaded-model handshake")
+                self._ready = ready
+                self.model_load_count = ready["model_load_count"]
+            except BaseException:
+                stop_process(self._proc)
+                self._closed = True
+                self._bootstrap.cleanup()
+                raise
+
+    def _infer_resident(self, argv):
+        from astrolabe.mutators.wrappers.subprocess_protocol import read_message
+        from astrolabe.runtime.client import OutcomeUnknown
+        with self._lock:
+            self._ensure_daemon()
+            request_id = uuid.uuid4().hex
+            try:
+                self._proc.stdin.write(json.dumps({"type": "infer", "id": request_id, "argv": argv}) + "\n")
+                self._proc.stdin.flush()
+                response = read_message(self._proc, self._buffer, timeout=self.request_timeout)
+            except (OSError, EOFError, TimeoutError, ValueError) as exc:
+                self.close()
+                raise OutcomeUnknown("NA-MPNN result is unknown; request was not replayed") from exc
+            if response.get("id") != request_id:
+                self.close()
+                raise OutcomeUnknown("NA-MPNN response identity mismatch; request was not replayed")
+            if response.get("type") != "result":
+                self.close()
+                raise RuntimeError("NA-MPNN inference failed: " + str(response.get("error")))
+            if response.get("model_load_count") != self.model_load_count:
+                self.close()
+                raise RuntimeError("NA-MPNN unexpectedly reloaded weights during a request")
+
+    def close(self):
+        from astrolabe.mutators.wrappers.subprocess_protocol import stop_process
+        with self._lock:
+            self._closed = True
+            stop_process(self._proc)
+            self._proc = None
+            self._ready = None
+            if self._bootstrap is not None:
+                self._bootstrap.cleanup()
+                self._bootstrap = None
+
+    shutdown = close
 
     def design_sequences(
         self,
@@ -43,12 +155,15 @@ class NAMPNNRunner:
         fixed_residues: Sequence[str] | None = None,
         parse_these_chains_only: str | Sequence[str] | None = None,
     ) -> Dict[str, object]:
+        if self._closed:
+            raise RuntimeError("NA-MPNN runner is closed")
         structure_path = pathlib.Path(structure_path).expanduser().resolve()
         if not structure_path.exists():
             raise FileNotFoundError(f"NA-MPNN input structure not found: {structure_path}")
 
-        job_dir = self.output_root / self._safe_name(job_name)
-        job_dir.mkdir(parents=True, exist_ok=True)
+        # A successful process that produced no new file must never consume a
+        # stale FASTA/specificity result from an earlier scientific request.
+        job_dir = pathlib.Path(tempfile.mkdtemp(prefix=self._safe_name(job_name) + "-", dir=self.output_root))
 
         cmd = [
             self.python,
@@ -96,21 +211,13 @@ class NAMPNNRunner:
                 ]
             )
 
-        for key, value in self.extra_args.items():
-            if value is None:
-                continue
-            key = str(key).strip().replace("_", "-")
-            if not key:
-                continue
-            cmd.extend([f"--{key}", str(value)])
+        cmd.extend(self._extra_arguments())
 
         logger.info("Running NA-MPNN design for %s", structure_path.name)
-        subprocess.run(
-            cmd,
-            check=True,
-            cwd=str(self.repo_path),
-            env=self._patched_env(),
-        )
+        if self.daemon:
+            self._infer_resident(cmd[2:])
+        else:
+            subprocess.run(cmd, check=True, cwd=str(self.repo_path), env=self._patched_env())
 
         expected_fasta = job_dir / "seqs" / f"{self._structure_basename(structure_path)}.fa"
         fasta_files = [expected_fasta]

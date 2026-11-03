@@ -15,6 +15,8 @@ def main():
     from astrolabe.evaluators.torch_rng import capture, restore
     from astrolabe.evaluators.request_path import request_directory
     from astrolabe.runtime.server import serve
+    from astrolabe.runtime.admission import operation
+    from astrolabe.evaluators.lifecycle import cpu_tree
     import torch
     actual = identity(sys.executable, spec['code_paths'], spec['weight_paths'], spec['device'], spec['settings'])
     if os.environ.get('CUDA_VISIBLE_DEVICES') != spec['device']['visible']:
@@ -23,6 +25,8 @@ def main():
     with contextlib.redirect_stdout(sys.stderr):
         restore(load_tree(boot / 'initial'), spec['device']['name'])
         from astrolabe.evaluators.esmfold import ESMFoldEvaluator, _load_esmfold_model_class
+        from astrolabe.evaluators.loader_observer import LoaderObserver
+        file_loads = LoaderObserver(torch, 'load')
         if str(Path(inspect.getfile(_load_esmfold_model_class())).resolve()) != spec['class_file']:
             raise RuntimeError('ESMFold1 model source mismatch')
         def no_download(*args, **kwargs):
@@ -34,15 +38,22 @@ def main():
     def handle(payload):
         request = request_directory(payload['request_dir'])
         batch = load_tree(request / 'input')
-        with contextlib.redirect_stdout(sys.stderr), torch.no_grad():
+        with contextlib.redirect_stdout(sys.stderr), torch.no_grad(), operation(actual, phase='device') as lease:
             restore(batch['rng'], spec['device']['name'])
             output = model.infer(batch['sequences'])
             pdbs = model.output_to_pdb(output)
             selected = {k: output[k] for k in ('chain_index', 'plddt', 'mean_plddt', 'ptm', 'predicted_aligned_error')}
-            result = {'output': selected, 'pdbs': pdbs, 'rng': capture(spec['device']['name'])}
+            result = {'output': cpu_tree(selected), 'pdbs': pdbs, 'rng': capture(spec['device']['name'])}
+            lease.update_lifecycle(**lifecycle())
         dump_tree(request / 'output', result)
         return {'request': request.name}
-    serve(handle, actual)
+    from astrolabe.evaluators.lifecycle import model_lifecycle
+    def lifecycle():
+        return model_lifecycle(model, load_count=evaluator._weight_load_count, loaded=evaluator._model is not None,
+                               device=spec['device'], components={'checkpoint_deserializations': file_loads.count,
+                               'checkpoint_read_failures': file_loads.failures, 'model_initializations': evaluator._weight_load_count})
+    serve(handle, actual, load_count=evaluator._weight_load_count, lifecycle=lifecycle,
+          capabilities={'managed_device': True, 'managed_methods': ['infer']})
 
 
 if __name__ == '__main__': main()

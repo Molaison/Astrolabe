@@ -1,0 +1,208 @@
+No site-local environment: using env=env. Configure model paths before inference (see README installation).
+Starting protein astrolabe pipeline
+event=span_start span_id=9cd78640b4c84b5aba1900968e2a003d component=initializer alias=random stage=initialization step=0 status=start detail_level=summary detail=RandomInitializer
+event=span_end span_id=9cd78640b4c84b5aba1900968e2a003d component=initializer alias=random stage=initialization step=0 status=success duration_ms=0.276 result=random detail_level=summary detail=RandomInitializer sequence_count=0
+stage_enter stage=default evaluator=Dummy oligo=['A'] mutators=['MCMC'] mutation_num=1
+Performing initial evaluation
+event=span_start span_id=05043cb50f1046c0a1aa5ae7cb90edf8 component=evaluator alias=Dummy stage=default step=0 status=start detail_level=summary detail=initial oligo=A
+event=span_end span_id=05043cb50f1046c0a1aa5ae7cb90edf8 component=evaluator alias=Dummy stage=default step=0 status=success duration_ms=21.070 artifact=A:. result=standard_scores detail_level=summary detail=initial artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=7e31d5b158b1491c81670db1fb33994f component=loss_engine alias=LossEngine stage=default step=0 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=965159e1856e407186bc7ac48a294478 component=loss alias=plddt stage=default step=0 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=965159e1856e407186bc7ac48a294478 component=loss alias=plddt stage=default step=0 status=success duration_ms=0.220 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=1.000
+event=span_end span_id=7e31d5b158b1491c81670db1fb33994f component=loss_engine alias=LossEngine stage=default step=0 status=success duration_ms=0.766 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=1.000
+step_start step=1/3 stage=default
+event=span_start span_id=53e7905cc21e4376afdbbef151a980e9 component=mutator alias=MCMC stage=default step=1 status=start detail_level=summary detail=MCMC
+event=span_end span_id=53e7905cc21e4376afdbbef151a980e9 component=mutator alias=MCMC stage=default step=1 status=success duration_ms=2.794 result=changed detail_level=summary detail=MCMC changed_positions=1 changed_protomers=1
+[MCMC] A    Before(score↑):    AAAA
+[MCMC] A    Mutate(ss):        |   
+[MCMC] A    After(entropy↓):   GAAA
+[MCMC] changed_positions=1 changed_protomers=1 entropy_norm=N/A selection_score=N/A secondary_structure=N/A
+[MCMC] sites A: A1:A->G(score=0.900 entropy=4.130 ss=N/A)
+event=span_start span_id=d7f03e1e211e48f685c6b747deee5d5a component=evaluator alias=Dummy stage=default step=1 status=start detail_level=summary detail=step oligo=A
+event=span_end span_id=d7f03e1e211e48f685c6b747deee5d5a component=evaluator alias=Dummy stage=default step=1 status=success duration_ms=4.795 artifact=A:. result=standard_scores detail_level=summary detail=step artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=8402c6167e854ea3ac9f71150c81013c component=decision_maker alias=Decisions stage=default step=1 status=start detail_level=summary detail=make_mutation_decision force_accept=false
+event=span_start span_id=936227b8ab0b41d68bea835f8d69c02b component=loss_engine alias=LossEngine stage=default step=1 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=7a426917a47742e3bdd486768b268cdd component=loss alias=plddt stage=default step=1 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=7a426917a47742e3bdd486768b268cdd component=loss alias=plddt stage=default step=1 status=success duration_ms=0.130 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=0.750
+event=span_end span_id=936227b8ab0b41d68bea835f8d69c02b component=loss_engine alias=LossEngine stage=default step=1 status=success duration_ms=0.545 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=0.750
+step=1 score previous=1.000 current=0.750 delta=-0.250
+component=plddt previous=1.000 current=0.750 delta=-0.250
+component=mutator_selector_MCMC_pA_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_delta previous=N/A current=0.000 delta=N/A
+component=mutator_selector_MCMC_plddt_delta previous=N/A current=0.000 delta=N/A
+step=1 decision=reject reason=worse previous=1.000 current=0.750
+event=span_end span_id=8402c6167e854ea3ac9f71150c81013c component=decision_maker alias=Decisions stage=default step=1 status=success duration_ms=10.942 result=reject detail_level=summary detail=make_mutation_decision accepted=false early_stop=false force_accept=false weighted_score=0.750
+step_end step=1 accepted=false early_stop=false stage=default
+step_start step=2/3 stage=default
+event=span_start span_id=868e6d61163f4645b9e0201aa667c4c6 component=mutator alias=MCMC stage=default step=2 status=start detail_level=summary detail=MCMC
+event=span_end span_id=868e6d61163f4645b9e0201aa667c4c6 component=mutator alias=MCMC stage=default step=2 status=success duration_ms=2.081 result=changed detail_level=summary detail=MCMC changed_positions=1 changed_protomers=1
+[MCMC] A    Before(score↑):    AAAA
+[MCMC] A    Mutate(ss):        |   
+[MCMC] A    After(entropy↓):   SAAA
+[MCMC] changed_positions=1 changed_protomers=1 entropy_norm=N/A selection_score=N/A secondary_structure=N/A
+[MCMC] sites A: A1:A->S(score=0.900 entropy=4.130 ss=N/A)
+event=span_start span_id=732c647622e5438cb6b16eea31c34372 component=evaluator alias=Dummy stage=default step=2 status=start detail_level=summary detail=step oligo=A
+event=span_end span_id=732c647622e5438cb6b16eea31c34372 component=evaluator alias=Dummy stage=default step=2 status=success duration_ms=5.124 artifact=A:. result=standard_scores detail_level=summary detail=step artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=8cd8ab7fdebd4977bafec6a5faa1bb5d component=decision_maker alias=Decisions stage=default step=2 status=start detail_level=summary detail=make_mutation_decision force_accept=false
+event=span_start span_id=754e4303870c415a8d1d01c7dde59590 component=loss_engine alias=LossEngine stage=default step=2 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=53ec60163c2742fa89f5a6affe1bb800 component=loss alias=plddt stage=default step=2 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=53ec60163c2742fa89f5a6affe1bb800 component=loss alias=plddt stage=default step=2 status=success duration_ms=0.131 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=0.750
+event=span_end span_id=754e4303870c415a8d1d01c7dde59590 component=loss_engine alias=LossEngine stage=default step=2 status=success duration_ms=0.535 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=0.750
+step=2 score previous=1.000 current=0.750 delta=-0.250
+component=plddt previous=1.000 current=0.750 delta=-0.250
+component=mutator_selector_MCMC_pA_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_delta previous=N/A current=0.000 delta=N/A
+component=mutator_selector_MCMC_plddt_delta previous=N/A current=0.000 delta=N/A
+step=2 decision=reject reason=worse previous=1.000 current=0.750
+event=span_end span_id=8cd8ab7fdebd4977bafec6a5faa1bb5d component=decision_maker alias=Decisions stage=default step=2 status=success duration_ms=6.004 result=reject detail_level=summary detail=make_mutation_decision accepted=false early_stop=false force_accept=false weighted_score=0.750
+step_end step=2 accepted=false early_stop=false stage=default
+Scientific workflow finished; releasing pipeline resources
+Pipeline completed successfully
+Starting protein astrolabe pipeline
+event=span_start span_id=fac40d150420412ea2f7164266e3d2b1 component=initializer alias=random stage=initialization step=0 status=start detail_level=summary detail=RandomInitializer
+event=span_end span_id=fac40d150420412ea2f7164266e3d2b1 component=initializer alias=random stage=initialization step=0 status=success duration_ms=0.256 result=random detail_level=summary detail=RandomInitializer sequence_count=0
+stage_enter stage=default evaluator=Dummy oligo=['A'] mutators=['MCMC'] mutation_num=1
+Performing initial evaluation
+event=span_start span_id=d44275975c9f4b05a3df6e68f5353b52 component=evaluator alias=Dummy stage=default step=0 status=start detail_level=summary detail=initial oligo=A
+event=span_end span_id=d44275975c9f4b05a3df6e68f5353b52 component=evaluator alias=Dummy stage=default step=0 status=success duration_ms=26.373 artifact=A:. result=standard_scores detail_level=summary detail=initial artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=fa13009fd94c429b95116cb3594ec86a component=loss_engine alias=LossEngine stage=default step=0 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=51357a3dda724b5c90c57a5875a34de7 component=loss alias=plddt stage=default step=0 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=51357a3dda724b5c90c57a5875a34de7 component=loss alias=plddt stage=default step=0 status=success duration_ms=0.264 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=1.000
+event=span_end span_id=fa13009fd94c429b95116cb3594ec86a component=loss_engine alias=LossEngine stage=default step=0 status=success duration_ms=0.883 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=1.000
+step_start step=1/3 stage=default
+event=span_start span_id=b9d4d4811f1f43ac813998430734bbe2 component=mutator alias=MCMC stage=default step=1 status=start detail_level=summary detail=MCMC
+event=span_end span_id=b9d4d4811f1f43ac813998430734bbe2 component=mutator alias=MCMC stage=default step=1 status=success duration_ms=2.836 result=changed detail_level=summary detail=MCMC changed_positions=1 changed_protomers=1
+[MCMC] A    Before(score↑):    AAAA
+[MCMC] A    Mutate(ss):        |   
+[MCMC] A    After(entropy↓):   PAAA
+[MCMC] changed_positions=1 changed_protomers=1 entropy_norm=N/A selection_score=N/A secondary_structure=N/A
+[MCMC] sites A: A1:A->P(score=0.900 entropy=4.130 ss=N/A)
+event=span_start span_id=77f150a675b247f3911815a2e34470b5 component=evaluator alias=Dummy stage=default step=1 status=start detail_level=summary detail=step oligo=A
+event=span_end span_id=77f150a675b247f3911815a2e34470b5 component=evaluator alias=Dummy stage=default step=1 status=success duration_ms=5.325 artifact=A:. result=standard_scores detail_level=summary detail=step artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=c8d7884fd9004050b82170568bd21d20 component=decision_maker alias=Decisions stage=default step=1 status=start detail_level=summary detail=make_mutation_decision force_accept=false
+event=span_start span_id=97bdb36cc222482fb1b367e62b4ee4dc component=loss_engine alias=LossEngine stage=default step=1 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=bfd5924f34dc41fc9ef290bf49a70985 component=loss alias=plddt stage=default step=1 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=bfd5924f34dc41fc9ef290bf49a70985 component=loss alias=plddt stage=default step=1 status=success duration_ms=0.133 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=0.750
+event=span_end span_id=97bdb36cc222482fb1b367e62b4ee4dc component=loss_engine alias=LossEngine stage=default step=1 status=success duration_ms=0.590 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=0.750
+step=1 score previous=1.000 current=0.750 delta=-0.250
+component=plddt previous=1.000 current=0.750 delta=-0.250
+component=mutator_selector_MCMC_pA_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_delta previous=N/A current=0.000 delta=N/A
+component=mutator_selector_MCMC_plddt_delta previous=N/A current=0.000 delta=N/A
+step=1 decision=reject reason=worse previous=1.000 current=0.750
+event=span_end span_id=c8d7884fd9004050b82170568bd21d20 component=decision_maker alias=Decisions stage=default step=1 status=success duration_ms=11.926 result=reject detail_level=summary detail=make_mutation_decision accepted=false early_stop=false force_accept=false weighted_score=0.750
+step_end step=1 accepted=false early_stop=false stage=default
+step_start step=2/3 stage=default
+event=span_start span_id=d02ca08ba4c0447f87a21c2f32525071 component=mutator alias=MCMC stage=default step=2 status=start detail_level=summary detail=MCMC
+event=span_end span_id=d02ca08ba4c0447f87a21c2f32525071 component=mutator alias=MCMC stage=default step=2 status=success duration_ms=2.136 result=changed detail_level=summary detail=MCMC changed_positions=1 changed_protomers=1
+[MCMC] A    Before(score↑):    AAAA
+[MCMC] A    Mutate(ss):        |   
+[MCMC] A    After(entropy↓):   TAAA
+[MCMC] changed_positions=1 changed_protomers=1 entropy_norm=N/A selection_score=N/A secondary_structure=N/A
+[MCMC] sites A: A1:A->T(score=0.900 entropy=4.130 ss=N/A)
+event=span_start span_id=2ba324399d694eb58947fa306f761e3a component=evaluator alias=Dummy stage=default step=2 status=start detail_level=summary detail=step oligo=A
+event=span_end span_id=2ba324399d694eb58947fa306f761e3a component=evaluator alias=Dummy stage=default step=2 status=success duration_ms=5.174 artifact=A:. result=standard_scores detail_level=summary detail=step artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=c261b152cf734896894b27659a844b79 component=decision_maker alias=Decisions stage=default step=2 status=start detail_level=summary detail=make_mutation_decision force_accept=false
+event=span_start span_id=2ed76a11b76843c898227fcce0c1204e component=loss_engine alias=LossEngine stage=default step=2 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=cff378b0dabb4b26b59c89395e3ad1ef component=loss alias=plddt stage=default step=2 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=cff378b0dabb4b26b59c89395e3ad1ef component=loss alias=plddt stage=default step=2 status=success duration_ms=0.128 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=0.750
+event=span_end span_id=2ed76a11b76843c898227fcce0c1204e component=loss_engine alias=LossEngine stage=default step=2 status=success duration_ms=0.534 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=0.750
+step=2 score previous=1.000 current=0.750 delta=-0.250
+component=plddt previous=1.000 current=0.750 delta=-0.250
+component=mutator_selector_MCMC_pA_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_delta previous=N/A current=0.000 delta=N/A
+component=mutator_selector_MCMC_plddt_delta previous=N/A current=0.000 delta=N/A
+step=2 decision=reject reason=worse previous=1.000 current=0.750
+event=span_end span_id=c261b152cf734896894b27659a844b79 component=decision_maker alias=Decisions stage=default step=2 status=success duration_ms=6.234 result=reject detail_level=summary detail=make_mutation_decision accepted=false early_stop=false force_accept=false weighted_score=0.750
+step_end step=2 accepted=false early_stop=false stage=default
+Scientific workflow finished; releasing pipeline resources
+Pipeline completed successfully
+Starting protein astrolabe pipeline
+event=span_start span_id=43fbab70b42048dfb5e0a885add86e72 component=initializer alias=random stage=initialization step=0 status=start detail_level=summary detail=RandomInitializer
+event=span_end span_id=43fbab70b42048dfb5e0a885add86e72 component=initializer alias=random stage=initialization step=0 status=success duration_ms=0.203 result=random detail_level=summary detail=RandomInitializer sequence_count=0
+stage_enter stage=default evaluator=Dummy oligo=['A'] mutators=['MCMC'] mutation_num=1
+Performing initial evaluation
+event=span_start span_id=05b56273a90448fca646c784291b1658 component=evaluator alias=Dummy stage=default step=0 status=start detail_level=summary detail=initial oligo=A
+event=span_end span_id=05b56273a90448fca646c784291b1658 component=evaluator alias=Dummy stage=default step=0 status=success duration_ms=30.242 artifact=A:. result=standard_scores detail_level=summary detail=initial artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=57f4b82fa8d34677823e439bbddcfafd component=loss_engine alias=LossEngine stage=default step=0 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=0eebdf8d9914444583878894ed2b6545 component=loss alias=plddt stage=default step=0 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=0eebdf8d9914444583878894ed2b6545 component=loss alias=plddt stage=default step=0 status=success duration_ms=0.631 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=1.000
+event=span_end span_id=57f4b82fa8d34677823e439bbddcfafd component=loss_engine alias=LossEngine stage=default step=0 status=success duration_ms=1.909 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=1.000
+step_start step=1/3 stage=default
+event=span_start span_id=3a47a31746de45e3805bc24813eb0729 component=mutator alias=MCMC stage=default step=1 status=start detail_level=summary detail=MCMC
+event=span_end span_id=3a47a31746de45e3805bc24813eb0729 component=mutator alias=MCMC stage=default step=1 status=success duration_ms=4.297 result=changed detail_level=summary detail=MCMC changed_positions=1 changed_protomers=1
+[MCMC] A    Before(score↑):    AAAA
+[MCMC] A    Mutate(ss):        |   
+[MCMC] A    After(entropy↓):   DAAA
+[MCMC] changed_positions=1 changed_protomers=1 entropy_norm=N/A selection_score=N/A secondary_structure=N/A
+[MCMC] sites A: A1:A->D(score=0.900 entropy=4.130 ss=N/A)
+event=span_start span_id=c65a71b2f2cb45638c94442573da39e9 component=evaluator alias=Dummy stage=default step=1 status=start detail_level=summary detail=step oligo=A
+event=span_end span_id=c65a71b2f2cb45638c94442573da39e9 component=evaluator alias=Dummy stage=default step=1 status=success duration_ms=6.228 artifact=A:. result=standard_scores detail_level=summary detail=step artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=73d1edf27fff4f8e8a06a001dc69f71b component=decision_maker alias=Decisions stage=default step=1 status=start detail_level=summary detail=make_mutation_decision force_accept=false
+event=span_start span_id=f5e557a152474657b1d16e70485ecf37 component=loss_engine alias=LossEngine stage=default step=1 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=cc0de34d78f24808a7e85120d23bc78f component=loss alias=plddt stage=default step=1 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=cc0de34d78f24808a7e85120d23bc78f component=loss alias=plddt stage=default step=1 status=success duration_ms=0.138 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=0.750
+event=span_end span_id=f5e557a152474657b1d16e70485ecf37 component=loss_engine alias=LossEngine stage=default step=1 status=success duration_ms=0.591 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=0.750
+step=1 score previous=1.000 current=0.750 delta=-0.250
+component=plddt previous=1.000 current=0.750 delta=-0.250
+component=mutator_selector_MCMC_pA_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_delta previous=N/A current=0.000 delta=N/A
+component=mutator_selector_MCMC_plddt_delta previous=N/A current=0.000 delta=N/A
+step=1 decision=reject reason=worse previous=1.000 current=0.750
+event=span_end span_id=73d1edf27fff4f8e8a06a001dc69f71b component=decision_maker alias=Decisions stage=default step=1 status=success duration_ms=12.861 result=reject detail_level=summary detail=make_mutation_decision accepted=false early_stop=false force_accept=false weighted_score=0.750
+step_end step=1 accepted=false early_stop=false stage=default
+step_start step=2/3 stage=default
+event=span_start span_id=e34ef4dd34864fd4bdd43cd4b13d7f6a component=mutator alias=MCMC stage=default step=2 status=start detail_level=summary detail=MCMC
+event=span_end span_id=e34ef4dd34864fd4bdd43cd4b13d7f6a component=mutator alias=MCMC stage=default step=2 status=success duration_ms=2.310 result=changed detail_level=summary detail=MCMC changed_positions=1 changed_protomers=1
+[MCMC] A    Before(score↑):    AAAA
+[MCMC] A    Mutate(ss):        |   
+[MCMC] A    After(entropy↓):   HAAA
+[MCMC] changed_positions=1 changed_protomers=1 entropy_norm=N/A selection_score=N/A secondary_structure=N/A
+[MCMC] sites A: A1:A->H(score=0.900 entropy=4.130 ss=N/A)
+event=span_start span_id=27bbf9f9235a4b7dade3bf2e698b4536 component=evaluator alias=Dummy stage=default step=2 status=start detail_level=summary detail=step oligo=A
+event=span_end span_id=27bbf9f9235a4b7dade3bf2e698b4536 component=evaluator alias=Dummy stage=default step=2 status=success duration_ms=5.766 artifact=A:. result=standard_scores detail_level=summary detail=step artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+event=span_start span_id=89c4b00e12694f47a1604831b3ae8062 component=decision_maker alias=Decisions stage=default step=2 status=start detail_level=summary detail=make_mutation_decision force_accept=false
+event=span_start span_id=febf3731adc74fedba1f12cd8428c1c5 component=loss_engine alias=LossEngine stage=default step=2 status=start detail_level=summary detail=compute_loss
+event=span_start span_id=47055a754a954282a5c9639f01f261b3 component=loss alias=plddt stage=default step=2 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+event=span_end span_id=47055a754a954282a5c9639f01f261b3 component=loss alias=plddt stage=default step=2 status=success duration_ms=0.162 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=0.750
+event=span_end span_id=febf3731adc74fedba1f12cd8428c1c5 component=loss_engine alias=LossEngine stage=default step=2 status=success duration_ms=0.594 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=0.750
+step=2 score previous=1.000 current=0.750 delta=-0.250
+component=plddt previous=1.000 current=0.750 delta=-0.250
+component=mutator_selector_MCMC_pA_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_selected_count previous=N/A current=4.000 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_after_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_plddt_before_mean previous=N/A current=0.900 delta=N/A
+component=mutator_selector_MCMC_pA_plddt_delta previous=N/A current=0.000 delta=N/A
+component=mutator_selector_MCMC_plddt_delta previous=N/A current=0.000 delta=N/A
+step=2 decision=reject reason=worse previous=1.000 current=0.750
+event=span_end span_id=89c4b00e12694f47a1604831b3ae8062 component=decision_maker alias=Decisions stage=default step=2 status=success duration_ms=5.745 result=reject detail_level=summary detail=make_mutation_decision accepted=false early_stop=false force_accept=false weighted_score=0.750
+step_end step=2 accepted=false early_stop=false stage=default
+Scientific workflow finished; releasing pipeline resources
+Pipeline completed successfully

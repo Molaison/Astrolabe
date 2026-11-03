@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -77,7 +78,9 @@ def _load_esmfold2_model(
     esmc_snapshot_path: Path | None,
 ) -> Any:
     if esmc_snapshot_path is None:
-        return model_cls.from_pretrained(model_name, **model_kwargs).eval()
+        model = model_cls.from_pretrained(model_name, **model_kwargs).eval()
+        model._astrolabe_load_counts = {'folding_loader': 1}
+        return model
 
     esmc_precision = model_kwargs.get("esmc_precision") or "bf16"
     model = model_cls.from_pretrained(
@@ -87,6 +90,7 @@ def _load_esmfold2_model(
     )
     model.config.esmc_id = str(esmc_snapshot_path)
     model.load_esmc(str(esmc_snapshot_path), precision=esmc_precision)
+    model._astrolabe_load_counts = {'folding_checkpoint': 1, 'esmc_checkpoint': 1}
     return model.eval()
 
 
@@ -191,7 +195,7 @@ def _worker_session(payload: dict[str, Any]):
     return model, builder, model_name, device, ProteinInput, StructurePredictionInput
 
 
-def _worker_run(payload: dict[str, Any], session=None) -> dict[str, Any]:
+def _worker_run(payload: dict[str, Any], session=None, *, execution_context=None) -> dict[str, Any]:
     if session is None:
         session = _worker_session(payload)
     model, builder, model_name, device, ProteinInput, StructurePredictionInput = session
@@ -219,19 +223,22 @@ def _worker_run(payload: dict[str, Any], session=None) -> dict[str, Any]:
             for chain in job["chains"]
         ]
         prediction_input = StructurePredictionInput(sequences=chains)
-        result = builder.fold(
-            model,
-            prediction_input,
-            complex_id=name,
-            **fold_kwargs,
-        )
-        if isinstance(result, list):
-            result = result[0]
-
         structure_path = output_dir / f"{name}_model.cif"
-        structure_path.write_text(result.complex.to_mmcif(), encoding="utf-8")
-        results.append(
-            {
+        # builder.fold owns a continuous native graph, including ESMC. Keep
+        # all possibly device-backed result materialization with that graph;
+        # filesystem writes and outer request preparation use CPU admission.
+        context = execution_context() if execution_context is not None else contextlib.nullcontext()
+        with context:
+            result = builder.fold(
+                model,
+                prediction_input,
+                complex_id=name,
+                **fold_kwargs,
+            )
+            if isinstance(result, list):
+                result = result[0]
+            structure_text = result.complex.to_mmcif()
+            result_data = {
                 "name": name,
                 "structure_path": str(structure_path),
                 "plddt": _to_python(result.plddt),
@@ -241,7 +248,8 @@ def _worker_run(payload: dict[str, Any], session=None) -> dict[str, Any]:
                 "pae": _to_python(getattr(result, "pae", None)),
                 "pde": _to_python(getattr(result, "pde", None)),
             }
-        )
+        structure_path.write_text(structure_text, encoding="utf-8")
+        results.append(result_data)
 
     return {
         "model_name": model_name,
@@ -343,6 +351,11 @@ class ESMFold2Runner:
             "daemon_device_kind",
         }
         return cls(**{k: v for k, v in container.items() if k in allowed})
+
+    def close(self):
+        if self._resident is not None:
+            self._resident.close()
+            self._resident = None
 
     def run(self, jobs: list[dict[str, Any]], output_dir: Path) -> dict[str, Any]:
         output_dir = Path(output_dir)

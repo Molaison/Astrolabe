@@ -18,6 +18,14 @@ class DummyEvaluator(Evaluator):
     This does not run any structure prediction. It produces deterministic,
     minimal `StandardScores` so the pipeline can exercise mutator/stage logic.
     """
+    execution_phase = 'cpu_execute'
+
+    def lifecycle(self):
+        import os
+        return {'process_alive': True, 'pid': os.getpid(), 'weights_loaded': False,
+                'gpu_resident': False, 'resident_bytes': 0, 'load_count': 0,
+                'ready': not getattr(self, '_closed', False), 'device': 'cpu',
+                'release_requires_exit': bool(self._write_structure)}
 
     def __init__(
         self,

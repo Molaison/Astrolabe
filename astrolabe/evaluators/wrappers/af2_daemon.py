@@ -15,6 +15,7 @@ def main():
     from astrolabe.evaluators.tree_codec import dump_tree, load_tree
     from astrolabe.evaluators.request_path import request_directory
     from astrolabe.runtime.server import serve
+    from astrolabe.runtime.admission import operation
     actual = identity(sys.executable, spec['code_paths'], spec['weight_paths'], spec['device'], spec['semantics'])
     if os.environ.get('CUDA_VISIBLE_DEVICES') != spec['device']['visible']:
         raise RuntimeError('AF2 visible device mismatch')
@@ -44,15 +45,23 @@ def main():
             if (type(runner) is not RunModel or not runner.params or
                 hashlib.sha256(inspect.getsource(RunModel.predict).encode()).hexdigest() != audited):
                 raise ValueError('AF2 broker requires audited stateless RunModel.predict and loaded parameters')
+        # Keep the loaded parameters on the bound device between requests.
+        # No PRNG state is consumed and the original parameter dtypes remain.
+        runner.params = jax.device_put(runner.params, d)
+        jax.block_until_ready(runner.params)
     def handle(payload):
         request = request_directory(payload['request_dir'])
         batch = load_tree(request / 'input')
-        with contextlib.redirect_stdout(sys.stderr), jax.default_device(d):
+        with contextlib.redirect_stdout(sys.stderr), jax.default_device(d), operation(actual, phase='device'):
             prediction = runner.predict(batch['features'], random_seed=batch['seed'])
             prediction = jax.tree_util.tree_map(np.asarray, prediction)
         dump_tree(request / 'output', prediction)
         return {'request': request.name}
-    serve(handle, actual)
+    from astrolabe.evaluators.lifecycle import model_lifecycle
+    serve(handle, actual, load_count=1,
+          lifecycle=lambda: model_lifecycle(runner.params, load_count=1, loaded=True,
+                                           device=spec['device']),
+          capabilities={'managed_device': True, 'managed_methods': ['forward']})
 
 
 if __name__ == '__main__': main()

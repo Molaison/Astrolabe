@@ -471,6 +471,12 @@ class OpenDDERunner:
                 f"See {out_dir / 'opendde.stderr.log'}.\n{tail}"
             )
 
+    def close(self):
+        resident = getattr(self, '_resident', None)
+        if resident is not None:
+            resident.close()
+            del self._resident
+
 
 def write_opendde_input(
     cplx_input: Any,

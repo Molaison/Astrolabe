@@ -1,0 +1,56 @@
+834402d Add trajectory-resident Chai1 component cache
+2637e06 Add trajectory-resident Boltz1 prediction
+3289b87 Share audited AF2 forward workers through broker
+d14d75e Merge evaluator evidence without losing member provenance
+84c71c1 Resolve member evaluator evidence under source identities
+ec31289 Publish DPLM proposal evidence with producer identities
+d540b85 Retain measured loss evidence with decision assessments
+f6ecfef Preserve scoped score and member assessment metadata
+067f837 Reject ignored AF3 constraints and changed ESMFold2 settings
+24ad10f Run AF2 prediction in trajectory resident worker
+922fc65 Wire automatic admission and reviewed score selectors into CLI
+c4b9e47 Add trajectory-resident ESMFold1 execution
+e0b4ef3 Pin AF3 feature cache to resident model identity
+f36c480 Pin selector dispatch and implementation source identities
+cd8390f Adapt trajectory admission and assign allocated devices
+c0953ec Admit explicitly allocated GPU devices independently
+04fab47 Terminate worker process groups after leader exit
+9542fa0 Register score selector factories with declared inputs
+61b17aa Expose actual loss scores and serializable score queries
+2785cc1 Revert "Resolve aggregate member evidence without relabelling"
+b522770 Validate score subject units direction and producer status
+7855c0e Resolve aggregate member evidence without relabelling
+9af5efc Preserve score entity scope across selectors
+e93b5c4 Aggregate directed score selectors across contexts
+b29b9b7 Expose canonical protomer evidence to score selectors
+335663e Avoid logging imports consuming trajectory RNG
+bf5d029 fix: preserve configured losses in saved runs
+f4b0118 Share configurable proposal constraints across mutators
+20d728a Keep Mol-1 interpreter paths isolated
+2c68457 Keep OpenDDE interpreter paths isolated
+e8ae64a Preserve Mol-1 residue confidence semantics
+e2a2759 Reject OpenDDE model configuration drift
+0b27e38 Add native Mol-1 resident protein evaluator
+a60721d Require every requested OpenDDE sample
+8018ad0 Test CPU loss capability implementation fencing
+dc77fee Pin loaded AF3 preprocessing asset fingerprints per evaluator
+3940d4f Preserve producer measurement subject in strict scores
+3fecb8c Add resident OpenDDE atomic inference
+6b6df3a Fence changed owner device isolation
+2c21267 Keep trajectory owners CPU-only and preserve assessment identity
+194a8ff Close processor resources through the original run lifecycle
+426b895 Add trajectory-exclusive Protenix resident inference
+f184c5c Close owned mutator and processor runners at teardown
+bdaf29f Bind score evidence to decision-owned assessments
+14817b6 Bound feature artifacts before serialization and array allocation
+7a0e2ef Serialize torch tensors without changing dtype or bits
+bb92335 Share resident workers across isolated trajectory sessions
+c8f859c Add reference-conditioned MPNN synchronization policies
+65e5a2d Give score assessments explicit clone-preserved identity
+b89d518 Verify resident model identity and shared request isolation
+b748745 Capture standard score evidence and wire strict consumers
+7c93fe0 Add resident AF3 and ESMFold2 execution adapters
+6dd2331 Add opt-in score evidence queries to loss and selectors
+b4b35a7 Separate AF3 execution stages and report backend identity
+a00a2a4 Keep trajectory lock alive across parent loss
+53ac3bb Add opt-in isolated trajectory execution and bounded worker primitives

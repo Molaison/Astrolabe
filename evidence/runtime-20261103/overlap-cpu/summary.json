@@ -1,0 +1,788 @@
+{
+  "analysis_scope": "Read-only evidence analysis of the snapshot04 CPU overlap fixture; no workload or tests executed.",
+  "certification_limits": {
+    "cpu_performance_certified": false,
+    "gpu_performance_certified": false,
+    "hardware_acceleration_inferred": false,
+    "reasons": [
+      "GPU visibility is empty; the daemon identity and observed device are cpu.",
+      "The runtime branch alone adds hashing, sleeps and a rendezvous; legacy is a scientific-result control, not a matched timing control.",
+      "The load counter is fixture-declared and weights_loaded is false.",
+      "Rendezvous and cold process startup affect controller rates; the trace includes a throughput regression contraction.",
+      "This analysis does not run or certify the separate CPU three-mode performance benchmark or its process observer."
+    ]
+  },
+  "controller": {
+    "event_count": 508,
+    "independent_supply_trials_to_2": 2,
+    "interpretation": "Limit controls independent in-flight trajectories. The observed proxy is warm backend/shape completion rate; gpu_activity=null and this does not demonstrate GPU concurrency or final throughput gain.",
+    "observed_limits": [
+      1,
+      2
+    ],
+    "reason_counts": {
+      "causal_dependency_or_no_independent_supply": 65,
+      "cold_start_observed": 1,
+      "cooldown": 4,
+      "independent_supply_trial": 2,
+      "observing_steady_work": 434,
+      "throughput_regression": 1,
+      "workload_complete": 1
+    },
+    "throughput_regression_shrinks_to_1": 1,
+    "transitions": [
+      {
+        "control_proxy": "warm_backend_shape_completions",
+        "effective_completed": 0,
+        "effective_throughput": 0.0,
+        "event": "controller",
+        "evidence": {
+          "gpu_activity": null,
+          "ready": 0,
+          "throughput": 0.7259308272445573
+        },
+        "limit": 2,
+        "objective": "completed_scientific_trajectories",
+        "previous_limit": 1,
+        "reason": "independent_supply_trial",
+        "source_line": 244,
+        "time": 32435.50386893,
+        "time_monotonic_ns": 32435503869268,
+        "wall_time": 1793706498.9530115
+      },
+      {
+        "control_proxy": "warm_backend_shape_completions",
+        "effective_completed": 0,
+        "effective_throughput": 0.0,
+        "event": "controller",
+        "evidence": {
+          "baseline": 0.7259308272445573,
+          "gain": -0.6996202265700611,
+          "throughput": 0.2180549374135283
+        },
+        "limit": 1,
+        "objective": "completed_scientific_trajectories",
+        "previous_limit": 2,
+        "reason": "throughput_regression",
+        "source_line": 442,
+        "time": 32444.67589891,
+        "time_monotonic_ns": 32444675899138,
+        "wall_time": 1793706508.1250415
+      },
+      {
+        "control_proxy": "warm_backend_shape_completions",
+        "effective_completed": 0,
+        "effective_throughput": 0.0,
+        "event": "controller",
+        "evidence": {
+          "gpu_activity": null,
+          "ready": 0,
+          "throughput": 1.1531772562615912
+        },
+        "limit": 2,
+        "objective": "completed_scientific_trajectories",
+        "previous_limit": 1,
+        "reason": "independent_supply_trial",
+        "source_line": 492,
+        "time": 32446.410212049,
+        "time_monotonic_ns": 32446410212261,
+        "wall_time": 1793706509.8593547
+      }
+    ]
+  },
+  "cpu_hash_work": {
+    "algorithm": "150000 sequential SHA-256 rounds, starting from bytes cpu-stage, per prepare; verified fixture source matches snapshot04.",
+    "interval_count": 10,
+    "intervals": [
+      {
+        "duration_s": 0.107543152,
+        "end_s": 32431.419905132,
+        "owner_pid": 2849413,
+        "source_lines": [
+          2,
+          3
+        ],
+        "start_s": 32431.31236198
+      },
+      {
+        "duration_s": 0.117128899,
+        "end_s": 32432.895589534,
+        "owner_pid": 2849413,
+        "source_lines": [
+          9,
+          10
+        ],
+        "start_s": 32432.778460635
+      },
+      {
+        "duration_s": 0.104369785,
+        "end_s": 32434.237367062,
+        "owner_pid": 2849413,
+        "source_lines": [
+          16,
+          17
+        ],
+        "start_s": 32434.132997277
+      },
+      {
+        "duration_s": 0.103026048,
+        "end_s": 32442.484829146,
+        "owner_pid": 2853403,
+        "source_lines": [
+          24,
+          25
+        ],
+        "start_s": 32442.381803098
+      },
+      {
+        "duration_s": 0.104781211,
+        "end_s": 32442.978834036,
+        "owner_pid": 2849413,
+        "source_lines": [
+          29,
+          30
+        ],
+        "start_s": 32442.874052825
+      },
+      {
+        "duration_s": 0.10229624,
+        "end_s": 32443.943622801,
+        "owner_pid": 2853403,
+        "source_lines": [
+          35,
+          37
+        ],
+        "start_s": 32443.841326561
+      },
+      {
+        "duration_s": 0.10408192,
+        "end_s": 32444.79392327,
+        "owner_pid": 2849413,
+        "source_lines": [
+          42,
+          44
+        ],
+        "start_s": 32444.68984135
+      },
+      {
+        "duration_s": 0.103242588,
+        "end_s": 32445.656868213,
+        "owner_pid": 2853403,
+        "source_lines": [
+          49,
+          51
+        ],
+        "start_s": 32445.553625625
+      },
+      {
+        "duration_s": 0.102811408,
+        "end_s": 32447.367516225,
+        "owner_pid": 2853403,
+        "source_lines": [
+          58,
+          59
+        ],
+        "start_s": 32447.264704817
+      },
+      {
+        "duration_s": 0.105719917,
+        "end_s": 32448.702166939,
+        "owner_pid": 2853403,
+        "source_lines": [
+          65,
+          66
+        ],
+        "start_s": 32448.596447022
+      }
+    ],
+    "sum_interval_wall_s": 1.055001168,
+    "total_hash_rounds_from_source_and_events": 1500000
+  },
+  "cross_owner_overlap": {
+    "fully_contained_cpu_intervals": 1,
+    "interpretation": "The fully contained pair is deliberately rendezvous-controlled; it proves execution capability, not a natural workload speedup.",
+    "pair_count": 4,
+    "pairs": [
+      {
+        "cpu_fully_contained": true,
+        "cpu_work": {
+          "duration_s": 0.104781211,
+          "end_s": 32442.978834036,
+          "owner_pid": 2849413,
+          "source_lines": [
+            29,
+            30
+          ],
+          "start_s": 32442.874052825
+        },
+        "overlap_duration_s": 0.104781211,
+        "overlap_end_s": 32442.978834036,
+        "overlap_start_s": 32442.874052825,
+        "peer_forward": {
+          "duration_s": 0.915064684,
+          "end_s": 32443.783522404,
+          "owner_pid": 2853403,
+          "source_lines": [
+            28,
+            33
+          ],
+          "start_s": 32442.86845772
+        }
+      },
+      {
+        "cpu_fully_contained": false,
+        "cpu_work": {
+          "duration_s": 0.10229624,
+          "end_s": 32443.943622801,
+          "owner_pid": 2853403,
+          "source_lines": [
+            35,
+            37
+          ],
+          "start_s": 32443.841326561
+        },
+        "overlap_duration_s": 0.102134662,
+        "overlap_end_s": 32443.943622801,
+        "overlap_start_s": 32443.841488139,
+        "peer_forward": {
+          "duration_s": 0.80116413,
+          "end_s": 32444.642652269,
+          "owner_pid": 2849413,
+          "source_lines": [
+            36,
+            40
+          ],
+          "start_s": 32443.841488139
+        }
+      },
+      {
+        "cpu_fully_contained": false,
+        "cpu_work": {
+          "duration_s": 0.10408192,
+          "end_s": 32444.79392327,
+          "owner_pid": 2849413,
+          "source_lines": [
+            42,
+            44
+          ],
+          "start_s": 32444.68984135
+        },
+        "overlap_duration_s": 0.095011898,
+        "overlap_end_s": 32444.79392327,
+        "overlap_start_s": 32444.698911372,
+        "peer_forward": {
+          "duration_s": 0.800851188,
+          "end_s": 32445.49976256,
+          "owner_pid": 2853403,
+          "source_lines": [
+            43,
+            47
+          ],
+          "start_s": 32444.698911372
+        }
+      },
+      {
+        "cpu_fully_contained": false,
+        "cpu_work": {
+          "duration_s": 0.103242588,
+          "end_s": 32445.656868213,
+          "owner_pid": 2853403,
+          "source_lines": [
+            49,
+            51
+          ],
+          "start_s": 32445.553625625
+        },
+        "overlap_duration_s": 0.098144193,
+        "overlap_end_s": 32445.656868213,
+        "overlap_start_s": 32445.55872402,
+        "peer_forward": {
+          "duration_s": 0.80074296,
+          "end_s": 32446.35946698,
+          "owner_pid": 2849413,
+          "source_lines": [
+            50,
+            54
+          ],
+          "start_s": 32445.55872402
+        }
+      }
+    ],
+    "sum_intersection_wall_s": 0.400071964
+  },
+  "events": {
+    "all_stage_pairs_closed": true,
+    "counts": {
+      "cpu_work_end": 10,
+      "cpu_work_start": 10,
+      "forward_end": 10,
+      "forward_start": 10,
+      "prepare_end": 10,
+      "prepare_start": 10,
+      "resident": 10
+    },
+    "line_count": 70
+  },
+  "fixture_source": {
+    "files": [
+      {
+        "matches_snapshot04": true,
+        "path_from_repo": "tests/runtime_hook/sitecustomize.py",
+        "sha256": "9e19c9bca97868cc4401e57155795726db3b58fd28f54c75f7f15ab401815be6",
+        "snapshot04_sha256": "9e19c9bca97868cc4401e57155795726db3b58fd28f54c75f7f15ab401815be6"
+      },
+      {
+        "matches_snapshot04": true,
+        "path_from_repo": "tests/runtime_fixture.py",
+        "sha256": "00f9e17f3e43c0347ecaee06836848eb415cc475c73aff7660843de8872a16b9",
+        "snapshot04_sha256": "00f9e17f3e43c0347ecaee06836848eb415cc475c73aff7660843de8872a16b9"
+      },
+      {
+        "matches_snapshot04": true,
+        "path_from_repo": "tests/test_runtime_execution.py",
+        "sha256": "dc50f901cd8d34b3ab52c231390593172cb7ae8a1cccccf2685da53f7e01911c",
+        "snapshot04_sha256": "dc50f901cd8d34b3ab52c231390593172cb7ae8a1cccccf2685da53f7e01911c"
+      }
+    ],
+    "source_snapshot": "../source-snapshot-04.json",
+    "source_snapshot_sha256": "acb745c5a839c2e6dfb72c1e47e8876ec9b8c79222a34103f83aa5fe0952a117"
+  },
+  "forward_fixture": {
+    "all_forward_intervals_serial": true,
+    "description": "CPU daemon with rendezvous wait and requested sleep=0.8 seconds; not GPU inference.",
+    "interval_count": 10,
+    "intervals": [
+      {
+        "duration_s": 0.801017678,
+        "end_s": 32432.722362167,
+        "owner_pid": 2849413,
+        "source_lines": [
+          6,
+          7
+        ],
+        "start_s": 32431.921344489
+      },
+      {
+        "duration_s": 0.800992313,
+        "end_s": 32434.078173628,
+        "owner_pid": 2849413,
+        "source_lines": [
+          13,
+          14
+        ],
+        "start_s": 32433.277181315
+      },
+      {
+        "duration_s": 0.801504762,
+        "end_s": 32435.420511265,
+        "owner_pid": 2849413,
+        "source_lines": [
+          20,
+          21
+        ],
+        "start_s": 32434.619006503
+      },
+      {
+        "duration_s": 0.915064684,
+        "end_s": 32443.783522404,
+        "owner_pid": 2853403,
+        "source_lines": [
+          28,
+          33
+        ],
+        "start_s": 32442.86845772
+      },
+      {
+        "duration_s": 0.80116413,
+        "end_s": 32444.642652269,
+        "owner_pid": 2849413,
+        "source_lines": [
+          36,
+          40
+        ],
+        "start_s": 32443.841488139
+      },
+      {
+        "duration_s": 0.800851188,
+        "end_s": 32445.49976256,
+        "owner_pid": 2853403,
+        "source_lines": [
+          43,
+          47
+        ],
+        "start_s": 32444.698911372
+      },
+      {
+        "duration_s": 0.80074296,
+        "end_s": 32446.35946698,
+        "owner_pid": 2849413,
+        "source_lines": [
+          50,
+          54
+        ],
+        "start_s": 32445.55872402
+      },
+      {
+        "duration_s": 0.801214089,
+        "end_s": 32447.218347613,
+        "owner_pid": 2853403,
+        "source_lines": [
+          55,
+          56
+        ],
+        "start_s": 32446.417133524
+      },
+      {
+        "duration_s": 0.80121911,
+        "end_s": 32448.550236044,
+        "owner_pid": 2853403,
+        "source_lines": [
+          62,
+          63
+        ],
+        "start_s": 32447.749016934
+      },
+      {
+        "duration_s": 0.802245087,
+        "end_s": 32449.886853658,
+        "owner_pid": 2853403,
+        "source_lines": [
+          69,
+          70
+        ],
+        "start_s": 32449.084608571
+      }
+    ],
+    "sum_interval_wall_s": 8.126016001
+  },
+  "input_files": {
+    "events.jsonl": {
+      "bytes": 5359,
+      "sha256": "6d6aaf28acc70ef4caca0bcb370f6b3d67f6deebc01d30634fa3a52afa5579ff"
+    },
+    "legacy/parallel_smoke/001_run/config.yaml": {
+      "bytes": 16632,
+      "sha256": "7ad33f9a1a6e70360060d5e71a1cdc846091f25a994d86f1e5afd46aef041cf1"
+    },
+    "legacy/parallel_smoke/001_run/provenance.json": {
+      "bytes": 2098,
+      "sha256": "06f93ea51c88d7da0209100816fe6311f939ef8834c14b4aed09c58fa0455d81"
+    },
+    "legacy/parallel_smoke/001_run/scores.csv": {
+      "bytes": 1275,
+      "sha256": "0119eb69c909283365958a4c659cf487e4b796854fa833468ee19487b273232b"
+    },
+    "legacy/parallel_smoke/002_run/config.yaml": {
+      "bytes": 16632,
+      "sha256": "b636841e9a44b21eae885c9815f2812eba7758e3d6e007798b3d4be9e4ddbbe5"
+    },
+    "legacy/parallel_smoke/002_run/provenance.json": {
+      "bytes": 2098,
+      "sha256": "f16097476ef131588e79af2c1a044d2f1aa4370ffa7344a3b61bf4fe6be0ba72"
+    },
+    "legacy/parallel_smoke/002_run/scores.csv": {
+      "bytes": 1275,
+      "sha256": "74432dbde7a19d25047eedb5b86935926b25a8190eefefbb4268aa87d24e4ca2"
+    },
+    "parallel.yaml": {
+      "bytes": 872,
+      "sha256": "7ac71cb65fffb8104826a7f9691c92a62b15d8145352483d90acb437e121f787"
+    },
+    "runtime/parallel_smoke/001_run/config.yaml": {
+      "bytes": 16634,
+      "sha256": "cc28dd4cc89234801a625b1ea7014745cbc2513dbf669cf50bed0cf0f4558bfe"
+    },
+    "runtime/parallel_smoke/001_run/provenance.json": {
+      "bytes": 2097,
+      "sha256": "aebd6e372309a3a0ea55e29cde1d610ff6e77b2ce828099fd60762e74aaed93c"
+    },
+    "runtime/parallel_smoke/001_run/scores.csv": {
+      "bytes": 1275,
+      "sha256": "0119eb69c909283365958a4c659cf487e4b796854fa833468ee19487b273232b"
+    },
+    "runtime/parallel_smoke/002_run/config.yaml": {
+      "bytes": 16634,
+      "sha256": "04bab6396f7f3e8853c4a5c602677495e9efe3c327ddb36287634e668f357292"
+    },
+    "runtime/parallel_smoke/002_run/provenance.json": {
+      "bytes": 2097,
+      "sha256": "0aad22118a614603e8eb4ec0b6cd94914176a32b6261f0f9dc6d87ab6156c820"
+    },
+    "runtime/parallel_smoke/002_run/scores.csv": {
+      "bytes": 1275,
+      "sha256": "74432dbde7a19d25047eedb5b86935926b25a8190eefefbb4268aa87d24e4ca2"
+    },
+    "trace.jsonl": {
+      "bytes": 271620,
+      "sha256": "1e531ef4011f0e457b2895fc55827f9ad0a5e7dcbd375691f827ab1935591c5d"
+    }
+  },
+  "reported_cleanup": [
+    {
+      "confirmed": false,
+      "device": "cpu",
+      "event": "resident_released",
+      "process_exit": true,
+      "resident": "fb97a9df21ad06ea6ee640de669c6b0d87a0a9d583c428576425431b347dc392",
+      "source_line": 609,
+      "time": 32451.360371572,
+      "time_monotonic_ns": 32451360372065,
+      "wall_time": 1793706514.8095145
+    },
+    {
+      "cleanup_confirmed": true,
+      "cleanup_errors": [],
+      "event": "broker_stopped",
+      "resources": {
+        "active": {},
+        "cpu_slots": 0,
+        "devices": {},
+        "limits": {
+          "cpu_slots": 20,
+          "output_bytes": 8589934592,
+          "pending_items": 32,
+          "prepared_bytes": 1073741824,
+          "ram_bytes": 270103404544,
+          "request_output_bytes": 1073741824,
+          "telemetry_interval": 1.0,
+          "telemetry_timeout": 2.0,
+          "vram_fraction": 0.9
+        },
+        "output_reserved_bytes": 0,
+        "pending": 0,
+        "prepared_bytes": 0,
+        "ram_reserved_bytes": 0,
+        "resident": {}
+      },
+      "source_line": 610,
+      "time": 32451.362468044,
+      "time_monotonic_ns": 32451362468291,
+      "unreleased": [],
+      "wall_time": 1793706514.8116105
+    }
+  ],
+  "schema_version": 1,
+  "scientific_results": {
+    "all_score_files_byte_identical": true,
+    "bytes_per_mode": 2550,
+    "pairs": [
+      {
+        "byte_identical": true,
+        "legacy": {
+          "accepted_rows": 1,
+          "bytes": 1275,
+          "columns": 35,
+          "data_rows": 5,
+          "path": "legacy/parallel_smoke/001_run/scores.csv",
+          "sha256": "0119eb69c909283365958a4c659cf487e4b796854fa833468ee19487b273232b",
+          "steps": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "runtime": {
+          "accepted_rows": 1,
+          "bytes": 1275,
+          "columns": 35,
+          "data_rows": 5,
+          "path": "runtime/parallel_smoke/001_run/scores.csv",
+          "sha256": "0119eb69c909283365958a4c659cf487e4b796854fa833468ee19487b273232b",
+          "steps": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "seed": 17
+      },
+      {
+        "byte_identical": true,
+        "legacy": {
+          "accepted_rows": 1,
+          "bytes": 1275,
+          "columns": 35,
+          "data_rows": 5,
+          "path": "legacy/parallel_smoke/002_run/scores.csv",
+          "sha256": "74432dbde7a19d25047eedb5b86935926b25a8190eefefbb4268aa87d24e4ca2",
+          "steps": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "runtime": {
+          "accepted_rows": 1,
+          "bytes": 1275,
+          "columns": 35,
+          "data_rows": 5,
+          "path": "runtime/parallel_smoke/002_run/scores.csv",
+          "sha256": "74432dbde7a19d25047eedb5b86935926b25a8190eefefbb4268aa87d24e4ca2",
+          "steps": [
+            0,
+            1,
+            2,
+            3,
+            4
+          ]
+        },
+        "seed": 18
+      }
+    ],
+    "provenance": [
+      {
+        "config_hash_matches": true,
+        "device_visibility": {
+          "CUDA_VISIBLE_DEVICES": "",
+          "HIP_VISIBLE_DEVICES": null,
+          "NVIDIA_VISIBLE_DEVICES": "void"
+        },
+        "ended_at": "2026-11-03T11:48:00+00:00",
+        "error": null,
+        "mode": "legacy",
+        "path": "legacy/parallel_smoke/001_run/provenance.json",
+        "seed": 17,
+        "started_at": "2026-11-03T11:47:59+00:00",
+        "state": "completed",
+        "terminal": true
+      },
+      {
+        "config_hash_matches": true,
+        "device_visibility": {
+          "CUDA_VISIBLE_DEVICES": "",
+          "HIP_VISIBLE_DEVICES": null,
+          "NVIDIA_VISIBLE_DEVICES": "void"
+        },
+        "ended_at": "2026-11-03T11:48:00+00:00",
+        "error": null,
+        "mode": "legacy",
+        "path": "legacy/parallel_smoke/002_run/provenance.json",
+        "seed": 18,
+        "started_at": "2026-11-03T11:48:00+00:00",
+        "state": "completed",
+        "terminal": true
+      },
+      {
+        "config_hash_matches": true,
+        "device_visibility": {
+          "CUDA_VISIBLE_DEVICES": "",
+          "HIP_VISIBLE_DEVICES": "",
+          "NVIDIA_VISIBLE_DEVICES": "void"
+        },
+        "ended_at": "2026-11-03T11:48:29+00:00",
+        "error": null,
+        "mode": "runtime",
+        "path": "runtime/parallel_smoke/001_run/provenance.json",
+        "seed": 17,
+        "started_at": "2026-11-03T11:48:14+00:00",
+        "state": "completed",
+        "terminal": true
+      },
+      {
+        "config_hash_matches": true,
+        "device_visibility": {
+          "CUDA_VISIBLE_DEVICES": "",
+          "HIP_VISIBLE_DEVICES": "",
+          "NVIDIA_VISIBLE_DEVICES": "void"
+        },
+        "ended_at": "2026-11-03T11:48:33+00:00",
+        "error": null,
+        "mode": "runtime",
+        "path": "runtime/parallel_smoke/002_run/provenance.json",
+        "seed": 18,
+        "started_at": "2026-11-03T11:48:25+00:00",
+        "state": "completed",
+        "terminal": true
+      }
+    ],
+    "rows_per_mode": 10,
+    "runtime_completed_requests": 10,
+    "runtime_trajectory_complete_events": [
+      {
+        "completed": 1,
+        "duration": 23.428759340000397,
+        "event": "trajectory_complete",
+        "source_line": 522,
+        "time": 32447.691624216,
+        "time_monotonic_ns": 32447691624651,
+        "wall_time": 1793706511.1407673
+      },
+      {
+        "completed": 2,
+        "duration": 15.597876967000047,
+        "event": "trajectory_complete",
+        "source_line": 607,
+        "time": 32451.162689065,
+        "time_monotonic_ns": 32451162689440,
+        "wall_time": 1793706514.6118321
+      }
+    ],
+    "seeds": [
+      17,
+      18
+    ],
+    "unique_scientific_request_ids": 10,
+    "unique_transport_request_ids": 10
+  },
+  "time_basis": "Logged time.monotonic seconds on one host; durations computed with decimal subtraction; interval times are wall time, not process CPU time.",
+  "trace_counts": {
+    "broker_started": 1,
+    "broker_stopped": 1,
+    "compute_end": 10,
+    "compute_start": 10,
+    "controller": 508,
+    "model_loaded": 1,
+    "request_complete": 10,
+    "request_queued": 10,
+    "resident_released": 1,
+    "resource_sample": 26,
+    "stage": 30,
+    "trajectory_complete": 2
+  },
+  "worker_reuse": {
+    "events_per_owner": {
+      "2849413": 5,
+      "2853403": 5
+    },
+    "gpu_resident_values": [
+      false
+    ],
+    "interpretation": "One real fixture worker registration serves both owners. load_count=1 is the test daemon declared counter; no model checkpoints are loaded (weights_loaded=false).",
+    "lifecycle_completed_requests": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10
+    ],
+    "model_loaded_events": 1,
+    "owner_pids": [
+      2849413,
+      2853403
+    ],
+    "reported_load_counts": [
+      1
+    ],
+    "resident_events": 10,
+    "weights_loaded_values": [
+      false
+    ],
+    "worker_epochs": [
+      "f9ccb550a58c43219360dc39c24a0808"
+    ],
+    "worker_pids": [
+      2851976
+    ]
+  }
+}

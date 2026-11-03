@@ -10,6 +10,8 @@ Protocol (one JSON object per line):
 from __future__ import annotations
 
 import argparse
+import contextlib
+import os
 import json
 import pathlib
 import random
@@ -21,6 +23,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from astrolabe.mutators.wrappers.dplm_infer import _resolve_model_name
+
+_protocol_output = None
 
 
 def _ensure_byprot_on_path() -> None:
@@ -112,11 +116,16 @@ def _run_generation(
 
 
 def _write(obj: Dict[str, Any]) -> None:
-    sys.stdout.write(json.dumps(obj) + "\n")
-    sys.stdout.flush()
+    output = _protocol_output or sys.stdout
+    output.write(json.dumps(obj) + "\n")
+    output.flush()
 
 
 def main() -> int:
+    global _protocol_output
+    _protocol_output = os.fdopen(os.dup(1), "w", buffering=1)
+    os.dup2(2, 1)
+    sys.stdout = sys.stderr
     args = _parse_args()
 
     # Lazy import (keeps `gh doctor` light if someone imports this module).
@@ -126,12 +135,18 @@ def main() -> int:
     device = _select_device(args.device)
     _seed_everything(random.randint(0, 1_000_000))
 
-    model = DiffusionProteinLanguageModel.from_pretrained(
-        _resolve_model_name(args.model_name)
-    )
-    model = model.to(device)
-    model.eval()
+    load_count = 0
+    with contextlib.redirect_stdout(sys.stderr):
+        model = DiffusionProteinLanguageModel.from_pretrained(
+            _resolve_model_name(args.model_name)
+        )
+        model = model.to(device)
+        model.eval()
+        load_count += 1
     tokenizer = model.tokenizer
+    _write({"type": "ready", "pid": os.getpid(), "model_load_count": load_count,
+            "weights_loaded": True, "gpu_resident": str(device).startswith("cuda"),
+            "device": str(device), "model_source": str(_resolve_model_name(args.model_name))})
 
     for raw in sys.stdin:
         line = raw.strip()

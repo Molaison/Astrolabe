@@ -1,0 +1,37 @@
+...............................F........................................ [ 17%]
+...s.................................................................... [ 35%]
+........................................................................ [ 53%]
+........................................................................ [ 71%]
+........................................................................ [ 88%]
+.............................................                            [100%]
+=================================== FAILURES ===================================
+_ test_lingering_child_invalidates_trial_and_is_cleaned_by_identity[new_session] _
+
+tmp_path = PosixPath('/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot04-pytest/test_lingering_child_invalidat1')
+new_session = True
+
+    @real_processes
+    @pytest.mark.parametrize("new_session", [False, True], ids=["same_group", "new_session"])
+    def test_lingering_child_invalidates_trial_and_is_cleaned_by_identity(tmp_path, new_session):
+        pid_file, exit_gate = tmp_path / "child.pid", tmp_path / "parent.exit"
+        process = subprocess.Popen(
+            [sys.executable, "-u", "-c", PARENT_WITH_CHILD, str(pid_file), str(exit_gate),
+             "new_session" if new_session else "same_group"], start_new_session=True,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        observer = processes.BenchmarkProcessObserver(process, exit_grace=.12,
+                                                       terminate_grace=.1, kill_grace=.4)
+        result = {}
+        worker = threading.Thread(target=lambda: result.update(
+            observer.observe_until_exit(process, time.monotonic() + 5)), daemon=True)
+        worker.start()
+        try:
+            _wait_for(pid_file.is_file)
+>           child_pid = int(pid_file.read_text())
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^
+E           ValueError: invalid literal for int() with base 10: ''
+
+tests/test_runtime_benchmark_processes.py:94: ValueError
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_backend_daemons.py:200: covered by runtime broker admission tests after integration
+FAILED tests/test_runtime_benchmark_processes.py::test_lingering_child_invalidates_trial_and_is_cleaned_by_identity[new_session]
+1 failed, 403 passed, 1 skipped, 7 warnings in 469.72s (0:07:49)

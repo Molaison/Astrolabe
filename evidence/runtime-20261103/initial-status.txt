@@ -1,0 +1,8 @@
+ M astrolabe/evaluators/af3_resident.py
+ M astrolabe/evaluators/wrappers/af3_daemon.py
+ M astrolabe/evaluators/wrappers/alphafold3.py
+?? astrolabe/evaluators/lifecycle.py
+?? astrolabe/runtime/contracts.py
+?? astrolabe/runtime/telemetry.py
+?? evidence/
+?? resources/.paper_inputs_protein.tar.gz.5zJm7f

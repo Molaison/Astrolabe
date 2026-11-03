@@ -60,8 +60,8 @@ if %r == 'af3':
     sys.modules[m.__name__] = m
 else:
     import astrolabe.evaluators.wrappers.esmfold2 as m
-    m._worker_session = lambda payload: (None, None, None, 'cpu', None, None)
-    def fake(payload, session):
+    m._worker_session = lambda payload: (types.SimpleNamespace(_astrolabe_load_counts={'folding_checkpoint': 1, 'esmc_checkpoint': 1}), None, None, 'cpu', None, None)
+    def fake(payload, session, *, execution_context=None):
         out = Path(payload['output_dir']); out.mkdir()
         jobs = []
         for job in payload['jobs']:
@@ -91,8 +91,8 @@ else:
         return receive()
     try:
         hello = receive()
-        assert hello['pid'] == worker.pid and hello['load_count'] == 1
-        assert hello['identity'] == identity(sys.executable, [str(code)], [str(weights)], device, semantics)
+        assert hello['pid'] == worker.pid and hello['load_count'] == (1 if backend == 'af3' else 2)
+        assert hello['identity'] == identity(sys.executable, [str(code)], [str(weights)], device, semantics, env=env)
         assert call('bad', str(tmp_path / 'request-missing'))['type'] == 'error'
         for idx, seq in enumerate(['AAA', 'CCC']):
             parent = tmp_path / ('trajectory-' + str(idx)); parent.mkdir()

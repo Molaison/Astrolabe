@@ -1,0 +1,29 @@
+{
+  "source_snapshot": {
+    "path": "/workspace/scratch/93ef4745b713/snapshot06.tar.gz",
+    "bytes": 66530,
+    "sha256": "25b1e34a1fd2d6131418ede053c3cf0873940bdf8b996d236d7f095d54a26d67",
+    "files": 12
+  },
+  "command": "export PATH=/xcf26/zpzeng/.gh_container/envs/_gh_apptainer/bin:$PATH\nexport LD_LIBRARY_PATH=/xcf26/zpzeng/.gh_container/envs/_gh_apptainer/lib:${LD_LIBRARY_PATH:-}\napptainer exec --cleanenv --bind /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation --pwd /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test --env CUDA_VISIBLE_DEVICES= --env JAX_PLATFORMS=cpu --env PYTHONDONTWRITEBYTECODE=1 --env OMP_NUM_THREADS=1 --env PYTHONPATH=/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-env/lib/python3.11/site-packages /xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif /alphafold3_venv/bin/python -m pytest tests/test_runtime_process_observations.py tests/test_runtime_benchmark_processes.py tests/test_workflow_benchmark.py tests/test_runtime_contracts.py tests/test_runtime_resources.py tests/test_runtime_controller.py tests/test_runtime_execution.py tests/test_af2_broker_resident.py tests/test_pipeline_release_identity.py tests/test_run_cleanup_policy.py tests/test_run_provenance.py tests/test_evaluator_lifecycle_contract.py tests/test_mutator_resident_runtime.py tests/test_mutator_additional_lifecycle.py tests/test_execution_auto_limits.py tests/test_runtime_trace_report.py -q --disable-warnings --maxfail=3 --basetemp /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot06-pytest >/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot06-lifecycle.log 2>&1\nstatus=$?\ntail -n 70 /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot06-lifecycle.log\nexit \"$status\"",
+  "tests": [
+    "tests/test_runtime_process_observations.py",
+    "tests/test_runtime_benchmark_processes.py",
+    "tests/test_workflow_benchmark.py",
+    "tests/test_runtime_contracts.py",
+    "tests/test_runtime_resources.py",
+    "tests/test_runtime_controller.py",
+    "tests/test_runtime_execution.py",
+    "tests/test_af2_broker_resident.py",
+    "tests/test_pipeline_release_identity.py",
+    "tests/test_run_cleanup_policy.py",
+    "tests/test_run_provenance.py",
+    "tests/test_evaluator_lifecycle_contract.py",
+    "tests/test_mutator_resident_runtime.py",
+    "tests/test_mutator_additional_lifecycle.py",
+    "tests/test_execution_auto_limits.py",
+    "tests/test_runtime_trace_report.py"
+  ],
+  "gpu_enabled": false,
+  "scope": "Process observation reconciliation, known-live release accounting, guardian retention, backend lifecycle integration."
+}

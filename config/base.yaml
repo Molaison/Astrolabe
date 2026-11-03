@@ -94,8 +94,22 @@ execution:
   enabled: false
   max_active: auto
   max_resident_models: auto
-  # Safety bound per allocated device, not a declaration of available VRAM.
-  max_resident_per_device: 1
+  # Registration limits are separate from measured resident/scratch VRAM.
+  # auto never discovers or borrows a GPU outside the current job allocation.
+  max_resident_per_device: auto
+  # Empty values use bounded affinity/cgroup/Slurm-derived CPU and RAM limits.
+  # Optional keys: cpu_slots, ram_bytes, prepared_bytes, output_bytes, request_output_bytes,
+  # pending_items, vram_fraction, telemetry_interval, telemetry_timeout.
+  resources: {}
+  control:
+    window_seconds: 5.0
+    min_completions: 4
+    cooldown_seconds: 10.0
+    gain_threshold: 0.05
+    regression_threshold: 0.10
+    memory_high: 0.90
+    gpu_busy_target: 90.0
+    poll_seconds: 1.0
 # runtime fullfillment
 raw_model_results_dir: null
 loss:

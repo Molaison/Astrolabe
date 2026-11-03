@@ -58,9 +58,7 @@ class BoltzEvaluator(Evaluator):
         return result
 
     def close(self):
-        close = getattr(self.model_runner, 'close', None)
-        if close is not None:
-            close()
+        super().close()
 
     def prepare_output(self, output, inputs, runtime_config):
         step = global_config.step

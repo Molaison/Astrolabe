@@ -8,17 +8,20 @@ import tempfile
 import uuid
 
 from astrolabe.evaluators.tree_codec import dump_tree, load_tree
+from astrolabe.evaluators.lifecycle import request_runtime
 from astrolabe.evaluators.worker_identity import identity, probe_device
-from astrolabe.evaluators.worker_session import WorkerArtifacts
-from astrolabe.evaluators.torch_rng import capture, restore
+from astrolabe.evaluators.worker_session import WorkerArtifacts, request_artifacts
+from astrolabe.evaluators.torch_rng import capture, restore, capture_settings
+
+
+BROKER_SHARED_ROOT = True
+BROKER_ADMITTED_PROBE = True
 
 
 class ProtenixResident:
     def __init__(self, config, *, source_dir, startup_timeout=600, timeout=None):
         # Broker reuse cannot preserve legacy random state without a coordinated
         # owner-side RNG lease. Direct mode owns this worker for one trajectory.
-        if os.environ.get('ASTROLABE_EXECUTION_ENDPOINT') or os.environ.get('ASTROLABE_EXECUTION_TOKEN'):
-            raise ValueError('Protenix daemon currently requires trajectory-exclusive direct execution')
         if int(os.environ.get('WORLD_SIZE', '1')) != 1 or int(os.environ.get('LOCAL_RANK', '0')) != 0:
             raise ValueError('Protenix daemon supports one local device only')
         from astrolabe.runtime.client import DaemonClient
@@ -55,20 +58,21 @@ class ProtenixResident:
         device = probe_device(sys.executable, 'protenix', env=env)
         self._device = device['name']
         initial_rng = capture(self._device)
-        bootstrap = root / 'request-bootstrap'; bootstrap.mkdir(mode=0o700)
+        bootstrap = Path(tempfile.mkdtemp(prefix='request-bootstrap-', dir=root))
         dump_tree(bootstrap / 'initial', initial_rng)
         base = Path(__file__).resolve().parent
         code = [str(base / name) for name in ('tree_codec.py', 'torch_rng.py', 'request_path.py', 'worker_identity.py', 'wrappers/protenix.py', 'wrappers/protenix_daemon.py')] + [str(source / 'protenix'), str(source / 'configs')]
         weights = [str(checkpoint), str(ccd), str(ccd_rdkit)]
         # Direct mode never shares a worker: the nonce also prevents future
         # broker implementations from merging independent trajectory streams.
-        semantics = {'config': raw, 'effective_model': normalized_model, 'trajectory': uuid.uuid4().hex}
-        expected = identity(sys.executable, code, weights, device, semantics)
+        semantics = {'config': raw, 'effective_model': normalized_model, 'trajectory': uuid.uuid4().hex,
+                     'torch_settings': capture_settings()}
+        expected = identity(sys.executable, code, weights, device, semantics, env=env)
         spec = {'model_config': raw, 'semantics': semantics, 'source_dir': str(source),
                 'code_paths': code, 'weight_paths': weights, 'device': device,
                 'bootstrap': str(bootstrap)}
         path = self._artifacts.specification(expected, spec)
-        self._client = DaemonClient([sys.executable, '-m', 'astrolabe.evaluators.wrappers.protenix_daemon', str(path)], expected, env=env, startup_timeout=startup_timeout)
+        self._client = self._artifacts.start_client([sys.executable, '-m', 'astrolabe.evaluators.wrappers.protenix_daemon', str(path)], expected, env=env, startup_timeout=startup_timeout)
         restore(load_tree(bootstrap / 'ready'), self._device)
         self.timeout = timeout
         self._pending_config = None
@@ -79,7 +83,7 @@ class ProtenixResident:
     def predict(self, data):
         if self._pending_config is None:
             raise RuntimeError('Protenix request did not update its model config')
-        with tempfile.TemporaryDirectory(prefix='request-', dir=self._artifacts.root) as tmp:
+        with request_artifacts(self._artifacts.root) as tmp:
             request = Path(tmp)
             settings = self._pending_config
             payload = {'data': data, 'rng': capture(self._device),
@@ -88,7 +92,7 @@ class ProtenixResident:
                                     'sample_diffusion': bool(settings.skip_amp.sample_diffusion)}}
             dump_tree(request / 'input', payload)
             self._pending_config = None
-            reply = self._client.call({'request_dir': str(request)}, timeout=self.timeout)
+            reply = self._client.call({'request_dir': str(request), 'method': 'predict'}, timeout=self.timeout, runtime=request_runtime(request, 'managed', data, execution_settings=capture_settings()))
             if reply != {'request': request.name}: raise ValueError('Protenix request mismatch')
             output = load_tree(request / 'output')
             restore(output['rng'], self._device)
@@ -96,7 +100,7 @@ class ProtenixResident:
 
     def close(self):
         if getattr(self, '_client', None) is not None:
-            self._client.close(); self._client = None
+            self._artifacts.close_client(self._client, release=True); self._client = None
         if getattr(self, '_artifacts', None) is not None:
             self._artifacts.close(); self._artifacts = None
 

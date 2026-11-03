@@ -69,6 +69,10 @@ class ModelRunner:
         self._model_config = config
         self._device = device
         self._model_dir = model_dir
+        self._weight_load_count = 0
+        self._device_load_count = 0
+        self._resident_params = None
+        self._closed = False
 
     def set_cyclic_asym_ids(self, cyclic_asym_ids: Sequence[int] | None) -> None:
         ids = tuple(int(x) for x in (cyclic_asym_ids or ()))
@@ -101,7 +105,47 @@ class ModelRunner:
     @functools.cached_property
     def model_params(self) -> hk.Params:
         """Loads model parameters from the model directory."""
-        return params.get_model_haiku_params(model_dir=self._model_dir)
+        if self._closed:
+            raise RuntimeError("AF3 model runner is closed")
+        result = params.get_model_haiku_params(model_dir=self._model_dir)
+        self._weight_load_count += 1
+        return result
+
+    def ensure_resident(self):
+        """Transfer immutable parameters once, without changing their dtype.
+
+        Legacy direct execution keeps its original host-parameter path.  The
+        resident worker calls this under startup admission and accounts for the
+        device allocation separately from request scratch space.
+        """
+        if self._closed:
+            raise RuntimeError("AF3 model runner is closed")
+        if self._resident_params is None:
+            resident = jax.device_put(self.model_params, self._device)
+            jax.block_until_ready(resident)
+            self._resident_params = resident
+            self._device_load_count += 1
+            self.__dict__.pop("_model", None)
+        return self._resident_params
+
+    def lifecycle(self):
+        from astrolabe.evaluators.lifecycle import model_lifecycle
+        return model_lifecycle(
+            self._resident_params, loaded="model_params" in self.__dict__,
+            load_count=self._weight_load_count,
+            device={"platform": str(self._device.platform), "id": int(self._device.id)},
+            ready=not self._closed,
+            components={"parameter_loads": self._weight_load_count,
+                        "parameter_device_transfers": self._device_load_count},
+        )
+
+    def close(self):
+        self._closed = True
+        self.__dict__.pop("_model", None)
+        self._resident_params = None
+        self.__dict__.pop("model_params", None)
+        # JAX's allocator can retain freed buffers.  The broker releases its
+        # resident reservation only after the worker process has exited.
 
     @functools.cached_property
     def _model(
@@ -114,13 +158,16 @@ class ModelRunner:
             return model.Model(self._model_config)(batch)
 
         return functools.partial(
-            jax.jit(forward_fn.apply, device=self._device), self.model_params
+            jax.jit(forward_fn.apply, device=self._device),
+            self._resident_params if self._resident_params is not None else self.model_params,
         )
 
     def run_inference(
         self, featurised_example: features.BatchDict, rng_key: jnp.ndarray
     ) -> model.ModelResult:
         """Computes a forward pass of the model on a featurised example."""
+        if self._closed:
+            raise RuntimeError("AF3 model runner is closed")
         featurised_example = jax.device_put(
             jax.tree_util.tree_map(
                 jnp.asarray, utils.remove_invalidly_typed_feats(featurised_example)

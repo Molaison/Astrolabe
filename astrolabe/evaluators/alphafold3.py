@@ -264,6 +264,8 @@ class AlphaFold3Evaluator(Evaluator):
         output = {}
         for oligo, feat in input_feat.items():
             if getattr(self, "resident", None) is not None:
+                if hasattr(self.resident, 'validate_config'):
+                    self.resident.validate_config(self.af3_conf)
                 from astrolabe.constraints import Constraint, ConstraintKind, validate_constraints
                 declared = self._get_config_value(self.af3_conf, "daemon_constraints", ()) or ()
                 # These declarations have no corresponding compiler into AF3
@@ -280,6 +282,9 @@ class AlphaFold3Evaluator(Evaluator):
                                    (ConstraintKind.TOPOLOGY, "query_residue_index_jumps")}}
                 validate_constraints("af3", constraints, allowed)
                 prepared = None
+                import time
+                from astrolabe.runtime.admission import stage_event
+                prepare_started = time.perf_counter()
                 cache_enabled = bool(self._get_config_value(self.af3_conf, "feature_cache", False))
                 if cache_enabled:
                     from copy import deepcopy
@@ -313,12 +318,18 @@ class AlphaFold3Evaluator(Evaluator):
                     if cache_enabled:
                         self._last_feature_cache = (key, deepcopy(prepared))
                 examples, cyclic, patches = prepared
+                stage_event('cpu_prepare', duration=time.perf_counter() - prepare_started,
+                            identity=self.resident.feature_identity, stage='af3_featurise_or_cache',
+                            cache_hit=bool(cache_enabled and cached and cached[0] == key))
                 results = self.resident.forward(feat.rng_seeds, examples, cyclic, patches)
                 from astrolabe.evaluators.wrappers.alphafold3 import ModelRunner
                 class Extractor:
                     def extract_structures(self, **kwargs):
                         return ModelRunner.extract_structures(None, **kwargs)
+                finalize_started = time.perf_counter()
                 output[oligo] = self.finalize_features(Extractor(), feat, examples, results)
+                stage_event('cpu_finalize', duration=time.perf_counter() - finalize_started,
+                            identity=self.resident.feature_identity, stage='af3_extract_structures')
                 continue
             output[oligo] = self.predict_structure(
                 fold_input=feat,
@@ -399,6 +410,10 @@ class AlphaFold3Evaluator(Evaluator):
             )
         self.buckets = buckets_by_oligo
         return inputs
+
+    def close(self):
+        self._last_feature_cache = None
+        super().close()
 
     def prepare_output(self, outputs, inputs, runtime_config):
 

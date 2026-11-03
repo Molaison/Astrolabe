@@ -114,6 +114,7 @@ class ESMFoldEvaluator(Evaluator):
         self._model = model
         self._model_name = model_name
         self._device = device
+        self._weight_load_count = 0
         self._execution = execution
         self._resident = None
 
@@ -165,6 +166,7 @@ class ESMFoldEvaluator(Evaluator):
             self._device = device
 
         self._model = model.eval().to(device)
+        self._weight_load_count += 1
         return self._model
 
     def prepare_input(self, inputs, runtime_config):
@@ -229,6 +231,5 @@ class ESMFoldEvaluator(Evaluator):
         return StandardScores(names=names, **results)
 
     def close(self):
-        if self._resident is not None:
-            self._resident.close()
-            self._resident = None
+        super().close()
+        self._model = None

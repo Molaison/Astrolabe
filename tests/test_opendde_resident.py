@@ -35,12 +35,20 @@ def get_default_runner(**kwargs):
     assert kwargs['n_cycle'] == 10 and kwargs['n_step'] == 200 and kwargs['n_sample'] == 1
     download_inference_cache(cfg)
     with open(os.environ['FAKE_OPENDDE_LOADS'], 'a') as f: f.write('load\\n')
-    return SimpleNamespace(configs=cfg, device=torch.device('cpu'), dumper=SimpleNamespace(base_dir=cfg.dump_dir))
+    from runner.inference import InferenceRunner
+    runner = InferenceRunner()
+    runner.configs, runner.device, runner.dumper = cfg, torch.device('cpu'), SimpleNamespace(base_dir=cfg.dump_dir)
+    runner.load_checkpoint()
+    return runner
 def preprocess_input(input_json, **kwargs): return input_json
 ''')
     (root / 'runner' / 'inference.py').write_text('''\
 import json
 from pathlib import Path
+class InferenceRunner:
+    def load_checkpoint(self):
+        import torch
+        self.model = torch.nn.Linear(1, 1)
 def infer_predict(runner, cfg):
     job = json.loads(Path(cfg.input_json_path).read_text())[0]
     for seed in job['modelSeeds']:
@@ -81,7 +89,7 @@ def infer_predict(runner, cfg):
         if hasattr(runner, '_resident'): runner._resident.close()
 
 
-def test_opendde_resident_rejects_distributed_and_broker(monkeypatch, tmp_path):
+def test_opendde_resident_rejects_distributed_in_all_modes(monkeypatch, tmp_path):
     from astrolabe.evaluators.opendde_resident import OpenDDEResident
     from astrolabe.evaluators.wrappers.opendde import OpenDDERunner
     runner = OpenDDERunner(python_bin=sys.executable, foldcp_mode='distributed')
@@ -89,5 +97,5 @@ def test_opendde_resident_rejects_distributed_and_broker(monkeypatch, tmp_path):
         OpenDDEResident(runner)
     monkeypatch.setenv('ASTROLABE_EXECUTION_ENDPOINT', 'broker')
     monkeypatch.setenv('ASTROLABE_EXECUTION_TOKEN', 'token')
-    with pytest.raises(ValueError, match='trajectory-exclusive'):
+    with pytest.raises(ValueError, match='single-device'):
         OpenDDEResident(runner)

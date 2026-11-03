@@ -24,8 +24,9 @@ def test_auto_bounds_reach_runtime_with_original_repeat_seeds(monkeypatch):
         return 4
     monkeypatch.setattr(session, 'run_parallel', execute)
     run.run_repeats(config())
-    assert seen == {'max_active': 2, 'max_resident_models': 2,
-                    'max_resident_per_device': 1, 'seeds': [17, 18, 19, 20]}
+    assert seen == {'max_active': 2, 'max_resident_models': 32,
+                    'max_resident_per_device': 32, 'resource_limits': {}, 'control': {},
+                    'seeds': [17, 18, 19, 20]}
 
 
 def test_disabled_auto_never_probes_device_or_uses_parallel_runtime(monkeypatch):

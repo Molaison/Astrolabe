@@ -1,17 +1,98 @@
-# Experimental isolated trajectories
+# Isolated trajectories and shared execution admission
 
-`execution.enabled: true` runs configured repeats in separate Python processes, preserving each repeat's original seed and trajectory loop. `execution.max_active` defaults to 1 and sets an upper bound on active repeats. Admission starts at at most two and adjusts only after repeat completions, using repeat durations, completed broker calls and their queue/service times, waiting requests, CPU load and cgroup-v2 memory pressure. It decreases conservatively under pressure or a large observed slowdown; it does not change the scientific work or launch benchmark trajectories. CPU load is host-wide and can therefore make admission conservative on shared systems. This heuristic does not claim to fill GPU SMs or establish a performance improvement. A graceful stop stops admission and lets already active repeats finish. Output directories may be assigned in a different order; provenance contains each repeat's seed.
+The current implementation and operator instructions are documented in
+[runtime_execution_guide.md](runtime_execution_guide.md). The preserved baseline
+is recorded in [runtime_implementation_baseline.md](runtime_implementation_baseline.md);
+exact evaluator and mutator variants and their evidence limits are in
+[evaluator_lifecycle_matrix.md](evaluator_lifecycle_matrix.md) and
+[mutator_lifecycle_matrix.md](mutator_lifecycle_matrix.md).
 
-This mode fails closed for unsupported components. It accepts MCMC, dummy evaluators, the explicitly declared CPU loss and selector implementations in `astrolabe.runtime.capabilities`, and AF3 daemon only when its adapter declares `BROKER_SHARED_ROOT = True` and `BROKER_ADMITTED_PROBE = True`. It checks active mutators, evaluators, transition-gate evaluators and selectors, all configured non-null losses, and registered implicit losses used by active expressions. Empty structure starts and disabled hooks are inert; active structure starts, predockers, evaluation hooks, per-residue plugins, unreviewed loss/selector implementations and other mutators/evaluators are rejected. The default `execution.enabled: false` retains the legacy path.
+## Current contract
 
-Selector admission pins the source digests of both the dispatch and selected implementations. A source change requires review and an explicit digest update before admission; a matching class name alone does not grant it. This pins those files, not the full transitive dependency tree.
+`execution.enabled: true` runs the already configured repeats in separate
+GPU-hidden trajectory processes. The original repeat seeds and scientific state
+writers remain unchanged. Admission starts at one independent trajectory and
+uses bounded observation windows, hysteresis, resource pressure, failures and
+backend/shape completion rates to adjust in-flight work. Complete trajectory
+completion counts are recorded separately from short-window phase proxies.
+The default remains `execution.enabled: false`.
 
-Each runtime session owns a private artifact directory and authenticated local broker. The broker retains a model subprocess for an exact identity and identical launch command/environment, serializes initialization and forward calls per declared device, and never replays a request. Multiple devices are permitted only when explicitly listed in the launcher's CUDA_VISIBLE_DEVICES; each worker and probe receives exactly its chosen allocation token. Trajectories receive a round-robin preferred token, used by admitted probes unless the adapter explicitly selects another allocated token. An adapter must probe under admission and verify its worker identity. Calls on different tokens can overlap; calls on the same token remain serialized. Mixed numeric and nonnumeric allocations, noncanonical numeric aliases, duplicates and abbreviated GPU UUIDs are rejected. Other distinct aliases for the same physical GPU cannot be resolved by the broker; the launcher must provide unique physical identities. The device lease is released after the forward, so trajectory CPU work can overlap it. A failed or uncertain worker fences that device for the rest of the session. The broker does not coordinate with other sessions, other users, or unrelated programs. On owner exit, the broker stops admission, terminates resident workers, waits for active handlers, and cleans its artifact root. Sudden broker death or an unkillable descendant remains an outcome-unknown boundary, not exact recovery.
+Both evaluator and mutator workers use the same broker ledger. Allocated CUDA
+tokens are resolved to physical UUIDs; a per-user OS lock prevents competing
+Astrolabe owners in the same shared host lock domain. Containers must share that
+domain or have an exclusive outer allocation. Other users and unrelated
+programs remain the external scheduler's responsibility. Unknown allocation,
+identity, telemetry or residency never authorizes additional GPU capacity.
+Same-card device execution remains serial; no cross-request batching has been
+numerically certified.
 
-Each trajectory interpreter starts with GPU visibility cleared, JAX restricted to CPU, and optional CLI CUDA preinitialization disabled. `ASTROLABE_ALLOCATED_CUDA_DEVICES` communicates the launcher's allocation as an assertion checked by the broker; it is not owner CUDA visibility. The broker supplies its own allocation to admitted device probes and model workers. This process boundary does not change the CLI parent's earlier startup behavior.
+Worker registration limits (`max_resident_models`, `max_resident_per_device`)
+are separate from resident/scratch VRAM, CPU/RAM, prepared requests and output
+budgets. The CLI exposes these limits and `execution.resources` /
+`execution.control`. Defaults and units are in the operator guide.
+Managed handlers yield the device slot during audited CPU stages while retaining
+their request's memory/output reservation. Composite native calls retain both
+CPU and GPU admission. Related embedding models and known external subprocesses
+remain in the admitted process group.
 
-The session admits at most `execution.max_resident_models` model workers, defaulting to one. The broker API additionally supports `BrokerSession(max_resident_per_device=N)`, defaulting to the session limit; the pipeline does not yet expose this setting. Both are worker-count budgets, not VRAM byte budgets. Raising them can exhaust device memory and does not enable concurrent forwards on one device.
+Process liveness, successful weight loads, tensor/device residency and readiness
+are separate lifecycle fields. Exact model identity includes actual code,
+checkpoint, interpreter/package/native library environment, relevant initialization
+settings and precision. Unobserved fields stay unknown. A live daemon is not
+a load or residency certificate.
 
-`CPUExecutor` maintains GPU-hidden Python subprocesses for its lifetime. Inputs and outputs are JSON, in-flight input bytes and item count are bounded, and each result is limited to `max_pending_bytes / (2 * workers)` so completed results are also bounded. `close()` waits for running work and closes workers. This utility is not yet used by the trajectory scoring and preparation code; those stages remain in trajectory processes.
+## Failure and containment
 
-See the task coordination document `EXECUTION_BROKER_API.md` for adapter details. CPU dummy and mock-device tests demonstrate protocol and scheduling mechanics only; they do not validate GPU numerical equivalence or performance.
+Client/worker epochs, transport request IDs and scientific identities fence
+duplicate, out-of-order and late responses. Outcome-unknown errors are preserved
+end-to-end and never trigger an automatic scientific retry. The native owner
+retains accepted revisions, stage transactions, fixed/shared segments and RNG.
+Terminal completion is recorded only after requested release is confirmed.
+
+A guardian holds the physical-device owner lock across broker death. CUDA-capable
+worker bootstrap registers its PID/start time before model imports; known child
+processes inherit the managed group. Group cleanup is anchored to process
+identities, so stale numeric PIDs/PGIDs are not blindly killed. Unconfirmed
+cleanup retains artifacts and admission ownership.
+
+Arbitrary third-party double-fork/session-detaching behavior is outside this
+process-group certification. Such a backend needs job-cgroup containment and
+explicit runtime evidence before its entire descendant lifetime can be certified.
+It must not be declared released merely because an opaque bridge exited.
+Standard tree-codec byte limits are enforced before publication; vendor-written
+files, RSS and VRAM use sampled breach detection/termination, not a filesystem
+or kernel memory hard quota.
+
+## Supported and rejected components
+
+The actual factory/registry and adapter declarations define the backend range.
+All 13 evaluator families and the 20 mutator registry names are inventoried in
+the matrices, including CPU-only implementations and exact MPNN/Protenix variants.
+A registered bridge or implementation contract is not GPU numerical certification.
+New Boltz2 and unspecified native callback versions are not silently substituted.
+
+The runtime checks active mutators/evaluators/gate evaluators, configured losses
+and implicit loss expressions, selectors and hooks. Active structure starts,
+predockers, GPU-capable per-residue plugins and unreviewed losses/selectors/hooks
+still fail closed until their resource boundary is connected. Selector admission
+pins the reviewed dispatch and implementation digests, not merely a class name.
+
+`CPUExecutor` remains a separately usable bounded, GPU-hidden subprocess utility.
+It is not the trajectory scoring/preparation call chain; those stages stay in
+their existing trajectory owner. The implementation does not claim to have moved
+every CPU operation to a new pool.
+
+## Evidence and comparison
+
+`scripts/validation/runtime_workflow_benchmark.py` interleaves fixed direct,
+resident-serial and adaptive workloads, with an explicit overall time/output
+budget, external timing, score/decision and emitted-coordinate comparisons.
+`--direct-repo` selects a frozen old checkout; otherwise the baseline is explicitly
+the current checkout's legacy path. Raw logs, traces, source manifests and
+integration results live in `evidence/runtime-20261103/`.
+
+GPU activity is diagnostic. Effective completed scientific work and resource
+cost determine the result. CPU fixtures, synthetic checkpoints, import tests and
+mock-device tests do not certify trained GPU models, cache equivalence or speed.
+Real GPU certification remains configuration-specific and requires an allocated
+device, exact installed versions/weights and an explicit experiment budget.

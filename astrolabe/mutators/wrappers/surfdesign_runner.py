@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-import selectors
 import subprocess
 import threading
 import uuid
@@ -89,6 +88,8 @@ class SurfDesignRunner:
         self._started = False
         self._closed = False
         self._request_index = 0
+        self._ready = None
+        self._prepared_payload = None
         self._lock = threading.RLock()
 
     @staticmethod
@@ -179,33 +180,24 @@ class SurfDesignRunner:
         try:
             ready = self._read_response(proc, self.startup_timeout)
         except Exception:
-            proc.terminate()
-            proc.wait()
+            from astrolabe.mutators.wrappers.subprocess_protocol import stop_process
+            stop_process(proc)
             raise
-        if ready.get("type") != "ready" or ready.get("model_load_count") != 1:
-            proc.terminate()
-            proc.wait()
+        if ready.get("type") != "ready" or ready.get("pid") != proc.pid or ready.get("model_load_count") != 1:
+            from astrolabe.mutators.wrappers.subprocess_protocol import stop_process
+            stop_process(proc)
             raise RuntimeError(f"Unexpected SurfDesign daemon startup response: {ready}")
+        self._ready = ready
         return proc
 
     @staticmethod
     def _read_response(
         proc: subprocess.Popen[str], timeout: float | None
     ) -> dict[str, Any]:
-        assert proc.stdout is not None
-        selector = selectors.DefaultSelector()
-        selector.register(proc.stdout, selectors.EVENT_READ)
-        try:
-            if not selector.select(timeout):
-                raise TimeoutError("Timed out waiting for SurfDesign daemon response.")
-        finally:
-            selector.close()
-        line = proc.stdout.readline()
-        if not line:
-            raise RuntimeError(
-                f"SurfDesign daemon exited unexpectedly with code {proc.poll()}."
-            )
-        return json.loads(line)
+        from astrolabe.mutators.wrappers.subprocess_protocol import read_message
+        if not hasattr(proc, "_astrolabe_response_buffer"):
+            proc._astrolabe_response_buffer = bytearray()
+        return read_message(proc, proc._astrolabe_response_buffer, timeout=timeout)
 
     @staticmethod
     def _write_request(proc: subprocess.Popen[str], payload: dict[str, Any]) -> None:
@@ -235,25 +227,61 @@ class SurfDesignRunner:
             )
         return probabilities
 
+    def prepare_request(self, **features: Any) -> None:
+        """CPU surface generation; the resident child must already be ready."""
+        with self._lock:
+            if self._proc is None or self._proc.poll() is not None:
+                raise RuntimeError("SurfDesign CPU preparation requires an initialized resident daemon")
+            if self._prepared_payload is not None:
+                raise RuntimeError("SurfDesign already has a prepared request")
+            # Older externally supplied scripts remain one composite operation.
+            if not self._ready or "prepare" not in self._ready.get("phases", []):
+                return
+            pdb_path = self._required_file(features.get("pdb_path"), "pdb_path")
+            payload = {"type": "prepare", "id": uuid.uuid4().hex,
+                       "pdb_path": str(pdb_path),
+                       "fixed_residues": str(features.get("fixed_residues") or ""),
+                       "seed": self.seed + self._request_index}
+            self._request_index += 1
+            self._write_request(self._proc, payload)
+            response = self._read_response(self._proc, self.request_timeout)
+            if response != {"type": "prepared", "id": payload["id"]}:
+                raise RuntimeError("SurfDesign preparation response identity mismatch")
+            self._prepared_payload = payload
+
     def design_sequences(self, **features: Any) -> dict[str, Any]:
         pdb_path = self._required_file(features.get("pdb_path"), "pdb_path")
         if pdb_path.suffix.lower() not in {".pdb", ".cif", ".mmcif"}:
             raise ValueError(
                 "SurfDesign mutator requires evaluator structures in PDB or mmCIF format."
             )
-        request_id = uuid.uuid4().hex
         with self._lock:
-            payload = {
-                "type": "infer",
-                "id": request_id,
-                "pdb_path": str(pdb_path),
-                "fixed_residues": str(features.get("fixed_residues") or ""),
-                "seed": self.seed + self._request_index,
-            }
-            self._request_index += 1
+            if self._prepared_payload is not None:
+                payload = dict(self._prepared_payload)
+                if payload["pdb_path"] != str(pdb_path) or payload["fixed_residues"] != str(features.get("fixed_residues") or ""):
+                    raise ValueError("SurfDesign prepared input identity mismatch")
+                payload["type"] = "infer_prepared"
+                self._prepared_payload = None
+            else:
+                payload = {"type": "infer", "id": uuid.uuid4().hex,
+                           "pdb_path": str(pdb_path),
+                           "fixed_residues": str(features.get("fixed_residues") or ""),
+                           "seed": self.seed + self._request_index}
+                self._request_index += 1
+            request_id = payload["id"]
             proc = self._ensure_daemon()
-            self._write_request(proc, payload)
-            response = self._read_response(proc, self.request_timeout)
+            try:
+                self._write_request(proc, payload)
+                response = self._read_response(proc, self.request_timeout)
+            except BaseException:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=5)
+                self._closed = True
+                raise
         if response.get("type") != "result" or response.get("id") != request_id:
             raise RuntimeError(f"Unexpected SurfDesign daemon response: {response}")
         return {
@@ -269,24 +297,22 @@ class SurfDesignRunner:
             return
         with self._lock:
             proc = self._proc
-            if proc is not None:
-                if proc.poll() is not None:
-                    self._closed = True
-                    raise RuntimeError(
-                        "SurfDesign daemon exited before shutdown; "
-                        f"return code {proc.returncode}."
-                    )
-                self._write_request(proc, {"type": "shutdown"})
-                response = self._read_response(proc, 30.0)
-                if response.get("type") != "ok":
-                    raise RuntimeError(
-                        f"Unexpected SurfDesign daemon shutdown response: {response}"
-                    )
-                return_code = proc.wait(timeout=30.0)
-                if return_code != 0:
-                    raise RuntimeError(
-                        f"SurfDesign daemon shutdown returned code {return_code}."
-                    )
-            self._closed = True
+            try:
+                if proc is not None:
+                    if proc.poll() is not None:
+                        raise RuntimeError("SurfDesign daemon exited before shutdown; "
+                                           f"return code {proc.returncode}.")
+                    self._write_request(proc, {"type": "shutdown"})
+                    response = self._read_response(proc, 5.0)
+                    if response.get("type") != "ok":
+                        raise RuntimeError(f"Unexpected SurfDesign daemon shutdown response: {response}")
+                    if proc.wait(timeout=5.0) != 0:
+                        raise RuntimeError("SurfDesign daemon shutdown returned nonzero status")
+            finally:
+                from astrolabe.mutators.wrappers.subprocess_protocol import stop_process
+                stop_process(proc)
+                self._ready = None
+                self._prepared_payload = None
+                self._closed = True
 
     shutdown = close

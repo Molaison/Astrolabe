@@ -13,6 +13,8 @@ class CarbonDesignRunner:
     """Thin wrapper that exposes CarbonDesign inference as a reusable runner."""
 
     def __init__(self, args) -> None:
+        self.model_load_count = 0
+        self._closed = False
         self.args = args
         self.repo_path = self._resolve_absolute_path(self._get("repo_path"))
         self.output_dir = pathlib.Path(
@@ -38,6 +40,8 @@ class CarbonDesignRunner:
         )
 
     def design_sequences(self, data_dir: str, name_idx: List[str]) -> Dict[str, Dict[str, torch.Tensor]]:
+        if self._closed:
+            raise RuntimeError("CarbonDesign runner is closed")
         if not name_idx:
             return {}
         loader = self._dataset_test.load(
@@ -77,6 +81,19 @@ class CarbonDesignRunner:
                         "sampling_probs": probs[i : i + 1, :valid_len].detach().cpu()
                     }
         return outputs
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        self.model.to("cpu")
+        self.model = None
+        self._feats = []
+        if self.device.type == "cuda":
+            torch.cuda.synchronize(self.device)
+            torch.cuda.empty_cache()
+
+    shutdown = close
 
     # --------------------------------------------------------------------- #
     # Internal helpers
@@ -158,4 +175,5 @@ class CarbonDesignRunner:
         model.load_state_dict(state_dict, strict=False)
         model.to(self.device)
         model.eval()
+        self.model_load_count += 1
         return model

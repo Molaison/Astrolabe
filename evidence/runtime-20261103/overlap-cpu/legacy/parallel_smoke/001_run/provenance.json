@@ -1,0 +1,77 @@
+{
+  "config": {
+    "algorithm": "sha256",
+    "path": "config.yaml",
+    "reason": null,
+    "sha256": "7ad33f9a1a6e70360060d5e71a1cdc846091f25a994d86f1e5afd46aef041cf1"
+  },
+  "dependencies": {
+    "biopython": "1.86",
+    "hydra-core": "1.3.2",
+    "numpy": "1.26.4",
+    "omegaconf": "2.3.0",
+    "scipy": "1.17.0",
+    "torch": "2.7.1"
+  },
+  "ended_at": "2026-11-03T11:48:00+00:00",
+  "error": null,
+  "git": {
+    "available": true,
+    "branch": "HEAD",
+    "commit": "834402daade9f62e9dec0b08041dade163a89369",
+    "dirty": true,
+    "dirty_entries": 80,
+    "dirty_scope": "tracked modifications; untracked files and submodule worktrees excluded",
+    "reason": null,
+    "root": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test"
+  },
+  "hardware": {
+    "cpu_count": 20,
+    "device_visibility_env": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "HIP_VISIBLE_DEVICES": null,
+      "NVIDIA_VISIBLE_DEVICES": "void"
+    },
+    "machine": "x86_64",
+    "nvidia_smi": {
+      "available": false,
+      "reason": "nvidia-smi not found on PATH"
+    },
+    "platform": "Linux-4.18.0-553.180.1.el8_10.x86_64-x86_64-with-glibc2.39"
+  },
+  "input_files": {
+    "homologies": {},
+    "named_files": null
+  },
+  "python": {
+    "executable": "/alphafold3_venv/bin/python",
+    "implementation": "CPython",
+    "version": "3.11.14"
+  },
+  "run": {
+    "repeat_index": 0,
+    "repeats": 2,
+    "run_dir": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot04-pytest/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/001_run",
+    "seed": 17,
+    "task_name": "parallel_smoke"
+  },
+  "schema_version": 1,
+  "started_at": "2026-11-03T11:47:59+00:00",
+  "state": "completed",
+  "status_history": [
+    {
+      "at": "2026-11-03T11:47:59+00:00",
+      "state": "started"
+    },
+    {
+      "at": "2026-11-03T11:48:00+00:00",
+      "state": "completed"
+    }
+  ],
+  "terminal": true,
+  "updated_at": "2026-11-03T11:48:00+00:00",
+  "version": {
+    "astrolabe": "0.1.0",
+    "source": "package attribute"
+  }
+}

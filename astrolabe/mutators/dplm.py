@@ -48,7 +48,8 @@ class DPLMMutator(Mutator):
 
     def __init__(self, position_selector=None, **runner_kwargs) -> None:
         self.position_selector = position_selector
-        self.runner = DPLMRunner(runner_kwargs)
+        from astrolabe.mutators.resident import build_runner
+        self.runner = build_runner("dplm", runner_kwargs)
         self.mask_token = "<mask>"
         self._prefetch_save = bool(runner_kwargs.get("prefetch_save", True))
         # Default: safe behavior (invalidate cache when accepted sequence changes).

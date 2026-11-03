@@ -1267,6 +1267,13 @@ def test_rf3_runner_uses_external_python_daemon_when_python_bin_is_set(
         def terminate(self) -> None:
             self._terminated = True
 
+        def kill(self) -> None:
+            self._terminated = True
+
+        def wait(self, timeout=None) -> int:
+            self._terminated = True
+            return 0
+
     popen_calls: list[dict[str, object]] = []
 
     def _fake_popen(*, args, cwd, stdin, stdout, stderr, text, bufsize):

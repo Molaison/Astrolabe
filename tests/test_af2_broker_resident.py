@@ -8,6 +8,11 @@ import sys
 
 def test_two_owners_share_af2_and_worker_death_fences(tmp_path, monkeypatch):
     from astrolabe.runtime.session import BrokerSession
+    # This fixture exercises audited AF2 code with CPU-only model apply. It
+    # must not inherit an unrelated test's or host's GPU allocation.
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', '')
+    monkeypatch.setenv('JAX_PLATFORMS', 'cpu')
+    monkeypatch.delenv('ASTROLABE_PREFERRED_CUDA_DEVICE', raising=False)
     fake = tmp_path / 'fake_af2.py'
     fake.write_text('''\
 import os

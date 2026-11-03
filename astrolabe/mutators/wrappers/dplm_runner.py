@@ -11,6 +11,9 @@ import subprocess
 import threading
 import uuid
 import weakref
+import select
+import signal
+import time
 from typing import Any, Dict, Iterable, Iterator, List, Sequence
 
 
@@ -24,6 +27,13 @@ def _terminate_process(proc: subprocess.Popen) -> None:
     try:
         proc.terminate()
     except Exception:
+        pass
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait(timeout=5)
+    except (AttributeError, ProcessLookupError):
         pass
 
 
@@ -66,7 +76,34 @@ class DPLMRunner:
         self._proc_finalizer: weakref.finalize | None = None
         self._lock = threading.RLock()
         self._closed = False
+        self._started = False
+        self._ready = None
+        self._response_buffer = b""
+        self.startup_timeout = float(self._get("startup_timeout", 600))
+        self.request_timeout = self._get("request_timeout", None)
         self._response_cache_mem: Dict[str, List[str]] = {}
+        self._cache_dependency_identity = None
+
+    def _cache_dependencies(self):
+        if self._cache_dependency_identity is not None:
+            return self._cache_dependency_identity
+        from astrolabe.evaluators.worker_identity import digest_path, identity
+        from astrolabe.mutators.wrappers.dplm_infer import _resolve_model_name
+        source = pathlib.Path(_resolve_model_name(str(self.model_name))).expanduser()
+        code_digest = hashlib.sha256()
+        for path in sorted(self.repo_path.rglob("*")):
+            if (path.is_file() and "__pycache__" not in path.parts
+                    and path.suffix in (".py", ".json", ".yaml", ".yml", ".so")):
+                code_digest.update(str(path.relative_to(self.repo_path)).encode())
+                code_digest.update(bytes.fromhex(digest_path(path)))
+        self._cache_dependency_identity = {
+            "model_content": digest_path(source) if source.exists() else None,
+            "model_source": str(source.resolve()) if source.exists() else str(self.model_name),
+            "repo_code": code_digest.hexdigest(),
+            "inference_code": [digest_path(self.script_path), digest_path(self.daemon_script_path)],
+            "environment": identity(str(self.python_bin), [], [], {"name": str(self.device)})["environment"],
+        }
+        return self._cache_dependency_identity
 
     def __enter__(self) -> "DPLMRunner":
         self._ensure_open()
@@ -127,7 +164,8 @@ class DPLMRunner:
 
     def _cache_key(self, task: Dict[str, Any]) -> str:
         payload = {
-            "version": 1,
+            "version": 2,
+            "dependencies": self._cache_dependencies(),
             "name": str(task.get("name") or ""),
             "masked_sequence": str(task.get("masked_sequence") or ""),
             "model_name": str(self.model_name),
@@ -237,6 +275,8 @@ class DPLMRunner:
         self._ensure_open()
         if self._proc is not None and self._proc.poll() is None:
             return self._proc
+        if self._started:
+            raise RuntimeError("DPLM daemon exited; implicit restart and request replay are disabled")
         if self._proc_finalizer is not None:
             self._proc_finalizer.detach()
             self._proc_finalizer = None
@@ -272,8 +312,39 @@ class DPLMRunner:
             bufsize=1,
         )
         self._proc = proc
+        self._started = True
         self._proc_finalizer = weakref.finalize(self, _terminate_process, proc)
+        try:
+            ready = self._read_daemon_response(self.startup_timeout)
+            if ready.get("type") != "ready" or ready.get("pid") != proc.pid or ready.get("model_load_count") != 1:
+                raise RuntimeError(f"DPLM startup identity mismatch: {ready}")
+            self._ready = ready
+        except BaseException:
+            _terminate_process(proc)
+            raise
         return proc
+
+    def _read_daemon_response(self, timeout):
+        proc = self._proc
+        if proc is None or proc.stdout is None:
+            raise RuntimeError("DPLM daemon is not running")
+        limit = int(self._get("max_message_bytes", 16 * 1024 * 1024))
+        deadline = None if timeout is None else time.monotonic() + float(timeout)
+        while b"\n" not in self._response_buffer:
+            remaining = None if deadline is None else max(0, deadline - time.monotonic())
+            if not select.select([proc.stdout], [], [], remaining)[0]:
+                raise TimeoutError("DPLM daemon response timed out")
+            chunk = os.read(proc.stdout.fileno(), min(65536, limit + 1 - len(self._response_buffer)))
+            if not chunk:
+                raise EOFError("DPLM daemon exited before returning a complete response")
+            self._response_buffer += chunk
+            if len(self._response_buffer) > limit:
+                raise ValueError("DPLM response exceeds byte budget")
+        line, self._response_buffer = self._response_buffer.split(b"\n", 1)
+        value = json.loads(line)
+        if not isinstance(value, dict):
+            raise ValueError("DPLM daemon response must be an object")
+        return value
 
     def _daemon_request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         proc = self._ensure_daemon()
@@ -281,10 +352,7 @@ class DPLMRunner:
         assert proc.stdout is not None
         proc.stdin.write(json.dumps(payload) + "\n")
         proc.stdin.flush()
-        line = proc.stdout.readline()
-        if not line:
-            raise RuntimeError("DPLM daemon exited unexpectedly.")
-        return json.loads(line)
+        return self._read_daemon_response(self.request_timeout)
 
     def _daemon_infer(self, tasks: Sequence[Dict[str, Any]]) -> Dict[str, List[str]]:
         request_id = uuid.uuid4().hex
@@ -314,23 +382,28 @@ class DPLMRunner:
             return
         if proc.poll() is not None:
             self._proc = None
+            self._ready = None
             if self._proc_finalizer is not None:
                 self._proc_finalizer.detach()
                 self._proc_finalizer = None
             return
         try:
             with self._lock:
-                self._daemon_request({"type": "shutdown"})
+                assert proc.stdin is not None
+                proc.stdin.write(json.dumps({"type": "shutdown"}) + "\n")
+                proc.stdin.flush()
+                self._read_daemon_response(5)
         except Exception:
             pass
         try:
-            proc.terminate()
+            _terminate_process(proc)
         except Exception:
             pass
         if self._proc_finalizer is not None:
             self._proc_finalizer.detach()
             self._proc_finalizer = None
         self._proc = None
+        self._ready = None
 
     def close(self) -> None:
         if self._closed:
@@ -343,10 +416,14 @@ class DPLMRunner:
         if self.daemon:
             try:
                 return self._daemon_infer(task_list)
-            except Exception:
-                # One restart attempt in case of a broken pipe / stale daemon.
+            except Exception as exc:
+                # A partial write, timeout, or wrong response can follow a
+                # completed scientific request. Never generate a fresh seed
+                # and silently replace it with another sequence.
                 self.shutdown()
-                return self._daemon_infer(task_list)
+                self._closed = True
+                from astrolabe.runtime.client import OutcomeUnknown
+                raise OutcomeUnknown("DPLM result is unknown; request was not replayed") from exc
 
         payload = self._build_payload(task_list)
         session_id = uuid.uuid4().hex
@@ -366,18 +443,12 @@ class DPLMRunner:
         env = self._build_host_subprocess_env()
 
         try:
-            subprocess.run(
-                args=cmd,
-                check=True,
-                cwd=str(self.repo_path),
-                env=env,
-            )
-        except subprocess.CalledProcessError as exc:  # pragma: no cover - runtime error path
-            raise RuntimeError(
-                f"DPLM runner failed with exit code {exc.returncode}. Command: {' '.join(cmd)}"
-            ) from exc
-
-        try:
+            try:
+                subprocess.run(args=cmd, check=True, cwd=str(self.repo_path), env=env)
+            except subprocess.CalledProcessError as exc:
+                raise RuntimeError(
+                    f"DPLM runner failed with exit code {exc.returncode}. Command: {' '.join(cmd)}"
+                ) from exc
             return self._read_results(output_path)
         finally:
             # Cleanup intermediate files to avoid unbounded growth.

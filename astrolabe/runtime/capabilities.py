@@ -4,6 +4,32 @@ These declarations identify implementations, not claims about an arbitrary
 plugin bearing the same name. New GPU-capable components need broker adapters.
 """
 
+# These adapters implement the process/admission contract. This is NOT a
+# numerical, cache-equivalence or same-card-concurrency certification.
+BROKER_EVALUATORS = {
+    'alphafold3': 'af3_resident', 'alphafold2': 'af2_resident',
+    'esmfold': 'esmfold_resident', 'esmfold2': 'esmfold2_resident',
+    'protenix': 'protenix_resident', 'boltz': 'boltz_resident',
+    'chai1': 'chai1_resident', 'opendde': 'opendde_resident',
+    'mol1': 'mol1_resident', 'mol-1': 'mol1_resident',
+    'rf3': 'rf3_resident', 'rhofold': 'rhofold_resident',
+}
+CPU_EVALUATORS = frozenset({'dummy', 'rosetta_crystal'})
+
+
+def declares_broker_protocol(module):
+    """Inspect declarations without importing CUDA frameworks in the launcher."""
+    import ast
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / 'evaluators' / (module + '.py')
+    try:
+        tree = ast.parse(path.read_text())
+    except (OSError, SyntaxError):
+        return False
+    flags = {name.id: node.value.value for node in tree.body if isinstance(node, ast.Assign)
+             and isinstance(node.value, ast.Constant) for name in node.targets if isinstance(name, ast.Name)}
+    return flags.get('BROKER_SHARED_ROOT') is True and flags.get('BROKER_ADMITTED_PROBE') is True
+
 CPU_LOSSES = {
     **{name: 'astrolabe.losses.sequence' for name in (
         'sequence_residue_fraction', 'sequence_region_identity', 'sequence_edge_region_identity')},

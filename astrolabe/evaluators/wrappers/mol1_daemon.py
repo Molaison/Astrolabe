@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import time
 
 
 def main():
@@ -12,6 +13,7 @@ def main():
     from astrolabe.evaluators.worker_identity import identity
     from astrolabe.evaluators.request_path import request_directory
     from astrolabe.runtime.server import serve
+    from astrolabe.runtime.admission import operation, stage_event
     options = spec['options']
     if spec['semantics']['options'] != options or not spec['semantics']['trajectory']:
         raise ValueError('Mol-1 startup identity mismatch')
@@ -25,7 +27,9 @@ def main():
         import torch
         import mol
         from mol.runner import batch_inference as batch
-        from mol.runner.inference import infer_predict
+        from mol.runner.inference import infer_predict, InferenceRunner
+        from astrolabe.evaluators.loader_observer import LoaderObserver
+        checkpoint_loads = LoaderObserver(InferenceRunner, "load_checkpoint")
         if not Path(mol.__file__).resolve().is_relative_to(source / 'mol'):
             raise RuntimeError('Mol-1 imported unexpected source')
         if not Path(batch.__file__).resolve().is_relative_to(source / 'mol'):
@@ -67,10 +71,17 @@ def main():
         Path(runner.error_dir).mkdir()
         runner.dumper.base_dir = str(out)
         with contextlib.redirect_stdout(sys.stderr):
+            prepare_start = time.perf_counter()
             runner.configs.input_json_path = batch.preprocess_input(
                 str(input_json), out_dir=str(out), use_msa=options['use_msa'],
                 use_template=False, use_rna_msa=False)
-            infer_predict(runner, runner.configs)
+            stage_event('cpu_prepare', duration=time.perf_counter() - prepare_start, identity=actual)
+            # Native infer_predict includes seeding, data loading, inference,
+            # dumping and CUDA cache cleanup. Its admitted wall time is a
+            # composite scope, never a GPU kernel-duration measurement.
+            with operation(actual, phase='device') as lease:
+                infer_predict(runner, runner.configs)
+                lease.update_lifecycle(**lifecycle())
         for seed in data[0]['modelSeeds']:
             directory = out / name / f'seed_{int(seed)}' / 'predictions'
             summaries = sorted(directory.glob(f'{name}_summary_confidence_sample_*.json'))
@@ -80,8 +91,15 @@ def main():
                 raise RuntimeError(f'Mol-1 missing full confidence for {name} seed {seed}')
         if (out / 'ERR').exists() and any((out / 'ERR').iterdir()):
             raise RuntimeError('Mol-1 reported inference errors')
+        from astrolabe.evaluators.lifecycle import validate_output_directory
+        validate_output_directory(out)
         return {'request': request.name}
-    serve(handle, actual)
+    from astrolabe.evaluators.lifecycle import model_lifecycle
+    def lifecycle():
+        return model_lifecycle(runner.model, load_count=checkpoint_loads.count, loaded=checkpoint_loads.count > 0,
+                               device=spec['device'], components={'checkpoint_load_failures': checkpoint_loads.failures})
+    serve(handle, actual, load_count=checkpoint_loads.count, lifecycle=lifecycle,
+          capabilities={'managed_device': True, 'managed_methods': ['run']})
 
 
 if __name__ == '__main__': main()

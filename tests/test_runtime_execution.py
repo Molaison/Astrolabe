@@ -33,6 +33,9 @@ class RuntimeTest(unittest.TestCase):
             self.assertIsNotNone(client.process.poll())
 
     def test_cpu_parallel_real_processes_and_bounded_inputs(self):
+        previous = os.environ.get('CUDA_VISIBLE_DEVICES')
+        self.addCleanup(lambda: os.environ.pop('CUDA_VISIBLE_DEVICES', None) if previous is None
+                        else os.environ.__setitem__('CUDA_VISIBLE_DEVICES', previous))
         os.environ['CUDA_VISIBLE_DEVICES'] = 'sentinel'
         with CPUExecutor(2, max_pending_bytes=1024) as executor:
             a, b = list(executor.map('runtime_fixture:cpu_work', [
@@ -204,7 +207,7 @@ def test_unsupported_parallel_component_is_rejected():
     from omegaconf import OmegaConf
     from astrolabe.runtime.session import validate_parallel
     cfg = OmegaConf.create({'stages': {'default': {'mutators': ['bad'], 'evaluator': 'dummy'}},
-                            'mutator': {'mutator_terms': {'bad': {'_type': 'LigandMPNN'}}},
+                            'mutator': {'mutator_terms': {'bad': {'_type': 'unregistered_gpu_mutator'}}},
                             'evaluator': {'evaluator_terms': {'dummy': {'_type': 'dummy'}}}})
     with pytest.raises(ValueError, match='does not support mutator'):
         validate_parallel(cfg)
@@ -413,8 +416,8 @@ def test_auto_limit_uses_affinity_quota_and_slurm(monkeypatch, tmp_path):
     assert admission.resolve_active_limit(10, 3) == 3
     with pytest.raises(ValueError):
         admission.resolve_active_limit(True, 3)
-    assert admission.resolve_resident_limit('auto', '0,1') == 2
-    assert admission.resolve_resident_limit('auto', '') == 1
+    assert admission.resolve_resident_limit('auto', '0,1') == 32
+    assert admission.resolve_resident_limit('auto', '') == 32
     for allocation in ('0,00', '0,GPU-123', 'GPU-abc', '1,1'):
         with pytest.raises(ValueError):
             admission.allocated_devices(allocation)
@@ -434,7 +437,7 @@ def test_adaptive_limit_responds_to_queue_and_pressure():
 def test_trajectory_preference_drives_admitted_probe(monkeypatch, tmp_path):
     import json
     from astrolabe.runtime import admission, session
-    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'a,b')
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'mock-a,mock-b')
     monkeypatch.setattr(admission, 'resource_pressure', lambda _: False)
     observed = []
     def trajectory(cfg, *, env):
@@ -446,7 +449,7 @@ def test_trajectory_preference_drives_admitted_probe(monkeypatch, tmp_path):
         observed.append((cfg, env['CUDA_VISIBLE_DEVICES'], json.loads(output)['visible']))
     monkeypatch.setattr(session, 'run_trajectory', trajectory)
     assert session.run_parallel(range(4), 2, lambda: False, lambda _: None, max_resident_models=2) == 4
-    assert sorted(observed) == [(0, '', 'a'), (1, '', 'b'), (2, '', 'a'), (3, '', 'b')]
+    assert sorted(observed) == [(0, '', 'mock-a'), (1, '', 'mock-b'), (2, '', 'mock-a'), (3, '', 'mock-b')]
 
 
 def test_broker_reports_actual_compute_queue(monkeypatch, tmp_path):
@@ -558,7 +561,7 @@ out_dir: {tmp_path / 'unused'}
 raw_model_results_dir: {tmp_path / 'raw'}
 repeats: 2
 seed: 17
-steps: 2
+steps: 5
 ananas_path: null
 seqs: {{A: AAAA}}
 mutator:
@@ -579,8 +582,11 @@ stages:
     weighted_score_expression: plddt
     early_stopping: null
 """)
-    root_env = dict(os.environ, PYTHONPATH=str(ROOT) + os.pathsep + os.environ.get('PYTHONPATH', ''))
+    root_env = dict(os.environ, CUDA_VISIBLE_DEVICES='', NVIDIA_VISIBLE_DEVICES='void',
+                    JAX_PLATFORMS='cpu', GH_CUDA_PREINITIALIZE='0',
+                    PYTHONPATH=str(ROOT) + os.pathsep + os.environ.get('PYTHONPATH', ''))
     log = tmp_path / 'events.jsonl'
+    trace = tmp_path / 'trace.jsonl'
     rows = []
     for enabled in (False, True):
         out = tmp_path / ('runtime' if enabled else 'legacy')
@@ -588,8 +594,16 @@ stages:
         if enabled:
             env.update(ASTROLABE_TEST_BROKER='1', ASTROLABE_TEST_EVENTS=str(log),
                        ASTROLABE_TEST_FIXTURE=str(ROOT / 'tests/runtime_fixture.py'),
+                       ASTROLABE_RUNTIME_TRACE=str(trace),
                        PYTHONPATH=str(ROOT / 'tests/runtime_hook') + os.pathsep + root_env['PYTHONPATH'])
         overrides = f'execution.enabled={str(enabled).lower()} execution.max_active={2 if enabled else 1} out_dir={out}'
+        if enabled:
+            # Exercise the actual conservative controller with enough fixed
+            # warm work. This is a protocol/overlap fixture, not a benchmark.
+            overrides += (' execution.control.window_seconds=0.25'
+                          ' execution.control.min_completions=2'
+                          ' execution.control.poll_seconds=0.05'
+                          ' execution.control.cooldown_seconds=0.25')
         subprocess.run([sys.executable, '-m', 'astrolabe', 'run', '--standalone', str(config),
                         '--overrides', overrides], cwd=ROOT, env=env, check=True,
                        capture_output=True, text=True, timeout=120)
@@ -606,6 +620,9 @@ stages:
     assert len({e['owner'] for e in residents}) == 2
     assert len({e['worker'] for e in residents}) == 1
     assert {e['loads'] for e in residents} == {1}
+    control = [json.loads(line) for line in trace.read_text().splitlines()]
+    assert any(e['event'] == 'controller' and e.get('reason') == 'independent_supply_trial' and
+               e['limit'] == 2 for e in control)
     prepares = {}
     forwards = {}
     overlap = False
@@ -636,3 +653,15 @@ stages:
     assert overlap or any(a != b and max(s, u) < min(t, v)
                           for a, s, t in prepare_intervals
                           for b, u, v in forward_intervals)
+    # The rendezvous spans the actual hashing work, not merely an owner that
+    # is asleep waiting to prepare. Its peer's forward remains in flight until
+    # this measured CPU work finishes. Serial admission cannot satisfy it.
+    cpu_intervals, cpu_starts = [], {}
+    for event in events:
+        owner = event.get('owner')
+        if event['kind'] == 'cpu_work_start':
+            cpu_starts[owner] = event['time']
+        elif event['kind'] == 'cpu_work_end':
+            cpu_intervals.append((owner, cpu_starts.pop(owner), event['time']))
+    assert any(a != b and u <= s < t <= v for a, s, t in cpu_intervals
+               for b, u, v in forward_intervals)

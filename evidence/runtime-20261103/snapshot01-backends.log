@@ -1,0 +1,78 @@
+....................s......................................F............ [ 63%]
+..........................................                               [100%]
+=================================== FAILURES ===================================
+____________ test_mpnn_cpu_cache_is_content_keyed_and_request_local ____________
+
+tmp_path = PosixPath('/tmp/pytest-of-zpzeng/pytest-1314/test_mpnn_cpu_cache_is_content0')
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f88e00fa950>
+
+    def test_mpnn_cpu_cache_is_content_keyed_and_request_local(tmp_path, monkeypatch):
+        args, features = _checkpoint_case(tmp_path, monkeypatch)
+        runner = LigandMPNN(args)
+        path = Path(features["pdb_path"])
+        try:
+>           first = runner._parse_cpu(path, "")
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/test_mutator_resident_runtime.py:94: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+astrolabe/mutators/wrappers/ligandmpnn_run.py:162: in _parse_cpu
+    protein, _backbone, _other_atoms, icodes, _ = parse_PDB(
+astrolabe/mutators/wrappers/ligandmpnn_utils.py:902: in parse_PDB
+    atoms = parsePDB(input_path)
+            ^^^^^^^^^^^^^^^^^^^^
+/alphafold3_venv/lib/python3.11/site-packages/prody/proteins/pdbfile.py:139: in parsePDB
+    return _parsePDB(pdb[0], **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+pdb = PosixPath('/tmp/pytest-of-zpzeng/pytest-1314/test_mpnn_cpu_cache_is_content0/AB.pdb')
+kwargs = {'title': 'AB'}
+
+    def _parsePDB(pdb, **kwargs):
+        title = kwargs.get('title', None)
+        chain = ''
+        if not os.path.isfile(pdb):
+            pdb, chain = _getPDBid(pdb)
+            if title is None:
+                title = pdb
+                kwargs['title'] = title
+            filename = fetchPDB(pdb, **kwargs)
+            if filename is None:
+                try:
+                    if not (eval(long_id_check_str % 12) or eval(long_id_check_str % 13)):
+                        LOGGER.warn("Trying to parse mmCIF file instead")
+                    chain = kwargs.pop('chain', chain)
+                    return parseMMCIF(pdb+chain, **kwargs)
+                except OSError:
+                    try:
+                        LOGGER.warn("Trying to parse EMD file instead")
+                        chain = kwargs.pop('chain', chain)
+                        return parseEMD(pdb+chain, **kwargs)
+                    except:
+                        raise IOError('PDB file for {0} could not be parsed.'
+                                    .format(pdb))
+            pdb = filename
+        if title is None:
+            title, ext = os.path.splitext(os.path.split(pdb)[1])
+            if ext == '.gz':
+                title, ext = os.path.splitext(title)
+            if len(title) == 7 and title.startswith('pdb'):
+                title = title[3:]
+            kwargs['title'] = title
+    
+>       if pdb.endswith('.pdb') or pdb.endswith('.pdb.gz'):
+           ^^^^^^^^^^^^
+E       AttributeError: 'PosixPath' object has no attribute 'endswith'
+
+/alphafold3_venv/lib/python3.11/site-packages/prody/proteins/pdbfile.py:249: AttributeError
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_backend_daemons.py:200: covered by runtime broker admission tests after integration
+FAILED tests/test_mutator_resident_runtime.py::test_mpnn_cpu_cache_is_content_keyed_and_request_local
+1 failed, 112 passed, 1 skipped, 3 warnings in 157.58s (0:02:37)
+Exception ignored in atexit callback: <bound method RF3RunnerService.shutdown of <astrolabe.evaluators.wrappers.rf3.RF3RunnerService object at 0x7f88e007a610>>
+Traceback (most recent call last):
+  File "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/astrolabe/evaluators/wrappers/rf3.py", line 360, in shutdown
+    proc.wait(timeout=5)
+    ^^^^^^^^^
+AttributeError: '_FakeProc' object has no attribute 'wait'

@@ -3,6 +3,7 @@ from abc import abstractmethod
 from typing import Any, Dict
 
 from astrolabe.core import global_config
+from astrolabe.execution_identity import scientific_operation
 from astrolabe.mutators.capabilities import (
     MutatorCapabilities,
     validate_mutator_capabilities,
@@ -66,7 +67,11 @@ class Mutator:
                     runtime_config.pop("record_mutator_selector_scores", None)
                 else:
                     runtime_config["record_mutator_selector_scores"] = previous_record_flag
-        mutation_output = self.compute_mutation(input_feat)
+        operation_alias = (getattr(self, "alias", None) or getattr(self, "name", None)
+                           or type(self).__name__)
+        with scientific_operation("mutator", operation_alias, runtime_config=runtime_config,
+                                  inputs=input_feat, reference=evaluation_scores):
+            mutation_output = self.compute_mutation(input_feat)
         extra_output = None
         transition_consistency_gate_context = get_transition_consistency_gate_context(
             runtime_config
@@ -98,7 +103,12 @@ class Mutator:
                         runtime_config["record_mutator_selector_scores"] = (
                             previous_record_flag
                         )
-            extra_output = self.compute_mutation(extra_input_feat)
+            with scientific_operation(
+                "mutator", operation_alias, runtime_config=runtime_config,
+                inputs=extra_input_feat,
+                reference=transition_consistency_gate_context.reference_scores,
+            ):
+                extra_output = self.compute_mutation(extra_input_feat)
 
         sentinel = object()
         previous_extra_output = sentinel
@@ -215,12 +225,20 @@ def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path"):
                 f"Unknown mutator name {name!r}. Available mutator types: {available}"
             ) from exc
 
-        mutator = factory(
-            conf,
-            alias=alias,
-            mutator_conf=mutator_conf,
-            raw_model_results_dir=raw_model_results_dir,
-        )
+        from astrolabe.mutators.resident import execution_mode, CPU_MUTATORS, BROKER_MUTATORS
+        execution = conf.pop("execution", "auto")
+        execution_resources = conf.pop("execution_resources", None)
+        if execution == "daemon" and str(name).lower() not in CPU_MUTATORS | BROKER_MUTATORS:
+            raise ValueError(f"mutator {name!r} has no audited resident adapter")
+        # CPU mutators retain their ordinary function path under every mode.
+        with execution_mode("auto" if str(name).lower() in CPU_MUTATORS else execution,
+                            resources=execution_resources):
+            mutator = factory(
+                conf,
+                alias=alias,
+                mutator_conf=mutator_conf,
+                raw_model_results_dir=raw_model_results_dir,
+            )
         mutator.alias = str(alias)
         try:
             protomers = global_config.protomers
@@ -269,7 +287,8 @@ def _build_mpnn_mutator(
 
     runner_conf, mutator_kwargs = _merge_runner_conf(mutator_conf.LigandMPNN, term_conf)
     runner_conf["out_folder"] = str(raw_model_results_dir / output_name)
-    sequence_model_runner = LigandMPNN(runner_conf)
+    from astrolabe.mutators.resident import build_runner
+    sequence_model_runner = build_runner("ligandmpnn", runner_conf)
     from astrolabe.mutators.synchronization import SynchronizationPolicy
     policy = mutator_kwargs.pop("synchronization_policy", None)
     if policy is None:
@@ -390,14 +409,14 @@ def _build_multistate_proteinmpnn_mutator(
 @register_mutator_factory("dynamicmpnn")
 def _build_dynamicmpnn_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.dynamicmpnn import DynamicMPNNMutator
-    from astrolabe.mutators.wrappers.dynamicmpnn_run import DynamicMPNNRunner
+    from astrolabe.mutators.resident import build_runner
 
     runner_conf, mutator_kwargs = _merge_runner_conf(
         mutator_conf.DynamicMPNN, term_conf
     )
     runner_conf["output_dir"] = str(raw_model_results_dir / "DynamicMPNN")
     return DynamicMPNNMutator(
-        sequence_model_runner=DynamicMPNNRunner(runner_conf),
+        sequence_model_runner=build_runner("dynamicmpnn", runner_conf),
         **mutator_kwargs,
     )
 
@@ -405,14 +424,14 @@ def _build_dynamicmpnn_mutator(term_conf, *, alias, mutator_conf, raw_model_resu
 @register_mutator_factory("surfdesign")
 def _build_surfdesign_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.surfdesign import SurfDesignMutator
-    from astrolabe.mutators.wrappers.surfdesign_runner import SurfDesignRunner
+    from astrolabe.mutators.resident import build_runner
 
     runner_conf, mutator_kwargs = _merge_runner_conf(
         mutator_conf.SurfDesign, term_conf
     )
     runner_conf["output_dir"] = str(raw_model_results_dir / "SurfDesign")
     return SurfDesignMutator(
-        sequence_model_runner=SurfDesignRunner(runner_conf),
+        sequence_model_runner=build_runner("surfdesign", runner_conf),
         **mutator_kwargs,
     )
 
@@ -420,12 +439,12 @@ def _build_surfdesign_mutator(term_conf, *, alias, mutator_conf, raw_model_resul
 @register_mutator_factory("surfpro")
 def _build_surfpro_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.surfpro import SurfProMutator
-    from astrolabe.mutators.wrappers.surfpro_runner import SurfProRunner
+    from astrolabe.mutators.resident import build_runner
 
     runner_conf, mutator_kwargs = _merge_runner_conf(mutator_conf.SurfPro, term_conf)
     runner_conf["output_dir"] = str(raw_model_results_dir / "SurfPro")
     return SurfProMutator(
-        sequence_model_runner=SurfProRunner(runner_conf),
+        sequence_model_runner=build_runner("surfpro", runner_conf),
         **mutator_kwargs,
     )
 
@@ -437,7 +456,8 @@ def _build_carbondesign_mutator(term_conf, *, alias, mutator_conf, raw_model_res
 
     runner_conf, mutator_kwargs = _merge_runner_conf(mutator_conf.CarbonDesign, term_conf)
     runner_conf["output_dir"] = str(raw_model_results_dir / "CarbonDesign")
-    sequence_model_runner = CarbonDesignRunner(runner_conf)
+    from astrolabe.mutators.resident import build_runner
+    sequence_model_runner = build_runner("carbondesign", runner_conf)
     return CarbonDesignMutator(
         sequence_model_runner=sequence_model_runner,
         **mutator_kwargs,
@@ -494,8 +514,9 @@ def _build_nampnn_mutator(term_conf, *, alias, mutator_conf, raw_model_results_d
     from astrolabe.mutators.wrappers.na_mpnn_runner import NAMPNNRunner
 
     runner_conf, mutator_kwargs = _merge_runner_conf(mutator_conf.NAMPNN, term_conf)
-    sequence_model_runner = NAMPNNRunner(
-        runner_conf,
+    from astrolabe.mutators.resident import build_runner
+    sequence_model_runner = build_runner(
+        "nampnn", runner_conf,
         output_root=raw_model_results_dir / "NAMPNN",
     )
     return NAMPNNMutator(

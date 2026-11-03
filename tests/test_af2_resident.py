@@ -13,6 +13,7 @@ class Runner:
     multimer_mode = False
     def __init__(self, cfg, prepare_only):
         self._gh_initial_guess_cfg = cfg.get('initial_guess')
+        self.params = {'weight': np.asarray([1.], dtype=np.float32)}
         if not prepare_only:
             with open(os.environ['AF2_TEST_LOADS'], 'a') as f: f.write('load\\n')
     def process_features(self, data, random_seed):

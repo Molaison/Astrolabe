@@ -5,6 +5,8 @@ import json
 import os
 import shlex
 import subprocess
+import signal
+import tempfile
 from pathlib import Path
 from string import Formatter
 from typing import Any, Callable, Mapping
@@ -27,6 +29,7 @@ class DynamicMPNNRunner:
         cfg = OmegaConf.to_container(config, resolve=True) if OmegaConf.is_config(config) else dict(config or {})
         self.output_dir = Path(str(cfg.get("output_dir") or cfg.get("out_folder") or "dynamicmpnn_outputs"))
         self.backend_callable = cfg.get("backend_callable")
+        self.backend_factory = cfg.get("backend_factory")
         self.command_template = cfg.get("command_template")
         self.repo_path = cfg.get("repo_path")
         self.checkpoint = cfg.get("checkpoint") or cfg.get("model_ref")
@@ -36,9 +39,41 @@ class DynamicMPNNRunner:
         self.probabilities_key = str(cfg.get("probabilities_key", "probabilities"))
         self.timeout = cfg.get("timeout", None)
         self.extra_env = dict(cfg.get("env") or {})
+        protected = {"CUDA_VISIBLE_DEVICES", "NVIDIA_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES", "ROCR_VISIBLE_DEVICES",
+                     "ASTROLABE_EXECUTION_ENDPOINT", "ASTROLABE_EXECUTION_TOKEN", "ASTROLABE_CPU_OWNER"}
+        if protected.intersection(self.extra_env):
+            raise ValueError("DynamicMPNN env cannot override job resource ownership or visible devices")
         self._run_index = 0
+        self._closed = False
+        self._backend = None
+        self.model = None
+        self.model_load_count = None
+        if self.backend_factory:
+            if self.backend_callable or self.command_template:
+                raise ValueError("DynamicMPNN backend_factory is exclusive with callback/CLI modes")
+            # Explicit opt-in lifecycle contract. The configured factory owns
+            # loading; calls retain native joint decoding and raw probabilities.
+            self._backend = self._resolve_callable(self.backend_factory)(config=cfg)
+            if not callable(getattr(self._backend, "design_sequences", None)):
+                raise TypeError("DynamicMPNN backend_factory must return a design_sequences runner")
+            self.model = getattr(self._backend, "model", None)
+            self.model_load_count = getattr(self._backend, "model_load_count", None)
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        closer = getattr(self._backend, "close", None) or getattr(self._backend, "shutdown", None)
+        if closer:
+            closer()
+        self.model = None
+        self._backend = None
+
+    shutdown = close
 
     def design_sequences(self, **features):
+        if self._closed:
+            raise RuntimeError("DynamicMPNN runner is closed")
         pdb_paths = self._load_pdb_paths(features)
         if len(pdb_paths) < 2:
             raise ValueError(
@@ -46,14 +81,14 @@ class DynamicMPNNRunner:
                 "got fewer than two PDB paths."
             )
 
-        run_dir = self.output_dir / f"run_{self._run_index:04d}"
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        run_dir = Path(tempfile.mkdtemp(prefix=f"run_{self._run_index:04d}_", dir=self.output_dir))
         self._run_index += 1
-        run_dir.mkdir(parents=True, exist_ok=True)
         probabilities_file = run_dir / self.probabilities_path
         manifest = self._build_manifest(features, pdb_paths, run_dir, probabilities_file)
 
-        if self.backend_callable:
-            callable_fn = self._resolve_callable(self.backend_callable)
+        if self.backend_callable or self._backend is not None:
+            callable_fn = self._backend.design_sequences if self._backend is not None else self._resolve_callable(self.backend_callable)
             sampling_probs = self._validate_probabilities(
                 callable_fn(manifest=manifest, features=features),
                 Path("<in-process DynamicMPNN probabilities>"),
@@ -61,7 +96,7 @@ class DynamicMPNNRunner:
             return {
                 "sampling_probs": sampling_probs,
                 "dynamicmpnn_backend": "Alex-Abrudan/DynamicMPNN",
-                "dynamicmpnn_backend_mode": "in_process",
+                "dynamicmpnn_backend_mode": "resident_factory" if self._backend is not None else "in_process",
             }
 
         if not self.command_template:
@@ -79,14 +114,51 @@ class DynamicMPNNRunner:
         command = self._format_command(manifest_path, run_dir, probabilities_file)
         env = os.environ.copy()
         env.update({str(k): str(v) for k, v in self.extra_env.items()})
-        subprocess.run(
+        private_worker = os.environ.get("ASTROLABE_MUTATOR_WORKER") == "1"
+        proc = subprocess.Popen(
             command,
             shell=True,
             cwd=str(self.repo_path) if self.repo_path else None,
             env=env,
-            check=True,
-            timeout=float(self.timeout) if self.timeout else None,
+            # Broker workers already own a guarded process group. Keep native
+            # descendants in it so abrupt worker death cannot orphan a GPU
+            # process between telemetry samples.
+            start_new_session=not private_worker,
         )
+        try:
+            returncode = proc.wait(timeout=float(self.timeout) if self.timeout else None)
+            if returncode:
+                raise subprocess.CalledProcessError(returncode, command)
+            if private_worker:
+                from astrolabe.runtime.telemetry import process_tree
+                descendants = set(process_tree([os.getpid()])) - {os.getpid()}
+                if descendants:
+                    from astrolabe.runtime.client import OutcomeUnknown
+                    raise OutcomeUnknown("DynamicMPNN CLI returned with live descendants; asynchronous completion cannot be committed")
+        except BaseException:
+            # shell=True may have spawned a GPU child; killing only the shell
+            # leaks that child. This group belongs solely to this native call.
+            if private_worker:
+                # Propagating failure fences the entire guarded worker group.
+                # Do not kill our own group before its owner observes failure.
+                if proc.poll() is None:
+                    proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                    proc.wait(timeout=5)
+            else:
+                try:
+                    os.killpg(proc.pid, signal.SIGTERM)
+                    proc.wait(timeout=5)
+                except (ProcessLookupError, subprocess.TimeoutExpired):
+                    try:
+                        os.killpg(proc.pid, signal.SIGKILL)
+                    except ProcessLookupError:
+                        pass
+                    proc.wait(timeout=5)
+            raise
 
         sampling_probs = self._read_probabilities(probabilities_file)
         return {

@@ -63,7 +63,7 @@ def install():
               'msa_pairing_strategy':'greedy'}
     worker = Boltz1Resident(config)
     try:
-        assert worker._client.hello['load_count'] == 1
+        assert worker._client.hello['load_count'] == 0
         for i in range(2):
             case = {'sequence': 'A' * (i + 1), 'constraints': [{'chain': 'A', 'residue': i + 1}], 'seed': i}
             source = tmp_path / f'{i}.yaml'; source.write_text(json.dumps(case))
@@ -72,6 +72,7 @@ def install():
             worker.run_request(data, request, destination)
             assert json.loads((destination/'predictions'/'case'/'result.json').read_text()) == case
             assert not request.exists()
+        assert worker._client.lifecycle['load_count'] == 1
         loads = [json.loads(line) for line in (tmp_path/'loads').read_text().splitlines()]
         assert len(loads) == 1
         assert loads[0]['predict_args']['recycling_steps'] == 4

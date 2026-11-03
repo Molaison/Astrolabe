@@ -12,6 +12,9 @@ class CPUExecutor:
     def __init__(self, workers, *, max_pending_bytes=1048576, task_timeout=None):
         if type(workers) is not int or workers < 1 or type(max_pending_bytes) is not int or max_pending_bytes < 1:
             raise ValueError('workers and max_pending_bytes must be positive integers')
+        from .admission import available_cpus
+        if workers > available_cpus():
+            raise ValueError('CPU worker count exceeds the current job allocation')
         self.max_pending_bytes = max_pending_bytes
         if task_timeout is not None and (not isinstance(task_timeout, (int, float)) or task_timeout <= 0):
             raise ValueError('task_timeout must be positive')
@@ -24,6 +27,8 @@ class CPUExecutor:
         self._available = queue.Queue()
         env = {'CUDA_VISIBLE_DEVICES': '', 'NVIDIA_VISIBLE_DEVICES': 'void',
                'HIP_VISIBLE_DEVICES': '', 'ROCR_VISIBLE_DEVICES': '',
+               'OMP_NUM_THREADS': '1', 'MKL_NUM_THREADS': '1', 'OPENBLAS_NUM_THREADS': '1',
+               'NUMEXPR_NUM_THREADS': '1', 'VECLIB_MAXIMUM_THREADS': '1',
                'PYTHONPATH': os.pathsep.join(str(pathlib.Path(p).resolve()) for p in sys.path if p)}
         try:
             for _ in range(workers):

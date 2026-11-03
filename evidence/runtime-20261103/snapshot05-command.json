@@ -1,0 +1,15 @@
+{
+  "source_snapshot": {
+    "path": "/workspace/scratch/93ef4745b713/snapshot05.tar.gz",
+    "bytes": 64630,
+    "sha256": "4d9d35beaccf303e79890ff2c77f55f6d4750c01a9eceb97888f38bcc957248d",
+    "files": 11
+  },
+  "command": "export PATH=/xcf26/zpzeng/.gh_container/envs/_gh_apptainer/bin:$PATH\nexport LD_LIBRARY_PATH=/xcf26/zpzeng/.gh_container/envs/_gh_apptainer/lib:${LD_LIBRARY_PATH:-}\napptainer exec --cleanenv --bind /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation --pwd /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test --env CUDA_VISIBLE_DEVICES= --env JAX_PLATFORMS=cpu --env PYTHONDONTWRITEBYTECODE=1 --env OMP_NUM_THREADS=1 --env PYTHONPATH=/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-env/lib/python3.11/site-packages /xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif /alphafold3_venv/bin/python -m pytest tests/test_runtime_benchmark_processes.py tests/test_workflow_benchmark.py -q --disable-warnings --maxfail=1 --basetemp /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot05-pytest >/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot05-validation.log 2>&1\nstatus=$?\ncat /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/snapshot05-validation.log\nexit \"$status\"",
+  "tests": [
+    "tests/test_runtime_benchmark_processes.py",
+    "tests/test_workflow_benchmark.py"
+  ],
+  "gpu_enabled": false,
+  "scope": "Targeted recheck: atomic PID fixture; production runtime/backends unchanged from snapshot04."
+}

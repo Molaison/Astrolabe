@@ -4,6 +4,10 @@ import math
 import os.path
 import random
 import sys
+import copy
+import hashlib
+from collections import OrderedDict
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -28,7 +32,14 @@ class LigandMPNN:
     })
 
     def __init__(self, args):
-
+        self.model_load_count = 0
+        self._closed = False
+        self._parse_cache = OrderedDict()
+        self._parse_cache_bytes = 0
+        self._parse_cache_limit = int(getattr(args, "prepare_cache_bytes", 64 * 1024 * 1024))
+        self._prepared_request = {}
+        self.cache_hits = 0
+        self.cache_misses = 0
         # persistent parameters
         self.omit_AA_list = args.omit_AA
         self.bias_AA = args.bias_AA
@@ -122,6 +133,81 @@ class LigandMPNN:
         model.to(device)
         model.eval()
         self.model = model
+        self.model_load_count += 1
+
+    @staticmethod
+    def _tree_bytes(value):
+        if isinstance(value, torch.Tensor):
+            return value.numel() * value.element_size()
+        if isinstance(value, np.ndarray):
+            return value.nbytes
+        if isinstance(value, dict):
+            return sys.getsizeof(value) + sum(sys.getsizeof(k) + LigandMPNN._tree_bytes(v) for k, v in value.items())
+        if isinstance(value, (tuple, list)):
+            return sys.getsizeof(value) + sum(LigandMPNN._tree_bytes(v) for v in value)
+        return sys.getsizeof(value)
+
+    def _parse_cpu(self, pdb, chains):
+        # Structure contents and every parser option are actual dependencies.
+        # No model embedding/pair/recycle state is cached across mutations.
+        digest = hashlib.sha256(Path(pdb).read_bytes()).hexdigest() if Path(pdb).is_file() else None
+        key = (digest, json.dumps(chains), self.ligand_mpnn_use_side_chain_context,
+               self.parse_atoms_with_zero_occupancy)
+        if digest is not None and key in self._parse_cache:
+            self.cache_hits += 1
+            value, size = self._parse_cache.pop(key)
+            self._parse_cache[key] = (value, size)
+            return copy.deepcopy(value)
+        self.cache_misses += 1
+        protein, _backbone, _other_atoms, icodes, _ = parse_PDB(
+            str(pdb), device="cpu", chains=chains,
+            parse_all_atoms=self.ligand_mpnn_use_side_chain_context,
+            parse_atoms_with_zero_occupancy=self.parse_atoms_with_zero_occupancy,
+        )
+        value = (protein, icodes)
+        size = self._tree_bytes(value)
+        if digest is not None and 0 < size <= self._parse_cache_limit:
+            while self._parse_cache and (self._parse_cache_bytes + size > self._parse_cache_limit or len(self._parse_cache) >= 16):
+                _key, (_value, removed) = self._parse_cache.popitem(last=False)
+                self._parse_cache_bytes -= removed
+            self._parse_cache[key] = (copy.deepcopy(value), size)
+            self._parse_cache_bytes += size
+        return value
+
+    def prepare_request(self, **features):
+        if self._closed:
+            raise RuntimeError("LigandMPNN runner is closed")
+        multi = features.get("pdb_path_multi")
+        if multi:
+            paths = json.loads(Path(multi).read_text())
+        else:
+            paths = [features.get("pdb_path")]
+        prepared = {}
+        total_bytes = 0
+        for path in paths:
+            value = self._parse_cpu(path, features.get("parse_these_chains_only", ""))
+            total_bytes += self._tree_bytes(value)
+            # A single scientific input is never silently truncated to fit.
+            if total_bytes > int(os.environ.get("ASTROLABE_MAX_PREPARED_BYTES", 512 * 1024 * 1024)):
+                raise MemoryError("MPNN prepared input exceeds the configured RAM budget")
+            prepared[str(path)] = (hashlib.sha256(Path(path).read_bytes()).hexdigest(), value)
+        self._prepared_request = prepared
+
+    def close(self):
+        if self._closed:
+            return
+        self._closed = True
+        self._parse_cache.clear()
+        self._prepared_request.clear()
+        self._parse_cache_bytes = 0
+        if getattr(self, "model", None) is not None:
+            self.model.to("cpu")
+            self.model = None
+            if self.device.type == "cuda":
+                torch.cuda.synchronize(self.device)
+                torch.cuda.empty_cache()
+
+    shutdown = close
 
     @staticmethod
     def _load_json_mapping(value):
@@ -181,6 +267,8 @@ class LigandMPNN:
         Inference function
         """
         device = self.device
+        if self._closed:
+            raise RuntimeError("LigandMPNN runner is closed")
         if distribution_semantics not in self.supported_distribution_semantics:
             raise ValueError("unsupported MPNN distribution semantics")
         if distribution_semantics == "shared_reference_teacher_forcing" and reference_decoding_ranks is None:
@@ -289,13 +377,20 @@ class LigandMPNN:
             redesigned_residues = redesigned_residues_multi[pdb]
             transmembrane_buried = transmembrane_buried_multi[pdb]
             transmembrane_interface = transmembrane_interface_multi[pdb]
-            protein_dict, backbone, other_atoms, icodes, _ = parse_PDB(
-                pdb,
-                device=device,
-                chains=parse_these_chains_only,
-                parse_all_atoms=self.ligand_mpnn_use_side_chain_context,
-                parse_atoms_with_zero_occupancy=self.parse_atoms_with_zero_occupancy,
-            )
+            prepared = self._prepared_request.pop(str(pdb), None)
+            if prepared is not None:
+                digest, prepared = prepared
+                if hashlib.sha256(Path(pdb).read_bytes()).hexdigest() != digest:
+                    raise ValueError("MPNN input structure changed between prepare and execute")
+            else:
+                prepared = self._parse_cpu(pdb, parse_these_chains_only)
+            protein_cpu, icodes = prepared
+            protein_dict = {key: value.to(device) if isinstance(value, torch.Tensor) else
+                            [part.to(device) if isinstance(part, torch.Tensor) else part for part in value]
+                            if isinstance(value, list) else value for key, value in protein_cpu.items()}
+            # The old function only zeroed these unused ProDy B-factors; no
+            # returned scientific quantity depended on retaining the objects.
+            other_atoms = None
             # make chain_letter + residue_idx + insertion_code mapping to integers
             R_idx_list = list(protein_dict["R_idx"].cpu().numpy())  # residue indices
             chain_letters_list = list(protein_dict["chain_letters"])  # chain letters

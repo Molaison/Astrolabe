@@ -93,6 +93,10 @@ def set_random_seeds(seed: int):
 
     if torch is not None:
         torch.manual_seed(seed)
+        # GPU-hidden trajectory owners carry an opaque CUDA RNG stream; the
+        # scientific seed is established here, never guessed by a worker.
+        from astrolabe.evaluators.torch_rng import register_owner_seed
+        register_owner_seed(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 

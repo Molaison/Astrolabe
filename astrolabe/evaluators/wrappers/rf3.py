@@ -3,6 +3,7 @@ from __future__ import annotations
 import atexit
 import inspect
 import json
+import os
 import random
 import subprocess
 import sys
@@ -71,6 +72,7 @@ def _normalize_config(config: Any | None) -> dict[str, Any]:
 
 def _engine_config(config: dict[str, Any]) -> dict[str, Any]:
     cleaned = dict(config)
+    cleaned.pop('execution', None)
     for key in _REQUEST_ONLY_META_KEYS:
         cleaned.pop(key, None)
     if cleaned.get("fallback_conformer_to_input_coords") is None:
@@ -152,6 +154,9 @@ class _CachedEngine:
 class RF3RunnerService:
     def __init__(self, base_config: Any):
         self.base_config = _normalize_config(base_config)
+        self.execution = self.base_config.pop('execution', 'legacy')
+        if self.execution not in ('legacy', 'daemon'):
+            raise ValueError('RF3 execution must be legacy or daemon')
         self.python_bin = _resolve_existing_path(
             self.base_config.get("python_bin"),
             label="python_bin",
@@ -159,6 +164,9 @@ class RF3RunnerService:
         self.daemon_script_path = Path(__file__).resolve().parent / "rf3_daemon.py"
         self.repo_root = Path(__file__).resolve().parents[3]
         self._engine_cache: dict[str, _CachedEngine] = {}
+        self._resident_cache = {}
+        self._engine_initializations = 0
+        self._closed = False
         self._lock = threading.Lock()
         self._proc: subprocess.Popen | None = None
         if self.python_bin is not None:
@@ -185,6 +193,7 @@ class RF3RunnerService:
         initialize = getattr(engine, "initialize", None)
         if callable(initialize):
             initialize()
+        self._engine_initializations += 1
         cached = _CachedEngine(
             engine=engine,
             post_init_rng_state=_capture_rng_state(),
@@ -313,8 +322,30 @@ class RF3RunnerService:
         return self._build_response(request)
 
     def shutdown(self) -> None:
+        self._closed = True
+        errors = []
+        for resident in self._resident_cache.values():
+            try:
+                resident.close()
+            except Exception as exc:
+                errors.append(exc)
+        self._resident_cache.clear()
+        for cached in self._engine_cache.values():
+            engine = cached.engine
+            close = getattr(engine, 'close', None)
+            try:
+                if callable(close):
+                    close()
+                else:
+                    engine.trainer = None
+                    engine.pipeline = None
+            except Exception as exc:
+                errors.append(exc)
+        self._engine_cache.clear()
         proc = self._proc
         if proc is None:
+            if errors:
+                raise RuntimeError('RF3 resident cleanup failed') from errors[0]
             return
         if proc.poll() is not None:
             self._proc = None
@@ -327,12 +358,49 @@ class RF3RunnerService:
             proc.terminate()
         except Exception:
             pass
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            proc.wait(timeout=5)
         self._proc = None
 
+    close = shutdown
+
+    def lifecycle(self):
+        from astrolabe.evaluators.lifecycle import model_lifecycle
+        models = []
+        for worker in self._resident_cache.values():
+            models.append(dict(worker._client.lifecycle))
+        for cached in self._engine_cache.values():
+            trainer = getattr(cached.engine, 'trainer', None)
+            model = getattr(trainer, 'state', {}).get('model') if trainer is not None else None
+            models.append(model_lifecycle(model, load_count=1, loaded=model is not None))
+        return {'process_alive': True, 'ready': not self._closed, 'weights_loaded': None if not models else
+                all(item.get('weights_loaded') is True for item in models), 'gpu_resident': None,
+                'models': models, 'engine_initializations': self._engine_initializations,
+                'legacy_daemon_process_alive': self._proc is not None and self._proc.poll() is None,
+                'release_requires_exit': True}
+
     def submit(self, request: RF3RunnerRequest) -> RF3RunnerResponse:
+        if self._closed:
+            raise RuntimeError('RF3 runner is closed')
         output_dir = Path(request.output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         try:
+            if self.execution == 'daemon':
+                from astrolabe.evaluators.rf3_resident import RF3Resident
+                effective = _engine_config(self._build_effective_config(request.rf3_overrides))
+                key = _config_cache_key(effective)
+                with self._lock:
+                    worker = self._resident_cache.get(key)
+                    if worker is None:
+                        worker = RF3Resident(effective, exchange_owner_rng=self.python_bin is None)
+                        self._resident_cache[key] = worker
+                    worker.run(request)
+                return self._build_response(request)
+            if os.environ.get('ASTROLABE_EXECUTION_ENDPOINT'):
+                raise RuntimeError('RF3 shared admission requires execution=daemon')
             if self.python_bin is not None:
                 with self._lock:
                     return self._submit_via_daemon(request)
@@ -363,7 +431,7 @@ def rf3_setup(config: Any) -> RF3RunnerService:
     normalized = _normalize_config(config)
     cache_key = _config_cache_key(normalized)
     runner = _RUNNER_CACHE.get(cache_key)
-    if runner is not None:
+    if runner is not None and not runner._closed:
         return runner
     runner = RF3RunnerService(normalized)
     _RUNNER_CACHE[cache_key] = runner

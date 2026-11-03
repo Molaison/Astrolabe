@@ -688,6 +688,7 @@ def from_af3_to_boltz(input_obj):
 
 class Boltz1Runner:
     def __init__(self, config):
+        self._weight_load_count = 0
         self.config = config
         self.accelerator = config["accelerator"]
         self.cache = pathlib.Path(config["cache"])
@@ -703,6 +704,10 @@ class Boltz1Runner:
         self.use_msa_server = config["use_msa_server"]
         self.msa_server_url = config["msa_server_url"] or "https://api.colabfold.com"
         self.msa_pairing_strategy = config["msa_pairing_strategy"]
+
+    def close(self):
+        if hasattr(self, 'model_module'):
+            del self.model_module
 
     def run_inference(self, data, out_dir):
         self.run_prediction(data, out_dir)
@@ -792,6 +797,7 @@ class Boltz1Runner:
             )
             model_module.eval()
             self.model_module = model_module
+            self._weight_load_count += 1
 
     def featurize_data(self, data, out_dir):
         # Validate inputs

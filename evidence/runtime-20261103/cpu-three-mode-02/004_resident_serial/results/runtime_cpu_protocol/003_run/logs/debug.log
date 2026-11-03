@@ -1,0 +1,84 @@
+2026-11-03 20:35:28 - root - INFO - Starting protein astrolabe pipeline
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_start span_id=6f8042bb86fd4fc1b06c3178c0f9835d component=initializer alias=random stage=initialization step=0 status=start detail_level=summary detail=RandomInitializer
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_end span_id=6f8042bb86fd4fc1b06c3178c0f9835d component=initializer alias=random stage=initialization step=0 status=success duration_ms=0.247 result=random detail_level=summary detail=RandomInitializer sequence_count=0
+2026-11-03 20:35:28 - root - INFO - stage_enter stage=default evaluator=Dummy oligo=['A'] mutators=['MCMC'] mutation_num=1
+2026-11-03 20:35:28 - root - DEBUG - Before: AAAA
+2026-11-03 20:35:28 - root - DEBUG - Mutate:     
+2026-11-03 20:35:28 - root - DEBUG - After:  AAAA
+2026-11-03 20:35:28 - root - INFO - Performing initial evaluation
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_start span_id=8ac13abf1b2a46b89b182bfe49fe9fde component=evaluator alias=Dummy stage=default step=0 status=start detail_level=summary detail=initial oligo=A
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_end span_id=8ac13abf1b2a46b89b182bfe49fe9fde component=evaluator alias=Dummy stage=default step=0 status=success duration_ms=22.435 artifact=A:. result=standard_scores detail_level=summary detail=initial artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_start span_id=6a0c82acd7b146db9aadf7ea39747db7 component=loss_engine alias=LossEngine stage=default step=0 status=start detail_level=summary detail=compute_loss
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_start span_id=8438741b0f034d6eaa4bd3d7e0c8f0d1 component=loss alias=plddt stage=default step=0 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_end span_id=8438741b0f034d6eaa4bd3d7e0c8f0d1 component=loss alias=plddt stage=default step=0 status=success duration_ms=0.205 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=1.000
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_end span_id=6a0c82acd7b146db9aadf7ea39747db7 component=loss_engine alias=LossEngine stage=default step=0 status=success duration_ms=0.735 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=1.000
+2026-11-03 20:35:28 - root - INFO - step_start step=1/3 stage=default
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_start span_id=0d340abca0ab4dd7a5d8af280248cf02 component=mutator alias=MCMC stage=default step=1 status=start detail_level=summary detail=MCMC
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_end span_id=0d340abca0ab4dd7a5d8af280248cf02 component=mutator alias=MCMC stage=default step=1 status=success duration_ms=2.544 result=changed detail_level=summary detail=MCMC changed_positions=1 changed_protomers=1
+2026-11-03 20:35:28 - root - INFO - [MCMC] A    Before(score↑):    AAAA
+2026-11-03 20:35:28 - root - INFO - [MCMC] A    Mutate(ss):        |   
+2026-11-03 20:35:28 - root - INFO - [MCMC] A    After(entropy↓):   DAAA
+2026-11-03 20:35:28 - root - INFO - [MCMC] changed_positions=1 changed_protomers=1 entropy_norm=N/A selection_score=N/A secondary_structure=N/A
+2026-11-03 20:35:28 - root - INFO - [MCMC] sites A: A1:A->D(score=0.900 entropy=4.130 ss=N/A)
+2026-11-03 20:35:28 - root - DEBUG - mutation step executed in 0.003287 seconds
+2026-11-03 20:35:28 - root - DEBUG - Before: AAAA
+2026-11-03 20:35:28 - root - DEBUG - Mutate: |   
+2026-11-03 20:35:28 - root - DEBUG - After:  DAAA
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_start span_id=59663f703914479793f625138a0e8fb1 component=evaluator alias=Dummy stage=default step=1 status=start detail_level=summary detail=step oligo=A
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_end span_id=59663f703914479793f625138a0e8fb1 component=evaluator alias=Dummy stage=default step=1 status=success duration_ms=5.856 artifact=A:. result=standard_scores detail_level=summary detail=step artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+2026-11-03 20:35:28 - root - DEBUG - evaluation executed in 0.006788 seconds
+2026-11-03 20:35:28 - root - INFO - event=span_start span_id=2c5a7775f0f64c46a30345cbf578b214 component=decision_maker alias=Decisions stage=default step=1 status=start detail_level=summary detail=make_mutation_decision force_accept=false
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_start span_id=04f5b6a2cfaa45009b9886a4e0c63f25 component=loss_engine alias=LossEngine stage=default step=1 status=start detail_level=summary detail=compute_loss
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_start span_id=f8856a65a7634dce8d70176134851ff4 component=loss alias=plddt stage=default step=1 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_end span_id=f8856a65a7634dce8d70176134851ff4 component=loss alias=plddt stage=default step=1 status=success duration_ms=0.130 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=0.750
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_end span_id=04f5b6a2cfaa45009b9886a4e0c63f25 component=loss_engine alias=LossEngine stage=default step=1 status=success duration_ms=0.545 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=0.750
+2026-11-03 20:35:28 - root - INFO - step=1 score previous=1.000 current=0.750 delta=-0.250
+2026-11-03 20:35:28 - root - INFO - component=plddt previous=1.000 current=0.750 delta=-0.250
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_pA_selected_count previous=N/A current=4.000 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_selected_count previous=N/A current=4.000 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_pA_plddt_after_mean previous=N/A current=0.900 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_pA_plddt_before_mean previous=N/A current=0.900 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_plddt_after_mean previous=N/A current=0.900 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_plddt_before_mean previous=N/A current=0.900 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_pA_plddt_delta previous=N/A current=0.000 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_plddt_delta previous=N/A current=0.000 delta=N/A
+2026-11-03 20:35:28 - root - DEBUG - Step 1 score_context current={'A_length': 4, 'step': 1, 'iteration': 1, 'prefix_steps': 2, 'A': {'plddt': 0.75, 'ptm': 0.0, 'iptm': 0.0}, 'plddt': 0.75, 'ptm': 0.0, 'iptm': 0.0, 'mutator_selector_MCMC_selected_count': 4.0, 'mutator_selector_MCMC_plddt_before_mean': 0.9, 'mutator_selector_MCMC_plddt_after_mean': 0.9, 'mutator_selector_MCMC_plddt_delta': 0.0, 'mutator_selector_MCMC_pA_selected_count': 4.0, 'mutator_selector_MCMC_pA_plddt_before_mean': 0.9, 'mutator_selector_MCMC_pA_plddt_after_mean': 0.9, 'mutator_selector_MCMC_pA_plddt_delta': 0.0, 'previous_weighted_score': 1.0, 'delta_weighted_score': -0.25, 'previous_iptm': 0.0, 'delta_iptm': 0.0, 'previous_plddt': 1.0, 'delta_plddt': -0.25, 'previous_prefix_steps': 1.0, 'delta_prefix_steps': 1.0, 'previous_ptm': 0.0, 'delta_ptm': 0.0, 'stage_entry': 0.0, 'acceptance_gate_passed': 1.0} previous={'A_length': 4, 'step': 0, 'iteration': 0, 'prefix_steps': 1, 'A': {'plddt': 1.0, 'ptm': 0.0, 'iptm': 0.0}, 'plddt': 1.0, 'ptm': 0.0, 'iptm': 0.0} shown=9 changed=1 availability=8 stable=2
+2026-11-03 20:35:28 - root - INFO - step=1 decision=reject reason=worse previous=1.000 current=0.750
+2026-11-03 20:35:28 - root - INFO - event=span_end span_id=2c5a7775f0f64c46a30345cbf578b214 component=decision_maker alias=Decisions stage=default step=1 status=success duration_ms=10.539 result=reject detail_level=summary detail=make_mutation_decision accepted=false early_stop=false force_accept=false weighted_score=0.750
+2026-11-03 20:35:28 - root - INFO - step_end step=1 accepted=false early_stop=false stage=default
+2026-11-03 20:35:28 - root - INFO - step_start step=2/3 stage=default
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_start span_id=4a7a6e5f60e448d69446434fa09890ba component=mutator alias=MCMC stage=default step=2 status=start detail_level=summary detail=MCMC
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_end span_id=4a7a6e5f60e448d69446434fa09890ba component=mutator alias=MCMC stage=default step=2 status=success duration_ms=1.789 result=changed detail_level=summary detail=MCMC changed_positions=1 changed_protomers=1
+2026-11-03 20:35:28 - root - INFO - [MCMC] A    Before(score↑):    AAAA
+2026-11-03 20:35:28 - root - INFO - [MCMC] A    Mutate(ss):        |   
+2026-11-03 20:35:28 - root - INFO - [MCMC] A    After(entropy↓):   HAAA
+2026-11-03 20:35:28 - root - INFO - [MCMC] changed_positions=1 changed_protomers=1 entropy_norm=N/A selection_score=N/A secondary_structure=N/A
+2026-11-03 20:35:28 - root - INFO - [MCMC] sites A: A1:A->H(score=0.900 entropy=4.130 ss=N/A)
+2026-11-03 20:35:28 - root - DEBUG - mutation step executed in 0.002503 seconds
+2026-11-03 20:35:28 - root - DEBUG - Before: AAAA
+2026-11-03 20:35:28 - root - DEBUG - Mutate: |   
+2026-11-03 20:35:28 - root - DEBUG - After:  HAAA
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_start span_id=afd3a113411346df963c520a5c4b4b4d component=evaluator alias=Dummy stage=default step=2 status=start detail_level=summary detail=step oligo=A
+2026-11-03 20:35:28 - astrolabe_run_module - INFO - event=span_end span_id=afd3a113411346df963c520a5c4b4b4d component=evaluator alias=Dummy stage=default step=2 status=success duration_ms=5.306 artifact=A:. result=standard_scores detail_level=summary detail=step artifact_count=1 iptm_mean=0.000 oligo=A oligomer_count=1 oligomers=A plddt_mean=0.900 ptm_mean=0.000
+2026-11-03 20:35:28 - root - DEBUG - evaluation executed in 0.006166 seconds
+2026-11-03 20:35:28 - root - INFO - event=span_start span_id=2bcc0c2996bc469aaf1467d48920a8ec component=decision_maker alias=Decisions stage=default step=2 status=start detail_level=summary detail=make_mutation_decision force_accept=false
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_start span_id=1c9e252eb0aa46e5aeca7cc0785474f0 component=loss_engine alias=LossEngine stage=default step=2 status=start detail_level=summary detail=compute_loss
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_start span_id=f86259a320534efcb79e555b242da53d component=loss alias=plddt stage=default step=2 status=start detail_level=summary detail=sequence_residue_fraction oligo=A
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_end span_id=f86259a320534efcb79e555b242da53d component=loss alias=plddt stage=default step=2 status=success duration_ms=0.150 result=scalar detail_level=summary detail=sequence_residue_fraction oligo=A result_value=0.750
+2026-11-03 20:35:28 - astrolabe.losses.base - INFO - event=span_end span_id=1c9e252eb0aa46e5aeca7cc0785474f0 component=loss_engine alias=LossEngine stage=default step=2 status=success duration_ms=0.558 result=aggregate detail_level=summary detail=compute_loss score_terms=6 weighted_score=0.750
+2026-11-03 20:35:28 - root - INFO - step=2 score previous=1.000 current=0.750 delta=-0.250
+2026-11-03 20:35:28 - root - INFO - component=plddt previous=1.000 current=0.750 delta=-0.250
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_pA_selected_count previous=N/A current=4.000 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_selected_count previous=N/A current=4.000 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_pA_plddt_after_mean previous=N/A current=0.900 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_pA_plddt_before_mean previous=N/A current=0.900 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_plddt_after_mean previous=N/A current=0.900 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_plddt_before_mean previous=N/A current=0.900 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_pA_plddt_delta previous=N/A current=0.000 delta=N/A
+2026-11-03 20:35:28 - root - INFO - component=mutator_selector_MCMC_plddt_delta previous=N/A current=0.000 delta=N/A
+2026-11-03 20:35:28 - root - DEBUG - Step 2 score_context current={'A_length': 4, 'step': 2, 'iteration': 2, 'prefix_steps': 3, 'A': {'plddt': 0.75, 'ptm': 0.0, 'iptm': 0.0}, 'plddt': 0.75, 'ptm': 0.0, 'iptm': 0.0, 'mutator_selector_MCMC_selected_count': 4.0, 'mutator_selector_MCMC_plddt_before_mean': 0.9, 'mutator_selector_MCMC_plddt_after_mean': 0.9, 'mutator_selector_MCMC_plddt_delta': 0.0, 'mutator_selector_MCMC_pA_selected_count': 4.0, 'mutator_selector_MCMC_pA_plddt_before_mean': 0.9, 'mutator_selector_MCMC_pA_plddt_after_mean': 0.9, 'mutator_selector_MCMC_pA_plddt_delta': 0.0, 'previous_weighted_score': 1.0, 'delta_weighted_score': -0.25, 'previous_iptm': 0.0, 'delta_iptm': 0.0, 'previous_plddt': 1.0, 'delta_plddt': -0.25, 'previous_prefix_steps': 1.0, 'delta_prefix_steps': 2.0, 'previous_ptm': 0.0, 'delta_ptm': 0.0, 'stage_entry': 0.0, 'acceptance_gate_passed': 1.0} previous={'A_length': 4, 'step': 0, 'iteration': 0, 'prefix_steps': 1, 'A': {'plddt': 1.0, 'ptm': 0.0, 'iptm': 0.0}, 'plddt': 1.0, 'ptm': 0.0, 'iptm': 0.0} shown=9 changed=1 availability=8 stable=2
+2026-11-03 20:35:28 - root - INFO - step=2 decision=reject reason=worse previous=1.000 current=0.750
+2026-11-03 20:35:28 - root - INFO - event=span_end span_id=2bcc0c2996bc469aaf1467d48920a8ec component=decision_maker alias=Decisions stage=default step=2 status=success duration_ms=5.750 result=reject detail_level=summary detail=make_mutation_decision accepted=false early_stop=false force_accept=false weighted_score=0.750
+2026-11-03 20:35:28 - root - INFO - step_end step=2 accepted=false early_stop=false stage=default
+2026-11-03 20:35:28 - root - INFO - Scientific workflow finished; releasing pipeline resources
+2026-11-03 20:35:28 - root - INFO - Pipeline completed successfully

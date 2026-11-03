@@ -6,6 +6,7 @@ import threading
 import uuid
 
 from .client import OutcomeUnknown, WorkerError, _encode
+from .contracts import OperationResources, request_metadata
 
 
 def worker_overrides(env):
@@ -24,16 +25,24 @@ def worker_overrides(env):
 
 
 class BrokerClient:
-    def __init__(self, endpoint, token, command, identity, *, env, max_message_bytes, startup_timeout):
+    def __init__(self, endpoint, token, command, identity, *, env, max_message_bytes, startup_timeout,
+                 resources=None):
         self.endpoint, self.token, self.limit = endpoint, token, max_message_bytes
         self.epoch = uuid.uuid4().hex
         self._lock = threading.Lock()
         self._used = set()
         self._closed = False
+        self._release_confirmed = False
+        self._release_error = None
+        self.resources = OperationResources.parse(resources).as_dict()
         response = self._rpc({'op': 'register', 'command': command, 'identity': identity,
                               'env': worker_overrides(env), 'limit': max_message_bytes,
-                              'startup_timeout': startup_timeout}, startup_timeout + 10, submitted=False)
+                              'startup_timeout': startup_timeout, 'resources': self.resources,
+                              'client_epoch': self.epoch, 'owner_pid': os.getpid()},
+                             startup_timeout + 10, submitted=False)
         self.handle, self.hello = response['handle'], response['hello']
+        self.lifecycle = dict(self.hello.get('lifecycle') or {})
+        self.last_metrics = {}
 
     def _rpc(self, request, timeout, *, submitted):
         request['token'] = self.token
@@ -80,12 +89,13 @@ class BrokerClient:
             raise WorkerError(response.get('error', 'broker request failed'))
         return response
 
-    def call(self, payload, *, timeout=None, request_id=None):
+    def call(self, payload, *, timeout=None, request_id=None, runtime=None):
         if not isinstance(payload, dict):
             raise TypeError('payload must be a JSON object')
         _encode(payload, self.limit)
         if timeout is not None and timeout <= 0:
             raise ValueError('timeout must be positive')
+        metadata = request_metadata(runtime)
         with self._lock:
             if self._closed:
                 raise WorkerError('broker client is closed')
@@ -96,16 +106,58 @@ class BrokerClient:
                 raise WorkerError('client request limit reached; start a new session')
             self._used.add(rid)
             response = self._rpc({'op': 'call', 'handle': self.handle, 'epoch': self.epoch,
-                                  'request_id': rid, 'payload': payload, 'timeout': timeout},
+                                  'request_id': rid, 'payload': payload, 'timeout': timeout,
+                                  'runtime': metadata},
                                  None if timeout is None else timeout + 5, submitted=True)
             result = response.get('result')
             if not isinstance(result, dict):
                 raise OutcomeUnknown('invalid broker result; request was not replayed')
+            if response.get('request_id') != rid or response.get('epoch') != self.epoch:
+                raise OutcomeUnknown('broker result identity mismatch; request was not replayed')
+            self.lifecycle = dict(response.get('lifecycle') or self.lifecycle)
+            self.hello['lifecycle'] = self.lifecycle
+            self.last_metrics = dict(response.get('runtime') or {})
+            for field in ('scientific_request_id', 'request_identity'):
+                if field in metadata and self.last_metrics.get(field) != metadata[field]:
+                    raise OutcomeUnknown('broker scientific identity mismatch; request was not replayed')
             return result
 
-    def close(self):
-        # Residency belongs to the broker session, not this handle.
-        self._closed = True
+    def close(self, *, release=False):
+        # A private trajectory-owned model opts into release. Shared exact-
+        # identity models may remain idle in the broker until pressure/exit.
+        with self._lock:
+            if self._closed:
+                if release and not getattr(self, '_release_confirmed', False):
+                    error = getattr(self, '_release_error', None)
+                    if error is not None:
+                        raise error
+                    raise OutcomeUnknown('worker handle is detached but resource release was never confirmed')
+                return
+            try:
+                response = self._rpc({'op': 'detach', 'handle': self.handle, 'client_epoch': self.epoch,
+                                      'release': bool(release)}, 10, submitted=False)
+                self._release_confirmed = response.get('released') is True
+                if self._release_confirmed:
+                    self.lifecycle = {**getattr(self, 'lifecycle', {}), 'process_alive': False,
+                                      'weights_loaded': False, 'gpu_resident': False, 'ready': False,
+                                      'release_confirmed': True}
+                    if hasattr(self, 'hello'):
+                        self.hello['lifecycle'] = self.lifecycle
+                if release and response.get('released') is not True:
+                    raise OutcomeUnknown('private worker release was not confirmed by its resource owner')
+            except WorkerError as exc:
+                if release:
+                    # Cleanup may proceed in the guardian, but its completion
+                    # has not been observed. Do not turn this into success.
+                    self._release_error = OutcomeUnknown('worker release outcome unknown; artifacts must be retained')
+                    self.lifecycle = {**getattr(self, 'lifecycle', {}), 'process_alive': None,
+                                      'weights_loaded': None, 'gpu_resident': None, 'ready': False,
+                                      'release_confirmed': False}
+                    if hasattr(self, 'hello'):
+                        self.hello['lifecycle'] = self.lifecycle
+                    raise self._release_error from exc
+            finally:
+                self._closed = True
 
     def __enter__(self):
         return self

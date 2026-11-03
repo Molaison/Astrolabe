@@ -25,6 +25,16 @@ def daemon_handler(payload):
                 f.write(json.dumps({'kind': kind, 'time': time.monotonic(),
                                     'pid': os.getpid(), 'owner': payload.get('owner')}) + '\n')
     event('forward_start')
+    if payload.get('started_path'):
+        from pathlib import Path
+        Path(payload['started_path']).touch()
+    if payload.get('wait_for_path'):
+        from pathlib import Path
+        deadline = time.monotonic() + 40
+        while not Path(payload['wait_for_path']).exists():
+            if time.monotonic() >= deadline:
+                raise TimeoutError('independent CPU preparation did not complete while forward was admitted')
+            time.sleep(.01)
     if payload.get('sleep'):
         time.sleep(payload['sleep'])
     event('forward_end')
@@ -36,4 +46,5 @@ def daemon_handler(payload):
 if __name__ == '__main__':
     from astrolabe.runtime.server import serve
     identity = json.loads(os.environ.get('RUNTIME_TEST_IDENTITY', 'null'))
-    serve(daemon_handler, identity or {'environment': 'test', 'code': 'test', 'weights': 'none', 'device': 'cpu'})
+    serve(daemon_handler, identity or {'environment': 'test', 'code': 'test', 'weights': 'none', 'device': 'cpu'},
+          load_count=1, lifecycle={'weights_loaded': False, 'gpu_resident': False})

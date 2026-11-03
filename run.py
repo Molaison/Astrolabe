@@ -2106,7 +2106,10 @@ def _evaluate_with_observability(
         oligo=_format_oligo_names(oligo_names),
         detail=detail,
     ) as span:
-        evaluation_result = evaluator.evaluate(inputs, runtime_config)
+        from astrolabe.execution_identity import scientific_operation
+        with scientific_operation("evaluator", _evaluator_event_alias(evaluator),
+                                  runtime_config=runtime_config, inputs=inputs):
+            evaluation_result = evaluator.evaluate(inputs, runtime_config)
         span.finish(
             artifact=_evaluation_artifact_summary(evaluation_result),
             **_evaluation_result_event_fields(evaluation_result),
@@ -2574,8 +2577,20 @@ def _handle_stage_entry(
     if transaction is None:
         return None
 
-    if transaction.target_stage_has_gate:
-        return _handle_transition_gate_stage_entry(
+    from astrolabe.execution_identity import stage_transaction_identity
+    with stage_transaction_identity(transaction.plan, stage_manager):
+        if transaction.target_stage_has_gate:
+            return _handle_transition_gate_stage_entry(
+                args=args,
+                step=step,
+                decisions=decisions,
+                loss_computer=loss_computer,
+                runtime_config=runtime_config,
+                stage_manager=stage_manager,
+                stage_entry=transaction,
+            )
+
+        return _handle_direct_stage_entry(
             args=args,
             step=step,
             decisions=decisions,
@@ -2584,16 +2599,6 @@ def _handle_stage_entry(
             stage_manager=stage_manager,
             stage_entry=transaction,
         )
-
-    return _handle_direct_stage_entry(
-        args=args,
-        step=step,
-        decisions=decisions,
-        loss_computer=loss_computer,
-        runtime_config=runtime_config,
-        stage_manager=stage_manager,
-        stage_entry=transaction,
-    )
 
 
 def run_optimization_loop(
@@ -2807,24 +2812,51 @@ def run_optimization_loop(
 
 def _shutdown_pipeline_resources() -> None:
     """Release per-run resources before the next repeat starts."""
+    # Aliases may refer to the same evaluator. Release each owner once after
+    # the whole trajectory, not during stage changes that can reuse it later.
+    try:
+        evaluators = global_config.get_const("evaluators")
+    except RuntimeError:
+        evaluators = {}
+    released = set()
+    failures = []
+    for alias, evaluator in (evaluators or {}).items():
+        if id(evaluator) in released:
+            continue
+        released.add(id(evaluator))
+        close = getattr(evaluator, "close", None)
+        if not callable(close):
+            continue
+        try:
+            close()
+        except Exception as exc:
+            logging.exception("Failed to close evaluator '%s'.", alias)
+            failures.append(("evaluator", alias, exc))
     try:
         mutators = global_config.get_const("mutators")
     except RuntimeError:
         mutators = {}
     for alias, mutator in (mutators or {}).items():
+        if id(mutator) in released:
+            continue
+        released.add(id(mutator))
         shutdown = getattr(mutator, "shutdown", None)
         if not callable(shutdown):
             continue
         try:
             shutdown()
-        except Exception:
+        except Exception as exc:
             logging.exception("Failed to shutdown mutator '%s'.", alias)
+            failures.append(("mutator", alias, exc))
     try:
         predockers = global_config.get_const("predockers")
     except RuntimeError:
         predockers = {}
     from astrolabe.structure_processors.base import shutdown_structure_processors
     shutdown_structure_processors(predockers)
+    if failures:
+        names = ", ".join(f"{kind}:{alias}" for kind, alias, _ in failures)
+        raise RuntimeError(f"Pipeline resource release was not confirmed for {names}") from failures[0][2]
 
 
 def _finish_run_provenance(
@@ -2883,7 +2915,7 @@ def _run_pipeline(cfg) -> None:
             runtime_config,
         )
 
-        logging.info("Pipeline completed successfully")
+        logging.info("Scientific workflow finished; releasing pipeline resources")
         succeeded = True
 
     except Exception as exc:
@@ -2896,11 +2928,27 @@ def _run_pipeline(cfg) -> None:
         # completion; provenance keeps the failure visible for the run directory.
         _finish_run_provenance(args, "interrupted", error=exc)
         raise
-    else:
-        _finish_run_provenance(args, "completed")
     finally:
-        _shutdown_pipeline_resources()
-        _cleanup_auto_managed_raw_dir(args=args, succeeded=succeeded)
+        cleanup_error = None
+        try:
+            _shutdown_pipeline_resources()
+        except Exception as exc:
+            cleanup_error = exc
+        try:
+            _cleanup_auto_managed_raw_dir(args=args, succeeded=succeeded and cleanup_error is None)
+        except Exception as exc:
+            cleanup_error = cleanup_error or exc
+        if cleanup_error is not None:
+            if succeeded:
+                _finish_run_provenance(args, "failed", error=cleanup_error)
+                raise cleanup_error
+            # Preserve the original scientific failure or interruption. The
+            # cleanup problem remains visible in the raw run log.
+            logging.error("Additional pipeline cleanup failure: %s", cleanup_error,
+                          exc_info=(type(cleanup_error), cleanup_error, cleanup_error.__traceback__))
+        elif succeeded:
+            _finish_run_provenance(args, "completed")
+            logging.info("Pipeline completed successfully")
 
 
 def _cleanup_auto_managed_raw_dir(*, args, succeeded: bool) -> None:
@@ -3033,10 +3081,10 @@ def run_repeats(
     for name, value in (("max_active", active_setting), ("max_resident_models", resident_setting)):
         if value != "auto" and (type(value) is not int or value < 1):
             raise ValueError(f"execution.{name} must be a positive integer or auto")
-    per_device = execution.get("max_resident_per_device", 1)
-    if type(per_device) is not int or per_device < 1:
-        raise ValueError("execution.max_resident_per_device must be a positive integer")
-    if not enabled and (active_setting not in (1, "auto") or resident_setting not in (1, "auto") or per_device != 1):
+    per_device_setting = execution.get("max_resident_per_device", "auto")
+    if per_device_setting != "auto" and (type(per_device_setting) is not int or per_device_setting < 1):
+        raise ValueError("execution.max_resident_per_device must be a positive integer or auto")
+    if not enabled and (active_setting not in (1, "auto") or resident_setting not in (1, "auto") or per_device_setting not in (1, "auto")):
         raise ValueError("nondefault execution limits require execution.enabled=true")
     if enabled:
         from astrolabe.runtime.admission import resolve_active_limit, resolve_resident_limit
@@ -3044,12 +3092,17 @@ def run_repeats(
         validate_parallel(lifecycle_cfg)
         max_active = resolve_active_limit(active_setting, repeats)
         max_resident_models = resolve_resident_limit(resident_setting)
+        per_device = resolve_resident_limit(per_device_setting)
+        resource_limits = OmegaConf.to_container(OmegaConf.create(execution.get("resources") or {}), resolve=True)
+        control = OmegaConf.to_container(OmegaConf.create(execution.get("control") or {}), resolve=True)
         logging.info("Execution admission bounds: trajectories=%d resident_models=%d per_device=%d",
                      max_active, max_resident_models, per_device)
         completed = run_parallel(repeat_configs(), max_active, stop_requested,
                                  lambda count: print(f"=== Completed {count}/{repeats} repeats ==="),
                                  max_resident_models=max_resident_models,
-                                 max_resident_per_device=per_device)
+                                 max_resident_per_device=per_device,
+                                 resource_limits=resource_limits,
+                                 control=control)
         if stop_requested():
             if on_stop_requested is not None:
                 on_stop_requested(completed, repeats)

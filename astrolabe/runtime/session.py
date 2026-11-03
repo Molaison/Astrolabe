@@ -10,6 +10,8 @@ import uuid
 import importlib
 import importlib.util
 import hashlib
+import json
+from collections import deque
 from concurrent.futures import ThreadPoolExecutor, FIRST_COMPLETED, wait
 from omegaconf import OmegaConf
 
@@ -22,7 +24,7 @@ def _child_env():
 
 
 class BrokerSession:
-    def __init__(self, max_resident_models=1, *, max_resident_per_device=None):
+    def __init__(self, max_resident_models=1, *, max_resident_per_device=None, resource_limits=None):
         if type(max_resident_models) is not int or max_resident_models < 1:
             raise ValueError('max_resident_models must be a positive integer')
         self.max_resident_models = max_resident_models
@@ -31,6 +33,8 @@ class BrokerSession:
         if type(max_resident_per_device) is not int or max_resident_per_device < 1:
             raise ValueError('max_resident_per_device must be a positive integer')
         self.max_resident_per_device = max_resident_per_device
+        from .contracts import ResourceLimits
+        self.resource_limits = ResourceLimits.from_mapping(resource_limits).as_dict()
 
     def __enter__(self):
         if os.environ.get('ASTROLABE_CPU_OWNER') == '1' or os.environ.get('ASTROLABE_EXECUTION_ENDPOINT'):
@@ -52,7 +56,7 @@ class BrokerSession:
             self.process = subprocess.Popen(
                 [sys.executable, '-m', 'astrolabe.runtime.broker', self.endpoint,
                  str(token_read), str(read_fd), self.directory.name, str(self.max_resident_models),
-                 str(self.max_resident_per_device)], env=self.env,
+                 str(self.max_resident_per_device), json.dumps(self.resource_limits)], env=self.env,
                 pass_fds=(read_fd, token_read))
         except BaseException:
             os.close(read_fd)
@@ -65,9 +69,9 @@ class BrokerSession:
         os.close(token_read)
         try:
             os.write(token_write, self.token.encode())
-        except BaseException:
+        except BaseException as exc:
             os.close(token_write)
-            self.__exit__(None, None, None)
+            self.__exit__(type(exc), exc, exc.__traceback__)
             raise
         else:
             os.close(token_write)
@@ -84,8 +88,8 @@ class BrokerSession:
                     if time.monotonic() >= deadline:
                         raise RuntimeError('execution broker startup timed out')
                     time.sleep(.02)
-        except BaseException:
-            self.__exit__(None, None, None)
+        except BaseException as exc:
+            self.__exit__(type(exc), exc, exc.__traceback__)
             raise
         self.env.update(ASTROLABE_EXECUTION_ENDPOINT=self.endpoint,
                         ASTROLABE_EXECUTION_TOKEN=self.token,
@@ -95,19 +99,35 @@ class BrokerSession:
                         CUDA_VISIBLE_DEVICES='', NVIDIA_VISIBLE_DEVICES='void',
                         HIP_VISIBLE_DEVICES='', ROCR_VISIBLE_DEVICES='',
                         JAX_PLATFORMS='cpu', GH_CUDA_PREINITIALIZE='0')
+        for name in ('OMP_NUM_THREADS', 'MKL_NUM_THREADS', 'OPENBLAS_NUM_THREADS',
+                     'NUMEXPR_NUM_THREADS', 'VECLIB_MAXIMUM_THREADS'):
+            self.env[name] = '1'
         return self
 
-    def __exit__(self, *_):
-        os.close(self.write_fd)
+    def __exit__(self, exc_type, exc, traceback):
+        from .client import OutcomeUnknown
+        if self.write_fd is not None:
+            os.close(self.write_fd)
+            self.write_fd = None
         # Broker holds in-flight leases until workers terminate; never remove
         # its artifact root while it can still be using request files.
-        self.process.wait()
-        self.directory.cleanup()
+        result = self.process.wait()
+        retained = pathlib.Path(self.directory.name, 'retained.json').exists()
+        if result or retained:
+            # TemporaryDirectory's finalizer would otherwise remove files
+            # while a guardian is still reaping an uncertain process tree.
+            self.directory._finalizer.detach()
+            if result and exc_type is None:
+                raise OutcomeUnknown('broker cleanup was not confirmed; artifacts retained at ' + self.directory.name)
+        else:
+            self.directory.cleanup()
 
 
 def validate_parallel(cfg):
     """Reject any component that has not explicitly opted into this path."""
-    from .capabilities import CPU_LOSSES, CPU_SELECTORS, SELECTOR_SOURCE_SHA256
+    from .capabilities import (CPU_LOSSES, CPU_SELECTORS, SELECTOR_SOURCE_SHA256,
+                               BROKER_EVALUATORS, CPU_EVALUATORS, declares_broker_protocol)
+    from astrolabe.mutators.resident import BROKER_MUTATORS, CPU_MUTATORS
     from astrolabe.losses.base import extract_loss_terms, loss_registry
     from astrolabe.selectors.utils import extract_variables
 
@@ -188,8 +208,13 @@ def validate_parallel(cfg):
             continue
         for alias in stage.get('mutators') or default_stage.get('mutators') or []:
             term = mutators.get(alias) or {}
-            if str(term.get('_type', '')).lower() != 'mcmc':
+            kind = str(term.get('_type', '')).lower()
+            if kind not in CPU_MUTATORS and kind not in BROKER_MUTATORS:
                 raise ValueError(f'parallel runtime does not support mutator {alias}')
+            if kind in BROKER_MUTATORS:
+                execution = term.get('execution', (cfg.get('mutator') or {}).get('execution', 'auto'))
+                if execution not in ('auto', 'daemon'):
+                    raise ValueError(f'parallel runtime requires daemon execution for mutator {alias}')
             active_mutators.add(str(alias))
         aliases = [stage.get('evaluator') or default_stage.get('evaluator')]
         gate = stage.get('transition_consistency_gate') or {}
@@ -198,7 +223,7 @@ def validate_parallel(cfg):
         for alias in aliases:
             term = evaluators.get(alias) or {}
             typ = str(term.get('_type', '')).lower()
-            if typ == 'dummy':
+            if typ in CPU_EVALUATORS:
                 continue
             if typ == 'alphafold3':
                 if not inactive_hooks(term.get('pre_eval_hooks'), {'af3_antibody_msa_cache'}):
@@ -206,15 +231,13 @@ def validate_parallel(cfg):
                 default_af3 = (cfg.get('evaluator') or {}).get('alphafold3', {})
                 if not inactive_hooks(default_af3.get('pre_eval_hooks'), {'af3_antibody_msa_cache'}):
                     raise ValueError('parallel runtime does not support evaluation hooks')
-                mode = term.get('execution', default_af3.get('execution', 'legacy'))
-                if mode == 'daemon':
-                    try:
-                        mod = importlib.import_module('astrolabe.evaluators.af3_resident')
-                        if (getattr(mod, 'BROKER_SHARED_ROOT', False) is True and
-                            getattr(mod, 'BROKER_ADMITTED_PROBE', False) is True):
-                            continue
-                    except ImportError:
-                        pass
+            if typ in BROKER_EVALUATORS:
+                name = 'mol1' if typ == 'mol-1' else typ
+                default_backend = (cfg.get('evaluator') or {}).get(name, {}) or {}
+                default_mode = 'daemon' if name == 'mol1' else 'legacy'
+                mode = term.get('execution', default_backend.get('execution', default_mode))
+                if mode == 'daemon' and declares_broker_protocol(BROKER_EVALUATORS[typ]):
+                    continue
             raise ValueError(f'parallel runtime does not support evaluator {alias}')
 
     mutator_cfg = cfg.get('mutator') or {}
@@ -255,25 +278,39 @@ def _next_limit(limit, maximum, *, pressure, slowed, metrics, previous):
 
 
 def run_parallel(configs, max_active, stop_requested, on_completed, *, max_resident_models=1,
-                 max_resident_per_device=None):
-    """Adapt admission at trajectory completions using observed work and pressure."""
-    from .admission import allocated_devices, available_cpus, resource_pressure
+                 max_resident_per_device=None, resource_limits=None, control=None):
+    """Overlap only independent existing trajectories; never create trial work."""
+    from .admission import allocated_devices
     from .broker_client import BrokerClient
     from .client import WorkerError
+    from .contracts import ResourceLimits
+    from .controller import AdaptiveController, ControlPolicy
+    from .telemetry import EventLog
+    limits = ResourceLimits.from_mapping(resource_limits)
+    policy = ControlPolicy.parse(control)
+    maximum = min(max_active, limits.cpu_slots)
+    if maximum < 1:
+        raise ValueError('max_active must be positive')
     remaining = iter(configs)
     exhausted = False
-    limit = min(2, max_active)
     active = {}
     completed = 0
-    previous_metrics = {'completed': 0, 'wait_seconds': 0.0, 'service_seconds': 0.0}
-    duration_ema = None
-    with BrokerSession(max_resident_models, max_resident_per_device=max_resident_per_device) as session, ThreadPoolExecutor(max_workers=max_active) as pool:
+    trace = EventLog(os.environ.get('ASTROLABE_RUNTIME_TRACE'))
+    controller = AdaptiveController(maximum, policy=control, started=time.monotonic(), events=trace)
+    trajectory_events = deque(maxlen=256)
+    with BrokerSession(max_resident_models, max_resident_per_device=max_resident_per_device,
+                       resource_limits=limits.as_dict()) as session, ThreadPoolExecutor(max_workers=maximum) as pool:
         devices = allocated_devices(session.env['ASTROLABE_ALLOCATED_CUDA_DEVICES'])
         admitted = 0
         monitor = object.__new__(BrokerClient)
         monitor.endpoint, monitor.token, monitor.limit = session.endpoint, session.token, 1048576
+        def observed_metrics():
+            metrics = monitor._rpc({'op': 'metrics'}, 5, submitted=False)['metrics']
+            metrics['effective_completed'] = completed
+            metrics['effective_recent'] = list(trajectory_events)
+            return metrics
         while not exhausted or active:
-            while not exhausted and len(active) < limit and not stop_requested():
+            while not exhausted and len(active) < controller.limit and not stop_requested():
                 try:
                     cfg = next(remaining)
                 except StopIteration:
@@ -289,30 +326,78 @@ def run_parallel(configs, max_active, stop_requested, on_completed, *, max_resid
                 active[future] = time.monotonic()
             if not active:
                 break
-            done, _ = wait(active, return_when=FIRST_COMPLETED)
-            durations = []
+            done, _ = wait(active, timeout=policy.poll_seconds, return_when=FIRST_COMPLETED)
             for future in done:
-                durations.append(time.monotonic() - active.pop(future))
-                future.result()
+                started = active.pop(future)
+                try:
+                    future.result()
+                except BaseException:
+                    # Preserve the real failure/OOM signal before propagating
+                    # the failed scientific trajectory. No request is replayed
+                    # and no extra candidate is created for control feedback.
+                    try:
+                        failure_metrics = observed_metrics()
+                        failure_metrics['trajectory_failure'] = True
+                    except (WorkerError, KeyError, TypeError):
+                        failure_metrics = None
+                    controller.observe(failure_metrics, now=time.monotonic(),
+                                       independent_work=False, active=len(active))
+                    trace.write('trajectory_failure', duration=time.monotonic() - started,
+                                effective_completed=completed, controller_reason=controller.last_reason)
+                    raise
                 completed += 1
                 on_completed(completed)
-            observed = sum(durations) / len(durations)
-            slowed = duration_ema is not None and observed > duration_ema * 1.5
-            duration_ema = observed if duration_ema is None else .75 * duration_ema + .25 * observed
-            pressure = resource_pressure(available_cpus())
+                trajectory_events.append({'time': time.monotonic(), 'backend': 'cpu_trajectory',
+                                          'shape_key': 'fixed_configured_work', 'phase': 'trajectory',
+                                          'cold_start': completed == 1, 'outcome': 'completed',
+                                          'duration': time.monotonic() - started})
+                trace.write('trajectory_complete', completed=completed,
+                            duration=time.monotonic() - started)
             try:
-                metrics = monitor._rpc({'op': 'metrics'}, 2, submitted=False)['metrics']
-                limit = _next_limit(limit, max_active, pressure=pressure, slowed=slowed,
-                                    metrics=metrics, previous=previous_metrics)
-                previous_metrics = metrics
+                metrics = observed_metrics()
+                if metrics.get('stopping'):
+                    raise RuntimeError('execution broker stopped after a resource/owner failure')
+                # A CPU-only workflow without model calls still has a real
+                # fixed-task completion measure. It is kept separate from GPU
+                # request cohorts and never used to claim GPU utilization.
+                if not metrics.get('recent') and not devices:
+                    metrics['recent'] = list(trajectory_events)
+                controller.observe(metrics, now=time.monotonic(),
+                                   independent_work=not exhausted and not stop_requested(), active=len(active))
             except (WorkerError, KeyError, TypeError):
-                limit = max(1, limit - 1)
+                controller.observe(None, now=time.monotonic(), independent_work=not exhausted, active=len(active))
     return completed
 
 
 def run_trajectory(cfg, *, env=None):
+    from .broker_client import BrokerClient
+    child_env = env or _child_env()
     with tempfile.TemporaryDirectory(prefix='astrolabe-trajectory-') as tmp:
         config_path = pathlib.Path(tmp) / 'config.yaml'
         OmegaConf.save(cfg, config_path, resolve=False)
-        subprocess.run([sys.executable, '-m', 'astrolabe.runtime.trajectory', str(config_path)],
-                       check=True, env=env or _child_env())
+        process = subprocess.Popen([sys.executable, '-m', 'astrolabe.runtime.trajectory', str(config_path)],
+                                   env=child_env, start_new_session=True)
+        try:
+            if child_env.get('ASTROLABE_EXECUTION_ENDPOINT'):
+                monitor = object.__new__(BrokerClient)
+                monitor.endpoint = child_env['ASTROLABE_EXECUTION_ENDPOINT']
+                monitor.token, monitor.limit = child_env['ASTROLABE_EXECUTION_TOKEN'], 1048576
+                monitor._rpc({'op': 'owner', 'pid': process.pid}, 5, submitted=False)
+            result = process.wait()
+            if result:
+                raise subprocess.CalledProcessError(result, process.args)
+        except BaseException:
+            import signal
+            try:
+                os.killpg(process.pid, signal.SIGTERM)
+            except ProcessLookupError:
+                pass
+            try:
+                process.wait(timeout=3)
+            except subprocess.TimeoutExpired:
+                try:
+                    os.killpg(process.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                process.wait()
+            raise

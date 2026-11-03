@@ -48,6 +48,7 @@ def _plain_mapping(value: Any) -> dict[str, Any]:
 
 class RosettaCrystalEvaluator(Evaluator):
     """Evaluate candidate sequences on immutable crystal Fab-ligand references."""
+    execution_phase = 'cpu_execute'
 
     def __init__(
         self,
@@ -99,9 +100,23 @@ class RosettaCrystalEvaluator(Evaluator):
         self._pyrosetta = None
         self._reference_poses: dict[tuple[str, str], Any] = {}
         self._reference_metrics: dict[tuple[str, str], dict[str, Any]] = {}
+        self._reference_identities = {}
+        self._params_identity = None
+        self._initialization_count = 0
+        self._reference_load_count = 0
 
     def _ensure_pyrosetta(self):
+        from astrolabe.evaluators.worker_identity import digest_path
+        params = []
+        for state, cfg in self.states.items():
+            path = Path(str(cfg.get('params', ''))).expanduser().resolve()
+            if not path.is_file():
+                raise FileNotFoundError(f'rosetta_crystal state {state} params missing: {path}')
+            params.append(path)
+        params_identity = tuple((str(path), digest_path(path)) for path in params)
         if self._pyrosetta is not None:
+            if params_identity != self._params_identity:
+                raise RuntimeError('Rosetta residue parameters changed; process-global initialization requires a new process')
             return self._pyrosetta
         import pyrosetta  # type: ignore
 
@@ -121,7 +136,9 @@ class RosettaCrystalEvaluator(Evaluator):
                 + " ".join(str(path) for path in params)
             )
             pyrosetta.init(opts)
+            self._initialization_count += 1
         self._pyrosetta = pyrosetta
+        self._params_identity = params_identity
         return pyrosetta
 
     def _reference_path(self, state: str, oligo_name: str) -> Path:
@@ -138,15 +155,46 @@ class RosettaCrystalEvaluator(Evaluator):
         return path
 
     def _reference_pose(self, state: str, oligo_name: str):
+        import json
+        from astrolabe.evaluators.worker_identity import digest_path
         key = (state, oligo_name)
+        pyrosetta = self._ensure_pyrosetta()
+        path = self._reference_path(state, oligo_name)
+        configuration = {name: getattr(self, name) for name in (
+            'protein_chains', 'ligand_chain', 'design_positions', 'neighbor_distance',
+            'replicates', 'random_seed', 'constraint_weight', 'protein_ca_sd',
+            'ligand_heavy_atom_sd', 'packer_nloop', 'minimize_tolerance', 'minimize_max_iter')}
+        dependency = (str(path), digest_path(path), self._params_identity,
+                      json.dumps(configuration, sort_keys=True))
+        if self._reference_identities.get(key) != dependency:
+            self._reference_poses.pop(key, None)
+            self._reference_metrics.pop(key, None)
         cached = self._reference_poses.get(key)
         if cached is not None:
             return cached.clone()
-        pyrosetta = self._ensure_pyrosetta()
-        pose = pyrosetta.pose_from_file(str(self._reference_path(state, oligo_name)))
+        pose = pyrosetta.pose_from_file(str(path))
         self._validate_pose(pose, state=state, oligo_name=oligo_name)
         self._reference_poses[key] = pose.clone()
+        self._reference_identities[key] = dependency
+        self._reference_load_count += 1
         return pose
+
+    def lifecycle(self):
+        import os
+        return {'process_alive': True, 'pid': os.getpid(), 'weights_loaded': False,
+                'gpu_resident': False, 'resident_bytes': 0, 'ready': not getattr(self, '_closed', False),
+                'load_count': self._reference_load_count, 'device': 'cpu',
+                'components': {'owned_pyrosetta_initializations': self._initialization_count,
+                               'reference_pose_loads': self._reference_load_count,
+                               'reference_cache_entries': len(self._reference_poses)},
+                'release_requires_exit': True, 'process_global_environment': 'pyrosetta'}
+
+    def close(self):
+        self._reference_poses.clear()
+        self._reference_metrics.clear()
+        self._reference_identities.clear()
+        self._pyrosetta = None
+        super().close()
 
     def _validate_pose(self, pose, *, state: str, oligo_name: str) -> None:
         pdb_info = pose.pdb_info()

@@ -31,10 +31,17 @@ class RhoFoldEvaluator(Evaluator):
     """
     Evaluator for RhoFold.
     """
+    finalize_phase = 'composite'  # optional OpenMM relaxation may use a device
 
     def __init__(self, model_runner, output_dir, config):
         self.config = config or {}
-        self.model_runner = model_runner.to(config.device)
+        self.model_runner = model_runner
+        self._uses_resident = getattr(model_runner, 'forward', None) is not None and not hasattr(model_runner, 'to')
+        if not self._uses_resident:
+            self.model_runner = model_runner.to(config.device)
+        else:
+            from rhofold.utils.converter import RNAConverter
+            self._converter = RNAConverter()
         self.output_dir = Path(output_dir)
 
     def prepare_output(self, output, inputs, runtime_config):
@@ -50,7 +57,7 @@ class RhoFoldEvaluator(Evaluator):
             os.makedirs(raw_result_dir, exist_ok=True)
 
             # Secondary structure, .ct format
-            ss_prob_map = torch.sigmoid(oligo_output["ss"][0, 0]).data.cpu().numpy()
+            ss_prob_map = oligo_output['ss_prob_map'] if self._uses_resident else torch.sigmoid(oligo_output["ss"][0, 0]).data.cpu().numpy()
             ss_file = raw_result_dir / "ss.ct"
             save_ss2ct(ss_prob_map, input.chains[0].sequence, ss_file, threshold=0.5)
 
@@ -58,30 +65,32 @@ class RhoFoldEvaluator(Evaluator):
             npz_file = raw_result_dir / "results.npz"
             np.savez_compressed(
                 npz_file,
-                dist_n=torch.softmax(oligo_output["n"].squeeze(0), dim=0)
+                dist_n=oligo_output['dist_n'] if self._uses_resident else torch.softmax(oligo_output["n"].squeeze(0), dim=0)
                 .data.cpu()
                 .numpy(),
-                dist_p=torch.softmax(oligo_output["p"].squeeze(0), dim=0)
+                dist_p=oligo_output['dist_p'] if self._uses_resident else torch.softmax(oligo_output["p"].squeeze(0), dim=0)
                 .data.cpu()
                 .numpy(),
-                dist_c=torch.softmax(oligo_output["c4_"].squeeze(0), dim=0)
+                dist_c=oligo_output['dist_c'] if self._uses_resident else torch.softmax(oligo_output["c4_"].squeeze(0), dim=0)
                 .data.cpu()
                 .numpy(),
                 ss_prob_map=ss_prob_map,
-                plddt=oligo_output["plddt"][0].data.cpu().numpy(),
+                plddt=oligo_output['plddt_cpu'] if self._uses_resident else oligo_output["plddt"][0].data.cpu().numpy(),
             )
-            plddt[oligo_name] = oligo_output["plddt"][0].data.cpu().numpy().tolist()
+            confidence = oligo_output['plddt_cpu'] if self._uses_resident else oligo_output["plddt"][0].data.cpu().numpy()
+            plddt[oligo_name] = confidence.tolist()
             # Save the prediction
             unrelaxed_model = raw_result_dir / f"{jobname}_model.pdb"
 
             # The last cords prediction
-            node_cords_pred = oligo_output["cord_tns_pred"][-1].squeeze(0)
-            self.model_runner.structure_module.converter.export_pdb_file(
+            coordinates = oligo_output['cords_cpu'] if self._uses_resident else oligo_output["cord_tns_pred"][-1].squeeze(0).data.cpu().numpy()
+            converter = self._converter if self._uses_resident else self.model_runner.structure_module.converter
+            converter.export_pdb_file(
                 input.chains[0].sequence,
-                node_cords_pred.data.cpu().numpy(),
+                coordinates,
                 path=unrelaxed_model,
                 chain_id=None,
-                confidence=oligo_output["plddt"][0].data.cpu().numpy(),
+                confidence=confidence,
             )
             final_model = structure_dir / f"{jobname}_model.pdb"
 
@@ -89,6 +98,12 @@ class RhoFoldEvaluator(Evaluator):
             if self.config.relax_steps is not None:
                 relax_steps = int(self.config.relax_steps)
                 if relax_steps > 0:
+                    relaxed_model = raw_result_dir / f"relaxed_{relax_steps}_model.pdb"
+                    if self._uses_resident:
+                        self.model_runner.relax(unrelaxed_model, relaxed_model)
+                        shutil.copy2(relaxed_model, final_model)
+                        complex_paths[oligo_name] = final_model
+                        continue
                     try:
                         from rhofold.relax.relax import AmberRelaxation
                     except ModuleNotFoundError as exc:
@@ -99,7 +114,6 @@ class RhoFoldEvaluator(Evaluator):
                     amber_relax = AmberRelaxation(
                         max_iterations=relax_steps, logger=logging.getLogger("rhofold")
                     )
-                    relaxed_model = raw_result_dir / f"relaxed_{relax_steps}_model.pdb"
                     amber_relax.process(unrelaxed_model, relaxed_model)
 
                     shutil.copy2(relaxed_model, final_model)
@@ -134,18 +148,11 @@ class RhoFoldEvaluator(Evaluator):
             if not sequence:
                 raise ValueError(f"RhoFold input {oligo_name!r} does not contain an RNA chain.")
 
-            tmp_file = tempfile.NamedTemporaryFile(
-                mode="w", suffix=".a3m", delete=False
-            )
-            tmp_file.write(f">{oligo_name}\n{sequence[0]}\n")
-            tmp_file.flush()
-            atexit.register(os.unlink, tmp_file.name)
-
-            # self.get_blast(tmp_file)
-            msa_tokens = get_msa_feature(msa_path=tmp_file.name, msa_depth=128)
-            rna_fm_tokens = get_rna_fm_token(
-                tmp_file.name,
-            )
+            with tempfile.NamedTemporaryFile(mode="w", suffix=".a3m") as tmp_file:
+                tmp_file.write(f">{oligo_name}\n{sequence[0]}\n")
+                tmp_file.flush()
+                msa_tokens = get_msa_feature(msa_path=tmp_file.name, msa_depth=128)
+                rna_fm_tokens = get_rna_fm_token(tmp_file.name)
 
             result[oligo_name] = {
                 "seq": sequence[0],
@@ -165,6 +172,9 @@ class RhoFoldEvaluator(Evaluator):
         )
 
     def run_function(self, input_feat):
+        if self._uses_resident:
+            self.model_runner.validate_config(self.config)
+            return self.model_runner.forward(input_feat)
         result = {}
         with torch.no_grad():
             for oligo_name, feat in input_feat.items():
@@ -174,3 +184,7 @@ class RhoFoldEvaluator(Evaluator):
                     seq=feat["seq"],
                 )[-1]
         return result
+
+    def close(self):
+        self._converter = None
+        super().close()

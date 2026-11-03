@@ -73,6 +73,15 @@ class ESM3Mutator(Mutator):
         self.position_selector = position_selector
         self.predocker = predocker
 
+        from astrolabe.mutators.resident import uses_resident, ResidentRunner
+        self._resident = None
+        if uses_resident():
+            self._resident = ResidentRunner("esm3", {"model_name": model_name,
+                "device": device, "temperature": temperature}, keyword_constructor=True)
+            self.runner = self._resident
+            self.aa_order = self._resident.metadata["aa_order"]
+            return
+
         self.device = torch.device(
             device if device is not None else ("cuda" if torch.cuda.is_available() else "cpu")
         )
@@ -98,6 +107,7 @@ class ESM3Mutator(Mutator):
         self.runner = self._esm3_cls.from_pretrained(model_name, device=self.device)
         self.runner.eval()
         self.runner = self.runner.to(self.device)
+        self.model_load_count = 1
 
         tokenizers = get_esm3_model_tokenizers(model_name)
         self.sequence_tokenizer = tokenizers.sequence
@@ -154,11 +164,15 @@ class ESM3Mutator(Mutator):
         return "".join(masked)
 
     def compute_mutation(self, mutation_input_features: Dict[str, Dict[str, Any]]):
+        if self._resident is not None:
+            return self._resident.compute_mutation(mutation_input_features)
         mutation_output = {}
         logits_config = self._logits_config
 
         for oligo_name, input_feat in mutation_input_features.items():
-            protein_prompt = input_feat["protein_prompt"]
+            protein_prompt = input_feat.get("protein_prompt")
+            if protein_prompt is None:
+                protein_prompt = self._build_protein_prompt(input_feat["sequence"])
             protein_tensor = self.runner.encode(protein_prompt)
             logits_output = self.runner.logits(
                 protein_tensor, config=logits_config
@@ -223,10 +237,18 @@ class ESM3Mutator(Mutator):
             masked_sequence = "".join(masked_sequence_parts)
 
             mutation_input_features[oligo_name] = {
-                "protein_prompt": self._build_protein_prompt(masked_sequence),
+                "sequence": masked_sequence,
             }
 
         return mutation_input_features
+
+    def shutdown(self):
+        if self._resident is not None:
+            self._resident.close()
+        elif getattr(self, "runner", None) is not None:
+            self.runner.to("cpu")
+            self.runner = None
+            self._aa_token_ids = None
 
     def prepare_mutation_output(
         self, mutation_output, protomer, evaluation_scores, runtime_config

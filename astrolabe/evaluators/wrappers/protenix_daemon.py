@@ -14,6 +14,8 @@ def main():
     from astrolabe.evaluators.torch_rng import capture, restore
     from astrolabe.evaluators.request_path import request_directory
     from astrolabe.runtime.server import serve
+    from astrolabe.runtime.admission import operation
+    from astrolabe.evaluators.lifecycle import cpu_tree
     if spec['semantics'].get('config') != spec['model_config'] or not spec['semantics'].get('trajectory'):
         raise ValueError('Protenix startup identity mismatch')
     actual = identity(sys.executable, spec['code_paths'], spec['weight_paths'], spec['device'], spec['semantics'])
@@ -58,7 +60,7 @@ def main():
         data = batch['data']
         if int(data['N_token'].item()) != batch['n_token'] or runner.configs.seed != batch['seed']:
             raise ValueError('Protenix request settings mismatch')
-        with contextlib.redirect_stdout(sys.stderr):
+        with contextlib.redirect_stdout(sys.stderr), operation(actual, phase='device') as lease:
             from astrolabe.evaluators.wrappers.protenix import update_inference_configs
             restore(batch['rng'], spec['device']['name'])
             updated = update_inference_configs(runner.configs, batch['n_token'])
@@ -66,11 +68,17 @@ def main():
                      'sample_diffusion': bool(updated.skip_amp.sample_diffusion)}
             if flags != batch['skip_amp']: raise ValueError('Protenix dynamic configuration mismatch')
             runner.update_model_configs(updated)
-            prediction = runner.predict(data)
+            prediction = cpu_tree(runner.predict(data))
             output = {'prediction': prediction, 'rng': capture(spec['device']['name'])}
+            lease.update_lifecycle(**lifecycle())
         dump_tree(request / 'output', output)
         return {'request': request.name}
-    serve(handle, actual)
+    from astrolabe.evaluators.lifecycle import model_lifecycle
+    def lifecycle():
+        return model_lifecycle(runner.model, load_count=runner._weight_load_count, loaded=runner._weight_load_count > 0,
+                               device=spec['device'])
+    serve(handle, actual, load_count=runner._weight_load_count, lifecycle=lifecycle,
+          capabilities={'managed_device': True, 'managed_methods': ['predict']})
 
 
 if __name__ == '__main__': main()

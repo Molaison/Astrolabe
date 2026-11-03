@@ -16,7 +16,8 @@ from astrolabe.mutators.utils import (
 
 def extract_esm2_probs(model, batch_tokens, temperature=0.3):
     with torch.no_grad():
-        logits = model(batch_tokens.cuda())["logits"]
+        device = next(model.parameters()).device
+        logits = model(batch_tokens.to(device))["logits"]
         logits /= temperature
         logits = logits[..., 4:24]
         probs = torch.softmax(logits, dim=-1)
@@ -36,16 +37,29 @@ class ESM2Mutator(Mutator):
         supports_shared_selection_policy=True,
     )
 
-    def __init__(self, position_selector=None, predocker=None):
+    def __init__(self, position_selector=None, predocker=None, device=None):
+        from astrolabe.mutators.resident import uses_resident, ResidentRunner
+        self.predocker = predocker
+        self.position_selector = position_selector
+        self._resident = None
+        if uses_resident():
+            self._resident = ResidentRunner("esm2", {"device": device}, keyword_constructor=True)
+            self.runner = self._resident
+            self.aa_order = self._resident.metadata["aa_order"]
+            self.alphabet = esm2.data.Alphabet(**self._resident.metadata["alphabet"])
+            return
         model, self.alphabet = esm2.pretrained.esm2_t33_650M_UR50D()
         # use eval mode for deterministic mutation_output e.g. without random dropout
         model.eval()
-        self.runner = model.cuda()
+        self.runner = model.to(device or "cuda")
+        self.model_load_count = 1
         self.predocker = predocker
         self.position_selector = position_selector
         self.aa_order = self.alphabet.all_toks[4:24]  # ESM2 uses a specific token order
 
     def compute_mutation(self, mutation_input_features):
+        if self._resident is not None:
+            return self._resident.compute_mutation(mutation_input_features)
         mutation_output = {}
         for oligo_name, input_feat in mutation_input_features.items():
             oligo_output = extract_esm2_probs(self.runner, **input_feat)
@@ -53,6 +67,13 @@ class ESM2Mutator(Mutator):
             mutation_output[oligo_name] = oligo_output
 
         return mutation_output
+
+    def shutdown(self):
+        if self._resident is not None:
+            self._resident.close()
+        elif getattr(self, "runner", None) is not None:
+            self.runner.to("cpu")
+            self.runner = None
 
     def prepare_mutation_input(
         self,

@@ -1,0 +1,17 @@
+{
+  "command": "export PATH=/xcf26/zpzeng/.gh_container/envs/_gh_apptainer/bin:$PATH\nexport LD_LIBRARY_PATH=/xcf26/zpzeng/.gh_container/envs/_gh_apptainer/lib:${LD_LIBRARY_PATH:-}\napptainer exec --cleanenv --bind /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation --pwd /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test --env CUDA_VISIBLE_DEVICES= --env JAX_PLATFORMS=cpu --env PYTHONDONTWRITEBYTECODE=1 --env OMP_NUM_THREADS=1 --env PYTHONPATH=/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-env/lib/python3.11/site-packages /xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif /alphafold3_venv/bin/python scripts/validation/runtime_workflow_benchmark.py --config /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/scripts/validation/fixtures/runtime_cpu.yaml --config-dir /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-test/config --direct-repo /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-direct --out /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/cpu-three-mode-02 --repetitions 3 --walltime-budget 600 --max-output-bytes 260000000 --sample-interval 0.5 >/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/cpu-three-mode-02-command.log 2>&1\nstatus=$?\ncat /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-evidence/cpu-three-mode-02-command.log\nexit \"$status\"",
+  "source_snapshot": {
+    "path": "/workspace/scratch/93ef4745b713/snapshot06.tar.gz",
+    "bytes": 66530,
+    "sha256": "25b1e34a1fd2d6131418ede053c3cf0873940bdf8b996d236d7f095d54a26d67",
+    "files": 12
+  },
+  "direct_commit": "834402daade9f62e9dec0b08041dade163a89369",
+  "walltime_budget_seconds": 600,
+  "prior_attempt_wall_seconds": 214.46087118900323,
+  "combined_budget_ceiling_seconds": 814.4608711890032,
+  "original_total_budget_seconds": 900,
+  "output_budget_bytes": 260000000,
+  "gpu_enabled": false,
+  "scope": "Complete repeated CPU protocol/overhead comparison after the process-observation bug fix; keep failed attempt01."
+}

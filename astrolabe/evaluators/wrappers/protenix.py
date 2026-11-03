@@ -1324,6 +1324,7 @@ def update_inference_configs(configs: Any, N_token: int):
 
 class ProtenixRunner(object):
     def __init__(self, configs: Any) -> None:
+        self._weight_load_count = 0
         _ensure_protenix_ccd_cache_files_exist()
         _lazy_import_protenix()
         self.configs = _normalize_protenix_configs(configs)
@@ -1335,6 +1336,11 @@ class ProtenixRunner(object):
             need_atom_confidence=self.configs.need_atom_confidence,
             sorted_by_ranking_score=self.configs.sorted_by_ranking_score,
         )
+
+    def close(self):
+        self.model = None
+        self.dumper = None
+        # Driver-reserved memory is reclaimed when the owning worker exits.
 
     def init_env(self) -> None:
         self.print(
@@ -1509,6 +1515,7 @@ class ProtenixRunner(object):
             strict=self.configs.load_strict,
         )
         self.model.eval()
+        self._weight_load_count += 1
         self.print(f"Finish loading checkpoint.")
 
     def init_dumper(

@@ -75,14 +75,14 @@ def _write(stream, payload: dict[str, Any]) -> None:
     stream.flush()
 
 
-def _seed_everything(seed: int) -> None:
+def _seed_everything(seed: int, *, cuda: bool = True) -> None:
     import numpy as np
     import torch
 
     random.seed(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
-    if torch.cuda.is_available():
+    torch.random.default_generator.manual_seed(seed)
+    if cuda and torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
 
 
@@ -205,7 +205,15 @@ class SurfaceBuilder:
         pdb_path = self._as_pdb(pdb_path)
         lines, chain_order, chain_lengths = self._backbone_lines(pdb_path)
         backbone_text = "\n".join(lines) + "\nEND\n"
-        cache_key = hashlib.sha256(backbone_text.encode("utf-8")).hexdigest()
+        digest = hashlib.sha256(backbone_text.encode("utf-8"))
+        digest.update(Path(__file__).read_bytes())
+        import inspect
+        for function in (self.computer_property, self.load_point_cloud):
+            source = inspect.getsourcefile(function)
+            if source:
+                digest.update(Path(source).read_bytes())
+        digest.update(repr(self.cmd.get_version()).encode())
+        cache_key = digest.hexdigest()
         cache_path = self.work_dir / f"{cache_key}.pkl"
         backbone_path = self.work_dir / f"{cache_key}.pdb"
         if cache_path.is_file():
@@ -260,12 +268,12 @@ def _fixed_flat_indices(
     return flat_indices
 
 
-def _infer(
+def _prepare(
     runtime: Runtime,
     surface_builder: SurfaceBuilder,
     pdb_path: Path,
     fixed_residues: str,
-) -> tuple[list[list[float]], str]:
+):
     torch = runtime.torch
     backbone_path, chain_order, chain_lengths, surface = surface_builder.build(pdb_path)
     structure = runtime.data_processor.parse_PDB(
@@ -282,6 +290,12 @@ def _infer(
 
     featurizer.get_surface = get_surface
     batch = runtime.alphabet.featurize(raw_batch=[structure])
+    return batch, chain_order, chain_lengths, fixed_residues
+
+
+def _execute(runtime: Runtime, prepared):
+    torch = runtime.torch
+    batch, chain_order, chain_lengths, fixed_residues = prepared
     batch = {
         key: value.to(runtime.device) if hasattr(value, "to") else value
         for key, value in batch.items()
@@ -331,18 +345,32 @@ def _infer(
     return probabilities.cpu().tolist(), sequence
 
 
+
+def _infer(runtime, surface_builder, pdb_path, fixed_residues):
+    return _execute(runtime, _prepare(runtime, surface_builder, pdb_path, fixed_residues))
+
 def main() -> int:
     args = _parse_args()
-    protocol_out = sys.stdout
+    import os
+    protocol_out = os.fdopen(os.dup(1), "w", buffering=1)
+    os.dup2(2, 1)
+    sys.stdout = sys.stderr
+    load_count = 0
     with contextlib.redirect_stdout(sys.stderr):
         runtime = _load_runtime(args)
+        load_count += 1
         surface_builder = SurfaceBuilder(Path(args.work_dir).resolve(), args.surface_mode)
     _write(
         protocol_out,
-        {"type": "ready", "pid": os.getpid(), "model_load_count": 1},
+        {"type": "ready", "pid": os.getpid(), "model_load_count": load_count, "weights_loaded": True,
+         "gpu_resident": runtime.device.startswith("cuda"), "device": runtime.device,
+         "phases": ["prepare", "infer_prepared"]},
     )
 
     request_count = 0
+    prepared = None
+    prepared_id = None
+    prepared_seed = None
     for raw in sys.stdin:
         message = json.loads(raw)
         message_type = message.get("type")
@@ -351,25 +379,41 @@ def main() -> int:
                 surface_builder.close()
             _write(protocol_out, {"type": "ok", "message": "bye"})
             return 0
-        if message_type != "infer":
+        if message_type == "prepare":
+            if prepared is not None:
+                raise ValueError("a SurfDesign request is already prepared")
+            prepared_seed = int(message.get("seed", 0))
+            _seed_everything(prepared_seed, cuda=False)
+            with contextlib.redirect_stdout(sys.stderr):
+                prepared = _prepare(runtime, surface_builder, Path(message["pdb_path"]).resolve(),
+                                    str(message.get("fixed_residues") or ""))
+            prepared_id = message.get("id")
+            _write(protocol_out, {"type": "prepared", "id": prepared_id})
+            continue
+        if message_type not in ("infer", "infer_prepared"):
             raise ValueError(f"Unknown SurfDesign daemon message type: {message_type!r}")
 
         request_count += 1
-        _seed_everything(int(message.get("seed", 0)))
-        with contextlib.redirect_stdout(sys.stderr):
-            probabilities, sequence = _infer(
-                runtime,
-                surface_builder,
-                Path(message["pdb_path"]).resolve(),
-                str(message.get("fixed_residues") or ""),
-            )
+        if message_type == "infer_prepared":
+            if prepared is None or message.get("id") != prepared_id:
+                raise ValueError("SurfDesign prepared request identity mismatch")
+            if runtime.device.startswith("cuda"):
+                runtime.torch.cuda.manual_seed_all(prepared_seed)
+            with contextlib.redirect_stdout(sys.stderr):
+                probabilities, sequence = _execute(runtime, prepared)
+            prepared = prepared_id = prepared_seed = None
+        else:
+            _seed_everything(int(message.get("seed", 0)))
+            with contextlib.redirect_stdout(sys.stderr):
+                probabilities, sequence = _infer(runtime, surface_builder,
+                    Path(message["pdb_path"]).resolve(), str(message.get("fixed_residues") or ""))
         _write(
             protocol_out,
             {
                 "type": "result",
                 "id": message.get("id"),
                 "pid": os.getpid(),
-                "model_load_count": 1,
+                "model_load_count": load_count,
                 "request_count": request_count,
                 "probabilities": probabilities,
                 "sequence": sequence,

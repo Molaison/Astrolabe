@@ -1,0 +1,200 @@
+{
+  "plan_commit": "b537b8a81ff0738922e80a997ffeb9700cdafe09",
+  "preserved_implementation_commit": "834402daade9f62e9dec0b08041dade163a89369",
+  "registry": {
+    "evaluator": [
+      {
+        "registry_key": "alphafold3",
+        "factory": "_build_alphafold3_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "rf3",
+        "factory": "_build_rf3_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "alphafold2",
+        "factory": "_build_alphafold2_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "esmfold",
+        "factory": "_build_esmfold_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "esmfold2",
+        "factory": "_build_esmfold2_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "chai1",
+        "factory": "_build_chai1_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "boltz",
+        "factory": "_build_boltz_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "opendde",
+        "factory": "_build_opendde_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "mol-1",
+        "factory": "_build_mol1_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "mol1",
+        "factory": "_build_mol1_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "protenix",
+        "factory": "_build_protenix_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "rhofold",
+        "factory": "_build_rhofold_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "dummy",
+        "factory": "_build_dummy_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      },
+      {
+        "registry_key": "rosetta_crystal",
+        "factory": "_build_rosetta_crystal_evaluator",
+        "source": "astrolabe/evaluators/utils.py"
+      }
+    ],
+    "mutator": [
+      {
+        "registry_key": "mcmc",
+        "factory": "_build_mcmc_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "pore_blocker_mcmc",
+        "factory": "_build_pore_blocker_mcmc_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "ligandmpnn",
+        "factory": "_build_ligandmpnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "grouped_ligandmpnn",
+        "factory": "_build_grouped_ligandmpnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "ProteinMPNN",
+        "factory": "_build_proteinmpnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "MultistateProteinMPNN",
+        "factory": "_build_multistate_proteinmpnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "multistate_proteinmpnn",
+        "factory": "_build_multistate_proteinmpnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "FarApartTiedMultitargetLigandMPNN",
+        "factory": "_build_multistate_proteinmpnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "far_apart_tied_multitarget_ligandmpnn",
+        "factory": "_build_multistate_proteinmpnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "dynamicmpnn",
+        "factory": "_build_dynamicmpnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "surfdesign",
+        "factory": "_build_surfdesign_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "surfpro",
+        "factory": "_build_surfpro_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "carbondesign",
+        "factory": "_build_carbondesign_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "esmif",
+        "factory": "_build_esmif_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "esm2",
+        "factory": "_build_esm2_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "esm3",
+        "factory": "_build_esm3_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "motifbreaker",
+        "factory": "_build_motifbreaker_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "dplm",
+        "factory": "_build_dplm_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "xmix",
+        "factory": "_build_xmix_mutator",
+        "source": "astrolabe/mutators/base.py"
+      },
+      {
+        "registry_key": "nampnn",
+        "factory": "_build_nampnn_mutator",
+        "source": "astrolabe/mutators/base.py"
+      }
+    ]
+  },
+  "inputs": {
+    "Astrolabe_AGENT_CONTEXT.md": {
+      "sha256": "6c5e55a55ae0485e43a53e20f4e7704bdfc20fc8ac3c1476b0ba92780f9c7bf7",
+      "bytes": 6574
+    },
+    "Astrolabe_REVIEW_EVIDENCE.md": {
+      "sha256": "04cc9ab9bf9e69fc3d09b122f78c72b62fbd313a73f6c9cf236e9066f8dbe261",
+      "bytes": 9069
+    },
+    "Astrolabe_RUNTIME_ARCHITECTURE_PLAN.md": {
+      "sha256": "6e6d6395bf9aeeca3f244781e5e442088a2df62bbfcee02103bf49fc83e1065b",
+      "bytes": 46894
+    }
+  },
+  "notes": [
+    "AST inventory of actual decorators, not import-only or model certification.",
+    "Each factory variant and native dependency is detailed in the evaluator and mutator lifecycle matrices.",
+    "initial-status.txt was captured after parallel implementation had begun; its task-owned edits are not pre-existing user changes.",
+    "The pre-existing untracked resource download is preserved and excluded from delivery."
+  ]
+}

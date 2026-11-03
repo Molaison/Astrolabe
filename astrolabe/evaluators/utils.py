@@ -555,10 +555,6 @@ def _build_rhofold_evaluator(
     oligo_names,
     evaluator_conf,
 ):
-    import torch
-    from rhofold.config import rhofold_config
-    from rhofold.rhofold import RhoFold
-
     from astrolabe.evaluators.rhofold import RhoFoldEvaluator
 
     rhofold_conf = _merge_conf_with_defaults(
@@ -571,10 +567,20 @@ def _build_rhofold_evaluator(
     if not ckpt:
         raise ValueError("RhoFold checkpoint is missing (`evaluator.rhofold.checkpoint`).")
 
-    model_runner = RhoFold(rhofold_config)
-    state = torch.load(str(ckpt), map_location=torch.device("cpu"))
-    model_runner.load_state_dict(state["model"])
-    model_runner.eval()
+    execution = rhofold_conf.get('execution', 'legacy')
+    if execution == 'daemon':
+        from astrolabe.evaluators.rhofold_resident import RhoFoldResident
+        model_runner = RhoFoldResident(rhofold_conf)
+    elif execution == 'legacy':
+        import torch
+        from rhofold.config import rhofold_config
+        from rhofold.rhofold import RhoFold
+        model_runner = RhoFold(rhofold_config)
+        state = torch.load(str(ckpt), map_location=torch.device("cpu"))
+        model_runner.load_state_dict(state["model"])
+        model_runner.eval()
+    else:
+        raise ValueError('RhoFold execution must be legacy or daemon')
 
     return RhoFoldEvaluator(
         model_runner,

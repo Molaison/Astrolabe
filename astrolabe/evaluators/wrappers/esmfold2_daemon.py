@@ -34,6 +34,7 @@ def main():
             if actual_kind != spec['device']['device_kind']:
                 raise RuntimeError(f'ESMFold2 device kind mismatch: {actual_kind}')
     from astrolabe.runtime.server import serve
+    from astrolabe.runtime.admission import operation
     from astrolabe.evaluators.request_path import request_directory
     def handle(payload):
         request = request_directory(payload['request_dir'])
@@ -44,10 +45,19 @@ def main():
                 raise ValueError('invalid job name')
         params = dict(spec['payload'], jobs=jobs, output_dir=str(request / 'structures'))
         with contextlib.redirect_stdout(sys.stderr):
-            result = _worker_run(params, session=session)
+            result = _worker_run(params, session=session,
+                                 execution_context=lambda: operation(actual, phase='device'))
         (request / 'result.json').write_text(json.dumps(result, allow_nan=False))
+        from astrolabe.evaluators.lifecycle import validate_output_directory
+        validate_output_directory(request)
         return {'request': request.name}
-    serve(handle, actual)
+    from astrolabe.evaluators.lifecycle import model_lifecycle
+    def lifecycle():
+        counts = getattr(session[0], '_astrolabe_load_counts', {})
+        return model_lifecycle(session[0], load_count=sum(counts.values()), loaded=session[0] is not None,
+                               device=spec['device'], components=dict(counts))
+    serve(handle, actual, load_count=lifecycle()['load_count'], lifecycle=lifecycle,
+          capabilities={'managed_device': True, 'managed_methods': ['run']})
 
 
 if __name__ == '__main__': main()
