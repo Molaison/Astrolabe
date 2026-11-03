@@ -14,6 +14,21 @@ def _records(evaluation_result, protomers, runtime_config):
     if capture:
         from astrolabe.score_evidence import records_from_standard_scores
         records.extend(records_from_standard_scores(evaluation_result, capture, protomers=protomers))
+        # Merge retains each physical oligomer's real source assessment. Rebuild
+        # its raw evaluator fields under that source ID, never the aggregate ID.
+        from types import SimpleNamespace
+        for context, member_id in (getattr(evaluation_result, 'member_assessment_ids', None) or {}).items():
+            fields = {name: {context: value[context]} for name in ('plddt', 'ptm', 'iptm', 'pae', 'pde')
+                      if (value := getattr(evaluation_result, name, None)) is not None and context in value}
+            member = SimpleNamespace(names=[context], **fields)
+            for record in records_from_standard_scores(member, member_id, protomers=protomers):
+                same = [r for r in records if r.spec == record.spec and r.snapshot == record.snapshot
+                        and r.subject == record.subject and r.relation == record.relation]
+                if same:
+                    if len(same) != 1 or same[0] != record:
+                        raise ValueError('member evaluator evidence conflicts with its stored record')
+                else:
+                    records.append(record)
     catalog = runtime_config.get('score_catalog', []) or []
     if catalog:
         from astrolabe.score_evidence import records_from_contributions

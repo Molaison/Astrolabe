@@ -28,7 +28,7 @@ def config_for(context, labels, target, n, weight):
             'mapping':'auto'}
 
 
-@pytest.mark.parametrize('producer', ['stored_records', 'standard_scores', 'merged_member_records'])
+@pytest.mark.parametrize('producer', ['stored_records', 'standard_scores', 'merged_member_records', 'merged_member_standard'])
 def test_weighted_directed_pair_selector_reaches_real_builder_and_mutate(tmp_path, monkeypatch, producer):
     protomers, scores, _ = setup_case(tmp_path, monkeypatch, 'probability_mean')
     ab = ['AB:A:1:A','AB:A:2:A','AB:A:3:A','AB:B:1:B','AB:B:2:B']
@@ -45,10 +45,15 @@ def test_weighted_directed_pair_selector_reaches_real_builder_and_mutate(tmp_pat
         members = []
         for context, labels, target, values in [('AB',ab,ab[3],[1,9,2]), ('AC',ac,ac[3],[7,3,2])]:
             member = StandardScores(names=[context],plddt={context:[.8]},complex_paths={context:scores.complex_paths[context]})
-            member.score_records = (pair_record(context,labels,target,values,member.assessment_id),)
+            record = pair_record(context,labels,target,values,member.assessment_id)
+            if producer == 'merged_member_standard':
+                member.pae = {context: [record.value]}
+            else:
+                member.score_records = (record,)
             members.append(member)
         scores = merge_standard_scores(members)
-        assert [record.snapshot for record in scores.score_records] == [member.assessment_id for member in members]
+        if producer == 'merged_member_records':
+            assert [record.snapshot for record in scores.score_records] == [member.assessment_id for member in members]
     global_config.init_const('decisions', SimpleNamespace(last_accepted=0,evaluation_results={0:scores}))
     global_config.init_const('stage_manager', SimpleNamespace(current_stage='default', transition_consistency_gate_context=None))
     spec = {'observations':[config_for('AB',ab,ab[3],3,1),config_for('AC',ac,ac[3],3,3)],
@@ -57,9 +62,11 @@ def test_weighted_directed_pair_selector_reaches_real_builder_and_mutate(tmp_pat
     if producer == 'standard_scores':
         for observation in spec['observations']:
             observation['query']['name'] = 'pae'
-    elif producer == 'merged_member_records':
+    elif producer in {'merged_member_records', 'merged_member_standard'}:
         for observation in spec['observations']:
             observation['query']['snapshot'] = 'member'
+            if producer == 'merged_member_standard':
+                observation['query']['name'] = 'pae'
     runtime = {'score_selector_queries':OmegaConf.create({'two':spec}),'oligo':['AB','AC'],
                'ignored_complexes':[], 'negative_design_complexes':[]}
     cfg = OmegaConf.create({'enabled_aliases':['random'],
