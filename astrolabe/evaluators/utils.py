@@ -656,6 +656,14 @@ class StandardScores:
     complex_poses: dict[str, typing.Any] | None = None
     score_contributions: typing.Any | None = None
     assessment_id: str = dataclasses.field(default_factory=lambda: uuid.uuid4().hex)
+    # Candidate keys are producer-supplied seed/sample identities, never list indices.
+    candidate_key: typing.Any | None = None
+    candidate_scores: typing.Any | None = None
+    candidate_results: typing.Any | None = None
+    member_assessment_ids: dict[str, str] | None = None
+    pre_eval_hook_reports: dict[str, typing.Any] | None = None
+    post_eval_hook_reports: dict[str, typing.Any] | None = None
+    score_records: typing.Any | None = None
 
     @staticmethod
     def _wrap_dict_values_in_list(
@@ -799,12 +807,42 @@ class StandardScores:
             self.score_contributions = normalize_score_contributions(
                 self.score_contributions
             )
+        if self.candidate_key is not None:
+            try:
+                hash(self.candidate_key)
+            except TypeError as exc:
+                raise ValueError("candidate_key must be immutable and hashable") from exc
+        # dataclasses.replace is also used by stage snapshots. Isolate only
+        # metadata containers and candidate wrappers, never model arrays/poses.
+        for name in ("candidate_scores", "candidate_results"):
+            candidates = getattr(self, name)
+            if candidates is not None:
+                if any(not isinstance(candidate, StandardScores) for candidate in candidates):
+                    raise TypeError(f"{name} must contain StandardScores")
+                setattr(self, name, [candidate.clone() for candidate in candidates])
+        for name in ("pre_eval_hook_reports", "post_eval_hook_reports", "member_assessment_ids"):
+            value = getattr(self, name)
+            if value is not None:
+                setattr(self, name, self._copy_metadata_containers(value))
+        if self.score_records is not None:
+            self.score_records = tuple(self.score_records)
 
     def __getitem__(self, item):
         return getattr(self, item)
 
     def __hash__(self):
         return id(self)
+
+    @staticmethod
+    def _copy_metadata_containers(value):
+        """Copy metadata containers; large arrays and other leaf objects stay shared."""
+        if isinstance(value, dict):
+            return {key: StandardScores._copy_metadata_containers(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [StandardScores._copy_metadata_containers(item) for item in value]
+        if isinstance(value, tuple):
+            return tuple(StandardScores._copy_metadata_containers(item) for item in value)
+        return value
 
     def filter_by_oligomer(self, oligomers: List[str]) -> StandardScores:
         """Filter scores by specified oligomers.
@@ -824,6 +862,30 @@ class StandardScores:
             value = getattr(self, key, None)
             if value is None:
                 filtered_scores[key] = None
+                continue
+            if key in {"candidate_key", "assessment_id"}:
+                filtered_scores[key] = value
+                continue
+            if key in {"candidate_scores", "candidate_results"}:
+                candidates = []
+                for candidate in value:
+                    if not isinstance(candidate, StandardScores):
+                        raise TypeError(f"{key} must contain StandardScores")
+                    if allowed_oligos.intersection(candidate.names):
+                        candidates.append(candidate.filter_by_oligomer(filtered_names))
+                filtered_scores[key] = candidates
+                continue
+            if key in {"pre_eval_hook_reports", "post_eval_hook_reports", "member_assessment_ids"}:
+                filtered_scores[key] = self._copy_metadata_containers({
+                    name: item for name, item in value.items() if name in allowed_oligos
+                })
+                continue
+            if key == "score_records":
+                from astrolabe.score_evidence import filter_score_records
+                filtered_scores[key] = filter_score_records(
+                    value, original_oligos=self.names, allowed_oligos=allowed_oligos,
+                    allowed_protomers=allowed_protos,
+                )
                 continue
             if key == "score_contributions":
                 filtered_scores[key] = filter_score_contributions(
@@ -870,8 +932,12 @@ class StandardScores:
         return StandardScores(**filtered_scores)
 
     def clone(self) -> StandardScores:
-        """Create a new StandardScores instance that shares underlying data."""
-        return dataclasses.replace(self)
+        """Copy path and metadata containers; numeric arrays and poses stay shared.
+
+        Assessment and candidate identities remain unchanged. This is not a
+        deep or immutable scientific snapshot.
+        """
+        return dataclasses.replace(self, complex_paths=dict(self.complex_paths))
 
 
 # noinspection PyUnresolvedReferences
