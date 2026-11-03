@@ -289,7 +289,11 @@ class AlphaFold3Evaluator(Evaluator):
                     static_identity = self._feature_static_identity(
                         Path(alphafold3.__file__).parent, chemical_components._CCD_PICKLE_FILE
                     )
-                    dependencies = {"schema": 1, "source": static_identity["source"],
+                    resident_identity = self.resident.feature_identity
+                    dependencies = {"schema": 2, "backend": "af3", "source": static_identity["source"],
+                        "weights": resident_identity["weights"],
+                        "dtype": {"policy": "af3-model-default", "model_config": resident_identity["model_config"]},
+                        "mapping": [str(c.id) for c in feat.chains],
                         "chains": raw.get("sequences"), "chain_order": [str(c.id) for c in feat.chains],
                         "topology": raw.get("bondedAtomPairs"), "constraints": options,
                         "seed": list(feat.rng_seeds), "msa": raw.get("sequences"),

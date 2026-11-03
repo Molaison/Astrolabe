@@ -8,7 +8,7 @@ from collections.abc import Mapping
 # These fields are deliberately mandatory, including explicit nulls: a caller
 # cannot accidentally omit a dependency when constructing a cache key.
 FEATURE_DEPENDENCIES = frozenset({
-    "schema", "source", "chains", "chain_order", "topology", "constraints",
+    "schema", "backend", "source", "weights", "dtype", "mapping", "chains", "chain_order", "topology", "constraints",
     "seed", "msa", "templates", "ccd", "options",
 })
 

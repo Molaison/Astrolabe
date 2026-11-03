@@ -32,6 +32,7 @@ class AF3Resident:
         fields = ('flash_attention_implementation', 'num_samples', 'num_recycles', 'save_embeddings', 'jax_compilation_cache_dir', 'refstructure_workers', 'refstructure_cache', 'refstructure_cache_max_entries', 'msa_cache', 'msa_cache_max_entries')
         semantics = {key: model_config.get(key) for key in fields}
         fingerprint = identity(sys.executable, code, weights, device, semantics)
+        self.feature_identity = fingerprint
         worker_config = dict(semantics, model_dir=model_config['model_dir'])
         spec = {'model_config': worker_config, 'code_paths': code, 'weight_paths': weights, 'device': device}
         path = self._artifacts.specification(fingerprint, spec)
