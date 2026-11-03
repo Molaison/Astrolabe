@@ -119,7 +119,12 @@ class Mutator:
                     runtime_config["transition_consistency_gate_output"] = (
                         previous_extra_output
                     )
+        if extra_output is None:
+            self.publish_score_evidence(evaluation_scores, runtime_config)
         return std_output
+
+    def publish_score_evidence(self, evaluation_scores, runtime_config):
+        """Optional producer hook; implementations publish actual identities."""
 
     @abstractmethod
     def prepare_mutation_input(

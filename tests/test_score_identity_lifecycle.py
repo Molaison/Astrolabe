@@ -306,3 +306,32 @@ def test_multicontext_loss_to_accepted_selector_real_cli(tmp_path):
     assert [row['accepted'].lower() for row in rows] == ['true', 'true', 'false']
     assert all(float(row['typed_quality']) == pytest.approx(.9) for row in rows)
     assert all(float(row['mutator_selector_MCMC_pA_selected_count']) == 4 for row in rows[1:])
+
+
+def test_loss_evidence_tracks_accepted_identity_across_rejection(tmp_path):
+    decisions, _, initial, _ = init_decisions(tmp_path)
+    engine = LossEngine({'loss_terms': {'quality': {'_type': 'plddt'}},
+                         'score_catalog': [{'source': 'loss', 'name': 'quality', 'entity': 'A', 'entity_scope': 'oligo'}]},
+                        validate_config=False)
+    engine.setup('quality', None, None, acceptance_gate='quality >= 0.3', validate_config=False)
+    decisions.recompute_last_score(engine, {}, initial)
+    selector = {'score_catalog': engine.score_catalog,
+                'score_selector_queries': {'quality': {'query': {'source': 'loss', 'name': 'quality', 'entity': 'A'},
+                   'broadcast': True, 'mapping': {'A:A:1:A': ['A', 0]}, 'threshold': .7, 'comparison': 'ge'}}}
+    protomers = global_config.protomers
+    from astrolabe.selectors.utils import construct_position_selector
+    from astrolabe.score_identity import score_runtime_view
+    def selected(result):
+        view = score_runtime_view(selector, result, decisions=decisions, selector=True)
+        return construct_position_selector('score("quality")', result, protomers, runtime_config=view)['A'].tolist()
+    assert selected(initial) == [False, False, False]
+    accepted = scores(.8)
+    assert decisions.make_mutation_decision(1, accepted, engine, {}, force_accept=True)[2]
+    assert selected(accepted) == [True, False, False]
+    rejected = scores(.2)
+    assert not decisions.make_mutation_decision(2, rejected, engine, {})[2]
+    assert selected(accepted) == [True, False, False]
+    assert {initial.assessment_id, accepted.assessment_id, rejected.assessment_id} <= set(decisions.score_records_by_assessment)
+    with pytest.raises(ValueError, match='expected one current score record'):
+        selected(rejected)
+    global_config.reset()

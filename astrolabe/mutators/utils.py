@@ -947,7 +947,15 @@ def mutate(method, proto_sequences, mutable_positions=None):
 def build_mutator_runtime_config(
     step, updated_sites=None, outprefix=None, former_config=None
 ):
-    former_config = former_config or {}
+    former_config = former_config if former_config is not None else {}
+    if former_config.get("_strict_producer_step") != step:
+        former_config["_strict_producer_step"] = step
+        former_config.pop("strict_score_contributions", None)
+        snapshots = dict(former_config.get("score_snapshots") or {})
+        for key in list(snapshots):
+            if str(key).startswith("producer:"):
+                del snapshots[key]
+        former_config["score_snapshots"] = snapshots
     try:
         score_engine = global_config.loss_computer
     except RuntimeError:

@@ -336,7 +336,7 @@ class Decisions:
         return getattr(self, item)
 
     def _remember_runtime_score_evidence(self, evaluation_result, runtime_config, loss_computer):
-        from astrolabe.score_contributions import score_contributions_from_runtime_config
+        from astrolabe.score_contributions import strict_score_contributions_from_runtime_config
         from astrolabe.score_evidence import records_from_contributions
 
         catalog = getattr(loss_computer, "score_catalog", None) or []
@@ -344,7 +344,7 @@ class Decisions:
         if not catalog or not identity:
             return
         records = list(records_from_contributions(
-            score_contributions_from_runtime_config(runtime_config), catalog, str(identity)
+            strict_score_contributions_from_runtime_config(runtime_config), catalog, str(identity)
         ))
         capture_losses = getattr(loss_computer, "loss_score_records", None)
         if callable(capture_losses):

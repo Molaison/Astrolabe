@@ -18,6 +18,7 @@ from astrolabe.losses.utils import LossRegistry
 from astrolabe.score_contributions import (
     score_contributions_from_runtime_config,
     score_contributions_to_snapshot,
+    strict_score_contributions_from_runtime_config,
 )
 from astrolabe.utils.log_events import event_span, summarize_event_items
 
@@ -556,6 +557,9 @@ class LossEngine:
                 continue
             if spec.entity_scope not in (None, "oligo"):
                 raise ValueError("loss score entity must identify an oligomer")
+            loss_entry = self.loss_specs.get(spec.name)
+            if loss_entry and getattr(loss_entry[1], "__module__", "") == "astrolabe.losses.sequence":
+                raise ValueError("sequence loss needs explicit sequence measurement identity; cannot bind it to a structure assessment")
             records.append(ScoreRecord(spec, snapshot, per_oligo_scores[spec.entity][spec.name], coordinates,
                                        input_snapshot=snapshot, subject="predicted_structure", relation="measured_on"))
         return records
@@ -578,7 +582,7 @@ class LossEngine:
         live_runtime_records = []
         if self.score_catalog:
             live_runtime_records = records_from_contributions(
-                score_contributions_from_runtime_config(runtime_config), self.score_catalog, snapshot
+                strict_score_contributions_from_runtime_config(runtime_config), self.score_catalog, snapshot
             )
         for assessment in assessments:
             records.extend(getattr(assessment, "score_records", None) or [])

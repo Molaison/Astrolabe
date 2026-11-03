@@ -83,6 +83,37 @@ class DPLMMutator(Mutator):
             "oligos": {},
         }
 
+    def publish_score_evidence(self, evaluation_scores, runtime_config):
+        from astrolabe.score_contributions import ScoreContribution, publish_score_contributions
+        if runtime_config is None:
+            return
+        catalog = runtime_config.get("score_catalog") or []
+        wanted = {(entry.get("name"), entry.get("entity")) for entry in catalog
+                  if entry.get("source") == "mutator.dplm"}
+        if not wanted:
+            return
+        reference = getattr(evaluation_scores, "assessment_id", None)
+        if not reference:
+            raise ValueError("DPLM evidence requires its actual input assessment")
+        measurement = "proposal:" + uuid.uuid4().hex
+        telemetry = self.last_mutation_telemetry
+        contributions = []
+        for name, entity in wanted:
+            if name not in {"entropy_norm", "selection_score"}:
+                continue
+            metrics = telemetry.get("metrics", {}) if entity is None else telemetry.get("oligos", {}).get(entity, {})
+            value = self._to_float(metrics.get(name))
+            if value is None or not np.isfinite(value):
+                continue
+            contributions.append(ScoreContribution(
+                source="mutator.dplm", metric_name=name, value=value,
+                scope="global" if entity is None else "oligo", entity=entity,
+                measurement_snapshot=measurement, input_snapshot=str(reference),
+                subject="proposal", relation="proposal_on_reference"))
+        alias = getattr(self, "alias", None) or self.name
+        publish_score_contributions(runtime_config, contributions,
+                                    snapshot_name=f"producer:{alias}", snapshot=measurement)
+
     @staticmethod
     def _to_float(value: Any) -> float | None:
         if isinstance(value, bool):

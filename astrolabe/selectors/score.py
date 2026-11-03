@@ -17,12 +17,12 @@ def _records(evaluation_result, protomers, runtime_config):
     catalog = runtime_config.get('score_catalog', []) or []
     if catalog:
         from astrolabe.score_evidence import records_from_contributions
-        from astrolabe.score_contributions import score_contributions_from_runtime_config
+        from astrolabe.score_contributions import strict_score_contributions_from_runtime_config
         if not capture:
             raise ValueError('score_capture_snapshot is required for catalog capture')
         contributions = list(getattr(evaluation_result, 'score_contributions', None) or [])
         if '_score_owned_records' not in runtime_config:
-            contributions.extend(score_contributions_from_runtime_config(runtime_config))
+            contributions.extend(strict_score_contributions_from_runtime_config(runtime_config))
         records.extend(records_from_contributions(contributions, catalog, capture))
         records.extend((runtime_config.get('_score_owned_records') or {}).get(str(capture), ()))
     snapshots = runtime_config.get('score_snapshots') or getattr(evaluation_result, 'score_snapshots', None) or {}

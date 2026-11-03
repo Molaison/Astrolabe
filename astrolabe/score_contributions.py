@@ -83,6 +83,36 @@ def score_contributions_from_runtime_config(runtime_config: Any) -> list[ScoreCo
     return normalize_score_contributions(raw)
 
 
+def strict_score_contributions_from_runtime_config(runtime_config: Any) -> list[ScoreContribution]:
+    """Strict-only producer evidence, plus explicitly supplied legacy contributions."""
+    result = score_contributions_from_runtime_config(runtime_config)
+    if runtime_config is not None:
+        result.extend(normalize_score_contributions(runtime_config.get("strict_score_contributions")))
+    return result
+
+
+def publish_score_contributions(runtime_config, contributions, *, snapshot_name, snapshot):
+    """Publish producer-owned evidence to this mutation's runtime context.
+
+    The caller supplies actual input and measurement identities. This does not
+    create or advance an accepted assessment, and does not expose legacy symbols.
+    """
+    if runtime_config is None or not snapshot_name or not snapshot:
+        raise ValueError("producer publication requires runtime, snapshot name and identity")
+    items = normalize_score_contributions(contributions)
+    if not items:
+        return
+    if any(not all((c.measurement_snapshot, c.input_snapshot, c.subject, c.relation))
+           or str(c.measurement_snapshot) != str(snapshot) for c in items):
+        raise ValueError("producer evidence must identify its actual measurement and input")
+    snapshots = dict(runtime_config.get("score_snapshots") or {})
+    if snapshot_name in snapshots:
+        raise ValueError(f"producer snapshot already published: {snapshot_name}")
+    snapshots[snapshot_name] = str(snapshot)
+    runtime_config["score_snapshots"] = snapshots
+    runtime_config.setdefault("strict_score_contributions", []).extend(items)
+
+
 def score_contributions_to_snapshot(raw: Any) -> dict[str, object]:
     snapshot: dict[str, object] = {}
     for contribution in normalize_score_contributions(raw):
