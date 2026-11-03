@@ -37,7 +37,8 @@ def _observation(config, records, snapshots, protomers, *, allow_equal_weights=F
     target = snapshots.get(query.snapshot, query.snapshot)
     record = next(r for r in records if r.spec.name == query.name and r.spec.source == query.source
                   and r.snapshot == target and r.subject == query.subject and r.relation == query.relation
-                  and (query.entity is None or r.spec.entity == query.entity))
+                  and (query.entity is None or r.spec.entity == query.entity)
+                  and (query.entity_scope is None or r.spec.entity_scope == query.entity_scope))
     axis = record.spec.axes.index(query.axes[0])
     labels = tuple((query.select or {}).get(query.axes[0], record.coordinates[axis]))
     mapping = config['mapping']

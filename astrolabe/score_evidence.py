@@ -13,9 +13,12 @@ class ScoreSpec:
     source: str
     axes: tuple[str, ...] = ()
     entity: str | None = None
+    entity_scope: str | None = None
 
     def __post_init__(self):
         object.__setattr__(self, 'axes', tuple(self.axes))
+        if self.entity_scope not in {None, 'oligo', 'protomer'} or (self.entity_scope is not None and not self.entity):
+            raise ValueError('score entity_scope requires an oligo or protomer entity')
         if not self.name or not self.source or len(set(self.axes)) != len(self.axes):
             raise ValueError('ScoreSpec requires a name, source, and unique axes')
 
@@ -74,11 +77,14 @@ class ScoreQuery:
     select: Mapping | None = None
     weights: Mapping | None = None
     entity: str | None = None
+    entity_scope: str | None = None
     subject: str = 'predicted_structure'
     relation: str = 'measured_on'
 
     def __post_init__(self):
         object.__setattr__(self, 'axes', tuple(self.axes))
+        if self.entity_scope not in {None, 'oligo', 'protomer'}:
+            raise ValueError('invalid score query entity_scope')
         if not self.name or not self.source or not self.snapshot:
             raise ValueError('query requires name, source, and snapshot')
         if len(set(self.axes)) != len(self.axes) or self.reduction not in {'mean', 'sum', 'min', 'max', 'identity'}:
@@ -94,7 +100,7 @@ def query_score(records, query, *, snapshots=None, generating_selector=False):
     if generating_selector and (query.snapshot in {'current_proposal', 'proposal'} or
                                 target != permitted):
         raise ValueError('a selector must use the last accepted snapshot')
-    matches = [r for r in records if r.spec.name == query.name and r.spec.source == query.source and r.snapshot == target and r.subject == query.subject and r.relation == query.relation and (query.entity is None or r.spec.entity == query.entity)]
+    matches = [r for r in records if r.spec.name == query.name and r.spec.source == query.source and r.snapshot == target and r.subject == query.subject and r.relation == query.relation and (query.entity is None or r.spec.entity == query.entity) and (query.entity_scope is None or r.spec.entity_scope == query.entity_scope)]
     if len(matches) != 1:
         raise ValueError(f'expected one current score record, found {len(matches)}')
     rec = matches[0]
@@ -174,13 +180,16 @@ def records_from_contributions(contributions, catalog, snapshot):
         config = dict(config)
         coordinates = config.pop('coordinates', ())
         spec = ScoreSpec(**config)
-        key = (spec.source, spec.name, spec.entity)
+        key = (spec.source, spec.name, spec.entity, spec.entity_scope)
         if key in specs:
             raise ValueError(f'duplicate score specification {key!r}')
         specs[key] = (spec, coordinates)
     records = []
     for contribution in normalize_score_contributions(contributions):
-        key = (contribution.source, contribution.metric_name, contribution.entity)
+        scope = contribution.scope if contribution.scope in {'oligo', 'protomer'} else None
+        key = (contribution.source, contribution.metric_name, contribution.entity, scope)
+        if key not in specs:
+            key = (contribution.source, contribution.metric_name, contribution.entity, None)
         if contribution.enabled and key in specs:
             spec, coordinates = specs[key]
             if not all((contribution.measurement_snapshot, contribution.input_snapshot, contribution.subject, contribution.relation)):
@@ -231,7 +240,7 @@ def records_from_standard_scores(scores, snapshot, *, protomers=None):
                 coords.append(labels)
             elif shape:
                 raise ValueError(f'unsupported {metric} shape {shape}')
-            result.append(ScoreRecord(ScoreSpec(metric, 'evaluator', tuple(axes), context), snapshot,
+            result.append(ScoreRecord(ScoreSpec(metric, 'evaluator', tuple(axes), context, 'oligo'), snapshot,
                                       arr[np.newaxis, ...], tuple(coords)))
     # Per-protomer arrays have already lost physical context identity. Expose
     # only their actual canonical design positions and anonymous observations.
@@ -256,7 +265,7 @@ def records_from_standard_scores(scores, snapshot, *, protomers=None):
         if any(array.shape != (length,) for array in arrays):
             continue
         coordinates = (tuple(range(len(arrays))), tuple(f'{proto}:{i + 1}' for i in range(length)))
-        result.append(ScoreRecord(ScoreSpec(metric, 'evaluator', ('observation', 'design_position'), proto),
+        result.append(ScoreRecord(ScoreSpec(metric, 'evaluator', ('observation', 'design_position'), proto, 'protomer'),
                                   snapshot, np.stack(arrays), coordinates))
     return result
 
@@ -270,3 +279,65 @@ def _physical_labels(context, length, protomers, int_id_to_str_id):
     if len(labels) != length:
         labels = [f'{context}:token:{i + 1}' for i in range(length)]
     return tuple(labels)
+
+
+def filter_score_records(records, *, original_oligos, allowed_oligos, allowed_protomers):
+    """Return immutable evidence views restricted to the requested physical scope."""
+    original_oligos, allowed_oligos = set(original_oligos), set(allowed_oligos)
+    original_protomers = set(''.join(original_oligos))
+    filtered = []
+    for record in records or ():
+        if not isinstance(record, ScoreRecord):
+            raise TypeError('score_records must contain ScoreRecord values')
+        entity = record.spec.entity
+        if entity is not None:
+            in_oligos, in_protos = entity in original_oligos, entity in original_protomers
+            scope = record.spec.entity_scope
+            if scope == 'oligo':
+                if entity not in allowed_oligos:
+                    continue
+            elif scope == 'protomer':
+                if entity not in allowed_protomers:
+                    continue
+            else:
+                if not (in_oligos or in_protos):
+                    raise ValueError(f'cannot determine score record entity scope: {entity!r}')
+                if in_oligos and in_protos and (entity in allowed_oligos) != (entity in allowed_protomers):
+                    raise ValueError(f'ambiguous score record entity scope: {entity!r}')
+                if not ((in_oligos and entity in allowed_oligos) or (in_protos and entity in allowed_protomers)):
+                    continue
+        data = record.value
+        coordinates = list(record.coordinates)
+        keep_record = True
+        for axis_index, (axis, labels) in enumerate(zip(record.spec.axes, coordinates)):
+            indices = None
+            if axis == 'context':
+                indices = [i for i, label in enumerate(labels) if str(label) in allowed_oligos]
+            elif axis in {'position', 'target_position'}:
+                parts = [str(label).split(':') for label in labels]
+                # Only restrict labels that actually encode a known context.
+                if parts and all(len(p) >= 3 and p[0] in original_oligos for p in parts):
+                    indices = [i for i, p in enumerate(parts) if p[0] in allowed_oligos]
+                elif entity is None and allowed_oligos != original_oligos:
+                    raise ValueError(f'cannot filter unscoped {axis} coordinates')
+            elif axis == 'design_position':
+                parts = [str(label).split(':') for label in labels]
+                if parts and all(len(p) == 2 and p[0] in original_protomers and p[1].isdigit() for p in parts):
+                    indices = [i for i, p in enumerate(parts) if p[0] in allowed_protomers]
+                elif entity is None and allowed_oligos != original_oligos:
+                    raise ValueError('cannot filter unscoped design positions')
+            if indices is None:
+                continue
+            if not indices:
+                keep_record = False
+                break
+            data = np.take(data, indices, axis=axis_index)
+            coordinates[axis_index] = tuple(labels[i] for i in indices)
+        if keep_record:
+            if tuple(coordinates) == record.coordinates:
+                filtered.append(record)
+            else:
+                filtered.append(ScoreRecord(record.spec, record.snapshot, data, coordinates,
+                    execution=record.execution, validity=record.validity, disposition=record.disposition,
+                    input_snapshot=record.input_snapshot, subject=record.subject, relation=record.relation))
+    return tuple(filtered)
