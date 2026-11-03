@@ -4,11 +4,13 @@ import os
 from pathlib import Path
 import sys
 import tempfile
-import uuid
 
 from astrolabe.evaluators.tree_codec import dump_tree, load_tree
 from astrolabe.evaluators.worker_identity import identity, probe_device
 from astrolabe.evaluators.worker_session import WorkerArtifacts
+
+BROKER_SHARED_ROOT = True
+BROKER_ADMITTED_PROBE = True
 
 
 class AF2Resident:
@@ -20,8 +22,6 @@ class AF2Resident:
         return {name: proxy for name in oligo_names}
 
     def __init__(self, cpu_runner, config):
-        if os.environ.get('ASTROLABE_EXECUTION_ENDPOINT') or os.environ.get('ASTROLABE_EXECUTION_TOKEN'):
-            raise ValueError('AF2 daemon requires trajectory-exclusive direct execution')
         self._cpu = cpu_runner
         self.multimer_mode = cpu_runner.multimer_mode
         self._gh_initial_guess_cfg = cpu_runner._gh_initial_guess_cfg
@@ -44,10 +44,14 @@ class AF2Resident:
         code = [str(base / p) for p in ('af2_resident.py', 'tree_codec.py', 'worker_identity.py', 'wrappers/alphafold.py', 'wrappers/af2_daemon.py')] + [str(source)]
         env = {'PYTHONPATH': os.pathsep.join(str(Path(p).resolve()) for p in sys.path if p)}
         device = probe_device(sys.executable, 'af3', env=env)
-        semantics = {'config': self._config, 'trajectory': uuid.uuid4().hex}
+        # Initial coordinates are incorporated in each owner's processed
+        # features; they are not model initialization or shared state.
+        model_config = {k: v for k, v in self._config.items() if k != 'initial_guess'}
+        semantics = {'config': model_config}
         expected = identity(sys.executable, code, [str(weight)], device, semantics)
         self._artifacts = WorkerArtifacts()
-        spec = {'semantics': semantics, 'code_paths': code, 'weight_paths': [str(weight)], 'device': device}
+        spec = {'semantics': semantics, 'code_paths': code, 'weight_paths': [str(weight)], 'device': device,
+                'broker_safe': self._artifacts.shared}
         path = self._artifacts.specification(expected, spec)
         self._client = DaemonClient([sys.executable, '-m', 'astrolabe.evaluators.wrappers.af2_daemon', str(path)], expected, env=env, startup_timeout=600)
 
