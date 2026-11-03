@@ -124,19 +124,23 @@ class DaemonClient:
 
     def close(self):
         p = self.process
+        # The leader may have exited while descendants still hold resources.
+        # Always signal its process group, including after a normal leader exit.
+        try:
+            os.killpg(p.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
         if p.poll() is None:
-            try:
-                os.killpg(p.pid, signal.SIGTERM)
-            except ProcessLookupError:
-                pass
             try:
                 p.wait(timeout=2)
             except subprocess.TimeoutExpired:
-                try:
-                    os.killpg(p.pid, signal.SIGKILL)
-                except ProcessLookupError:
-                    pass
-                p.wait()
+                pass
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        if p.poll() is None:
+            p.wait()
         for stream in (p.stdin, p.stdout):
             if stream:
                 stream.close()

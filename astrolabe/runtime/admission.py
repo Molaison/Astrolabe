@@ -36,11 +36,11 @@ def _execute_probe(command, env, timeout, limit=65536):
             raise ValueError('device probe must return a JSON object')
         return result
     except BaseException:
+        try:
+            os.killpg(p.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
         if p.poll() is None:
-            try:
-                os.killpg(p.pid, signal.SIGKILL)
-            except ProcessLookupError:
-                pass
             p.wait()
         raise
     finally:

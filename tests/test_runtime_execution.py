@@ -171,6 +171,21 @@ def test_cpu_timeout_stops_worker():
     assert process.poll() is not None
 
 
+def test_probe_timeout_kills_descendants_after_leader_exit(tmp_path):
+    import time
+    import pytest
+    from astrolabe.runtime.admission import _execute_probe
+    marker = tmp_path / 'survived'
+    child = "import pathlib,time,sys; time.sleep(.6); pathlib.Path(sys.argv[1]).touch()"
+    parent = ("import subprocess,sys; "
+              "subprocess.Popen([sys.executable,'-c',sys.argv[1],sys.argv[2]]); "
+              "sys.exit(0)")
+    with pytest.raises(TimeoutError):
+        _execute_probe([sys.executable, '-c', parent, child, str(marker)], os.environ.copy(), .2)
+    time.sleep(.7)
+    assert not marker.exists()
+
+
 def test_broker_timeout_fences_device(monkeypatch):
     import pytest
     from astrolabe.runtime.session import BrokerSession
