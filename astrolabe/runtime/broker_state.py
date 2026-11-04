@@ -488,6 +488,7 @@ class State:
         retry_not_executed = False
         release_safe = True
         admitted = None
+        waiting_counted = True
         pending = False
         existing = None
         retained_key = (ident[0], scientific) if staged else None
@@ -522,6 +523,7 @@ class State:
             admitted = time.monotonic()
             with self._state_lock(deadline, request['cancel']):
                 self.metrics['waiting'] -= 1
+                waiting_counted = False
                 if record['device'] in self.poisoned or self.stopping:
                     raise OutcomeUnknown('device fenced or session stopping')
             dispatch_id = identity_key({'client_epoch': ident[0], 'request_id': ident[1]})
@@ -631,7 +633,7 @@ class State:
                     if staged:
                         record['retained'].pop(retained_key, None)
             with self.lock:
-                if admitted is None:
+                if waiting_counted:
                     self.metrics['waiting'] -= 1
                 record['busy'] -= 1
                 record['last_used'] = ended

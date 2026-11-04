@@ -268,3 +268,40 @@ def test_entry_lock_wait_consumes_admission_budget(state, monkeypatch, timeout, 
     if not expired:
         with pytest.raises(ValueError, match="duplicate request"):
             state.call(request(timeout=timeout))
+
+
+@pytest.mark.parametrize("waiting_retired", [False, True], ids=["before-transition", "after-transition"])
+def test_expiry_retires_waiting_count_once_across_admission_transition(state, monkeypatch, waiting_retired):
+    """Real admission plus a controlled scheduling delay; no worker executes."""
+    observed = {}
+
+    def delay_after_real_admission():
+        observed["waiting"] = state.metrics["waiting"]
+        observed["active"] = len(state.ledger.active)
+        time.sleep(.2)
+
+    if waiting_retired:
+        write = state.events.write
+
+        def delayed_event(event, **fields):
+            write(event, **fields)
+            if event == "compute_start":
+                delay_after_real_admission()
+
+        monkeypatch.setattr(state.events, "write", delayed_event)
+    else:
+        acquire = state.ledger.acquire_compute
+
+        def delayed_acquire(*args, **kwargs):
+            acquire(*args, **kwargs)
+            delay_after_real_admission()
+
+        monkeypatch.setattr(state.ledger, "acquire_compute", delayed_acquire)
+
+    with pytest.raises(TimeoutError):
+        state.call(request(timeout=.1))
+    assert observed == {"waiting": 0 if waiting_retired else 1, "active": 1}
+    assert not state.workers["worker"]["client"].dispatches
+    assert_request_released(state)
+    assert state.ledger.snapshot()["cpu_slots"] == 0
+    assert not state.poisoned
