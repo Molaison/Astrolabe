@@ -4,7 +4,7 @@ import math
 import pathlib
 from collections import defaultdict
 from functools import lru_cache
-from typing import Any, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, Sequence
 
 import numpy as np
 from Bio.PDB import MMCIFParser, PDBParser
@@ -31,7 +31,11 @@ except Exception as exc:  # pragma: no cover - optional/proprietary dependency
     ShapeComplementarityFilter = None  # type: ignore
     MutateResidue = None  # type: ignore
     _PYROSETTA_IMPORT_ERROR = exc
-from scipy.spatial import Delaunay, QhullError, cKDTree
+
+# Loss discovery also imports this module for sequence-only runs. Geometry
+# dependencies are loaded by the functions that use them.
+if TYPE_CHECKING:
+    from scipy.spatial import Delaunay
 
 from astrolabe.core.chain_resolution import (
     chain_ids_for_oligo,
@@ -115,6 +119,8 @@ def _ca_contact_pairs(
     *,
     cutoff: float = 8.0,
 ) -> list[tuple[int, int]]:
+    from scipy.spatial import cKDTree
+
     xyz = np.asarray(parsed.get("xyz"), dtype=float)
     mask = np.asarray(parsed.get("mask"), dtype=bool)
     if xyz.ndim != 3 or xyz.shape[1] <= 1 or mask.shape[:2] != xyz.shape[:2]:
@@ -160,6 +166,8 @@ def _sc_contact_pairs(
     *,
     cutoff: float = 5.0,
 ) -> list[tuple[int, int]]:
+    from scipy.spatial import cKDTree
+
     xyz = np.asarray(parsed.get("xyz"), dtype=float)
     mask = np.asarray(parsed.get("mask"), dtype=bool)
     if xyz.ndim != 3 or mask.shape[:2] != xyz.shape[:2]:
@@ -876,6 +884,8 @@ def _interface_residues_from_structure_model(
     interface_distance: float,
     context: str,
 ) -> list[Any]:
+    from scipy.spatial import cKDTree
+
     residues_by_chain: dict[str, list[Any]] = {}
     ca_by_chain: dict[str, np.ndarray] = {}
     for chain_id in chain_ids:
@@ -1455,7 +1465,9 @@ def _alpha_shape_kept_simplex_indices(
     alpha_radius_scale: float = 1.8,
     alpha_min_radius: float = 3.0,
     alpha_max_radius: float = 8.0,
-) -> tuple[Delaunay, set[int], float]:
+) -> "tuple[Delaunay, set[int], float]":
+    from scipy.spatial import Delaunay, QhullError
+
     pts = _require_alpha_shape_points(
         points,
         "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy pocket",
@@ -1756,6 +1768,8 @@ def _saturating_fraction(value: float, midpoint: float) -> float:
 
 
 def _build_ligand_environment_pose(pose, ligand_chain: str, neighbor_distance: float):
+    from scipy.spatial import cKDTree
+
     ligand_residues = _residue_indices_for_chains(pose, [ligand_chain])
     if not ligand_residues:
         return None
@@ -2114,6 +2128,8 @@ def ipae_max(
 
 
 def find_interface_residues_by_ca(model_path, cutoff=8.0):
+    from scipy.spatial import cKDTree
+
     parsed_str = parse_mmcif(model_path)
     coords = parsed_str["xyz"][:, 1]
     chains = [chain for chain, _ in parsed_str["pdb_idx"]]
@@ -4119,6 +4135,8 @@ def calculate_com_line_distance(eval_result, buried_protomer):
 
 
 def get_hotspot_interaction_number(eval_result, protomer):
+    from scipy.spatial import cKDTree
+
     # -------------
     # temporary obj
     hotspot = protomer.hotspots

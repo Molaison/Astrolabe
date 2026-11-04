@@ -16,17 +16,14 @@ from astrolabe.losses.base import loss_registry
 from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
 
 
-try:
-    from scipy.spatial import cKDTree  # type: ignore
-except Exception:  # pragma: no cover - optional dependency
-    cKDTree = None  # type: ignore
-
-
 def _require_ckdtree():
-    if cKDTree is None:
+    try:
+        from scipy.spatial import cKDTree
+    except Exception as exc:  # pragma: no cover - optional dependency
         raise ImportError(
             "scipy is required for BindCraft-aligned clash/interface-residue losses."
-        )
+        ) from exc
+    return cKDTree
 
 
 def _to_pdb_path(structure_path: Path) -> Path:
@@ -175,7 +172,7 @@ def halludesign_key_res_plddt(
     ligand_chains: str | None = None,
     cutoff: float = 5.0,
 ):
-    _require_ckdtree()
+    cKDTree = _require_ckdtree()
     scores: dict[str, float] = {}
     for oligo_name in eval_result.names:
         path = Path(eval_result.complex_paths[oligo_name])
@@ -546,7 +543,7 @@ def _calculate_bindcraft_clash_score(
       - exclude sequential residues (|i-j|==1) within same chain
       - when only_ca=False: only count inter-chain clashes (skip same-chain pairs)
     """
-    _require_ckdtree()
+    cKDTree = _require_ckdtree()
     atoms = _iter_atoms(structure_path)
     filtered: list[_Atom] = []
     coords: list[np.ndarray] = []
@@ -592,7 +589,7 @@ def _bindcraft_hotspot_residues(
     Returns: {binder_resseq -> binder_aa_1letter} for binder residues with >=1 atom within cutoff
     of any target atom.
     """
-    _require_ckdtree()
+    cKDTree = _require_ckdtree()
     atoms = _iter_atoms(structure_path)
     binder_atoms = [a for a in atoms if a.chain == str(binder_chain)]
     target_atoms = [a for a in atoms if a.chain == str(target_chain)]

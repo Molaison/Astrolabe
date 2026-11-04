@@ -9,7 +9,6 @@ import warnings
 from pathlib import Path
 
 import numpy as np
-from scipy.spatial import cKDTree
 
 from astrolabe.core.repeat_symmetry import (
     apply_transform,
@@ -352,6 +351,8 @@ def _residue_pair_contact_count(
     cutoff: float,
     atom_mode: str,
 ) -> int:
+    from scipy.spatial import cKDTree
+
     coords_a, residue_idx_a = _chain_contact_metric_inputs(residues_a, atom_mode=atom_mode)
     coords_b, residue_idx_b = _chain_contact_metric_inputs(residues_b, atom_mode=atom_mode)
     if coords_a.size == 0 or coords_b.size == 0:
@@ -372,6 +373,8 @@ def _minimum_interchain_atom_distance(
     *,
     atom_mode: str,
 ) -> float:
+    from scipy.spatial import cKDTree
+
     coords_a, _ = _chain_contact_metric_inputs(residues_a, atom_mode=atom_mode)
     coords_b, _ = _chain_contact_metric_inputs(residues_b, atom_mode=atom_mode)
     if coords_a.size == 0 or coords_b.size == 0:
