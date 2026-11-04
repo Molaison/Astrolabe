@@ -1,0 +1,65 @@
+{
+  "root": "final-head-a",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 4301,
+      "sha256": "0b8b467c5fb2b0faba2f2165d44597d91e24e4eb44de9fc656f15362103d1683"
+    },
+    {
+      "path": "all-changes-vs-tested.txt",
+      "bytes": 7949,
+      "sha256": "749cca850204169fba3c1bf23039ad7429ded160881db2be2ff7c62fc350bf69"
+    },
+    {
+      "path": "audit_final_source.py",
+      "bytes": 6352,
+      "sha256": "5c6eb2a20eaafaf8c9a552931e07787e67beb4b4044885f41b8ba949cecc9fdf"
+    },
+    {
+      "path": "frozen-measurement-manifest.json",
+      "bytes": 3190,
+      "sha256": "7f312b7a9dda5b8b8d7291e034e17d16811dadf60e1ae05317d08d83f12ae22f"
+    },
+    {
+      "path": "local-vs-published.diff",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "measurement-vs-d66.diff",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "production-manifest.json",
+      "bytes": 514705,
+      "sha256": "9573f425bc8b23918d65a65234bebf0c1db685eebd33d430ce554fd5b721c8d1"
+    },
+    {
+      "path": "production-vs-tested.diff",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "published-commit.json",
+      "bytes": 1310,
+      "sha256": "dee7a9fe76aa482ee8ac66389ece1a9c3674f846ab06b4df0606d36b53b13a86"
+    },
+    {
+      "path": "scheduler-boron.json",
+      "bytes": 4769,
+      "sha256": "851f401c6b856e1d9026caa4f9052e2e716d440d2c94ba1e4b4d2b07a9d9f79d"
+    },
+    {
+      "path": "scheduler-own_jobs.json",
+      "bytes": 2851,
+      "sha256": "289050212353f683ac7da7e8f89d8f890204d26f32063bfffa6db15bd91d68da"
+    },
+    {
+      "path": "source-audit.json",
+      "bytes": 1998,
+      "sha256": "0142a64d42d8b1eb84b8f3d3a6b10c31fea7fec8adc4913733c30c1b0844bc94"
+    }
+  ]
+}

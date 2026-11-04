@@ -1,0 +1,42 @@
+[
+  {
+    "path": "preallocation.tar.xz",
+    "bytes": 80628,
+    "sha256": "cdf243d4634ec6456fa8241578d90591add2950ec68c31ad788a5b444f09a77b"
+  },
+  {
+    "path": "preallocation.manifest.json",
+    "bytes": 1922,
+    "sha256": "c83f3522b8df08f177e9dcd702fc1543e7ab26f7a02a7a68903dade2a33a4155"
+  },
+  {
+    "path": "postallocation.tar.xz",
+    "bytes": 9664,
+    "sha256": "f855e9c6a53f272237a24429d89e33409c04e4d7b290e4f84317833f32da74cb"
+  },
+  {
+    "path": "postallocation.manifest.json",
+    "bytes": 2001,
+    "sha256": "475a5acf69c214e105039d665a3f6570c99acbeb923fbc5a6a59f8aff136cbb9"
+  },
+  {
+    "path": "source-audit.json",
+    "bytes": 1998,
+    "sha256": "0142a64d42d8b1eb84b8f3d3a6b10c31fea7fec8adc4913733c30c1b0844bc94"
+  },
+  {
+    "path": "frozen-measurement-manifest.json",
+    "bytes": 3190,
+    "sha256": "7f312b7a9dda5b8b8d7291e034e17d16811dadf60e1ae05317d08d83f12ae22f"
+  },
+  {
+    "path": "accounting-proof.json",
+    "bytes": 3609,
+    "sha256": "6e4bc3d652a1588a1dcd5c428ff0c040189bf093dcf95338ee926460cfbc1168"
+  },
+  {
+    "path": "allocation-proof.md",
+    "bytes": 4451,
+    "sha256": "c908711b08feb5fce00a72215c44743ea687f74da3e6a598eb1a94bb5a072619"
+  }
+]

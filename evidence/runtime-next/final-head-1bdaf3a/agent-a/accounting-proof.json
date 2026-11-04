@@ -1,0 +1,75 @@
+{
+  "account": "xulab",
+  "accounting_exit_code": "0:0",
+  "actual_allocated_gpu_count": 0,
+  "actual_allocation_gpu_hours": 0.0,
+  "actual_end_utc": "2026-11-04T05:52:06Z",
+  "actual_start": null,
+  "allocation_end_minus_start_seconds": null,
+  "allocation_evidence": [
+    "sacct Start=None / ElapsedRaw=0 / AllocCPUS=0 / AllocTRES empty / NodeList=None assigned",
+    "scontrol CANCELLED / AllocTRES=(null) / NodeList empty",
+    "Own-job squeue empty",
+    "allocation.json absent and srun reports failed resource allocation"
+  ],
+  "causal_scope": "Busy is the actual admission result; Reason=Priority and retained per-GPU memory fields are recorded. Arithmetic node headroom did not establish schedulability. No unique scheduler root cause or memory-override guarantee is inferred.",
+  "client_wall_seconds": 60.10791897773743,
+  "elapsed_raw_seconds": 0,
+  "end_minus_start_note": "No actual allocation start exists. Do not subtract the future scontrol timestamp from End.",
+  "gpu_inference_trials_in_this_job": 0,
+  "gpu_validation_status": "BLOCKED_SCHEDULER_ALLOCATION",
+  "job_id": "33334",
+  "job_name": "astrolabe-gpu-20261104-10cf2b34c104",
+  "partition": "boron",
+  "primary_field_semantics": {
+    "AllocTRES": "https://slurm.schedmd.com/sacct.html#OPT_AllocTres",
+    "ElapsedRaw": "https://slurm.schedmd.com/sacct.html#OPT_ElapsedRaw"
+  },
+  "qos": "normal",
+  "query_utc": {
+    "sacct": "2026-11-04T05:53:12.454Z",
+    "scontrol": "2026-11-04T05:53:14.162Z",
+    "squeue": "2026-11-04T05:53:13.332Z"
+  },
+  "read_only_review_scope": "Only exact own job 33334, boron scheduler metadata and own launcher log files were read. No GPU query, cancellation, retry, allocation or scientific execution was issued by this audit.",
+  "requested_allocation_limit_seconds": 900,
+  "requested_gpu_hours_ceiling": 0.25,
+  "requested_gpu_limit": 1,
+  "requested_limit_is_not_usage": true,
+  "scheduler_arithmetic_only": {
+    "allocated_gpus": 5,
+    "configured_gpus": 6,
+    "eligible_arithmetic_only": true,
+    "gres": "gpu:g4090:6",
+    "node": "f146",
+    "partitions": "boron",
+    "raw": {
+      "argv": [
+        "scontrol",
+        "--oneliner",
+        "show",
+        "node",
+        "f146"
+      ],
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "NodeName=f146 Arch=x86_64 CoresPerSocket=28  CPUAlloc=40 CPUEfctv=56 CPUTot=56 CPULoad=25.39 AvailableFeatures=(null) ActiveFeatures=(null) Gres=gpu:g4090:6 NodeAddr=f146 NodeHostName=f146 Version=26.05.4 OS=Linux 4.18.0-553.172.1.el8_10.x86_64 #1 SMP Thu Oct 8 13:40:23 UTC 2026  RealMemory=240000 AllocMem=202880 FreeMem=225563 Sockets=2 Boards=1 State=MIXED ThreadsPerCore=1 TmpDisk=0 Weight=1 Owner=N/A MCS_label=N/A Partitions=boron  BootTime=2026-10-11T09:15:05 SlurmdStartTime=2026-10-11T09:15:19 LastBusyTime=2026-10-24T02:42:18 ResumeAfterTime=None SuspendTime=INFINITE CfgTRES=cpu=56,mem=240000M,billing=56,gres/gpu=6 AllocTRES=cpu=40,mem=202880M,gres/gpu=5 CurrentWatts=0 AveWatts=0\n"
+    },
+    "reported_unallocated_cpus": 16,
+    "reported_unallocated_ram_mib": 37120,
+    "state": "MIXED"
+  },
+  "scheduler_snapshot_utc": "2026-11-04T05:53:54.546593Z",
+  "scontrol_mem_per_tres": "gpu:40000",
+  "scontrol_min_memory_tres": "40000M",
+  "scontrol_nonexecution_start_timestamp": "2026-11-05T02:44:35",
+  "scontrol_reason": "Priority",
+  "scontrol_req_tres": "cpu=4,mem=32G,node=1,billing=4,gres/gpu=1",
+  "scontrol_runtime": "INVALID",
+  "srun_exit_code": 1,
+  "status": "DONE_ACCOUNTING_NO_ALLOCATION",
+  "submit_to_terminal_seconds": 60.0,
+  "terminal_state": "CANCELLED by 7054",
+  "uid": 7054,
+  "user": "zpzeng"
+}
