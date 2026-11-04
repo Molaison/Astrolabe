@@ -57,6 +57,9 @@ from `requirements-geometry.txt`. It runs the four fixed
 output-boundary, tree-codec, RNG-lifecycle and ESMFold1-resident suites with the
 same process/IPC preflight and zero-skip JUnit gate (`--torch-contracts`), plus
 real SciPy/RDKit structural loss, Qhull fallback and lazy-import/RNG controls. Its
+required suites also include `test_gpu_mutator_control.py`, which tests the GPU
+control harness's scientific and failure gates using CPU tensors. These checker
+tests are mandatory after integration; they do not certify a GPU model run. Its
 runner, logs and artifact are separate from W0; Torch is never added to the W0
 environment; RDKit and Pandas also remain outside W0. These are CPU contract tests, including local fake-weight model
 fixtures, and do not certify pretrained inference or GPU acceleration.

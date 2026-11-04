@@ -242,10 +242,14 @@ def test_summary_uses_observed_baseline_and_never_invents_d66(tmp_path, has_plan
     assert (VALIDATED_BASELINE if has_plan else "unavailable") in text
 
 
-def test_missing_recovered_runtime_suites_block_instead_of_skipping(tmp_path, monkeypatch):
+@pytest.mark.parametrize("torch_contracts,missing_suites", [
+    (False, RECOVERED_RUNTIME_SUITES), (True, ("tests/test_gpu_mutator_control.py",)),
+], ids=["recovered-runtime", "gpu-control-checker"])
+def test_missing_new_suites_block_instead_of_skipping(tmp_path, monkeypatch, torch_contracts, missing_suites):
     root, out = tmp_path / "checkout", tmp_path / "evidence"
-    for name in validation.REQUIRED_TESTS:
-        if name not in RECOVERED_RUNTIME_SUITES:
+    suites = validation.TORCH_CONTRACT_TESTS if torch_contracts else validation.REQUIRED_TESTS
+    for name in suites:
+        if name not in missing_suites:
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.touch()
@@ -254,7 +258,7 @@ def test_missing_recovered_runtime_suites_block_instead_of_skipping(tmp_path, mo
     def unexpected_pytest(*args, **kwargs):
         pytest.fail("missing required suites must block before pytest starts")
     monkeypatch.setattr(validation.subprocess, "run", unexpected_pytest)
-    assert validation.regressions(SimpleNamespace(out=out, torch_contracts=False)) == 3
+    assert validation.regressions(SimpleNamespace(out=out, torch_contracts=torch_contracts)) == 3
     report = json.loads((out / "report.json").read_text())
     assert report["status"] == "BLOCKED"
-    assert set(report["missing_required_suites"]) == set(RECOVERED_RUNTIME_SUITES)
+    assert set(report["missing_required_suites"]) == set(missing_suites)

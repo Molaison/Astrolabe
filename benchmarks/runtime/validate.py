@@ -75,6 +75,7 @@ TORCH_CONTRACT_TESTS = (
     "tests/test_interaction_ipae.py", "tests/test_repeat_symmetry.py",
     "tests/test_ligand_reference_pose_distance.py", "tests/test_design_screening_geometry.py",
     "tests/test_loss_import_lifecycle.py",
+    "tests/test_gpu_mutator_control.py",
 )
 
 
