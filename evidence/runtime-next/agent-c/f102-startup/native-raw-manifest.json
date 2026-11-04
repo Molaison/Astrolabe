@@ -1,0 +1,74 @@
+{
+  "STAGED.json": {
+    "bytes": 534,
+    "sha256": "3f7812d3219410123a26cf816cf94c6472096bf24f6a34e241091b253814fa79"
+  },
+  "compare_native_startup.py": {
+    "bytes": 2736,
+    "sha256": "c2b07486d31da59bc778eecbb22de36d4803d6504d668b4ba871c5170757c76b"
+  },
+  "controller.stderr.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "controller.stdout.log": {
+    "bytes": 172,
+    "sha256": "0a33b083481c0d17847580b1311cdd8011253bd8d321545fe8eb88f43049cd13"
+  },
+  "execution/baseline.json": {
+    "bytes": 531781,
+    "sha256": "9e9f976b0d4a409c1284c19770311c6394975eb0087fa9c648c25f99d111fabf"
+  },
+  "execution/baseline.stderr.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "execution/baseline.stdout.log": {
+    "bytes": 1772,
+    "sha256": "4f90014c9f5b0cc860ec2efb07a1141084f3868275635564e0de2a9e376f6403"
+  },
+  "execution/candidate.json": {
+    "bytes": 531790,
+    "sha256": "8f4c6f343fae4ba1c527aa7ae411c8d4b3d9cb88a8fd10d6043d7cba09b96f5b"
+  },
+  "execution/candidate.stderr.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "execution/candidate.stdout.log": {
+    "bytes": 1779,
+    "sha256": "638c1b1073d00b17018360d20fbc01fede4b91ec2ebf8c8bb8da52af1999dde2"
+  },
+  "execution/comparison.json": {
+    "bytes": 2519,
+    "sha256": "4f5f378be6a6ef4327833c7dba305a240d6111ba76ffd64c50ac9823dcf6b39b"
+  },
+  "execution/comparison.stderr.log": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "execution/comparison.stdout.log": {
+    "bytes": 2045,
+    "sha256": "d3f6a60f7a37337413e3c9f7efec5c73c01b0ec188037b1316157fb45352ede5"
+  },
+  "execution/state.json": {
+    "bytes": 3225,
+    "sha256": "db887ea77a73d58c0c315427aa95778e2009c92c0946282b298c4ddc88cb1eba"
+  },
+  "launch.json": {
+    "bytes": 1009,
+    "sha256": "9dfffb7f924ff170db12c80f6d80eabb0cd46fe08f96b020944bfbd6b9bf0cbd"
+  },
+  "native-control.json": {
+    "bytes": 2426,
+    "sha256": "8b0edc59cf348737794323254c11180dfa1c7bb7306937220d5c39547aef3d07"
+  },
+  "probe_native_startup.py": {
+    "bytes": 11997,
+    "sha256": "78f0abc425a3fea1d9d36550bbeacf1a0ce0b1a8265dd53ec82af1dfe94d2ef4"
+  },
+  "run_native_pair.py": {
+    "bytes": 6202,
+    "sha256": "471c666a265314a53644ea36e55fb224054e1221711e5a16278dee8d323da091"
+  }
+}

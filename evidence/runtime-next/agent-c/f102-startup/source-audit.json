@@ -1,0 +1,1272 @@
+{
+  "all_direct_registered_signatures_decorators_exact": true,
+  "direct_registered_definitions": [
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Min atom-atom distance (\u00c5) between binding_site-selected residues and allowed residues on the opposite chain; when one side omits positions, that side expands to the whole chain.'))])"
+      ],
+      "file": "astrolabe/losses/binding_site.py",
+      "function": "binding_site_allowed_min_dist",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='atom_mode', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='use_ca', annotation=BinOp(left=Name(id='bool', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Min atom-atom distance (\u00c5) using runtime dynamic_binding_site residues; returns missing_value before a predocker publishes dynamic contacts.'))])"
+      ],
+      "file": "astrolabe/losses/binding_site.py",
+      "function": "dynamic_binding_site_allowed_min_dist",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='atom_mode', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='use_ca', annotation=BinOp(left=Name(id='bool', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='missing_value', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Attribute(value=Name(id='math', ctx=Load()), attr='inf', ctx=Load())])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Min heavy-atom distance (\u00c5) between binder chain(s) and target chain(s); target defaults to all non-binder chains in the evaluated oligo.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/binding_site.py",
+      "function": "binder_target_min_dist",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load())), arg(arg='target_chains'), arg(arg='atom_mode', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='use_ca', annotation=BinOp(left=Name(id='bool', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='A'), Constant(value=None), Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Min atom-atom distance (\u00c5) between the target-side binding site (or full target chain) and binder framework residues.'))])"
+      ],
+      "file": "astrolabe/losses/binding_site.py",
+      "function": "binding_site_framework_min_dist",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='atom_mode', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='use_ca', annotation=BinOp(left=Name(id='bool', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='reference_structure_path'), Constant(value='reference_spheres_path'), Constant(value='frame_source'), Constant(value='alignment_chains'), Constant(value='lateral_step'), Constant(value='end_radius'), Constant(value='effective_radius_cutoff'), Constant(value='radius_gate_path_len_threshold'), Constant(value='hole_executable'), Constant(value='hole_radius_file')], ctx=Load())), keyword(arg='description', value=Constant(value='Best-of-9 HOLE score using a reference-spheres frame or the current exact-cyclic axis.'))])"
+      ],
+      "file": "astrolabe/losses/channel_hole.py",
+      "function": "channel_hole",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[arg(arg='reference_structure_path'), arg(arg='reference_spheres_path'), arg(arg='frame_source', annotation=Name(id='str', ctx=Load())), arg(arg='alignment_chains', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='lateral_step', annotation=Name(id='float', ctx=Load())), arg(arg='end_radius', annotation=Name(id='float', ctx=Load())), arg(arg='effective_radius_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='radius_gate_path_len_threshold', annotation=Name(id='float', ctx=Load())), arg(arg='hole_executable', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='hole_radius_file', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kw_defaults=[Constant(value=None), Constant(value=None), Name(id='FRAME_SOURCE_REFERENCE_SPHERES', ctx=Load()), Constant(value=None), Name(id='DEFAULT_LATERAL_STEP', ctx=Load()), Name(id='DEFAULT_END_RADIUS', ctx=Load()), Name(id='DEFAULT_EFFECTIVE_RADIUS_CUTOFF', ctx=Load()), Name(id='DEFAULT_RADIUS_GATE_PATH_LEN_THRESHOLD', ctx=Load()), Constant(value=None), Constant(value=None)], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='reference_structure_path'), Constant(value='reference_spheres_path'), Constant(value='frame_source'), Constant(value='alignment_chains'), Constant(value='lateral_step'), Constant(value='end_radius'), Constant(value='effective_radius_cutoff'), Constant(value='radius_gate_path_len_threshold'), Constant(value='hole_executable'), Constant(value='hole_radius_file')], ctx=Load())), keyword(arg='description', value=Constant(value='Effective path length of the best channel_hole scan.'))])"
+      ],
+      "file": "astrolabe/losses/channel_hole.py",
+      "function": "best_channel_effective_path_len",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[arg(arg='reference_structure_path'), arg(arg='reference_spheres_path'), arg(arg='frame_source', annotation=Name(id='str', ctx=Load())), arg(arg='alignment_chains', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='lateral_step', annotation=Name(id='float', ctx=Load())), arg(arg='end_radius', annotation=Name(id='float', ctx=Load())), arg(arg='effective_radius_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='radius_gate_path_len_threshold', annotation=Name(id='float', ctx=Load())), arg(arg='hole_executable', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='hole_radius_file', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kw_defaults=[Constant(value=None), Constant(value=None), Name(id='FRAME_SOURCE_REFERENCE_SPHERES', ctx=Load()), Constant(value=None), Name(id='DEFAULT_LATERAL_STEP', ctx=Load()), Name(id='DEFAULT_END_RADIUS', ctx=Load()), Name(id='DEFAULT_EFFECTIVE_RADIUS_CUTOFF', ctx=Load()), Name(id='DEFAULT_RADIUS_GATE_PATH_LEN_THRESHOLD', ctx=Load()), Constant(value=None), Constant(value=None)], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='reference_structure_path'), Constant(value='reference_spheres_path'), Constant(value='frame_source'), Constant(value='alignment_chains'), Constant(value='lateral_step'), Constant(value='end_radius'), Constant(value='effective_radius_cutoff'), Constant(value='radius_gate_path_len_threshold'), Constant(value='hole_executable'), Constant(value='hole_radius_file')], ctx=Load())), keyword(arg='description', value=Constant(value='Minimum radius of the best channel_hole scan.'))])"
+      ],
+      "file": "astrolabe/losses/channel_hole.py",
+      "function": "best_channel_min_radius",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[arg(arg='reference_structure_path'), arg(arg='reference_spheres_path'), arg(arg='frame_source', annotation=Name(id='str', ctx=Load())), arg(arg='alignment_chains', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='lateral_step', annotation=Name(id='float', ctx=Load())), arg(arg='end_radius', annotation=Name(id='float', ctx=Load())), arg(arg='effective_radius_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='radius_gate_path_len_threshold', annotation=Name(id='float', ctx=Load())), arg(arg='hole_executable', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='hole_radius_file', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kw_defaults=[Constant(value=None), Constant(value=None), Name(id='FRAME_SOURCE_REFERENCE_SPHERES', ctx=Load()), Constant(value=None), Name(id='DEFAULT_LATERAL_STEP', ctx=Load()), Name(id='DEFAULT_END_RADIUS', ctx=Load()), Name(id='DEFAULT_EFFECTIVE_RADIUS_CUTOFF', ctx=Load()), Name(id='DEFAULT_RADIUS_GATE_PATH_LEN_THRESHOLD', ctx=Load()), Constant(value=None), Constant(value=None)], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='reference_structure_path'), Constant(value='reference_spheres_path'), Constant(value='frame_source'), Constant(value='alignment_chains'), Constant(value='lateral_step'), Constant(value='end_radius'), Constant(value='effective_radius_cutoff'), Constant(value='radius_gate_path_len_threshold'), Constant(value='target_min_radius'), Constant(value='temperature'), Constant(value='hole_executable'), Constant(value='hole_radius_file')], ctx=Load())), keyword(arg='description', value=Constant(value='Smooth negative softplus penalty over all valid HOLE scan minimum radii.'))])"
+      ],
+      "file": "astrolabe/losses/channel_hole.py",
+      "function": "channel_softplus_radius",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[arg(arg='reference_structure_path'), arg(arg='reference_spheres_path'), arg(arg='frame_source', annotation=Name(id='str', ctx=Load())), arg(arg='alignment_chains', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='lateral_step', annotation=Name(id='float', ctx=Load())), arg(arg='end_radius', annotation=Name(id='float', ctx=Load())), arg(arg='effective_radius_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='radius_gate_path_len_threshold', annotation=Name(id='float', ctx=Load())), arg(arg='target_min_radius', annotation=Name(id='float', ctx=Load())), arg(arg='temperature', annotation=Name(id='float', ctx=Load())), arg(arg='hole_executable', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='hole_radius_file', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kw_defaults=[Constant(value=None), Constant(value=None), Name(id='FRAME_SOURCE_REFERENCE_SPHERES', ctx=Load()), Constant(value=None), Name(id='DEFAULT_LATERAL_STEP', ctx=Load()), Name(id='DEFAULT_END_RADIUS', ctx=Load()), Name(id='DEFAULT_EFFECTIVE_RADIUS_CUTOFF', ctx=Load()), Name(id='DEFAULT_RADIUS_GATE_PATH_LEN_THRESHOLD', ctx=Load()), Name(id='DEFAULT_SOFTPLUS_RADIUS_TARGET', ctx=Load()), Name(id='DEFAULT_SOFTPLUS_RADIUS_TEMPERATURE', ctx=Load()), Constant(value=None), Constant(value=None)], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Mean predicted aligned error (PAE) score'))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "pae",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='normalize_factor')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=20)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Mean predicted distance error (PDE) score'))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "pde",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='normalize_factor')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=20)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Mean predicted TM score'))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "ptm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Mean predicted LDDT score normalized to [0,1]'))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "plddt",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Mean interfacial predicted TM score'))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "iptm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='binder_iptm')), keyword(arg='description', value=Constant(value='Binder chain interface pTM (Protenix chain_iptm definition: mean of chain_pair_iptm pairs involving binder chain)')), keyword(arg='optional_params', value=List(elts=[Constant(value='binder_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "binder_iptm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='chain_pair_iptm')), keyword(arg='description', value=Constant(value='Mean chain-pair iPTM for the selected chain_a/chain_b pairs')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "chain_pair_iptm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a'), arg(arg='chain_b')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='binder_ptm')), keyword(arg='description', value=Constant(value='Binder chain pTM (from per-chain chain_ptm in AF3/Protenix summary_confidence)')), keyword(arg='optional_params', value=List(elts=[Constant(value='binder_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "binder_ptm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='target_hotspot_plddt')), keyword(arg='description', value=Constant(value='Mean residue-level pLDDT over an explicitly configured target hotspot window')), keyword(arg='required_params', value=List(elts=[Constant(value='target')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "target_hotspot_plddt",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='target')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ipsae')), keyword(arg='description', value=Constant(value='ipSAE (DunbrackLab/IPSAE): equal-weight mean of symmetric per-chain-pair ipSAE values')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pae_cutoff')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "ipsae",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a'), arg(arg='chain_b'), arg(arg='pae_cutoff', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=10.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='pae_min')), keyword(arg='description', value=Constant(value='Minimum cross-chain PAE between chain_a and chain_b; target-group selectors are reduced per chain pair then averaged')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "pae_min",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='scaled_pae_min')), keyword(arg='description', value=Constant(value='Per-chain-pair scaled cross-chain PAE min mapped to [0,1]: max(0, 1 - pae_min/cutoff), then averaged')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='cutoff')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/confidence.py",
+      "function": "scaled_pae_min",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='cutoff', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=10.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='target_radius')], ctx=Load()))])"
+      ],
+      "file": "astrolabe/losses/cyclic.py",
+      "function": "circle_dual_cyclic",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='target_radius'), arg(arg='exclude_terminal_residues')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=5)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Coefficient of variation of protomer-centroid radii about global COM.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic.py",
+      "function": "cyclic_radius_cv",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Normalized RMS distance of protomer centroids to their best-fit plane.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic.py",
+      "function": "cyclic_plane_rms_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Coefficient of variation of adjacent protomer-centroid edge lengths.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic.py",
+      "function": "cyclic_edge_cv",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Composite cyclic symmetry mismatch from radius, plane, and edge regularity.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic.py",
+      "function": "cyclic_symmetry_composite",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Std of protomer COM radii about global COM.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic.py",
+      "function": "separation_std",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='optional_params', value=List(elts=[Constant(value='sigma'), Constant(value='aggregate')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized cyclic closure quality in [0,1] using Gaussian distance penalty on configured cyclization bonds.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic_closure.py",
+      "function": "cyclic_closure_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='sigma', annotation=Name(id='float', ctx=Load())), arg(arg='aggregate', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=0.2), Constant(value='min')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Maximum direct distance excess over configured cyclization bonds in Angstrom; lower is better.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic_closure.py",
+      "function": "cyclic_closure_max_excess",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='optional_params', value=List(elts=[Constant(value='margin')], ctx=Load())), keyword(arg='description', value=Constant(value='Binary direct cyclic closure status; 1 when every configured bond has observed distance <= target_distance + margin.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic_closure.py",
+      "function": "cyclic_all_bonds_closed",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='margin', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=0.3)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Maximum absolute bond-length error in Angstrom across every configured cyclization bond, independent of encoding scope; missing endpoint atoms give infinity.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic_closure.py",
+      "function": "cyclic_max_bond_error",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='optional_params', value=List(elts=[Constant(value='margin')], ctx=Load())), keyword(arg='description', value=Constant(value='Publication closure endpoint: 1 when all configured bonds have endpoint atoms and absolute bond-length error <= margin, independent of encoding scope.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic_closure.py",
+      "function": "cyclic_all_bonds_within_error",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='margin', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=0.3)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='optional_params', value=List(elts=[Constant(value='margin')], ctx=Load())), keyword(arg='description', value=Constant(value='Direct cyclic closure quality in [0,1] from distance excess; 1 means no bond exceeds target distance, 0 means at least one bond exceeds target distance by margin or more.'))])"
+      ],
+      "file": "astrolabe/losses/cyclic_closure.py",
+      "function": "cyclic_closure_distance_score",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='margin', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=0.3)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bfactor_mean')), keyword(arg='description', value=Constant(value='Mean B-factor over all atoms (common pLDDT proxy for structure files)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bfactor_mean",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bfactor_mean_norm')), keyword(arg='description', value=Constant(value='Mean B-factor normalized to [0,1] assuming 0..100 scale')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bfactor_mean_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='plddt_mean_norm')), keyword(arg='description', value=Constant(value='Alias for mean pLDDT in [0,1] (model-native per-residue pLDDT)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "plddt_mean_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='plddt_mean')), keyword(arg='description', value=Constant(value='Alias for mean pLDDT (same as plddt_mean_norm in this codebase)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "plddt_mean",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_binder_plddt_norm')), keyword(arg='description', value=Constant(value='BindCraft-aligned binder pLDDT normalized to [0,1] from B-factors')), keyword(arg='required_params', value=List(elts=[Constant(value='binder_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_binder_plddt_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='halludesign_plddt')), keyword(arg='description', value=Constant(value='HalluDesign-aligned average B-factor over all atoms (pLDDT proxy)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "halludesign_plddt",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='halludesign_plddt_chain_A')), keyword(arg='description', value=Constant(value='HalluDesign-aligned average B-factor over chain A (pLDDT proxy)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "halludesign_plddt_chain_A",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='halludesign_plddt_chain_B')), keyword(arg='description', value=Constant(value='HalluDesign-aligned average B-factor over chain B (pLDDT proxy)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "halludesign_plddt_chain_B",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='halludesign_key_res_plddt')), keyword(arg='description', value=Constant(value='HalluDesign-aligned key-region pLDDT (mean protein atom B-factors within cutoff of ligand/binder atoms; duplicates allowed)')), keyword(arg='required_params', value=List(elts=[Constant(value='protein_chain')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='ligand_chains'), Constant(value='cutoff')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "halludesign_key_res_plddt",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='protein_chain', annotation=Name(id='str', ctx=Load())), arg(arg='ligand_chains', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='cutoff', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=5.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='odesign_tmscore')), keyword(arg='description', value=Constant(value='ODesign TM-score (shells out to upstream TMscore.cpp; requires reference_structure)')), keyword(arg='required_params', value=List(elts=[Constant(value='reference_structure')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='tmscore_cpp'), Constant(value='tmscore_bin')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "odesign_tmscore",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='reference_structure', annotation=Name(id='str', ctx=Load())), arg(arg='tmscore_cpp', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='tmscore_bin', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='complex_rmsd')), keyword(arg='description', value=Constant(value='PXDesignBench-style CA-only Kabsch RMSD over all chains (requires reference_complex)')), keyword(arg='required_params', value=List(elts=[Constant(value='reference_complex')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "complex_rmsd",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='reference_complex', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='binder_rmsd')), keyword(arg='description', value=Constant(value='PXDesignBench-style CA-only RMSD for binder_unbound_structure vs binder chain in reference_complex')), keyword(arg='required_params', value=List(elts=[Constant(value='binder_unbound_structure'), Constant(value='reference_complex'), Constant(value='binder_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "binder_rmsd",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_unbound_structure', annotation=Name(id='str', ctx=Load())), arg(arg='reference_complex', annotation=Name(id='str', ctx=Load())), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='binder_bound_unbound_binder_rmsd')), keyword(arg='description', value=Constant(value='PXDesignBench-style CA-only RMSD for binder_unbound_structure vs binder chain in predicted complex')), keyword(arg='required_params', value=List(elts=[Constant(value='binder_unbound_structure'), Constant(value='binder_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "binder_bound_unbound_binder_rmsd",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_unbound_structure', annotation=Name(id='str', ctx=Load())), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='clash_pairs')), keyword(arg='description', value=Constant(value='BindCraft-aligned heavy-atom inter-chain clash count (<=2.4\u00c5)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "clash_pairs",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='clash_pairs_ca')), keyword(arg='description', value=Constant(value='BindCraft-aligned C\u03b1 clash count (<=2.5\u00c5)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "clash_pairs_ca",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_hotspot_rmsd')), keyword(arg='description', value=Constant(value='BindCraft-aligned hotspot RMSD (unaligned PyRosetta RMSDMetric on binder chain; requires bindcraft_trajectory_pdb)')), keyword(arg='required_params', value=List(elts=[Constant(value='bindcraft_trajectory_pdb'), Constant(value='binder_chain')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_hotspot_rmsd",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='bindcraft_trajectory_pdb', annotation=Name(id='str', ctx=Load())), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_binder_rmsd')), keyword(arg='description', value=Constant(value='BindCraft-aligned binder RMSD (align binder-alone onto trajectory, then unaligned RMSD; requires bindcraft_trajectory_pdb + bindcraft_binder_alone_pdb)')), keyword(arg='required_params', value=List(elts=[Constant(value='bindcraft_trajectory_pdb'), Constant(value='bindcraft_binder_alone_pdb'), Constant(value='binder_chain')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='bindcraft_binder_alone_chain'), Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_binder_rmsd",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='bindcraft_trajectory_pdb', annotation=Name(id='str', ctx=Load())), arg(arg='bindcraft_binder_alone_pdb', annotation=Name(id='str', ctx=Load())), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load())), arg(arg='bindcraft_binder_alone_chain', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='A'), Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_target_rmsd')), keyword(arg='description', value=Constant(value='BindCraft-aligned target RMSD (CA-only; requires bindcraft_starting_pdb + bindcraft_starting_target_chains)')), keyword(arg='required_params', value=List(elts=[Constant(value='bindcraft_starting_pdb'), Constant(value='bindcraft_starting_target_chains')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_target_rmsd",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='bindcraft_starting_pdb', annotation=Name(id='str', ctx=Load())), arg(arg='bindcraft_starting_target_chains', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_binder_loop_pct')), keyword(arg='description', value=Constant(value='BindCraft-aligned binder loop% (DSSP; requires mkdssp)')), keyword(arg='required_params', value=List(elts=[Constant(value='binder_chain'), Constant(value='target_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_binder_loop_pct",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load())), arg(arg='target_chain', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_loop_pct')), keyword(arg='description', value=Constant(value='BindCraft-aligned interface loop% (DSSP; requires mkdssp)')), keyword(arg='required_params', value=List(elts=[Constant(value='binder_chain'), Constant(value='target_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_loop_pct",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load())), arg(arg='target_chain', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_plddt_norm')), keyword(arg='description', value=Constant(value='BindCraft-aligned interface pLDDT normalized to [0,1] (from B-factors)')), keyword(arg='required_params', value=List(elts=[Constant(value='binder_chain'), Constant(value='target_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_plddt_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load())), arg(arg='target_chain', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_ss_plddt_norm')), keyword(arg='description', value=Constant(value='BindCraft-aligned non-loop pLDDT normalized to [0,1] (from B-factors)')), keyword(arg='required_params', value=List(elts=[Constant(value='binder_chain'), Constant(value='target_chain')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_ss_plddt_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load())), arg(arg='target_chain', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='halludesign_af3_iptm')), keyword(arg='description', value=Constant(value='HalluDesign AF3 summary-style ipTM aggregation from chain_pair_iptm (row 0, cols 1..)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "halludesign_af3_iptm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='halludesign_af3_ipae')), keyword(arg='description', value=Constant(value='HalluDesign AF3 summary-style ipAE aggregation from chain_pair_pae_min (row 0, cols 1..)')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "halludesign_af3_ipae",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='physical_interface_score')), keyword(arg='description', value=Constant(value='Minimal physical interface score from InterfaceAnalyzerMover: normalized SC improvement minus normalized dG_separated increase.')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b'), Constant(value='baseline_sc'), Constant(value='baseline_dg'), Constant(value='sc_scale'), Constant(value='dg_scale')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "physical_interface_score",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='baseline_sc', annotation=Name(id='float', ctx=Load())), arg(arg='baseline_dg', annotation=Name(id='float', ctx=Load())), arg(arg='sc_scale', annotation=Name(id='float', ctx=Load())), arg(arg='dg_scale', annotation=Name(id='float', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='sap_score')), keyword(arg='description', value=Constant(value='Rosetta SAP score (SapScoreMetric). Set included_protomers to restrict to a subset of protomers; empty/None scores the full complex. Lower is better.')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomers'), Constant(value='pyrosetta_init')], ctx=Load()))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "sap_score",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomers', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_sc')), keyword(arg='description', value=Constant(value='BindCraft-style interface shape complementarity (InterfaceAnalyzerMover sc_value)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_sc",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_dG')), keyword(arg='description', value=Constant(value='BindCraft-style interface dG (InterfaceAnalyzerMover get_interface_dG)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_dG",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_dSASA')), keyword(arg='description', value=Constant(value='BindCraft-style interface dSASA (InterfaceAnalyzerMover get_interface_delta_sasa)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_dSASA",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_nres')), keyword(arg='description', value=Constant(value='BindCraft-aligned interface residue count on binder chain (hotspot-residue definition)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_nres",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_interface_hbonds')), keyword(arg='description', value=Constant(value='BindCraft-style interface hbonds (InterfaceAnalyzerMover interface_hbonds)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_interface_hbonds",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_delta_unsat_hbonds')), keyword(arg='description', value=Constant(value='BindCraft-style buried unsatisfied HBonds (RosettaScripts BuriedUnsatHbonds ddG-style)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_delta_unsat_hbonds",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_binder_score')), keyword(arg='description', value=Constant(value='BindCraft-style binder chain energy score (TotalEnergyMetric)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_binder_score",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_surface_hydrophobicity')), keyword(arg='description', value=Constant(value='BindCraft-style binder surface hydrophobicity fraction (LayerSelector surface residues)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pyrosetta_init')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_surface_hydrophobicity",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load())), arg(arg='pyrosetta_init', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='-ignore_unrecognized_res -ignore_zero_occupancy -mute all')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='bindcraft_interface_hydrophobicity')), keyword(arg='description', value=Constant(value='BindCraft-aligned interface hydrophobicity (percent hydrophobic AA among hotspot residues)')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "bindcraft_interface_hydrophobicity",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ipae_mean')), keyword(arg='description', value=Constant(value='Mean cross-chain PAE (AB+BA mean) from full PAE matrix')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "ipae_mean",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ipae_min')), keyword(arg='description', value=Constant(value='Minimum cross-chain PAE across AB/BA submatrices from full PAE matrix')), keyword(arg='required_params', value=List(elts=[Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/design_screening.py",
+      "function": "ipae_min",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='chain_a', annotation=Name(id='str', ctx=Load())), arg(arg='chain_b', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='cd47_antibody_like_epitope_score')), keyword(arg='description', value=Constant(value='CD47 antibody-like target-epitope score: consensus-contact Jaccard, zeroed when overlap is below the antibody-like floor or the contact set is N-terminal-dominant.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "cd47_antibody_like_epitope_score",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load())), arg(arg='target_chain', annotation=Name(id='str', ctx=Load())), arg(arg='contact_method', annotation=Name(id='str', ctx=Load())), arg(arg='sc_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='ca_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='min_overlap', annotation=Name(id='int', ctx=Load())), arg(arg='zero_if_nterm_dominant', annotation=Name(id='bool', ctx=Load())), arg(arg='nterm_max_resi', annotation=Name(id='int', ctx=Load())), arg(arg='nterm_fraction', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='A'), Constant(value='B'), Constant(value='sc'), Constant(value=5.0), Constant(value=8.0), Constant(value=6), Constant(value=True), Constant(value=30), Constant(value=0.5)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='description', value=Constant(value='Interfacial predicted aligned error (iPAE) score')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ipae",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='contact_method', annotation=Name(id='str', ctx=Load())), arg(arg='sc_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='ca_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='chain_a', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='chain_b', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='sc'), Constant(value=5.0), Constant(value=8.0), Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ipae_min')), keyword(arg='description', value=Constant(value='Mean contact-pair iPAE using min(PAE[i,j], PAE[j,i]) for each cross-chain contact pair')), keyword(arg='optional_params', value=List(elts=[Constant(value='contact_method'), Constant(value='sc_cutoff'), Constant(value='ca_cutoff'), Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ipae_min",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='contact_method', annotation=Name(id='str', ctx=Load())), arg(arg='sc_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='ca_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='chain_a', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='chain_b', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='sc'), Constant(value=5.0), Constant(value=8.0), Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ipae_minimal')), keyword(arg='description', value=Constant(value='Minimal contact-pair iPAE over min(PAE[i,j], PAE[j,i]) values')), keyword(arg='optional_params', value=List(elts=[Constant(value='contact_method'), Constant(value='sc_cutoff'), Constant(value='ca_cutoff'), Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ipae_minimal",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='contact_method', annotation=Name(id='str', ctx=Load())), arg(arg='sc_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='ca_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='chain_a', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='chain_b', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='sc'), Constant(value=5.0), Constant(value=8.0), Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ipae_max')), keyword(arg='description', value=Constant(value='Mean contact-pair iPAE using max(PAE[i,j], PAE[j,i]) for each cross-chain contact pair')), keyword(arg='optional_params', value=List(elts=[Constant(value='contact_method'), Constant(value='sc_cutoff'), Constant(value='ca_cutoff'), Constant(value='chain_a'), Constant(value='chain_b')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ipae_max",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='contact_method', annotation=Name(id='str', ctx=Load())), arg(arg='sc_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='ca_cutoff', annotation=Name(id='float', ctx=Load())), arg(arg='chain_a', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='chain_b', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='sc'), Constant(value=5.0), Constant(value=8.0), Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='protomer_shape_complementarity')), keyword(arg='description', value=Constant(value='Shape complementarity penalty between two protomers')), keyword(arg='optional_params', value=List(elts=[Constant(value='protomer_a'), Constant(value='protomer_b'), Constant(value='included_protomers'), Constant(value='target_sc'), Constant(value='saturation_constant'), Constant(value='return_raw')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "protomer_shape_complementarity",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='protomer_a', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='protomer_b', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='included_protomers', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_shape_complementarity')), keyword(arg='description', value=Constant(value='Mean Rosetta shape complementarity between ligand chain(s) and protein chain(s)')), keyword(arg='optional_params', value=List(elts=[Constant(value='ligand_targets')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_shape_complementarity",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='contact_molecular_surface')), keyword(arg='description', value=Constant(value='Rosetta contact molecular surface between two protomer/chain groups')), keyword(arg='optional_params', value=List(elts=[Constant(value='protomer_a'), Constant(value='protomer_b'), Constant(value='protomer_a_residues'), Constant(value='protomer_b_residues'), Constant(value='included_protomers'), Constant(value='distance_weight'), Constant(value='use_rosetta_radii')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "contact_molecular_surface",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='protomer_a', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='protomer_b', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='protomer_a_residues', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='protomer_b_residues', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='included_protomers', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='distance_weight', annotation=Name(id='float', ctx=Load())), arg(arg='use_rosetta_radii', annotation=Name(id='bool', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=0.5), Constant(value=True)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='contact_molecular_surface_norm')), keyword(arg='description', value=Constant(value='Normalized Rosetta contact molecular surface score with cms=400 mapped to 0.8')), keyword(arg='optional_params', value=List(elts=[Constant(value='protomer_a'), Constant(value='protomer_b'), Constant(value='protomer_a_residues'), Constant(value='protomer_b_residues'), Constant(value='included_protomers'), Constant(value='distance_weight'), Constant(value='use_rosetta_radii'), Constant(value='midpoint'), Constant(value='midpoint_value'), Constant(value='lower_scale'), Constant(value='upper_scale')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "contact_molecular_surface_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='protomer_a', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='protomer_b', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='protomer_a_residues', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='protomer_b_residues', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='included_protomers', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='distance_weight', annotation=Name(id='float', ctx=Load())), arg(arg='use_rosetta_radii', annotation=Name(id='bool', ctx=Load())), arg(arg='midpoint', annotation=Name(id='float', ctx=Load())), arg(arg='midpoint_value', annotation=Name(id='float', ctx=Load())), arg(arg='lower_scale', annotation=Name(id='float', ctx=Load())), arg(arg='upper_scale', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=0.5), Constant(value=True), Constant(value=400.0), Constant(value=0.8), Constant(value=150.0), Constant(value=75.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='interface_buried_unsatisfied_hbonds')), keyword(arg='description', value=Constant(value='Interface-induced buried unsatisfied H-bond count between two protomer/chain groups')), keyword(arg='optional_params', value=List(elts=[Constant(value='protomer_a'), Constant(value='protomer_b'), Constant(value='included_protomers'), Constant(value='separation_distance'), Constant(value='ignore_surface_res')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "interface_buried_unsatisfied_hbonds",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='protomer_a', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='protomer_b', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='included_protomers', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='separation_distance', annotation=Name(id='float', ctx=Load())), arg(arg='ignore_surface_res', annotation=Name(id='bool', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=1000.0), Constant(value=False)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_protein_hbond')), keyword(arg='description', value=Constant(value='Saturated count of ligand\u2013protein hydrogen bonds')), keyword(arg='optional_params', value=List(elts=[Constant(value='ligand_targets'), Constant(value='saturation_constant')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_protein_hbond",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='saturation_constant', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=4.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='select_expression')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='normalize_factor')], ctx=Load())), keyword(arg='description', value=Constant(value='Hotspot delta SASA calculation'))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "hotspot_dsasa",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='select_expression'), arg(arg='normalize_factor', annotation=Name(id='int', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=20)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='hotspot_buried_ratio')), keyword(arg='required_params', value=List(elts=[Constant(value='select_expression')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='sidechain_only')], ctx=Load())), keyword(arg='description', value=Constant(value='Selected hotspot buried ratio defined as 1 - bound_exposed_sasa / unbound_exposed_sasa'))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "hotspot_buried_ratio",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='select_expression'), arg(arg='sidechain_only', annotation=Name(id='bool', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=True)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='buried_protomer')], ctx=Load())), keyword(arg='description', value=Constant(value='Calculate buried contribution difference for a specific protomer')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "buried_contribution_diff",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='buried_protomer', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='buried_protomer')], ctx=Load())), keyword(arg='description', value=Constant(value='Calculate holes difference for a specific protomer')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "chain_holes_diff",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='buried_protomer', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_delta_sasa_fraction')), keyword(arg='description', value=Constant(value='Fraction of ligand SASA buried upon binding')), keyword(arg='optional_params', value=List(elts=[Constant(value='ligand_targets'), Constant(value='epsilon')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_delta_sasa_fraction",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='epsilon', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=0.001)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_pocket_occupancy')), keyword(arg='required_params', value=List(elts=[Constant(value='pocket_chain')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='pocket_residues'), Constant(value='pocket_residues_by_chain'), Constant(value='ligand_targets'), Constant(value='pocket_padding')], ctx=Load())), keyword(arg='description', value=Constant(value='Fraction of ligand heavy atoms inside the selected pocket residue box')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_pocket_occupancy",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='pocket_chain', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='pocket_residues', annotation=BinOp(left=BinOp(left=BinOp(left=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), ctx=Load())), op=BitOr(), right=Subscript(value=Name(id='Mapping', ctx=Load()), slice=Tuple(elts=[Name(id='str', ctx=Load()), BinOp(left=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), ctx=Load()))], ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='pocket_residues_by_chain', annotation=BinOp(left=Subscript(value=Name(id='Mapping', ctx=Load()), slice=Tuple(elts=[Name(id='str', ctx=Load()), BinOp(left=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), ctx=Load()))], ctx=Load()), ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='pocket_padding', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=1.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_protein_interface_ca90')), keyword(arg='optional_params', value=List(elts=[Constant(value='interface_chains'), Constant(value='ligand_targets'), Constant(value='interface_distance'), Constant(value='coverage_percent'), Constant(value='padding'), Constant(value='min_box_size')], ctx=Load())), keyword(arg='description', value=Constant(value='Ligand heavy-atom fraction inside the protein-interface C-alpha PCA percentile box')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_protein_interface_ca90",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='interface_chains', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='interface_distance', annotation=Name(id='float', ctx=Load())), arg(arg='coverage_percent', annotation=Name(id='float', ctx=Load())), arg(arg='padding', annotation=Name(id='float', ctx=Load())), arg(arg='min_box_size', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=8.0), Constant(value=90.0), Constant(value=1.0), Constant(value=5.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_protein_interface_occupancy')), keyword(arg='optional_params', value=List(elts=[Constant(value='interface_chains'), Constant(value='ligand_targets'), Constant(value='interface_distance'), Constant(value='interface_padding'), Constant(value='min_box_size')], ctx=Load())), keyword(arg='description', value=Constant(value='Fraction of ligand heavy atoms inside the AutoDock-style box built from the dynamically computed protein-protein interface residues')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_protein_interface_occupancy",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='interface_chains', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='interface_distance', annotation=Name(id='float', ctx=Load())), arg(arg='interface_padding', annotation=Name(id='float', ctx=Load())), arg(arg='min_box_size', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=8.0), Constant(value=1.0), Name(id='AUTODOCK_MIN_BOX_SIZE', ctx=Load())])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_protein_interface_cb_alpha_shape_occupancy')), keyword(arg='optional_params', value=List(elts=[Constant(value='interface_chains'), Constant(value='ligand_targets'), Constant(value='interface_distance'), Constant(value='alpha_radius'), Constant(value='alpha_radius_scale'), Constant(value='alpha_min_radius'), Constant(value='alpha_max_radius'), Constant(value='alpha_tolerance')], ctx=Load())), keyword(arg='description', value=Constant(value='Fraction of ligand heavy atoms inside the alpha shape built from C-beta or glycine C-alpha points of dynamically computed protein-protein interface residues')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_protein_interface_cb_alpha_shape_occupancy",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='interface_chains', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='interface_distance', annotation=Name(id='float', ctx=Load())), arg(arg='alpha_radius', annotation=BinOp(left=Name(id='float', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='alpha_radius_scale', annotation=Name(id='float', ctx=Load())), arg(arg='alpha_min_radius', annotation=Name(id='float', ctx=Load())), arg(arg='alpha_max_radius', annotation=Name(id='float', ctx=Load())), arg(arg='alpha_tolerance', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=8.0), Constant(value=None), Constant(value=1.8), Constant(value=3.0), Constant(value=8.0), Constant(value=1e-08)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_aligned_reference_pose_distance')), keyword(arg='required_params', value=List(elts=[Constant(value='reference_structure_path'), Constant(value='reference_ligand_path')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='reference_structure_chain'), Constant(value='current_structure_chain'), Constant(value='ligand_targets'), Constant(value='min_ca_atoms'), Constant(value='allow_length_mismatch')], ctx=Load())), keyword(arg='description', value=Constant(value='Centroid distance between the current ligand and a reference ligand pose after aligning current protein chains to the reference structure')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_aligned_reference_pose_distance",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='reference_structure_path', annotation=Name(id='str', ctx=Load())), arg(arg='reference_ligand_path', annotation=Name(id='str', ctx=Load())), arg(arg='reference_structure_chain', annotation=Name(id='Any', ctx=Load())), arg(arg='current_structure_chain', annotation=Name(id='Any', ctx=Load())), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='min_ca_atoms', annotation=Name(id='int', ctx=Load())), arg(arg='allow_length_mismatch', annotation=Name(id='bool', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=20), Constant(value=False)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_aligned_reference_pocket_box_occupancy')), keyword(arg='required_params', value=List(elts=[Constant(value='reference_structure_path')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='reference_structure_chain'), Constant(value='current_structure_chain'), Constant(value='reference_pocket_positions'), Constant(value='reference_pocket_positions_by_chain'), Constant(value='reference_box_padding'), Constant(value='binding_site_padding'), Constant(value='ligand_targets'), Constant(value='allow_length_mismatch'), Constant(value='min_box_size')], ctx=Load())), keyword(arg='description', value=Constant(value='Fraction of ligand heavy atoms inside the AutoDock aligned_reference_pocket box computed from the mapped current pocket residues')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_aligned_reference_pocket_box_occupancy",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='reference_structure_path', annotation=Name(id='str', ctx=Load())), arg(arg='reference_structure_chain', annotation=Name(id='Any', ctx=Load())), arg(arg='current_structure_chain', annotation=Name(id='Any', ctx=Load())), arg(arg='reference_pocket_positions', annotation=BinOp(left=BinOp(left=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='reference_pocket_positions_by_chain', annotation=BinOp(left=Subscript(value=Name(id='Mapping', ctx=Load()), slice=Tuple(elts=[Name(id='str', ctx=Load()), BinOp(left=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), ctx=Load()))], ctx=Load()), ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='reference_box_padding', annotation=BinOp(left=Name(id='float', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='binding_site_padding', annotation=BinOp(left=Name(id='float', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='allow_length_mismatch', annotation=Name(id='bool', ctx=Load())), arg(arg='min_box_size', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=False), Name(id='AUTODOCK_MIN_BOX_SIZE', ctx=Load())])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_aligned_reference_pocket_cb_alpha_shape_occupancy')), keyword(arg='required_params', value=List(elts=[Constant(value='reference_structure_path')], ctx=Load())), keyword(arg='optional_params', value=List(elts=[Constant(value='reference_structure_chain'), Constant(value='current_structure_chain'), Constant(value='reference_pocket_positions'), Constant(value='reference_pocket_positions_by_chain'), Constant(value='alpha_radius'), Constant(value='alpha_radius_scale'), Constant(value='alpha_min_radius'), Constant(value='alpha_max_radius'), Constant(value='alpha_tolerance'), Constant(value='ligand_targets'), Constant(value='allow_length_mismatch')], ctx=Load())), keyword(arg='description', value=Constant(value='Fraction of ligand heavy atoms inside the alpha shape built from mapped current target-pocket residue C-beta points; glycine uses C-alpha')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='reference_structure_path', annotation=Name(id='str', ctx=Load())), arg(arg='reference_structure_chain', annotation=Name(id='Any', ctx=Load())), arg(arg='current_structure_chain', annotation=Name(id='Any', ctx=Load())), arg(arg='reference_pocket_positions', annotation=BinOp(left=BinOp(left=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='reference_pocket_positions_by_chain', annotation=BinOp(left=Subscript(value=Name(id='Mapping', ctx=Load()), slice=Tuple(elts=[Name(id='str', ctx=Load()), BinOp(left=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=BinOp(left=Name(id='int', ctx=Load()), op=BitOr(), right=Name(id='str', ctx=Load())), ctx=Load()))], ctx=Load()), ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='alpha_radius', annotation=BinOp(left=Name(id='float', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='alpha_radius_scale', annotation=Name(id='float', ctx=Load())), arg(arg='alpha_min_radius', annotation=Name(id='float', ctx=Load())), arg(arg='alpha_max_radius', annotation=Name(id='float', ctx=Load())), arg(arg='alpha_tolerance', annotation=Name(id='float', ctx=Load())), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='allow_length_mismatch', annotation=Name(id='bool', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=1.8), Constant(value=3.0), Constant(value=8.0), Constant(value=1e-08), Constant(value=None), Constant(value=False)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_protein_iptm')), keyword(arg='description', value=Constant(value='Mean iPTM between ligand and protein chains')), keyword(arg='optional_params', value=List(elts=[Constant(value='ligand_targets')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_protein_iptm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_local_holes')), keyword(arg='description', value=Constant(value='Local Holes/packstat penalty in ligand environment')), keyword(arg='optional_params', value=List(elts=[Constant(value='ligand_targets'), Constant(value='neighbor_distance'), Constant(value='saturation_constant')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_local_holes",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='neighbor_distance', annotation=Name(id='float', ctx=Load())), arg(arg='saturation_constant', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=8.0), Constant(value=10.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ligand_buried_unsat_hbonds')), keyword(arg='description', value=Constant(value='Buried unsatisfied polar groups in the ligand local environment')), keyword(arg='optional_params', value=List(elts=[Constant(value='ligand_targets'), Constant(value='neighbor_distance'), Constant(value='saturation_constant')], ctx=Load())), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "ligand_buried_unsat_hbonds",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='ligand_targets', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='Sequence', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='neighbor_distance', annotation=Name(id='float', ctx=Load())), arg(arg='saturation_constant', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=8.0), Constant(value=6.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='buried_protomer')], ctx=Load())), keyword(arg='description', value=Constant(value='Calculate buried fraction for a specific protomer')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "chain_buried_fraction",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='buried_protomer', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='buried_protomer')], ctx=Load())), keyword(arg='description', value=Constant(value='Calculate buried fraction using all-alanine reference')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "buried_fraction_allala",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='buried_protomer', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='buried_protomer')], ctx=Load())), keyword(arg='description', value=Constant(value='Calculate center of mass distance for a specific protomer')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/interaction.py",
+      "function": "com_distance",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='buried_protomer', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='optional_params', value=List(elts=[Constant(value='penalty_value')], ctx=Load())), keyword(arg='description', value=Constant(value='Fixed penalty when AutoDock predocker recorded a soft docking failure for the current step.'))])"
+      ],
+      "file": "astrolabe/losses/predocker.py",
+      "function": "autodock_penalty",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='penalty_value', annotation=Name(id='float', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=100.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='repeat_unit_rmsd_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomer')], ctx=Load())), keyword(arg='description', value=Constant(value='Mean pairwise CA RMSD between internally repeated units after Kabsch alignment.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "repeat_unit_rmsd_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomer')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='repeat_unit_rmsd_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomer'), Constant(value='best'), Constant(value='worst')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized internal repeat quality in [0,1]; higher is better.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "repeat_unit_rmsd_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomer'), arg(arg='best'), arg(arg='worst')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=0.0), Constant(value=1.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='pseudocycle_rotation_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomer')], ctx=Load())), keyword(arg='description', value=Constant(value='Absolute deviation (degrees) from ideal 360/N repeat rotation for pseudocycles.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "pseudocycle_rotation_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomer')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='pseudocycle_rotation_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomer'), Constant(value='best'), Constant(value='worst')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized pseudocycle rotation quality in [0,1]; higher is better.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "pseudocycle_rotation_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomer'), arg(arg='best'), arg(arg='worst')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=0.0), Constant(value=20.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='pseudocycle_rise_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomer')], ctx=Load())), keyword(arg='description', value=Constant(value='Absolute screw-axis rise (Angstrom) for pseudocycle closure.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "pseudocycle_rise_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomer')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='pseudocycle_rise_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomer'), Constant(value='best'), Constant(value='worst')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized pseudocycle rise quality in [0,1]; higher is better.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "pseudocycle_rise_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomer'), arg(arg='best'), arg(arg='worst')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=0.0), Constant(value=1.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='pseudocycle_closure_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomer'), Constant(value='rotation_best'), Constant(value='rotation_worst'), Constant(value='rise_best'), Constant(value='rise_worst')], ctx=Load())), keyword(arg='description', value=Constant(value='Paper-style pseudocycle closure score where 0 is best.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "pseudocycle_closure_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomer'), arg(arg='rotation_best'), arg(arg='rotation_worst'), arg(arg='rise_best'), arg(arg='rise_worst')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=0.0), Constant(value=20.0), Constant(value=0.0), Constant(value=1.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='pseudocycle_closure_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='included_protomer'), Constant(value='rotation_best'), Constant(value='rotation_worst'), Constant(value='rise_best'), Constant(value='rise_worst')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized pseudocycle closure quality in [0,1]; higher is better.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "pseudocycle_closure_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomer'), arg(arg='rotation_best'), arg(arg='rotation_worst'), arg(arg='rise_best'), arg(arg='rise_worst')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=0.0), Constant(value=20.0), Constant(value=0.0), Constant(value=1.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='point_group_orbit_rmsd_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='point_group'), Constant(value='order')], ctx=Load())), keyword(arg='description', value=Constant(value='Point-group orbit CA RMSD in Angstrom after fitting a Cn/Dn ideal operator layout.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "point_group_orbit_rmsd_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='point_group'), arg(arg='order')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='C'), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='point_group_orbit_rmsd_ratio')), keyword(arg='optional_params', value=List(elts=[Constant(value='point_group'), Constant(value='order')], ctx=Load())), keyword(arg='description', value=Constant(value='Point-group orbit CA RMSD divided by assembly radius for Cn/Dn assemblies.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "point_group_orbit_rmsd_ratio",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='point_group'), arg(arg='order')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='C'), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='point_group_rotation_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='point_group'), Constant(value='order')], ctx=Load())), keyword(arg='description', value=Constant(value='Mean protomer orientation residual in degrees against fitted Cn/Dn operators.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "point_group_rotation_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='point_group'), arg(arg='order')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='C'), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='point_group_symmetry_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='point_group'), Constant(value='order'), Constant(value='orbit_best'), Constant(value='orbit_worst'), Constant(value='rotation_best'), Constant(value='rotation_worst'), Constant(value='rotation_weight')], ctx=Load())), keyword(arg='description', value=Constant(value='Combined Cn/Dn point-group quality in [0,1] from orbit RMSD ratio and orientation residual.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "point_group_symmetry_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='point_group'), arg(arg='order'), arg(arg='orbit_best'), arg(arg='orbit_worst'), arg(arg='rotation_best'), arg(arg='rotation_worst'), arg(arg='rotation_weight')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='C'), Constant(value=None), Constant(value=0.0), Constant(value=0.2), Constant(value=0.0), Constant(value=25.0), Constant(value=0.5)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ananas_rmsd_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='point_group'), Constant(value='order'), Constant(value='ananas_path'), Constant(value='timeout_s'), Constant(value='missing_rmsd')], ctx=Load())), keyword(arg='description', value=Constant(value='AnAnaS symmetry RMSD for a requested Cn/Dn point group.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "ananas_rmsd_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='point_group'), arg(arg='order'), arg(arg='ananas_path'), arg(arg='timeout_s'), arg(arg='missing_rmsd')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='C'), Constant(value=None), Constant(value=None), Constant(value=30.0), Attribute(value=Name(id='math', ctx=Load()), attr='inf', ctx=Load())])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='ananas_rmsd_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='point_group'), Constant(value='order'), Constant(value='ananas_path'), Constant(value='timeout_s'), Constant(value='best'), Constant(value='worst'), Constant(value='missing_rmsd')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized AnAnaS symmetry RMSD in [0,1]; higher is better.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "ananas_rmsd_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='point_group'), arg(arg='order'), arg(arg='ananas_path'), arg(arg='timeout_s'), arg(arg='best'), arg(arg='worst'), arg(arg='missing_rmsd')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value='C'), Constant(value=None), Constant(value=None), Constant(value=30.0), Constant(value=0.0), Constant(value=2.0), Attribute(value=Name(id='math', ctx=Load()), attr='inf', ctx=Load())])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='dihedral_ring_sep_cv_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='order')], ctx=Load())), keyword(arg='description', value=Constant(value='Dn adjacent-ring COM distance coefficient of variation.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "dihedral_ring_sep_cv_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='order')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='dihedral_pair_sep_cv_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='order')], ctx=Load())), keyword(arg='description', value=Constant(value='Dn C2-paired COM distance coefficient of variation.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "dihedral_pair_sep_cv_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='order')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='dihedral_pair_contact_count_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='order'), Constant(value='contact_cutoff'), Constant(value='atom_mode'), Constant(value='reduction')], ctx=Load())), keyword(arg='description', value=Constant(value='Residue-pair contact count across Dn C2-paired protomers on evaluator-predicted structures.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "dihedral_pair_contact_count_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='order'), arg(arg='contact_cutoff'), arg(arg='atom_mode'), arg(arg='reduction')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=5.0), Constant(value='heavy'), Constant(value='mean')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='dihedral_pair_contact_count_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='order'), Constant(value='contact_cutoff'), Constant(value='atom_mode'), Constant(value='target'), Constant(value='reduction')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized Dn C2-pair contact count in [0,1]; higher rewards paired-chain contact.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "dihedral_pair_contact_count_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='order'), arg(arg='contact_cutoff'), arg(arg='atom_mode'), arg(arg='target'), arg(arg='reduction')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=5.0), Constant(value='heavy'), Constant(value=12.0), Constant(value='mean')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='dihedral_pair_contact_fraction_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='order'), Constant(value='contact_cutoff'), Constant(value='atom_mode'), Constant(value='min_contacts')], ctx=Load())), keyword(arg='description', value=Constant(value='Fraction of Dn C2-paired protomer pairs with at least min_contacts residue contacts.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "dihedral_pair_contact_fraction_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='order'), arg(arg='contact_cutoff'), arg(arg='atom_mode'), arg(arg='min_contacts')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=5.0), Constant(value='heavy'), Constant(value=1)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='dihedral_pair_contact_fraction_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='order'), Constant(value='contact_cutoff'), Constant(value='atom_mode'), Constant(value='min_contacts'), Constant(value='target')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized Dn C2-pair interface coverage in [0,1]; higher means more paired interfaces are present.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "dihedral_pair_contact_fraction_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='order'), arg(arg='contact_cutoff'), arg(arg='atom_mode'), arg(arg='min_contacts'), arg(arg='target')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=5.0), Constant(value='heavy'), Constant(value=1), Constant(value=1.0)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='dihedral_pair_min_distance_raw')), keyword(arg='optional_params', value=List(elts=[Constant(value='order'), Constant(value='atom_mode'), Constant(value='reduction')], ctx=Load())), keyword(arg='description', value=Constant(value='Minimum atom distance across Dn C2-paired protomers on evaluator-predicted structures.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "dihedral_pair_min_distance_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='order'), arg(arg='atom_mode'), arg(arg='reduction')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value='heavy'), Constant(value='mean')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='dihedral_pair_min_distance_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='order'), Constant(value='atom_mode'), Constant(value='best'), Constant(value='worst'), Constant(value='reduction')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized Dn C2-pair atom-distance compactness in [0,1]; higher is closer contact.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "dihedral_pair_min_distance_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='order'), arg(arg='atom_mode'), arg(arg='best'), arg(arg='worst'), arg(arg='reduction')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value='heavy'), Constant(value=3.5), Constant(value=14.0), Constant(value='mean')])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='protomer_rmsd_raw')), keyword(arg='description', value=Constant(value='Mean pairwise CA RMSD across heterooligomer shared-core regions after Kabsch alignment.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "protomer_rmsd_raw",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='protomer_rmsd_norm')), keyword(arg='optional_params', value=List(elts=[Constant(value='m'), Constant(value='s'), Constant(value='best'), Constant(value='worst')], ctx=Load())), keyword(arg='description', value=Constant(value='Normalized shared-core protomer agreement in [0,1]; higher is better.')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/repeat_symmetry.py",
+      "function": "protomer_rmsd_norm",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='m'), arg(arg='s'), arg(arg='best'), arg(arg='worst')], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=2.0), Constant(value=2.0), Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='metric')], ctx=Load())), keyword(arg='description', value=Constant(value='Read an oligomer-level metric emitted by RosettaCrystalEvaluator')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/rosetta_crystal.py",
+      "function": "rosetta_crystal_metric",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='metric', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='included_protomers'), Constant(value='residues')], ctx=Load()))])"
+      ],
+      "file": "astrolabe/losses/sequence.py",
+      "function": "sequence_residue_fraction",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomers', annotation=Name(id='str', ctx=Load())), arg(arg='residues', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='included_protomers'), Constant(value='positions')], ctx=Load()))])"
+      ],
+      "file": "astrolabe/losses/sequence.py",
+      "function": "sequence_region_identity",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomers', annotation=Name(id='str', ctx=Load())), arg(arg='positions', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='edges'), Constant(value='m_positions'), Constant(value='n_positions')], ctx=Load()))])"
+      ],
+      "file": "astrolabe/losses/sequence.py",
+      "function": "sequence_edge_region_identity",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='edges', annotation=Name(id='str', ctx=Load())), arg(arg='m_positions', annotation=Name(id='str', ctx=Load())), arg(arg='n_positions', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='name', value=Constant(value='binder_pair_tmscore')), keyword(arg='description', value=Constant(value='Mean binder-chain TM-score between two predicted oligomers using USalign')), keyword(arg='required_params', value=List(elts=[Constant(value='oligo_a'), Constant(value='oligo_b'), Constant(value='binder_chain')], ctx=Load()))])"
+      ],
+      "file": "astrolabe/losses/structure.py",
+      "function": "binder_pair_tmscore",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='oligo_a', annotation=Name(id='str', ctx=Load())), arg(arg='oligo_b', annotation=Name(id='str', ctx=Load())), arg(arg='binder_chain', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='optional_params', value=List(elts=[Constant(value='template_files'), Constant(value='template_file_alias'), Constant(value='query_chain'), Constant(value='reference_chain')], ctx=Load())), keyword(arg='description', value=Constant(value='USalign TM-score against template/reference structures')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/structure.py",
+      "function": "tmscore",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='template_files', annotation=Subscript(value=Name(id='Optional', ctx=Load()), slice=Subscript(value=Name(id='List', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load()), ctx=Load())), arg(arg='template_file_alias', annotation=BinOp(left=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Subscript(value=Name(id='List', ctx=Load()), slice=Name(id='str', ctx=Load()), ctx=Load())), op=BitOr(), right=Constant(value=None))), arg(arg='query_chain', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None))), arg(arg='reference_chain', annotation=BinOp(left=Name(id='str', ctx=Load()), op=BitOr(), right=Constant(value=None)))], kwonlyargs=[], kw_defaults=[], defaults=[Constant(value=None), Constant(value=None), Constant(value=None), Constant(value=None)])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='included_protomers')], ctx=Load())), keyword(arg='description', value=Constant(value='Calculate radius of gyration for included protomers'))])"
+      ],
+      "file": "astrolabe/losses/structure.py",
+      "function": "single_chain_rog",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomers', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='included_protomers')], ctx=Load())), keyword(arg='description', value=Constant(value='Mean C-alpha radius of gyration of included protein chains')), keyword(arg='supports_oligomer_specific', value=Constant(value=True))])"
+      ],
+      "file": "astrolabe/losses/structure.py",
+      "function": "single_chain_ca_rog",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomers', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='included_protomers'), Constant(value='sse_type')], ctx=Load())), keyword(arg='description', value=Constant(value='Compute DSSP fraction of a specific SSE type (E/H/L) for protomers'))])"
+      ],
+      "file": "astrolabe/losses/structure.py",
+      "function": "secondary_structure_fraction",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomers', annotation=Name(id='str', ctx=Load())), arg(arg='sse_type', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='included_protomers'), Constant(value='sse_type')], ctx=Load())), keyword(arg='description', value=Constant(value='Compute longest contiguous DSSP run fraction for protomers'))])"
+      ],
+      "file": "astrolabe/losses/structure.py",
+      "function": "longest_secondary_structure_run_fraction",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='included_protomers', annotation=Name(id='str', ctx=Load())), arg(arg='sse_type', annotation=Name(id='str', ctx=Load()))], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    },
+    {
+      "decorators": [
+        "Call(func=Attribute(value=Name(id='loss_registry', ctx=Load()), attr='register', ctx=Load()), args=[], keywords=[keyword(arg='required_params', value=List(elts=[Constant(value='EHL_fractions')], ctx=Load())), keyword(arg='description', value=Constant(value='Minimum DSSP fractions for helices, beta strands, and other structures'))])"
+      ],
+      "file": "astrolabe/losses/structure.py",
+      "function": "min_dssp_fractions",
+      "signature": "arguments(posonlyargs=[], args=[arg(arg='eval_result'), arg(arg='EHL_fractions')], kwonlyargs=[], kw_defaults=[], defaults=[])"
+    }
+  ],
+  "heads": {
+    "baseline": "47c6f6dd18fe822a6d28ea6970c756d5dfae7b95",
+    "candidate": "f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f"
+  },
+  "interaction_guard_only_functions": [
+    "_chain_region_selector",
+    "_chain_group_region_selector",
+    "_per_residue_sasa_calculator",
+    "calculate_holes_diff",
+    "_load_pose_cached",
+    "mutate_pose_to_all_ala"
+  ],
+  "interaction_other_changed_functions": [
+    "_require_pyrosetta"
+  ],
+  "interaction_unchanged_functions": [
+    "sasa_calculator",
+    "_parse_residue_structure",
+    "_chain_residue_indices",
+    "_ca_contact_pairs",
+    "_sc_contact_pairs",
+    "find_interchain_contact_pairs",
+    "_split_chain_selectors",
+    "_as_bool_value",
+    "_resolve_interface_chain_pairs",
+    "_resolve_interface_chain_pairs_from_structure",
+    "_target_contact_residue_numbers",
+    "_jaccard",
+    "cd47_antibody_like_epitope_score",
+    "_compute_contact_pair_pae",
+    "compute_interface_pae",
+    "_normalize_ligand_targets",
+    "_resolve_ligand_chains",
+    "_protomer_chain_map",
+    "_protein_chains_for_oligo",
+    "_residue_indices_for_chains",
+    "_normalize_residue_numbers",
+    "_is_mapping_like",
+    "_normalize_chain_selectors",
+    "_normalize_chain_residue_specs",
+    "_resolve_pocket_chain_number_specs",
+    "_residue_indices_for_chain_numbers",
+    "_residue_indices_for_chain_number_specs",
+    "_heavy_atom_coordinates",
+    "_require_nonempty_coords",
+    "_fraction_inside_pocket_box",
+    "_structure_model_from_file",
+    "_residue_heavy_atom_coordinates_biopdb",
+    "_ligand_pocket_occupancy_from_structure_file",
+    "_resolve_dynamic_interface_chain_ids",
+    "_interface_residues_from_structure_model",
+    "_heavy_atom_coordinates_for_residues_biopdb",
+    "_cb_or_ca_coordinates_for_residues_biopdb",
+    "_model_chain_by_id",
+    "_chain_id_from_model_selector",
+    "_chain_ids_from_pose",
+    "_chain_id_from_pose_selector",
+    "_selector_mapping",
+    "_selector_list",
+    "_alignment_chain_pairs",
+    "_ca_coordinates_from_model_chain",
+    "_ca_coordinates_from_pose_chain",
+    "_heavy_atom_coordinates_for_model_chains",
+    "_polymer_residues_from_model_chain",
+    "_polymer_residue_indices_from_pose_chain",
+    "_author_position_to_ordinal",
+    "_chain_selector_for_pocket_key",
+    "_reference_pocket_specs",
+    "_current_pocket_coords_from_structure_model",
+    "_current_pocket_coords_from_pose",
+    "_residue_cb_or_ca_coordinate_biopdb",
+    "_residue_cb_or_ca_coordinate_pose",
+    "_require_alpha_shape_points",
+    "_current_pocket_cb_coords_from_structure_model",
+    "_current_pocket_cb_coords_from_pose",
+    "_circumsphere_radius",
+    "_positive_finite_float",
+    "_adaptive_alpha_radius",
+    "_alpha_shape_kept_simplex_indices",
+    "_fraction_inside_cb_alpha_shape",
+    "_fraction_inside_autodock_box",
+    "_all_heavy_atom_coordinates_from_structure_file",
+    "_append_ordered_ca_pairs",
+    "_protein_alignment_arrays_from_structure_file",
+    "_protein_alignment_arrays_from_pose",
+    "_kabsch_transform",
+    "_aligned_ligand_centroid_distance",
+    "_ligand_reference_pose_distance_from_structure_file",
+    "_ligand_reference_pose_distance_from_pose",
+    "_extract_subpose",
+    "_saturating_fraction",
+    "_build_ligand_environment_pose",
+    "_isolate_chains",
+    "_compute_shape_complementarity_between_chains",
+    "_compute_contact_molecular_surface_between_chains",
+    "_chain_relative_residue_indices",
+    "_compute_interface_buried_unsatisfied_hbonds",
+    "normalize_contact_molecular_surface",
+    "ipae",
+    "ipae_min",
+    "ipae_minimal",
+    "ipae_max",
+    "find_interface_residues_by_ca",
+    "calculate_ddg_loss",
+    "protomer_shape_complementarity",
+    "ligand_shape_complementarity",
+    "contact_molecular_surface",
+    "contact_molecular_surface_norm",
+    "interface_buried_unsatisfied_hbonds",
+    "_resolve_contact_chain_group",
+    "_resolve_contact_chain_groups",
+    "_resolve_chain_pair",
+    "ligand_protein_hbond",
+    "compute_hotspot_delta_sasa",
+    "hotspot_dsasa",
+    "_hotspot_selector_values",
+    "_normalized_hotspot_selector_values",
+    "_bound_and_unbound_residue_sasa",
+    "_selected_bound_and_unbound_exposed_sasa",
+    "hotspot_buried_ratio",
+    "buried_contribution_diff",
+    "calculate_buried_contribution_diff",
+    "get_chain_sasa",
+    "get_buried_contribution",
+    "chain_holes_diff",
+    "ligand_delta_sasa_fraction",
+    "ligand_pocket_occupancy",
+    "protein_interface_ca_box",
+    "ligand_protein_interface_ca90",
+    "ligand_protein_interface_occupancy",
+    "ligand_protein_interface_cb_alpha_shape_occupancy",
+    "ligand_aligned_reference_pose_distance",
+    "ligand_aligned_reference_pocket_box_occupancy",
+    "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy",
+    "ligand_protein_iptm",
+    "ligand_local_holes",
+    "ligand_buried_unsat_hbonds",
+    "validate_load_poses",
+    "_current_raw_model_extra_residue_params",
+    "load_pose",
+    "remove_chain_from_pose",
+    "chain_buried_fraction",
+    "calculate_buried_fraction",
+    "buried_fraction_allala",
+    "calculate_buried_fraction_allala",
+    "split_pose_by_chain",
+    "get_residue_center",
+    "com_distance",
+    "calculate_com_diff",
+    "calculate_com_line_distance",
+    "get_hotspot_interaction_number",
+    "load_structure"
+  ],
+  "loss_module_hashes": {
+    "baseline": {
+      "astrolabe/losses/__init__.py": "e3a8a8f1ab4e66173c5792d5004ae852842eeb066b480e2c4235f78b4195be7c",
+      "astrolabe/losses/base.py": "43f14713701e3b9cbfaa1a805f4f4986c27641c26e323256fb603071ddcfd63b",
+      "astrolabe/losses/binding_site.py": "978abadfad53152d759b30e2f62d7e552aedaacd637cbe2d06a6ac2d16af76b7",
+      "astrolabe/losses/channel_hole.py": "62bd4c9e59391f7bf75973565d14644ef74196a45e3e27481f7260b896c37378",
+      "astrolabe/losses/confidence.py": "849b8073e16eb7ef93ed9c1f0be1499fa85978b2cb9c1b48926710b6c9ba2609",
+      "astrolabe/losses/cyclic.py": "05ad4ec5b1fadf4ee44009c6be815cb6b8b9892afeaeccda221c4cf10843a837",
+      "astrolabe/losses/cyclic_closure.py": "06c23225493fc7d6bd5d5f69541475c1ffdacede49adce605816fe97ae922ed1",
+      "astrolabe/losses/design_screening.py": "a2baf08a576c92b94903f49e949c51818777bd38c830fd52ef146349fa566693",
+      "astrolabe/losses/interaction.py": "a1b3881bedc8370d56338004bc13cd5707d88750647855b50131bd554d57c0d8",
+      "astrolabe/losses/peptide_plug.py": "196e2bb77376e0a1ed2b3fd1f7234951f83015a4d14f3d711e21e4d6e552d3eb",
+      "astrolabe/losses/predocker.py": "6b668162c622643c456d1378935950354da5a94c22c60f1382c3d7db28b836af",
+      "astrolabe/losses/repeat_symmetry.py": "0f72ec4747e0b6db84d7b88d8416f7717e3451478fba4537e2531b6856f9f593",
+      "astrolabe/losses/rosetta_crystal.py": "ec15b00cd1c7787fa4c379abe694f87d720ac87db8aecff4ada5697c68f3a842",
+      "astrolabe/losses/sequence.py": "fd2dd0d422e292e50985aa0ff68cf8205ba8d720026e9f87d40e980bb69cb9d1",
+      "astrolabe/losses/structure.py": "3ec0bca03fb64051a7fa7869d884c558fe4fe5ea1190ad3eb93185bf5f82893c",
+      "astrolabe/losses/utils.py": "50fd3b18a92135d5d36e017690d50181ae2ff5c77cb67bb29b9e0275b7b193d5"
+    },
+    "candidate": {
+      "astrolabe/losses/__init__.py": "e3a8a8f1ab4e66173c5792d5004ae852842eeb066b480e2c4235f78b4195be7c",
+      "astrolabe/losses/base.py": "43f14713701e3b9cbfaa1a805f4f4986c27641c26e323256fb603071ddcfd63b",
+      "astrolabe/losses/binding_site.py": "978abadfad53152d759b30e2f62d7e552aedaacd637cbe2d06a6ac2d16af76b7",
+      "astrolabe/losses/channel_hole.py": "62bd4c9e59391f7bf75973565d14644ef74196a45e3e27481f7260b896c37378",
+      "astrolabe/losses/confidence.py": "849b8073e16eb7ef93ed9c1f0be1499fa85978b2cb9c1b48926710b6c9ba2609",
+      "astrolabe/losses/cyclic.py": "05ad4ec5b1fadf4ee44009c6be815cb6b8b9892afeaeccda221c4cf10843a837",
+      "astrolabe/losses/cyclic_closure.py": "06c23225493fc7d6bd5d5f69541475c1ffdacede49adce605816fe97ae922ed1",
+      "astrolabe/losses/design_screening.py": "a2baf08a576c92b94903f49e949c51818777bd38c830fd52ef146349fa566693",
+      "astrolabe/losses/interaction.py": "a78914c2a6b5e410b9f07935ead280f15f9d714488c3655d8cd958a5febb322c",
+      "astrolabe/losses/peptide_plug.py": "196e2bb77376e0a1ed2b3fd1f7234951f83015a4d14f3d711e21e4d6e552d3eb",
+      "astrolabe/losses/predocker.py": "6b668162c622643c456d1378935950354da5a94c22c60f1382c3d7db28b836af",
+      "astrolabe/losses/repeat_symmetry.py": "0f72ec4747e0b6db84d7b88d8416f7717e3451478fba4537e2531b6856f9f593",
+      "astrolabe/losses/rosetta_crystal.py": "ec15b00cd1c7787fa4c379abe694f87d720ac87db8aecff4ada5697c68f3a842",
+      "astrolabe/losses/sequence.py": "fd2dd0d422e292e50985aa0ff68cf8205ba8d720026e9f87d40e980bb69cb9d1",
+      "astrolabe/losses/structure.py": "3ec0bca03fb64051a7fa7869d884c558fe4fe5ea1190ad3eb93185bf5f82893c",
+      "astrolabe/losses/utils.py": "50fd3b18a92135d5d36e017690d50181ae2ff5c77cb67bb29b9e0275b7b193d5"
+    }
+  },
+  "protocol_sha256": "8b0edc59cf348737794323254c11180dfa1c7bb7306937220d5c39547aef3d07",
+  "registry_limitation": "Static decorator definitions do not count dynamically registered aliases; installed registry must still be compared at runtime.",
+  "scope": "immutable-source-only; no native execution or scientific workload",
+  "status": "PASS"
+}

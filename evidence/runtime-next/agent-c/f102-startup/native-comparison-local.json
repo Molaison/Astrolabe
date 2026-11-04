@@ -1,0 +1,85 @@
+{
+  "checks": {
+    "baseline_pass": true,
+    "candidate_cold_pyrosetta_deferred": true,
+    "candidate_cold_spatial_deferred": true,
+    "candidate_pass": true,
+    "cuda_initialized_exact": true,
+    "dependencies_exact": true,
+    "expected_baseline_head": true,
+    "expected_candidate_head": true,
+    "geometry_after_exact": true,
+    "geometry_before_exact": true,
+    "initialized_after_explicit_init_exact": true,
+    "initialized_before_explicit_init_exact": true,
+    "metric_values_exact": true,
+    "native_symbols_exact": true,
+    "native_version_exact": true,
+    "probe_sha256_exact": true,
+    "protocol_sha256_exact": true,
+    "pyrosetta_loss_classification_exact": true,
+    "registered_loss_values_exact": true,
+    "registry_exact": true,
+    "registry_order_exact": true,
+    "requirements_exact": true,
+    "rng_after_first_require_exact": true,
+    "rng_after_native_init_exact": true,
+    "rng_after_native_losses_exact": true,
+    "rng_after_pose_build_exact": true,
+    "rng_after_registry_and_requirements_exact": true,
+    "rng_production_seeded_exact": true
+  },
+  "cold_import_rng_diagnostic_equal": true,
+  "cpu_seconds": [
+    7.412457512,
+    6.473064804000001
+  ],
+  "inputs": {
+    "native-raw/execution/baseline.json": "9e9f976b0d4a409c1284c19770311c6394975eb0087fa9c648c25f99d111fabf",
+    "native-raw/execution/candidate.json": "8f4c6f343fae4ba1c527aa7ae411c8d4b3d9cb88a8fd10d6043d7cba09b96f5b"
+  },
+  "losses": {
+    "baseline": [
+      {
+        "chain_buried_fraction": {
+          "ABC": 0.28873283581553477
+        },
+        "com_distance": {
+          "ABC": 9.000000000000002
+        }
+      },
+      {
+        "chain_buried_fraction": {
+          "ABC": 0.28873283581553477
+        },
+        "com_distance": {
+          "ABC": 9.000000000000002
+        }
+      }
+    ],
+    "candidate": [
+      {
+        "chain_buried_fraction": {
+          "ABC": 0.28873283581553477
+        },
+        "com_distance": {
+          "ABC": 9.000000000000002
+        }
+      },
+      {
+        "chain_buried_fraction": {
+          "ABC": 0.28873283581553477
+        },
+        "com_distance": {
+          "ABC": 9.000000000000002
+        }
+      }
+    ]
+  },
+  "registry_count": [
+    169,
+    169
+  ],
+  "scope": "native CPU scientific correctness only",
+  "status": "PASS"
+}
