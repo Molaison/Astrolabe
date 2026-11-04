@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import threading
 
 import pytest
 
@@ -189,3 +190,86 @@ def test_fixed_parent_generator_keeps_task_count_and_best_score() -> None:
     assert {result.candidate_id: result.score for result in collection.completed} == scores
     assert collection.selected is not None
     assert collection.selected.candidate_id == "b"
+
+
+@pytest.mark.parametrize("reuse_object", [False, True], ids=["same-id", "same-task"])
+def test_duplicate_submission_identity_rejects_entire_batch(reuse_object: bool) -> None:
+    calls = []
+
+    def worker(task: CandidateTask) -> float:
+        calls.append(task.candidate_id)
+        return float(task.payload)
+
+    prefix = CandidateTask("prefix", 1, payload=0.25)
+    candidate = CandidateTask("duplicate", 1, payload=0.5)
+    duplicate = candidate if reuse_object else CandidateTask("duplicate", 1, payload=0.9)
+    config = CandidatePoolConfig(num_candidates=3, min_completed=1, max_wait_s=1.0)
+    with CandidatePoolScheduler(config, worker) as scheduler:
+        with pytest.raises(ValueError, match="duplicate candidate task identity"):
+            scheduler.submit_generation(1, [prefix, candidate, duplicate])
+        assert scheduler.drain() == []
+        assert calls == []
+        scheduler.submit_generation(1, [prefix, candidate])
+        collections = scheduler.drain()
+
+    assert sorted(calls) == ["duplicate", "prefix"]
+    assert len(collections) == 1
+    assert collections[0].selected is not None
+    assert collections[0].selected.score == 0.5
+
+
+@pytest.mark.parametrize("phase", ["running", "collected", "failed"])
+def test_submitted_identity_cannot_be_replayed(phase: str) -> None:
+    calls = []
+    entered = threading.Event()
+    release = threading.Event()
+
+    def worker(task: CandidateTask) -> float:
+        calls.append(task.candidate_id)
+        if task.candidate_id == "original":
+            entered.set()
+            if phase == "running" and not release.wait(2.0):
+                raise RuntimeError("test controller did not release worker")
+            if phase == "failed":
+                raise RuntimeError("worker failure does not authorize replay")
+        return 0.5
+
+    candidate = CandidateTask("original", 1)
+    prefix = CandidateTask("new-prefix", 1)
+    config = CandidatePoolConfig(num_candidates=2, min_completed=1, max_wait_s=1.0)
+    with CandidatePoolScheduler(config, worker) as scheduler:
+        try:
+            scheduler.submit_generation(1, [candidate])
+            assert entered.wait(1.0)
+            if phase != "running":
+                scheduler.drain()
+            with pytest.raises(ValueError, match="duplicate candidate task identity"):
+                scheduler.submit_generation(1, [prefix, candidate])
+        finally:
+            release.set()
+        scheduler.drain()
+        assert calls == ["original"]
+        # A rejected batch cannot consume the fresh prefix's identity.
+        scheduler.submit_generation(1, [prefix])
+        scheduler.drain()
+    assert calls == ["original", "new-prefix"]
+
+
+def test_same_candidate_id_in_distinct_generations_is_allowed() -> None:
+    calls = []
+
+    def worker(task: CandidateTask) -> float:
+        calls.append((task.candidate_id, task.generation))
+        return float(task.payload)
+
+    config = CandidatePoolConfig(num_candidates=2, min_completed=1, max_wait_s=1.0)
+    with CandidatePoolScheduler(config, worker) as scheduler:
+        scheduler.submit_generation(1, [CandidateTask("candidate", 1, payload=0.25)])
+        scheduler.submit_generation(2, [CandidateTask("candidate", 2, payload=0.75)])
+        first = scheduler.collect_until_ready(target_generation=1)
+        second = scheduler.collect_until_ready(target_generation=2)
+    assert sorted(calls) == [("candidate", 1), ("candidate", 2)]
+    assert first is not None and first.selected is not None
+    assert second is not None and second.selected is not None
+    assert first.selected.score == 0.25
+    assert second.selected.score == 0.75
