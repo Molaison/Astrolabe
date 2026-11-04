@@ -1,0 +1,15 @@
+{
+  "all_original_entries": 40,
+  "all_original_file_bytes": 977895,
+  "all_original_files_verified": 27,
+  "all_transport_results_complete_and_untruncated": true,
+  "archive_bytes": 126328,
+  "archive_sha256": "5588acc27dceb7595fe7aff8be79385ec9186913aa7a486fc54e8ea0e750b8e9",
+  "manifest_sha256": "2e620a82f9e7e08fc91fd212f50aa3a05585441fdeace9036d7f53a878caaa1b",
+  "no_execution_or_trials": true,
+  "no_inside_allocation_record": true,
+  "remote_sources_unchanged_during_pack": true,
+  "scope": "Lossless original evidence verification only; no scientific or GPU execution",
+  "status": "PASS",
+  "transfer_chunks": 49
+}

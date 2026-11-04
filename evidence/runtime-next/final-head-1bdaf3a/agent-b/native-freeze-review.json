@@ -1,0 +1,46 @@
+{
+  "actual_cpu_chain_counts": {
+    "A": 177,
+    "B": 177
+  },
+  "actual_cpu_cuda_initialized": false,
+  "actual_cpu_mask_sum": 354,
+  "actual_cpu_weights": {
+    "devices": [
+      "cpu"
+    ],
+    "dtypes": [
+      "torch.float32"
+    ],
+    "forward_calls": 0,
+    "load_count": 1,
+    "parameters": 1660485,
+    "sample_calls": 0
+  },
+  "bytes": 47296,
+  "environment": {
+    "cuda_build": "12.6",
+    "executable": "/alphafold3_venv/bin/python",
+    "numpy": "1.26.4",
+    "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+    "torch": "2.7.1+cu126"
+  },
+  "frozen_sha256": "21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a",
+  "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "limitation": "Parsed-input bytes and complete trial outputs remain pending transfer; the GPU control has not been certified by this review.",
+  "native_sequence_sha256": "a149f24cd9a0ca21eaeed7478450b91dfec6800b5d372e06655511e6b49a8e44",
+  "parsed_input_expected_hashes": {
+    "arrays.npz": "9e892165e0941ba783ff98144dc2a5b3dcd19cde3ae9ae0738ed4498004e5868",
+    "tree.json": "956c784d59995c30e0868efe56fd7a3b27cf48249ab7994c96d017de24017701"
+  },
+  "plan_exact": true,
+  "planned_design_requests": 30,
+  "planned_trials": 10,
+  "protocol_sha256": "72a18eef550fdf5555501b4163126522d752f441c3b7a5aad517a852d6498fc6",
+  "scope": "Independent raw manifest and final-source digest verification; no new model or native/GPU execution by B",
+  "settings_exact": true,
+  "source_count": 302,
+  "source_dictionary_exact": true,
+  "status": "PASS",
+  "tree": "6f763bfb04778ef4f32386ddb8aeb38ce4240bf1"
+}

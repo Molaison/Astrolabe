@@ -1,0 +1,43 @@
+{
+  "command_helpers_python36_grammar": "PASS",
+  "gpu_actions": 0,
+  "handoff_sha256": "ee4f1a9e7577b068d05aa4605ed3116e903804a5ba27dcd39ab9f8844534941e",
+  "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "local_review_worktree": "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b-final-review",
+  "native_executions": 0,
+  "remote_frozen_source": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a",
+  "resolved_commands_sha256": "016f84824561f2544628c23e72660fc82dd811808babbe709cb8a8c577d4e292",
+  "reviewed_files": {
+    "astrolabe/mutators/wrappers/ligandmpnn_run.py": {
+      "equal": true,
+      "frozen_source_sha256": "c8aa0cc7ea214a54eeb45f298e3f0e0a9c0fb275b41fc090e6977511286f048f",
+      "reviewed_source_sha256": "c8aa0cc7ea214a54eeb45f298e3f0e0a9c0fb275b41fc090e6977511286f048f"
+    },
+    "astrolabe/mutators/wrappers/ligandmpnn_utils.py": {
+      "equal": true,
+      "frozen_source_sha256": "8efd500f1791e06c020ee5b87962f225778246a49f2700eda032aac691dc9f75",
+      "reviewed_source_sha256": "8efd500f1791e06c020ee5b87962f225778246a49f2700eda032aac691dc9f75"
+    },
+    "benchmarks/runtime/gpu_mutator_control.py": {
+      "equal": true,
+      "frozen_source_sha256": "2540e2b0bd8dcdb6fbf63d840e229e5ec792ba8a8e370975027275228e2413fd",
+      "reviewed_source_sha256": "2540e2b0bd8dcdb6fbf63d840e229e5ec792ba8a8e370975027275228e2413fd"
+    },
+    "benchmarks/runtime/gpu_slurm_launcher.py": {
+      "equal": true,
+      "frozen_source_sha256": "782a59fb444e106f16eaca04bc2a8e18e7061f4487989355debcba7a6072c3c1",
+      "reviewed_source_sha256": "782a59fb444e106f16eaca04bc2a8e18e7061f4487989355debcba7a6072c3c1"
+    },
+    "benchmarks/runtime/workloads/proteinmpnn_gpu_control.json": {
+      "equal": true,
+      "frozen_source_sha256": "72a18eef550fdf5555501b4163126522d752f441c3b7a5aad517a852d6498fc6",
+      "reviewed_source_sha256": "72a18eef550fdf5555501b4163126522d752f441c3b7a5aad517a852d6498fc6"
+    }
+  },
+  "scope": "Read-only final source/handoff consistency; no native benchmark, container, Slurm or GPU command executed",
+  "source_digests_sha256": "5510919696b12b39249f25f9a3b978727bbab91d9d5a449a57575593afb70963",
+  "source_file_count": 302,
+  "status": "PASS",
+  "tracked_and_untracked_clean": true,
+  "tree": "6f763bfb04778ef4f32386ddb8aeb38ce4240bf1"
+}

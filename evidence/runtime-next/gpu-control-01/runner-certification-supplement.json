@@ -1,0 +1,395 @@
+{
+  "accounting": {
+    "actual_allocated_cpus": 0,
+    "actual_allocated_gpus": 0,
+    "actual_allocation_gpu_hours": 0.0,
+    "actual_end_utc": "2026-11-04T05:52:06Z",
+    "actual_start": null,
+    "b_independently_parsed_actual_raw": true,
+    "elapsed_raw_seconds": 0,
+    "future_scontrol_start_excluded": "2026-11-05T02:44:35",
+    "independent_agent_a_commit": "186ee84711791029a99dc9b07a4389a037846f82",
+    "proof_path": "evidence/runtime-next/final-head-1bdaf3a/agent-a/accounting-proof.json",
+    "proof_sha256": "6e4bc3d652a1588a1dcd5c428ff0c040189bf093dcf95338ee926460cfbc1168",
+    "queue_wait_is_not_gpu_usage": true,
+    "raw_archive_path": "evidence/runtime-next/final-head-1bdaf3a/agent-a/postallocation.tar.xz",
+    "raw_archive_sha256": "f855e9c6a53f272237a24429d89e33409c04e4d7b290e4f84317833f32da74cb",
+    "raw_sha256": {
+      "sacct.json": "cadc38b336559622fa7ad56fc1992f6a07e6491adf3233743249bc22c19cf7c7",
+      "scontrol.json": "11a85d7d6e1d40c3bd59d6d57ceda02f6b0b5d70cd981ea6dcbf72ab5851a61e",
+      "squeue.json": "03072c310b8ba86806b47580cbf8af4abfe31200575142dff3b04cd00c36ddca"
+    },
+    "requested_ceiling_gpu_hours": 0.25,
+    "scope_note": "CANCELLED/no start/no allocated TRES/no assigned node/zero elapsed plus empty own-job queue establish zero allocation. The original launcher PARTIAL_ACCOUNTING record is not rewritten.",
+    "status": "DONE_NO_ALLOCATION",
+    "terminal_state": "CANCELLED by 7054"
+  },
+  "actual_cpu_preflight": {
+    "cuda_initialized": false,
+    "environment": {
+      "cuda_build": "12.6",
+      "executable": "/alphafold3_venv/bin/python",
+      "numpy": "1.26.4",
+      "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+      "torch": "2.7.1+cu126"
+    },
+    "input_verification": {
+      "chain_counts": {
+        "A": 177,
+        "B": 177
+      },
+      "chain_order": "A177 then B177",
+      "coordinate_dtype": "torch.float32",
+      "coordinate_shape": [
+        354,
+        4,
+        3
+      ],
+      "finite_coordinates": true,
+      "input_mask_sum": 354,
+      "native_sequence_sha256": "a149f24cd9a0ca21eaeed7478450b91dfec6800b5d372e06655511e6b49a8e44",
+      "pdb_bytes": 531114,
+      "pdb_sha256": "c05c06773ae8c00d2d033f7f7a103c4048981d79418c6c1a2579b15da455b2b7",
+      "residues": 354
+    },
+    "kind": "real_native_LigandMPNN_constructor_on_CPU_for_protein_mpnn_checkpoint",
+    "limitation": "No forward/sample call and no public-runner GPU call; this is actual CPU readiness only.",
+    "phase_result": {
+      "returncode": 0,
+      "wall_seconds": 7.785164701010217
+    },
+    "settings_exact": true,
+    "weights": {
+      "devices": [
+        "cpu"
+      ],
+      "dtypes": [
+        "torch.float32"
+      ],
+      "forward_calls": 0,
+      "load_count": 1,
+      "parameters": 1660485,
+      "sample_calls": 0
+    }
+  },
+  "admission": {
+    "account": "xulab",
+    "attempts": 1,
+    "failure_classification": "Admission failure before scientific execution, not a numerical/performance failure. Requested nodes busy is observed; no unique scheduler root cause is inferred.",
+    "gpu_design_requests_completed": 0,
+    "gpu_device_uuid": null,
+    "gpu_model_loads": 0,
+    "gpu_trial_directories_exist": false,
+    "gpu_trials_started": 0,
+    "harness_execution_record_exists": false,
+    "inside_allocation_record_exists": false,
+    "job_id": "33334",
+    "job_name": "astrolabe-gpu-20261104-10cf2b34c104",
+    "original_launcher_status": "PARTIAL_ACCOUNTING_OR_BUDGET",
+    "original_launcher_status_preserved": true,
+    "partition": "boron",
+    "qos": "normal",
+    "retries": 0,
+    "srun_client_wall_seconds": 60.10791897773743,
+    "srun_exit_code": 1,
+    "status": "BLOCKED_ADMISSION",
+    "stderr": "srun: job 33334 queued and waiting for resources\nsrun: error: Unable to allocate resources: Requested nodes are busy\n",
+    "submission_wrapper_result": {
+      "returncode": 1,
+      "wall_seconds": 60.65971449900826
+    },
+    "uid": 7054,
+    "user": "zpzeng"
+  },
+  "api": "build_runner(\"ligandmpnn\", model_type=\"protein_mpnn\")",
+  "as_of_utc": "2026-11-04T05:53:54Z",
+  "completion_interpretation": "CPU readiness and a single resource-admission attempt are complete. The mandatory real pretrained GPU end-to-end/performance objective remains BLOCKED because no allocation was granted. No retry or scientific substitution was performed.",
+  "completion_status": "BLOCKED",
+  "control_id": "proteinmpnn_4gyt_ab_gpu_control_v1",
+  "evidence": {
+    "all_original_file_hashes_verified": true,
+    "b_cpu_reread_path": "evidence/runtime-next/final-head-1bdaf3a/agent-b/cpu-and-admission-review.json",
+    "b_cpu_reread_sha256": "a3dd757d70e097271d959435d337bb02580cb3bd1b424532d87e820b79bf2cdd",
+    "original_entries": 40,
+    "original_file_bytes": 977895,
+    "original_files": 27,
+    "owner_directory": "evidence/runtime-next/final-head-1bdaf3a/agent-b",
+    "raw_archive_bytes": 126328,
+    "raw_archive_path": "evidence/runtime-next/final-head-1bdaf3a/agent-b/gpu-admission-blocked-33334.tar.xz",
+    "raw_archive_sha256": "5588acc27dceb7595fe7aff8be79385ec9186913aa7a486fc54e8ea0e750b8e9",
+    "raw_manifest_path": "evidence/runtime-next/final-head-1bdaf3a/agent-b/archive-manifest.json",
+    "raw_manifest_sha256": "2e620a82f9e7e08fc91fd212f50aa3a05585441fdeace9036d7f53a878caaa1b",
+    "review_archive_path": "evidence/runtime-next/final-head-1bdaf3a/agent-b/independent-review-artifacts.tar.xz",
+    "review_archive_sha256": "34c151b454db0a882ddf7bfb4c145281a50b1bfadd7616889daaa27ff4e5284d"
+  },
+  "exclusions": [
+    "pretrained evaluator W1",
+    "complete registry selector/proposal/acceptance",
+    "MCMC and stage transitions",
+    "shared broker",
+    "other MPNN model types/grouped/native-tie/multistate variants",
+    "GPU scientific parity or speedup",
+    "revision-attributed GPU improvement"
+  ],
+  "gpu_execution": "NOT_RUN",
+  "gpu_performance": {
+    "cold_seconds": null,
+    "effective_design_requests_per_second": null,
+    "effective_throughput_improvement_proved": false,
+    "limitation": "No GPU timing or throughput denominator exists; CPU preflight and queue wall time are not inference measurements.",
+    "paired_workflow_ratios": [],
+    "status": "NOT_RUN",
+    "steady_seconds": null
+  },
+  "gpu_scientific_results": {
+    "completed_comparison_pairs": 0,
+    "completed_design_requests": 0,
+    "model_reuse_and_residency": null,
+    "sequence_probability_rng_parity": null,
+    "status": "NOT_RUN"
+  },
+  "kind": "post_freeze_exact_runner_control_supplement",
+  "launcher_preparation": {
+    "actual_home": "/xcf26/zpzeng",
+    "actual_home_is_private": false,
+    "actual_tmpdir": "/tmp",
+    "cpu_environment_matches_native_freeze": true,
+    "launch_status": "READY_FOR_ROOT_REVIEW",
+    "limitation": "Private HOME was requested but not applied by Apptainer. --no-home and recorded private tmp/cache arguments remain visible; no user-home write is evidenced. GPU mount/runtime execution was not reached.",
+    "phase_result": {
+      "returncode": 0,
+      "wall_seconds": 23.617934076988604
+    },
+    "private_tmp_bind_recorded": true,
+    "raw_warning": "WARNING: Overriding HOME environment variable with APPTAINERENV_HOME is not permitted",
+    "sif": {
+      "path": "/xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif",
+      "sha256": "242aae3bb97c5c7ea374dab5d7462e04863d9d48ba2ee00cc57e6c0a57a538e3",
+      "stat": {
+        "device": 2221890670,
+        "inode": 144115242819995550,
+        "mtime_ns": 1784734453000000000,
+        "size": 6418354176
+      }
+    },
+    "status": "DONE_WITH_RECORDED_HOME_LIMITATION"
+  },
+  "pre_run_matrix_snapshot": {
+    "generated_inventory_head": "0f730c75fdf46f26b5c84f4aeb90715d1ffe26a7",
+    "path": "evidence/runtime-next/backend-certification-final.json",
+    "sha256": "3074e78c0e98a18ff80e2c4426031f29887235096930958df29dc45241e4b7aa",
+    "superseded_scope": "Only readiness/admission progress for runner_controls[id=proteinmpnn_4gyt_ab_gpu_control_v1]; no registered backend status changes"
+  },
+  "protocol": {
+    "assets": {
+      "checkpoint": {
+        "bytes": 6681301,
+        "path": "/xcf26/zpzeng/gitrepo/ligandmpnn/model_params/proteinmpnn_v_48_020.pt",
+        "sha256": "c9cb4a671d79604111231f8dbfc7c590e06f1197453b7a6854ac6661a642f5bd"
+      },
+      "pdb": {
+        "bytes": 531114,
+        "chain_counts": {
+          "A": 177,
+          "B": 177
+        },
+        "chain_order": [
+          [
+            "A",
+            177
+          ],
+          [
+            "B",
+            177
+          ]
+        ],
+        "mask_all_ones": true,
+        "native_sequence_sha256": "a149f24cd9a0ca21eaeed7478450b91dfec6800b5d372e06655511e6b49a8e44",
+        "path": "/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/4GYT.pdb",
+        "residues": 354,
+        "sha256": "c05c06773ae8c00d2d033f7f7a103c4048981d79418c6c1a2579b15da455b2b7"
+      }
+    },
+    "constructor": {
+      "bias_AA": "",
+      "bias_AA_per_residue": "",
+      "bias_AA_per_residue_multi": "",
+      "bias_mode": "additive",
+      "checkpoint_global_label_membrane_mpnn": "",
+      "checkpoint_ligand_mpnn": "",
+      "checkpoint_per_residue_label_membrane_mpnn": "",
+      "checkpoint_soluble_mpnn": "",
+      "design_pattern": "",
+      "design_pattern_range": "",
+      "device": "cuda:0",
+      "fasta_seq_separation": ":",
+      "file_ending": "",
+      "ligand_mpnn_cutoff_for_score": 8.0,
+      "ligand_mpnn_use_atom_context": 1,
+      "ligand_mpnn_use_side_chain_context": 1,
+      "model_type": "protein_mpnn",
+      "number_of_batches": 1,
+      "omit_AA": [
+        "C"
+      ],
+      "omit_AA_per_residue": "",
+      "omit_AA_per_residue_multi": "",
+      "parse_atoms_with_zero_occupancy": 1,
+      "prepare_cache_bytes": 67108864,
+      "save_stats": 0,
+      "startup_timeout": 120.0,
+      "temperature": 0.3,
+      "verbose": 0,
+      "zero_indexed": 0
+    },
+    "decode": {
+      "batch_size": 1,
+      "bias_AA_per_residue": "",
+      "bias_AA_per_residue_multi": "",
+      "chains_to_design": "A,B",
+      "distribution_semantics": "legacy_order_conditioned_marginals",
+      "fixed_residues": "",
+      "fixed_residues_multi": "",
+      "global_transmembrane_label": 0,
+      "homo_oligomer": 0,
+      "omit_AA_per_residue": "",
+      "omit_AA_per_residue_multi": "",
+      "parse_these_chains_only": [
+        "A",
+        "B"
+      ],
+      "pdb_path": "@frozen_pdb",
+      "pdb_path_multi": "",
+      "redesigned_residues": "",
+      "redesigned_residues_multi": "",
+      "reference_decoding_ranks": null,
+      "return_joint_sequence": false,
+      "symmetry_residues": "",
+      "symmetry_weights": "",
+      "transmembrane_buried": "",
+      "transmembrane_buried_multi": "",
+      "transmembrane_interface": "",
+      "transmembrane_interface_multi": ""
+    },
+    "frozen_manifest_sha256": "21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a",
+    "groups": [
+      17,
+      18,
+      19,
+      20,
+      21
+    ],
+    "launch_manifest_sha256": "9bbbae547470afda98c361f6a6796e14c6ef0f71dab536b7a6f503ee2ba8a921",
+    "mode_order": [
+      [
+        "legacy",
+        "resident"
+      ],
+      [
+        "resident",
+        "legacy"
+      ],
+      [
+        "legacy",
+        "resident"
+      ],
+      [
+        "resident",
+        "legacy"
+      ],
+      [
+        "legacy",
+        "resident"
+      ]
+    ],
+    "path": "benchmarks/runtime/workloads/proteinmpnn_gpu_control.json",
+    "planned_design_requests": 30,
+    "planned_model_loads": 10,
+    "planned_trials": 10,
+    "planned_warmup_requests": 0,
+    "requested_budget": {
+      "allocation_seconds": 900,
+      "cpus": 4,
+      "experiment_seconds": 840,
+      "gpus": 1,
+      "max_output_bytes": 260000000,
+      "maximum_gpu_hours": 0.25,
+      "memory_gib": 32,
+      "process_poll_seconds": 0.03,
+      "slurm_immediate_seconds": 60,
+      "telemetry_sample_seconds": 0.5,
+      "trial_seconds": 150
+    },
+    "scientific_gates": {
+      "atol": 1e-06,
+      "exact": [
+        "S",
+        "decoding_order",
+        "chain_letters",
+        "alphabet",
+        "distribution_semantics",
+        "python_rng",
+        "numpy_rng",
+        "torch_cpu_rng",
+        "torch_cuda_rng",
+        "numerical_settings"
+      ],
+      "float_keys": [
+        "sampling_probs",
+        "log_probs",
+        "logits"
+      ],
+      "mask_source": "Independent CPU parse of the byte-identical full input, with parse_atoms_with_zero_occupancy=1 and chains=['A','B']. Native legacy return has no mask field.",
+      "probability_sum_atol": 1e-05,
+      "rtol": 1e-05,
+      "sequence_policy": "All 354 parsed residues retained. Positions with effective design mask == 0 retain native S; positions with mask == 1 and design mask == 1 are sampled and must not contain C. For this full AB control both masks are all ones. No cropping, changed precision, reseeding, retries or output filtering."
+    },
+    "settings": {
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "cudnn_tf32": true,
+      "default_dtype": "float32",
+      "deterministic": false,
+      "deterministic_warn_only": false,
+      "float32_matmul_precision": "highest",
+      "matmul_tf32": false
+    },
+    "sha256": "72a18eef550fdf5555501b4163126522d752f441c3b7a5aad517a852d6498fc6"
+  },
+  "registry_certification": false,
+  "registry_status_counts_unchanged": {
+    "BLOCKED": 28,
+    "DONE": 0,
+    "PARTIAL": 6
+  },
+  "schema": 1,
+  "scope": "Exact planned same-candidate legacy/private-resident ProteinMPNN runner control; neither mode reached GPU execution.",
+  "source": {
+    "frozen_source_and_independent_review_checkout_match": true,
+    "harness_sha256": "2540e2b0bd8dcdb6fbf63d840e229e5ec792ba8a8e370975027275228e2413fd",
+    "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+    "launcher_sha256": "782a59fb444e106f16eaca04bc2a8e18e7061f4487989355debcba7a6072c3c1",
+    "native_sources": {
+      "astrolabe/mutators/wrappers/ligandmpnn_run.py": "c8aa0cc7ea214a54eeb45f298e3f0e0a9c0fb275b41fc090e6977511286f048f",
+      "astrolabe/mutators/wrappers/ligandmpnn_utils.py": "8efd500f1791e06c020ee5b87962f225778246a49f2700eda032aac691dc9f75"
+    },
+    "production_changes_in_this_supplement": false,
+    "remote_root": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a",
+    "source_files_independently_verified": 302,
+    "tree": "6f763bfb04778ef4f32386ddb8aeb38ce4240bf1"
+  },
+  "stage_verdicts": {
+    "final_source_identity": "DONE",
+    "five_group_gpu_effective_throughput": "NOT_RUN",
+    "genuine_pretrained_native_cpu_constructor_and_input_freeze": "DONE",
+    "gpu_model_residency_reuse_and_request_release": "NOT_RUN",
+    "gpu_sequence_probability_rng_parity": "NOT_RUN",
+    "independent_terminal_accounting": "DONE_NO_ALLOCATION",
+    "lossless_raw_preservation_and_cpu_reread": "DONE",
+    "one_bounded_slurm_submission": "DONE",
+    "real_pretrained_gpu_end_to_end": "NOT_RUN",
+    "same_sif_cpu_launcher_preparation": "DONE",
+    "slurm_admission": "BLOCKED"
+  },
+  "status": "BLOCKED_ADMISSION"
+}

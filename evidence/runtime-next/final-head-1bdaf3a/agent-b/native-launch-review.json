@@ -1,0 +1,60 @@
+{
+  "HOME_limitation": "Apptainer ignored the requested HOME environment value. Actual HOME was not the task-private home; --no-home and readonly ancestor behavior are not proof of a private HOME variable. No user-home write is evidenced here. Private TMP mount flags and actual TMPDIR are recorded independently.",
+  "actual_HOME_is_private": false,
+  "actual_cpu_environment": {
+    "cuda_build": "12.6",
+    "cuda_initialized": false,
+    "environment": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "GH_CUDA_PREINITIALIZE": "0",
+      "HIP_VISIBLE_DEVICES": "",
+      "HOME": "/xcf26/zpzeng",
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "NVIDIA_VISIBLE_DEVICES": "void",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "PYTHONPATH": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-env/lib/python3.11/site-packages",
+      "ROCR_VISIBLE_DEVICES": "",
+      "TMPDIR": "/tmp"
+    },
+    "executable": "/alphafold3_venv/bin/python",
+    "gpu_forward_calls": 0,
+    "numpy": "1.26.4",
+    "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+    "settings": {
+      "cudnn_benchmark": false,
+      "cudnn_deterministic": false,
+      "cudnn_tf32": true,
+      "default_dtype": "float32",
+      "deterministic": false,
+      "deterministic_warn_only": false,
+      "float32_matmul_precision": "highest",
+      "matmul_tf32": false
+    },
+    "torch": "2.7.1+cu126"
+  },
+  "argv_private_tmp_binds": true,
+  "argv_readonly_source_assets_binds": true,
+  "cpu_check_sha256": "685d7ac7fc02017a944caf1b4be3618bc9ee75ee09a66a80faea42c27b117e9a",
+  "frozen_sha256": "21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a",
+  "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "launch_sha256": "9bbbae547470afda98c361f6a6796e14c6ef0f71dab536b7a6f503ee2ba8a921",
+  "limitations": [
+    "This validates the executed CPU prepare and its recorded full SIF hash; B did not recompute the 6.4GB SIF hash independently.",
+    "No GPU execution, parity, throughput or allocation release is certified by prepare."
+  ],
+  "raw_stderr": "WARNING: Overriding HOME environment variable with APPTAINERENV_HOME is not permitted\n",
+  "scope": "Independent original launcher preparation evidence only; GPU admission/execution is separate",
+  "sif_full_checksum_record": {
+    "path": "/xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif",
+    "sha256": "242aae3bb97c5c7ea374dab5d7462e04863d9d48ba2ee00cc57e6c0a57a538e3",
+    "stat": {
+      "device": 2221890670,
+      "inode": 144115242819995550,
+      "mtime_ns": 1784734453000000000,
+      "size": 6418354176
+    }
+  },
+  "status": "PASS_WITH_RECORDED_HOME_LIMITATION"
+}

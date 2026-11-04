@@ -1,0 +1,66 @@
+{
+  "accounting_from_independent_A_raw": {
+    "account": "xulab",
+    "allocated_cpus": "0",
+    "allocated_tres": "",
+    "elapsed_raw": "0",
+    "eligible": "2026-11-04T05:51:06",
+    "end": "2026-11-04T05:52:06",
+    "exit_code": "0:0",
+    "job_id": "33334",
+    "job_name": "astrolabe-gpu-20261104-10cf2b34c104",
+    "node_list": "None assigned",
+    "nodes_requested": "1",
+    "partition": "boron",
+    "qos": "normal",
+    "requested_tres": "billing=4,cpu=4,gres/gpu=1,mem=32G,node=1",
+    "start": "None",
+    "state": "CANCELLED by 7054",
+    "submit": "2026-11-04T05:51:06",
+    "uid": "7054",
+    "user": "zpzeng"
+  },
+  "accounting_raw_sha256": {
+    "sacct.json": "cadc38b336559622fa7ad56fc1992f6a07e6491adf3233743249bc22c19cf7c7",
+    "scontrol.json": "11a85d7d6e1d40c3bd59d6d57ceda02f6b0b5d70cd981ea6dcbf72ab5851a61e",
+    "squeue.json": "03072c310b8ba86806b47580cbf8af4abfe31200575142dff3b04cd00c36ddca"
+  },
+  "allocated_gpu_count": 0,
+  "allocation_gpu_hours": 0.0,
+  "cpu_artifact": {
+    "chain_counts": {
+      "A": 177,
+      "B": 177
+    },
+    "chain_order": "A177 then B177",
+    "coordinate_dtype": "torch.float32",
+    "coordinate_shape": [
+      354,
+      4,
+      3
+    ],
+    "finite_coordinates": true,
+    "input_mask_sum": 354,
+    "native_sequence_sha256": "a149f24cd9a0ca21eaeed7478450b91dfec6800b5d372e06655511e6b49a8e44",
+    "pdb_bytes": 531114,
+    "pdb_sha256": "c05c06773ae8c00d2d033f7f7a103c4048981d79418c6c1a2579b15da455b2b7",
+    "residues": 354
+  },
+  "future_scontrol_start_excluded": "2026-11-05T02:44:35",
+  "gpu_execution": "NOT_RUN",
+  "gpu_parity_rng_model_reuse_and_throughput": "NOT_RUN",
+  "gpu_requests_completed": 0,
+  "gpu_throughput": null,
+  "gpu_trials_started": 0,
+  "original_launcher_status_preserved": "PARTIAL_ACCOUNTING_OR_BUDGET",
+  "review_environment": {
+    "cuda_build": null,
+    "cuda_initialized": false,
+    "torch": "2.7.1+cpu"
+  },
+  "runner_outcome": "BLOCKED_ADMISSION",
+  "scope": "CPU reload of original parsed input and independent parse of A native accounting captures; no model construction, forward, sampling, scheduler command or GPU action by this script",
+  "source_files_verified": 302,
+  "srun_client_wall_seconds": 60.10791897773743,
+  "status": "PASS_OFFLINE_EVIDENCE_CHECKS"
+}

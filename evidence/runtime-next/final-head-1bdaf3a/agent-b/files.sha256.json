@@ -1,0 +1,45 @@
+{
+  "files": {
+    "README.md": {
+      "bytes": 4241,
+      "sha256": "2f6c1d172e6f56a976a28ddd118a9372941e4e10d8bb4d604846029c0401d8b1"
+    },
+    "archive-manifest.json": {
+      "bytes": 8783,
+      "sha256": "2e620a82f9e7e08fc91fd212f50aa3a05585441fdeace9036d7f53a878caaa1b"
+    },
+    "archive-verification.json": {
+      "bytes": 626,
+      "sha256": "caa8019375004a8d567c5d7f351b80b1807f8f7dce84eb120df1825f0715b18c"
+    },
+    "cpu-and-admission-review.json": {
+      "bytes": 2273,
+      "sha256": "a3dd757d70e097271d959435d337bb02580cb3bd1b424532d87e820b79bf2cdd"
+    },
+    "gpu-admission-blocked-33334.tar.xz": {
+      "bytes": 126328,
+      "sha256": "5588acc27dceb7595fe7aff8be79385ec9186913aa7a486fc54e8ea0e750b8e9"
+    },
+    "independent-review-artifacts.tar.xz": {
+      "bytes": 184192,
+      "sha256": "34c151b454db0a882ddf7bfb4c145281a50b1bfadd7616889daaa27ff4e5284d"
+    },
+    "independent-review-manifest.json": {
+      "bytes": 1026,
+      "sha256": "9ffadedc5a5aa14d22bea300bc669ab7c2869b9e823e062e48e620319a276f2b"
+    },
+    "native-freeze-review.json": {
+      "bytes": 1643,
+      "sha256": "a864956f760eb1c3bb8e75082a8299c6523e4a49a0554597413a2111ebf55237"
+    },
+    "native-launch-review.json": {
+      "bytes": 2863,
+      "sha256": "0a99a1a0d3cc989825152c768c7eccc63bdc0c63384135f918a4f594374d9483"
+    },
+    "source-handoff-verification.json": {
+      "bytes": 2356,
+      "sha256": "6ae7c91142ccf19798b37c42b8de684cf3051413cc4908c67778871b8f808e18"
+    }
+  },
+  "scope": "B final evidence only; this manifest excludes itself"
+}

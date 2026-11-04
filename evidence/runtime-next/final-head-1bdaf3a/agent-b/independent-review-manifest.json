@@ -1,0 +1,29 @@
+{
+  "files": {
+    "archive-transfer.json": {
+      "bytes": 258901,
+      "sha256": "7a77fdd912d3d0524f192454d18ff706b5c5f7e67605fa690318073041e815b0"
+    },
+    "audit_cpu_and_admission.py": {
+      "bytes": 6539,
+      "sha256": "8b50329e5b900bdf5f13685ddda05d6eb8e7df8686286bdeefa1d8d08b9038ec"
+    },
+    "commands-resolved.json": {
+      "bytes": 8968,
+      "sha256": "016f84824561f2544628c23e72660fc82dd811808babbe709cb8a8c577d4e292"
+    },
+    "frozen-source-digests.json": {
+      "bytes": 33052,
+      "sha256": "5510919696b12b39249f25f9a3b978727bbab91d9d5a449a57575593afb70963"
+    },
+    "native-freeze-transfer.json": {
+      "bytes": 94826,
+      "sha256": "c09dfaff9432250bcdc9ab1917f37944d29b9480cbcfb1ef02e259b6c124e44a"
+    },
+    "native-launch-transfer.json": {
+      "bytes": 30630,
+      "sha256": "c6d2a66c712396d534f6f123a3e277b68c15589e74ced163bcbabfb477b005b6"
+    }
+  },
+  "scope": "Original B transfer observations, prepared commands, source digests and CPU-only audit script; no GPU execution"
+}

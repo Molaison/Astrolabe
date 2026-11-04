@@ -1,0 +1,269 @@
+{
+  "created_utc": "2026-11-04T05:54:52.360331+00:00",
+  "entries": {
+    "control/gpu-execution-root-01": {
+      "mode": 448,
+      "mtime_ns": 1793771526000000000,
+      "type": "directory"
+    },
+    "control/gpu-execution-root-01/00-create.invocation.json": {
+      "bytes": 554,
+      "mode": 384,
+      "mtime_ns": 1793771313000000000,
+      "sha256": "50ef69fb287e703a31893a620a2cd1725be7ed57bb11f78d241fd0b30ef519fc",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/00-create.result.json": {
+      "bytes": 61,
+      "mode": 384,
+      "mtime_ns": 1793771313000000000,
+      "sha256": "e0ac6a4ca633525b6be8aa9b63404a8995a54c3b2ab645577e3017dcc8198dfa",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/00-create.stderr.log": {
+      "bytes": 0,
+      "mode": 384,
+      "mtime_ns": 1793771313000000000,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/00-create.stdout.log": {
+      "bytes": 115,
+      "mode": 384,
+      "mtime_ns": 1793771313000000000,
+      "sha256": "525ac061426e4f1c1c01eeb2157c9aa8dc0714073a4aca8aca860fd16f7b60a5",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/01-freeze.invocation.json": {
+      "bytes": 2059,
+      "mode": 384,
+      "mtime_ns": 1793771320000000000,
+      "sha256": "16b772baf278c058c2a1566dd1407029c81ec114786e7c77bf3c4e919c13d370",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/01-freeze.result.json": {
+      "bytes": 59,
+      "mode": 384,
+      "mtime_ns": 1793771328000000000,
+      "sha256": "907ea8c5577b13b27033666f94b875876b0516c801ecf82d5593b69818cba494",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/01-freeze.stderr.log": {
+      "bytes": 229,
+      "mode": 384,
+      "mtime_ns": 1793771327000000000,
+      "sha256": "9ba5726ac06902ada910612c33e83ca586546bad44a15a72b7c50856ad062a32",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/01-freeze.stdout.log": {
+      "bytes": 292,
+      "mode": 384,
+      "mtime_ns": 1793771327000000000,
+      "sha256": "089257329588cdcd84579982ba8a7fc67302737b7ab57d9b01195122f95a381a",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/02-prepare.invocation.json": {
+      "bytes": 706,
+      "mode": 384,
+      "mtime_ns": 1793771364000000000,
+      "sha256": "f113b68726761de8c325ba2e65eb64ca6f4dc7cbabe7dd8fb7b6eaf94f8d08a6",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/02-prepare.result.json": {
+      "bytes": 60,
+      "mode": 384,
+      "mtime_ns": 1793771387000000000,
+      "sha256": "6e9b37342765193127358e43400caf859fc8d09bed90e1eb228a26e741bf7aa8",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/02-prepare.stderr.log": {
+      "bytes": 0,
+      "mode": 384,
+      "mtime_ns": 1793771364000000000,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/02-prepare.stdout.log": {
+      "bytes": 1122,
+      "mode": 384,
+      "mtime_ns": 1793771387000000000,
+      "sha256": "dfdbb5f9fe1d8652f0a94cc346aeed80625f1ff0921d02b7a8102bb88bcd6240",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/03-root-review.json": {
+      "bytes": 1008,
+      "mode": 384,
+      "mtime_ns": 1793771465000000000,
+      "sha256": "348a0b79a999da09cd42a503e3a3c6a7d8747bc24fa3c25b9b497f3765c3df0f",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/03-submit.invocation.json": {
+      "bytes": 572,
+      "mode": 384,
+      "mtime_ns": 1793771465000000000,
+      "sha256": "81ecb2d7f578b29d175672c2441b7a249db42b745f2ed20866ec75f69aa33e01",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/03-submit.result.json": {
+      "bytes": 59,
+      "mode": 384,
+      "mtime_ns": 1793771526000000000,
+      "sha256": "e4b5f3db897380cf1f3898acafaec1605bc12bd2a53d00613da8bd64a1620cf4",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/03-submit.stderr.log": {
+      "bytes": 0,
+      "mode": 384,
+      "mtime_ns": 1793771465000000000,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/03-submit.stdout.log": {
+      "bytes": 200,
+      "mode": 384,
+      "mtime_ns": 1793771526000000000,
+      "sha256": "3f6c8d8ae58392f13bc4be4fe3245bd8714efcdabd89340c0016e30c0dccf09d",
+      "type": "file"
+    },
+    "control/gpu-execution-root-01/prepared-handoff.json": {
+      "bytes": 8968,
+      "mode": 384,
+      "mtime_ns": 1793771313000000000,
+      "sha256": "016f84824561f2544628c23e72660fc82dd811808babbe709cb8a8c577d4e292",
+      "type": "file"
+    },
+    "gpu-allocation-01": {
+      "mode": 448,
+      "mtime_ns": 1793771526000000000,
+      "type": "directory"
+    },
+    "gpu-allocation-01/apptainer_cache": {
+      "mode": 448,
+      "mtime_ns": 1793771364000000000,
+      "type": "directory"
+    },
+    "gpu-allocation-01/apptainer_tmp": {
+      "mode": 448,
+      "mtime_ns": 1793771364000000000,
+      "type": "directory"
+    },
+    "gpu-allocation-01/cache": {
+      "mode": 448,
+      "mtime_ns": 1793771364000000000,
+      "type": "directory"
+    },
+    "gpu-allocation-01/cpu-container-check.json": {
+      "bytes": 6048,
+      "mode": 384,
+      "mtime_ns": 1793771387000000000,
+      "sha256": "685d7ac7fc02017a944caf1b4be3618bc9ee75ee09a66a80faea42c27b117e9a",
+      "type": "file"
+    },
+    "gpu-allocation-01/home": {
+      "mode": 448,
+      "mtime_ns": 1793771364000000000,
+      "type": "directory"
+    },
+    "gpu-allocation-01/launch.json": {
+      "bytes": 6609,
+      "mode": 384,
+      "mtime_ns": 1793771387000000000,
+      "sha256": "9bbbae547470afda98c361f6a6796e14c6ef0f71dab536b7a6f503ee2ba8a921",
+      "type": "file"
+    },
+    "gpu-allocation-01/srun.stderr.txt": {
+      "bytes": 117,
+      "mode": 384,
+      "mtime_ns": 1793771526000000000,
+      "sha256": "bd882359d6814c45a42699dd63dd8e56530cf7c16adc69f62376a625a8257d3e",
+      "type": "file"
+    },
+    "gpu-allocation-01/srun.stdout.txt": {
+      "bytes": 0,
+      "mode": 384,
+      "mtime_ns": 1793771466000000000,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "type": "file"
+    },
+    "gpu-allocation-01/submission.json": {
+      "bytes": 1347,
+      "mode": 384,
+      "mtime_ns": 1793771526000000000,
+      "sha256": "d65a6251d72fad7501f73011ec1400da8dc4d96bc028505ccd0bb1de3a4e83b4",
+      "type": "file"
+    },
+    "gpu-allocation-01/tmp": {
+      "mode": 448,
+      "mtime_ns": 1793771364000000000,
+      "type": "directory"
+    },
+    "gpu-allocation-01/var_tmp": {
+      "mode": 448,
+      "mtime_ns": 1793771364000000000,
+      "type": "directory"
+    },
+    "gpu-control-01": {
+      "mode": 448,
+      "mtime_ns": 1793771327000000000,
+      "type": "directory"
+    },
+    "gpu-control-01/cpu-preflight-native": {
+      "mode": 448,
+      "mtime_ns": 1793771327000000000,
+      "type": "directory"
+    },
+    "gpu-control-01/cpu-preflight-native/backbones": {
+      "mode": 448,
+      "mtime_ns": 1793771327000000000,
+      "type": "directory"
+    },
+    "gpu-control-01/cpu-preflight-native/seqs": {
+      "mode": 448,
+      "mtime_ns": 1793771327000000000,
+      "type": "directory"
+    },
+    "gpu-control-01/frozen.json": {
+      "bytes": 47296,
+      "mode": 384,
+      "mtime_ns": 1793771327000000000,
+      "sha256": "21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a",
+      "type": "file"
+    },
+    "gpu-control-01/input.pdb": {
+      "bytes": 531114,
+      "mode": 384,
+      "mtime_ns": 1793771321000000000,
+      "sha256": "c05c06773ae8c00d2d033f7f7a103c4048981d79418c6c1a2579b15da455b2b7",
+      "type": "file"
+    },
+    "gpu-control-01/parsed_input": {
+      "mode": 448,
+      "mtime_ns": 1793771327000000000,
+      "type": "directory"
+    },
+    "gpu-control-01/parsed_input/arrays.npz": {
+      "bytes": 331254,
+      "mode": 384,
+      "mtime_ns": 1793771327000000000,
+      "sha256": "9e892165e0941ba783ff98144dc2a5b3dcd19cde3ae9ae0738ed4498004e5868",
+      "type": "file"
+    },
+    "gpu-control-01/parsed_input/tree.json": {
+      "bytes": 38046,
+      "mode": 384,
+      "mtime_ns": 1793771327000000000,
+      "sha256": "956c784d59995c30e0868efe56fd7a3b27cf48249ab7994c96d017de24017701",
+      "type": "file"
+    }
+  },
+  "original_file_bytes": 977895,
+  "original_file_count": 27,
+  "roots": [
+    "gpu-control-01",
+    "gpu-allocation-01",
+    "control/gpu-execution-root-01"
+  ],
+  "schema": 1,
+  "scope": "Lossless original CPU freeze/launcher/admission-failure evidence; no GPU work executed by archive creation",
+  "source_base": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104"
+}
