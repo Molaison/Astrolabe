@@ -76,15 +76,20 @@ class BrokerSession:
         else:
             os.close(token_write)
         try:
+            from .broker_client import BrokerClient
+            from .client import WorkerError
+            startup = object.__new__(BrokerClient)
+            startup.endpoint, startup.token, startup.limit = self.endpoint, self.token, 1048576
             deadline = time.monotonic() + 15
             while True:
                 if self.process.poll() is not None:
                     raise RuntimeError('execution broker exited during startup')
                 try:
-                    with socket.socket(socket.AF_UNIX) as probe:
-                        probe.connect('\0' + self.endpoint[1:])
+                    # An authenticated control reply proves all lanes have
+                    # been bound; a connect-only probe consumed a business slot.
+                    startup._rpc({'op': 'metrics'}, min(1, max(.001, deadline - time.monotonic())), submitted=False)
                     break
-                except OSError:
+                except WorkerError:
                     if time.monotonic() >= deadline:
                         raise RuntimeError('execution broker startup timed out')
                     time.sleep(.02)

@@ -124,6 +124,7 @@ class ResourceLedger:
         self.events = events
         self.condition = threading.Condition(threading.RLock())
         self.devices = {}
+        self.fenced_devices = set()
         self.owners = {}
         self.residents = {}
         self.pending = {}
@@ -288,18 +289,21 @@ class ResourceLedger:
                                   process_exit=not alive, confirmed=confirmed)
             return True
 
-    def _wait(self, predicate, deadline, reason):
-        if self.stopping:
-            raise ResourceExhausted('resource ledger is stopping')
-        while not predicate():
+    def _wait(self, predicate, deadline, reason, cancel_token=None):
+        from .client import AdmissionRejected
+        while True:
+            if cancel_token and cancel_token.is_set():
+                raise AdmissionRejected('request cancelled before submission')
             if self.stopping:
                 raise ResourceExhausted('resource ledger is stopping')
             remaining = None if deadline is None else deadline - time.monotonic()
             if remaining is not None and remaining <= 0:
                 raise TimeoutError(reason)
-            self.condition.wait(None if remaining is None else min(remaining, .5))
+            if predicate():
+                return
+            self.condition.wait(remaining)
 
-    def admit_pending(self, token, resources, *, timeout=None):
+    def admit_pending(self, token, resources, *, timeout=None, deadline=None, cancel_token=None):
         resources = OperationResources.parse(resources)
         if resources.output_bytes is None:
             cap = self.limits.request_output_bytes or max(1, min(1024 ** 3, self.limits.output_bytes // 2))
@@ -315,7 +319,7 @@ class ResourceLedger:
                                  (resources.ram_bytes, self.limits.ram_bytes, 'RAM')):
             if value > cap:
                 raise ResourceExhausted(f'request exceeds {name} byte budget')
-        deadline = None if timeout is None else time.monotonic() + timeout
+        deadline = deadline if deadline is not None else (None if timeout is None else time.monotonic() + timeout)
         with self.condition:
             if token in self.pending:
                 raise ValueError('duplicate resource admission')
@@ -324,7 +328,7 @@ class ResourceLedger:
                         self.prepared_bytes + resources.prepared_bytes <= self.limits.prepared_bytes and
                         self.output_bytes + resources.output_bytes <= self.limits.output_bytes and
                         self.ram_bytes + resources.ram_bytes <= self.limits.ram_bytes)
-            self._wait(room, deadline, 'prepared/output/RAM admission timed out')
+            self._wait(room, deadline, 'prepared/output/RAM admission timed out', cancel_token)
             self.pending[token] = resources
             self.prepared_bytes += resources.prepared_bytes
             self.output_bytes += resources.output_bytes
@@ -338,8 +342,14 @@ class ResourceLedger:
                 self.cpu_slots -= active['cpu_slots']
             self.condition.notify_all()
 
-    def acquire_compute(self, token, device, *, timeout=None, cpu=False, cpu_work=True):
-        deadline = None if timeout is None else time.monotonic() + timeout
+    def fence(self, device):
+        if device != 'cpu':
+            with self.condition:
+                self.fenced_devices.add(device)
+                self.condition.notify_all()
+
+    def acquire_compute(self, token, device, *, timeout=None, cpu=False, cpu_work=True, deadline=None, cancel_token=None):
+        deadline = deadline if deadline is not None else (None if timeout is None else time.monotonic() + timeout)
         with self.condition:
             resources = self.pending[token]
             charge = resources.cpu_slots if cpu or device == 'cpu' or cpu_work else 0
@@ -353,10 +363,13 @@ class ResourceLedger:
             if capacity is not None and resources.scratch_bytes is not None and resident + scratch > capacity:
                 raise ResourceExhausted('resident plus requested scratch VRAM exceeds budget')
             def room():
+                if device in self.fenced_devices:
+                    from .client import OutcomeUnknown
+                    raise OutcomeUnknown('device fenced after uncertain worker outcome')
                 return (self.cpu_slots + charge <= self.limits.cpu_slots and
                         (cpu or device == 'cpu' or
                          not any(a['device'] == device and not a['cpu'] for a in self.active.values())))
-            self._wait(room, deadline, 'compute admission timed out')
+            self._wait(room, deadline, 'compute admission timed out', cancel_token)
             if not cpu and device in self.devices and not self.devices[device].get('mock'):
                 sample = self.telemetry.sample(self.devices[device])
                 if not sample.get('available'):
@@ -385,18 +398,20 @@ class ResourceLedger:
             self.condition.notify_all()
 
     @contextmanager
-    def lease(self, token, device, resources=None, *, timeout=None, cpu=False, cpu_work=True):
-        start = time.monotonic()
-        self.admit_pending(token, resources, timeout=timeout)
+    def lease(self, token, device, resources=None, *, timeout=None, cpu=False, cpu_work=True, deadline=None):
+        deadline = deadline if deadline is not None else (None if timeout is None else time.monotonic() + timeout)
+        self.admit_pending(token, resources, deadline=deadline)
         try:
-            remaining = None if timeout is None else max(0, timeout - (time.monotonic() - start))
-            self.acquire_compute(token, device, timeout=remaining, cpu=cpu, cpu_work=cpu_work)
+            self.acquire_compute(token, device, deadline=deadline, cpu=cpu, cpu_work=cpu_work)
             yield
         finally:
             self.release(token)
 
-    def snapshot(self):
-        with self.condition:
+    def snapshot(self, *, deadline=None):
+        remaining = 2.0 if deadline is None else deadline - time.monotonic()
+        if remaining <= 0 or not self.condition.acquire(timeout=remaining):
+            raise TimeoutError('resource snapshot deadline expired')
+        try:
             return {'limits': asdict(self.limits), 'prepared_bytes': self.prepared_bytes,
                     'output_reserved_bytes': self.output_bytes, 'ram_reserved_bytes': self.ram_bytes,
                     'cpu_slots': self.cpu_slots, 'pending': len(self.pending),
@@ -404,6 +419,8 @@ class ResourceLedger:
                     'resident': {key: {**value, 'processes': dict(value['processes'])}
                                  for key, value in self.residents.items()},
                     'devices': {key: dict(value) for key, value in self.devices.items()}}
+        finally:
+            self.condition.release()
 
     def close(self):
         with self.condition:

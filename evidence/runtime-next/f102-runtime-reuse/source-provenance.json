@@ -1,0 +1,123 @@
+{
+  "baseline_current": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "recovered_base": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "recovered_branch": "fix/runtime-admission-isolation-20261103",
+  "recovered_worktree": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix",
+  "recovered_patch_sha256": "49c84419808453d6629cf3f3464305590ea57f8a38e7b9655358ca61d1904f56",
+  "files": [
+    {
+      "path": "astrolabe/runtime/admission.py",
+      "validated_9d_sha256": "ea121c60dca535d3dd7e5cfa3e030db6a9431f53db854daa29c5486c32f0c12d",
+      "recovered_fix_sha256": "8954d70bd1f78c1fb361bcb773b23a88802a442a68f0699944f0794f959c4a2d",
+      "initial_integrated_sha256": "8954d70bd1f78c1fb361bcb773b23a88802a442a68f0699944f0794f959c4a2d",
+      "candidate_sha256": "8954d70bd1f78c1fb361bcb773b23a88802a442a68f0699944f0794f959c4a2d"
+    },
+    {
+      "path": "astrolabe/runtime/broker.py",
+      "validated_9d_sha256": "21ff84bd33b9a3364a59b86295ef381a3756830c37ad661d085cb63db5e93f6b",
+      "recovered_fix_sha256": "92ed56bd2e11788e051befb85abf1bbe1d2bbeeb4ae7e994ccea95def0f08705",
+      "initial_integrated_sha256": "92ed56bd2e11788e051befb85abf1bbe1d2bbeeb4ae7e994ccea95def0f08705",
+      "candidate_sha256": "92ed56bd2e11788e051befb85abf1bbe1d2bbeeb4ae7e994ccea95def0f08705"
+    },
+    {
+      "path": "astrolabe/runtime/broker_client.py",
+      "validated_9d_sha256": "9615ab5b112bf6de192e4002feb64ec15e358a97742212b56290c92421e53434",
+      "recovered_fix_sha256": "0485175d3bb030c01780f97dc21ea8cb6445750d3a2c6568c6f090a9c3320e44",
+      "initial_integrated_sha256": "0485175d3bb030c01780f97dc21ea8cb6445750d3a2c6568c6f090a9c3320e44",
+      "candidate_sha256": "0485175d3bb030c01780f97dc21ea8cb6445750d3a2c6568c6f090a9c3320e44"
+    },
+    {
+      "path": "astrolabe/runtime/broker_state.py",
+      "validated_9d_sha256": "eb32c6da3fd6df5d3907214d4ef69b115e60546f8cdca07acb6751bf0a1fadf6",
+      "recovered_fix_sha256": "69372ee1c22ac06f05a6eb11f75d9f91c32778a07457a493c1a5ee37d28cb27a",
+      "initial_integrated_sha256": "69372ee1c22ac06f05a6eb11f75d9f91c32778a07457a493c1a5ee37d28cb27a",
+      "candidate_sha256": "69372ee1c22ac06f05a6eb11f75d9f91c32778a07457a493c1a5ee37d28cb27a"
+    },
+    {
+      "path": "astrolabe/runtime/broker_transport.py",
+      "validated_9d_sha256": null,
+      "recovered_fix_sha256": "83d191123520fd2b9932617e44fb71f821186fd802c28be4b7650c396863ed9a",
+      "initial_integrated_sha256": "83d191123520fd2b9932617e44fb71f821186fd802c28be4b7650c396863ed9a",
+      "candidate_sha256": "83d191123520fd2b9932617e44fb71f821186fd802c28be4b7650c396863ed9a"
+    },
+    {
+      "path": "astrolabe/runtime/client.py",
+      "validated_9d_sha256": "76ad63edf9bb62ffde2262483f088c3ae66310111474e0147e88b7d7e9930118",
+      "recovered_fix_sha256": "7e052a04b9b082d07b6100b1b242b7be21a0da5bcd16199623a56d260adbdccf",
+      "initial_integrated_sha256": "7e052a04b9b082d07b6100b1b242b7be21a0da5bcd16199623a56d260adbdccf",
+      "candidate_sha256": "7e052a04b9b082d07b6100b1b242b7be21a0da5bcd16199623a56d260adbdccf"
+    },
+    {
+      "path": "astrolabe/runtime/resources.py",
+      "validated_9d_sha256": "c749da2dfb210c4ec291786e03b4fd4dbd75ee06570b4506331c5d2ae0b13002",
+      "recovered_fix_sha256": "a3de42ff97ef6112fae2cf5373f4fecaeab74794c984a95ca0d5846131cf3f95",
+      "initial_integrated_sha256": "a3de42ff97ef6112fae2cf5373f4fecaeab74794c984a95ca0d5846131cf3f95",
+      "candidate_sha256": "a3de42ff97ef6112fae2cf5373f4fecaeab74794c984a95ca0d5846131cf3f95"
+    },
+    {
+      "path": "astrolabe/runtime/session.py",
+      "validated_9d_sha256": "e0e2032f9bc7d5e612587f704cc5bcac85d5a81d4eadffa02a09444f65e3ccf1",
+      "recovered_fix_sha256": "9e929ba296d1b84a92b78a41556c151977a2fb8b24778a6a3e9964645f68fa64",
+      "initial_integrated_sha256": "9e929ba296d1b84a92b78a41556c151977a2fb8b24778a6a3e9964645f68fa64",
+      "candidate_sha256": "9e929ba296d1b84a92b78a41556c151977a2fb8b24778a6a3e9964645f68fa64"
+    },
+    {
+      "path": "tests/test_runtime_contracts.py",
+      "validated_9d_sha256": "5634fd530a29a4b4b6a3239b4c95f4c55dbfd9592845abb73e6b4a27a330b281",
+      "recovered_fix_sha256": "2bf35e8b0b85152a52cca98323a6077e68f8d2bcc2f04981d638b0fd30cbb9c1",
+      "initial_integrated_sha256": "2bf35e8b0b85152a52cca98323a6077e68f8d2bcc2f04981d638b0fd30cbb9c1",
+      "candidate_sha256": "2bf35e8b0b85152a52cca98323a6077e68f8d2bcc2f04981d638b0fd30cbb9c1"
+    },
+    {
+      "path": "tests/test_runtime_ingress.py",
+      "validated_9d_sha256": null,
+      "recovered_fix_sha256": "dde6bcba8f200ea96bdc00498e760f2fa084e845a7b0b5226ce72e6c81bad68e",
+      "initial_integrated_sha256": "dde6bcba8f200ea96bdc00498e760f2fa084e845a7b0b5226ce72e6c81bad68e",
+      "candidate_sha256": "dde6bcba8f200ea96bdc00498e760f2fa084e845a7b0b5226ce72e6c81bad68e"
+    },
+    {
+      "path": "tests/test_runtime_request_isolation.py",
+      "validated_9d_sha256": null,
+      "recovered_fix_sha256": "7cd2161b83f55124188ab4ccdaa8f1c4635554a536023b365e49ccb4b6d42463",
+      "initial_integrated_sha256": "7cd2161b83f55124188ab4ccdaa8f1c4635554a536023b365e49ccb4b6d42463",
+      "candidate_sha256": "7cd2161b83f55124188ab4ccdaa8f1c4635554a536023b365e49ccb4b6d42463"
+    },
+    {
+      "path": "tests/test_runtime_saturation.py",
+      "validated_9d_sha256": null,
+      "recovered_fix_sha256": "8058adcb96ca81b0805ec4185f63aa733cb156c5f7080e45d068bd374811c9d7",
+      "initial_integrated_sha256": "8058adcb96ca81b0805ec4185f63aa733cb156c5f7080e45d068bd374811c9d7",
+      "candidate_sha256": "8058adcb96ca81b0805ec4185f63aa733cb156c5f7080e45d068bd374811c9d7"
+    },
+    {
+      "path": "tests/runtime_request_isolation_a_fixture.py",
+      "validated_9d_sha256": null,
+      "recovered_fix_sha256": "176ffd33c09e56799e3cee9b06b4d67640d9b44ff85763e865c53296184da5e4",
+      "initial_integrated_sha256": "176ffd33c09e56799e3cee9b06b4d67640d9b44ff85763e865c53296184da5e4",
+      "candidate_sha256": "176ffd33c09e56799e3cee9b06b4d67640d9b44ff85763e865c53296184da5e4"
+    },
+    {
+      "path": "tests/runtime_saturation_fixture.py",
+      "validated_9d_sha256": null,
+      "recovered_fix_sha256": "891eb04738cc70b043b238825d2266fa6815c2955a33d9a03c7cecfc213a4cb9",
+      "initial_integrated_sha256": "891eb04738cc70b043b238825d2266fa6815c2955a33d9a03c7cecfc213a4cb9",
+      "candidate_sha256": "891eb04738cc70b043b238825d2266fa6815c2955a33d9a03c7cecfc213a4cb9"
+    },
+    {
+      "path": "docs/runtime_execution.md",
+      "validated_9d_sha256": "54b07caef6cbede333b20dd66c273d1032101c2592e5f4bb46d85b5b39e7b021",
+      "recovered_fix_sha256": "d03b65146d938488cad39a450276c557df04efa7b2f151f9c9d34b3144f7b812",
+      "initial_integrated_sha256": "d03b65146d938488cad39a450276c557df04efa7b2f151f9c9d34b3144f7b812",
+      "candidate_sha256": "c5a8db094f6e481d18d0074ad72d8d00d85512ffbbb929b4292c36bbb16039c3"
+    }
+  ],
+  "deferred": [
+    "esmfold_daemon.py and its lease test: B owns current output implementation",
+    "runtime_workflow_benchmark.py and runtime_trace_report.py: frozen measurement/report code; independent wrapper already gates complete workload",
+    "opt/interaction.py and runtime_requirements.py: unmeasured PyRosetta startup optimization; current SciPy R1 untouched"
+  ],
+  "no_original_worktree_modified": true,
+  "test_adaptation": "Current seven shared deadline/owner outcomes retained without private token/signature coupling; full suite additionally adopts explicit CPU worker fencing and prepared retention contracts; shared fake absolute clock.",
+  "candidate_test_sha256": "c056231ae0e47dae1538103b5cefb4b762c3ca619af9549ce8e40ba18ed0f3e2",
+  "worktree_incident": "Initial uncommitted tracked copies reverted to validated HEAD; original cause UNKNOWN and isolated expected-failure probe did not reproduce it. Correct owner/gitdir confirmed by root; candidate was rebuilt from verified source and committed before subsequent tests. Raw incident in control/f102-runtime-reuse-incident; no original tree modified."
+}

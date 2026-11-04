@@ -31,7 +31,8 @@ class ControlledWorker:
         raise self.error
 
     def close(self):
-        pass
+        # Controlled post-dispatch cleanup observation; no process/GPU exists.
+        self.lifecycle["release_confirmed"] = True
 
 
 @pytest.fixture
@@ -57,9 +58,12 @@ def request(*, timeout=1.0, **overrides):
             **overrides}
 
 
-def assert_request_released(state):
-    assert "client:request" not in state.ledger.pending
-    assert "client:request" not in state.ledger.active
+def assert_request_released(state, *, retained_pending=()):
+    # The ledger token is private to the broker. Only the explicit blockers
+    # and an intentionally retained prepared request may remain reserved.
+    blockers = {"compute-blocker", "pending-blocker", "blocker"}
+    assert not (set(state.ledger.pending) - blockers - set(retained_pending))
+    assert not (set(state.ledger.active) - blockers)
     assert state.metrics["waiting"] == 0
     assert state.workers["worker"]["busy"] == 0
     assert state.workers["worker"]["delegated"] is None
@@ -75,10 +79,10 @@ def test_pending_and_compute_waits_share_one_total_deadline(state, monkeypatch):
     original = ledger.admit_pending
 
     def observe_admission(token, resources, **kwargs):
-        if token == "client:request":
+        if token not in {"compute-blocker", "pending-blocker", "blocker"}:
             entered.set()
         original(token, resources, **kwargs)
-        if token == "client:request":
+        if token not in {"compute-blocker", "pending-blocker", "blocker"}:
             admitted.set()
 
     monkeypatch.setattr(ledger, "admit_pending", observe_admission)
@@ -109,10 +113,14 @@ def test_pending_and_compute_waits_share_one_total_deadline(state, monkeypatch):
 
 
 def test_expiration_after_compute_admission_never_gets_a_fresh_millisecond(state, monkeypatch):
-    # Advance only State's clock at the observable dispatch boundary. The real
-    # ledger is uncontended; this deterministic test makes no timing claim.
+    # State and ledger share an absolute clock. Advance it at the observable
+    # dispatch boundary; this deterministic test makes no wall-time claim.
+    from astrolabe.runtime import resources as resource_module
+
     clock = [100.0]
-    monkeypatch.setattr(broker_state, "time", SimpleNamespace(monotonic=lambda: clock[0]))
+    timer = SimpleNamespace(monotonic=lambda: clock[0])
+    monkeypatch.setattr(broker_state, "time", timer)
+    monkeypatch.setattr(resource_module, "time", timer)
     write = state.events.write
 
     def expire_before_dispatch(event, **fields):
@@ -140,7 +148,7 @@ def test_live_deadline_preserves_dispatch_identity_and_unbounded_calls(state, ti
     assert_request_released(state)
 
 
-def test_expired_staged_execute_releases_its_prepared_reservation(state):
+def test_expired_staged_execute_preserves_prepared_reservation_before_dispatch(state):
     worker = state.workers["worker"]
     worker["client"].hello["capabilities"]["request_staging"] = True
     resources = {"prepared_bytes": 32, "ram_bytes": 0, "output_bytes": 0}
@@ -152,19 +160,21 @@ def test_expired_staged_execute_releases_its_prepared_reservation(state):
     with pytest.raises(TimeoutError):
         state.call(request(timeout=.03, payload={"method": "execute"},
                            runtime={"scientific_request_id": "scientific"}))
-    assert "prepared" not in state.ledger.pending
-    assert not worker["retained"]
+    assert "prepared" in state.ledger.pending
+    assert worker["retained"][("client", "scientific")] == {
+        "token": "prepared", "resources": resources, "state": "prepared"}
     assert not worker["client"].dispatches
-    assert_request_released(state)
+    assert_request_released(state, retained_pending={"prepared"})
 
 
-def test_unknown_dispatched_outcome_still_fences_and_is_not_replayed(state):
+def test_unknown_dispatched_outcome_fences_its_cpu_worker_and_is_not_replayed(state):
     client = state.workers["worker"]["client"]
     client.error = OutcomeUnknown("controlled uncertain transport outcome")
     with pytest.raises(OutcomeUnknown):
         state.call(request())
     assert len(client.dispatches) == 1
-    assert state.poisoned == {"cpu"} and state.retain_artifacts
+    assert state.workers["worker"]["fenced"] and state.retain_artifacts
+    assert not state.poisoned  # Independent CPU workers do not share a device fence.
     assert_request_released(state)
     with pytest.raises(ValueError, match="duplicate request"):
         state.call(request())
@@ -205,7 +215,7 @@ def test_waiter_cannot_clear_the_running_request_delegation(state, monkeypatch, 
                 state.call(request(timeout=.03))
         assert worker["delegated"] is delegated
         assert worker["busy"] == 1 and state.metrics["waiting"] == 0
-        assert "client:first" in state.ledger.active
+        assert len(state.ledger.active) == 1
         assert not state.poisoned
     finally:
         release.set()
@@ -224,9 +234,9 @@ def test_entry_lock_wait_consumes_admission_budget(state, monkeypatch, timeout, 
     errors = []
     track = state._track_request
 
-    def observe_track(value):
+    def observe_track(value, *args, **kwargs):
         entered.set()
-        return track(value)
+        return track(value, *args, **kwargs)
 
     monkeypatch.setattr(state, "_track_request", observe_track)
 
@@ -253,5 +263,8 @@ def test_entry_lock_wait_consumes_admission_budget(state, monkeypatch, timeout, 
         assert 0 < dispatch["timeout"] < timeout - .1
     assert_request_released(state)
     assert not state.poisoned
-    with pytest.raises(ValueError, match="duplicate request"):
-        state.call(request(timeout=timeout))
+    # An entry lock timeout can occur before the request is recorded. Once
+    # recorded, the same ID is still rejected; the runtime never auto-replays.
+    if not expired:
+        with pytest.raises(ValueError, match="duplicate request"):
+            state.call(request(timeout=timeout))

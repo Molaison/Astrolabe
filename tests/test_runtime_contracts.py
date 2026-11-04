@@ -26,6 +26,7 @@ serve(handler, {}, load_count=None)
 def test_private_release_failure_is_not_silently_acknowledged():
     client = object.__new__(BrokerClient)
     client._lock, client._closed = threading.Lock(), False
+    client._close_lock = threading.Lock()
     client.handle, client.epoch = 'private', 'client'
     def lost_broker(*args, **kwargs):
         raise WorkerError('broker connection failed')
@@ -43,6 +44,7 @@ def test_private_release_failure_is_not_silently_acknowledged():
 def test_private_release_requires_confirmed_cleanup_response():
     client = object.__new__(BrokerClient)
     client._lock, client._closed = threading.Lock(), False
+    client._close_lock = threading.Lock()
     client.handle, client.epoch = 'private', 'client'
     client._rpc = lambda *args, **kwargs: {'released': False}
     with pytest.raises(OutcomeUnknown):
@@ -54,6 +56,7 @@ def test_private_release_requires_confirmed_cleanup_response():
 def test_detached_shared_handle_cannot_pretend_private_release_was_confirmed():
     client = object.__new__(BrokerClient)
     client._lock, client._closed = threading.Lock(), False
+    client._close_lock = threading.Lock()
     client.handle, client.epoch = 'shared', 'client'
     client._rpc = lambda *args, **kwargs: {'released': False}
     client.close()
@@ -64,6 +67,7 @@ def test_detached_shared_handle_cannot_pretend_private_release_was_confirmed():
 def test_confirmed_private_release_is_idempotent():
     client = object.__new__(BrokerClient)
     client._lock, client._closed = threading.Lock(), False
+    client._close_lock = threading.Lock()
     client.handle, client.epoch = 'private', 'client'
     responses = []
     def release(*args, **kwargs):

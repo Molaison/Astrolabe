@@ -130,6 +130,22 @@ def resource_pressure(cpus):
     return False
 
 
+# Set only by the isolated broker process; direct probes keep their deadline.
+_broker_stopping = None
+
+
+def _probe_group_anchor(pid):
+    """Include an unreaped probe leader, preserving its original group identity."""
+    try:
+        text = pathlib.Path(f'/proc/{pid}/stat').read_text()
+    except FileNotFoundError:
+        return None
+    fields = text[text.rfind(')') + 2:].split()
+    if int(text.split(' ', 1)[0]) != pid:
+        raise RuntimeError('probe PID observation mismatch')
+    return pid, int(fields[19]), int(fields[2])
+
+
 def _execute_probe(command, env, timeout, limit=65536, *, pass_fds=()):
     if timeout <= 0:
         raise TimeoutError('probe deadline expired')
@@ -137,22 +153,37 @@ def _execute_probe(command, env, timeout, limit=65536, *, pass_fds=()):
                          bufsize=0, pass_fds=tuple(pass_fds))
     deadline = time.monotonic() + timeout
     data = bytearray()
+    anchor = _probe_group_anchor(p.pid)
+
+    def remaining_time():
+        if _broker_stopping is not None and _broker_stopping.is_set():
+            raise InterruptedError('broker stopped during device probe')
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise TimeoutError('device probe timed out')
+        return remaining
+
     try:
         while True:
-            remaining = deadline - time.monotonic()
-            if remaining <= 0:
-                raise TimeoutError('device probe timed out')
-            ready, _, _ = select.select([p.stdout], [], [], remaining)
+            remaining = remaining_time()
+            interval = remaining if _broker_stopping is None else min(.1, remaining)
+            ready, _, _ = select.select([p.stdout], [], [], interval)
             if not ready:
-                raise TimeoutError('device probe timed out')
+                continue
             chunk = os.read(p.stdout.fileno(), min(65536, limit + 1 - len(data)))
             if not chunk:
                 break
             data.extend(chunk)
             if len(data) > limit:
                 raise ValueError('device probe output exceeds byte limit')
-        remaining = max(0, deadline - time.monotonic())
-        if p.wait(timeout=remaining) != 0:
+        while True:
+            remaining = remaining_time()
+            try:
+                result_code = p.wait(timeout=remaining if _broker_stopping is None else min(.1, remaining))
+                break
+            except subprocess.TimeoutExpired:
+                continue
+        if result_code != 0:
             raise RuntimeError('device probe failed')
         result = json.loads(data)
         if not isinstance(result, dict):
@@ -160,7 +191,10 @@ def _execute_probe(command, env, timeout, limit=65536, *, pass_fds=()):
         return result
     except BaseException:
         try:
-            os.killpg(p.pid, signal.SIGKILL)
+            # Never trust a numeric PGID after its observed anchor disappears.
+            # An unreaped zombie still has its original start time in /proc.
+            if anchor is not None and anchor[2] == p.pid and _probe_group_anchor(p.pid) == anchor:
+                os.killpg(p.pid, signal.SIGKILL)
         except ProcessLookupError:
             pass
         if p.poll() is None:
