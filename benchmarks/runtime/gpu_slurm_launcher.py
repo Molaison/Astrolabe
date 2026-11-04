@@ -98,7 +98,7 @@ def single_gpu_token(value):
             "missing/ambiguous scheduler GPU token")
     require(re.fullmatch(r"[0-9]+", value) is not None or re.fullmatch(GPU_UUID, value) is not None,
             "GPU token must be one explicit decimal global ID or complete GPU UUID; no ranges/lists/MIG guessing")
-    return str(int(value)) if value.isdigit() else value.lower()
+    return str(int(value)) if value.isdigit() else "GPU-" + value[4:].lower()
 
 
 def allocated_binding(environment):
@@ -175,7 +175,7 @@ def verify_job(job, step, binding, job_name, uid):
 
 
 def gpu_query_argv(global_id):
-    single_gpu_token(global_id)
+    global_id = single_gpu_token(global_id)
     return [NVIDIA_SMI, "-i", global_id, "--query-gpu=index,uuid,name,driver_version,pci.bus_id,memory.total,memory.used",
             "--format=csv,noheader,nounits"]
 
@@ -187,7 +187,7 @@ def parse_gpu_reply(text, binding):
     require(index.isdigit() and re.fullmatch(GPU_UUID, device_uuid) is not None,
             "invalid GPU index/UUID returned by the allocated-ID query")
     assigned = binding["global_gpu_id"]
-    require((str(int(index)) == assigned) if assigned.isdigit() else device_uuid.lower() == assigned,
+    require((str(int(index)) == assigned) if assigned.isdigit() else device_uuid.lower() == assigned.lower(),
             "GPU query identity differs from scheduler assignment")
     visible = binding["inherited_cuda_visible_devices"]
     if visible.lower().startswith("gpu-"):
@@ -205,7 +205,7 @@ def clean_host_environment(environment, private, container=True):
     result = {key: value for key, value in environment.items()
               if not key.startswith(("APPTAINER_", "APPTAINERENV_", "SINGULARITY_", "SINGULARITYENV_", "SRUN_", "SBATCH_"))}
     result.update(APPTAINER_TMPDIR=private["apptainer_tmp"], APPTAINER_CACHEDIR=private["apptainer_cache"],
-                  PYTHONDONTWRITEBYTECODE="1", TZ="UTC")
+                  PYTHONDONTWRITEBYTECODE="1", TZ="UTC", SLURM_TIME_FORMAT="standard")
     if container:
         result.update(PATH=str(APPTAINER_PREFIX / "bin") + os.pathsep + result.get("PATH", "/usr/bin:/bin"),
                       LD_LIBRARY_PATH=str(APPTAINER_PREFIX / "lib"))
@@ -389,6 +389,13 @@ def terminate_child(process):
             pass
 
 
+def standard_utc_epoch(value):
+    require(re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}", value) is not None,
+            "scheduler timestamp is not a complete standard UTC date")
+    return int(datetime.datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
+               .replace(tzinfo=datetime.timezone.utc).timestamp())
+
+
 def allocation_clock(environment, job):
     clocks = []
     if environment.get("SLURM_JOB_START_TIME") or environment.get("SLURM_JOB_END_TIME"):
@@ -397,8 +404,7 @@ def allocation_clock(environment, job):
         clocks.append((int(start), int(end)))
     if job.get("StartTime") not in (None, "Unknown") and job.get("EndTime") not in (None, "Unknown"):
         require(environment.get("TZ") == "UTC", "scontrol date fallback requires the launcher's explicit UTC environment")
-        clocks.append(tuple(int(datetime.datetime.strptime(job[key], "%Y-%m-%dT%H:%M:%S")
-                                .replace(tzinfo=datetime.timezone.utc).timestamp()) for key in ("StartTime", "EndTime")))
+        clocks.append(tuple(standard_utc_epoch(job[key]) for key in ("StartTime", "EndTime")))
     require(clocks and len(set(clocks)) == 1 and clocks[0][1] - clocks[0][0] == 900,
             "missing/contradictory exact 900-second scheduler allocation clock")
     return clocks[0]
@@ -412,7 +418,7 @@ def inside(args):
     require(not (directory / "allocation.json").exists(), "allocation already entered; replay prohibited")
     record = {"status": "STARTING", "entered_utc": utc_now(), "entered_unix": time.time(),
               "host": os.uname().nodename, "host_python": sys.version,
-              "environment": {key: os.environ.get(key) for key in SLURM_FIELDS + ("CUDA_VISIBLE_DEVICES", "NVIDIA_VISIBLE_DEVICES")},
+              "environment": {key: os.environ.get(key) for key in SLURM_FIELDS + ("CUDA_VISIBLE_DEVICES", "NVIDIA_VISIBLE_DEVICES", "TZ", "SLURM_TIME_FORMAT")},
               "launch_sha256": args.launch_sha256, "container_started": False}
     write_json(directory / "allocation.json", record)
     process = None
@@ -474,15 +480,23 @@ def accounting_summary(text, job_id):
     rows = [row for row in csv.reader(text.splitlines(), delimiter="|") if row and row[0] == job_id]
     require(len(rows) == 1 and len(rows[0]) == 7, "terminal own-job accounting row is absent/ambiguous")
     job, state, code, start, end, elapsed, alloc = rows[0]
-    require(state.split()[0] in {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL", "PREEMPTED", "BOOT_FAIL", "DEADLINE"},
+    require(state.split() and state.split()[0] in {"COMPLETED", "FAILED", "CANCELLED", "TIMEOUT", "OUT_OF_MEMORY", "NODE_FAIL", "PREEMPTED", "BOOT_FAIL", "DEADLINE"},
             "job accounting is not terminal")
     require(start not in ("", "Unknown", "None") and end not in ("", "Unknown", "None") and elapsed.isdigit(),
             "actual allocation start/end/elapsed is unknown")
+    start_epoch, end_epoch = standard_utc_epoch(start), standard_utc_epoch(end)
+    require(end_epoch >= start_epoch, "accounted allocation end precedes its start")
+    require(re.fullmatch(r"[0-9]+:[0-9]+", code) is not None, "accounted exit status is unknown")
     allocation = tres(alloc)
-    require(allocation.get("gres/gpu", allocation.get("gres/gpu:g4090")) == "1", "accounted GPU count is not one")
+    gpu = {key: value for key, value in allocation.items() if key == "gres/gpu" or key.startswith("gres/gpu:")}
+    require(gpu and all(value == "1" for value in gpu.values()) and set(gpu) <= {"gres/gpu", "gres/gpu:g4090"},
+            "accounted GPU count/type is absent, contradictory or not one g4090")
+    wall = end_epoch - start_epoch
     return {"job_id": job, "state": state, "exit_code": code, "actual_start": start, "actual_end": end,
+            "actual_start_unix": start_epoch, "actual_end_unix": end_epoch, "actual_wall_seconds": wall,
             "actual_elapsed_seconds": int(elapsed), "allocated_tres": allocation,
-            "actual_gpu_hours": int(elapsed) / 3600., "within_gpu_budget": int(elapsed) <= 900}
+            "actual_gpu_hours": int(elapsed) / 3600., "allocation_wall_gpu_hours": wall / 3600.,
+            "within_gpu_budget": int(elapsed) <= 900 and wall <= 900}
 
 
 def submit(args):
@@ -526,7 +540,8 @@ def submit(args):
                            "--format=JobIDRaw,State%30,ExitCode,Start,End,ElapsedRaw,AllocTRES%200"]
                 record["own_job_id"] = job_id
                 record["terminal_accounting_argv"] = command
-                accounting = command_record(command, directory, "sacct-own-job-final", environment={**os.environ, "TZ": "UTC"})
+                accounting = command_record(command, directory, "sacct-own-job-final",
+                                            environment={**os.environ, "TZ": "UTC", "SLURM_TIME_FORMAT": "standard"})
                 try:
                     require(accounting["returncode"] == 0, "sacct query failed")
                     record["terminal_accounting"] = accounting_summary(accounting["stdout"], job_id)

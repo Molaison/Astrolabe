@@ -60,6 +60,16 @@ def test_scheduler_assignment_cgroup_remap_and_scoped_query(environment, job):
     assert result["uuid"] == UUID
 
 
+def test_complete_scheduler_uuid_survives_allocation_query_reply_roundtrip(environment):
+    environment.update(SLURM_STEP_GPUS=UUID.upper(),
+                       SLURM_JOB_GPUS=UUID, CUDA_VISIBLE_DEVICES=UUID)
+    binding = launcher.allocated_binding(environment)
+    assert binding["global_gpu_id"] == UUID
+    assert launcher.gpu_query_argv(binding["global_gpu_id"])[2] == UUID
+    gpu = launcher.parse_gpu_reply("5, " + UUID + ", name, driver, bus, 24564, 0", binding)
+    assert gpu["uuid"] == UUID
+
+
 @pytest.mark.parametrize("changes", [
     {"SLURM_JOB_ID": ""}, {"SLURM_STEP_ID": "batch"}, {"SLURM_STEPID": "1"},
     {"SLURM_JOB_GPUS": "5"}, {"SLURM_STEP_GPUS": "4,5"},
@@ -160,12 +170,14 @@ def test_global_gpu_five_inherited_zero_binds_verified_uuid_before_cuda(environm
 
 def test_untrusted_container_overrides_removed_without_breaking_slurm_client_libraries():
     env = {"PATH": "/usr/bin", "LD_LIBRARY_PATH": "/site/slurm/lib", "SRUN_JOBID": "old",
+           "SLURM_TIME_FORMAT": "relative", "TZ": "Asia/Shanghai",
            "APPTAINER_BIND": "/old:/repo:rw", "APPTAINERENV_CUDA_VISIBLE_DEVICES": "all", "SINGULARITYENV_FOO": "bad"}
     private = plan_fixture()["private"]
     actual = launcher.clean_host_environment(env, private, container=False)
     assert actual["PATH"] == env["PATH"] and actual["LD_LIBRARY_PATH"] == env["LD_LIBRARY_PATH"]
     assert not any(key in actual for key in ("SRUN_JOBID", "APPTAINER_BIND", "APPTAINERENV_CUDA_VISIBLE_DEVICES", "SINGULARITYENV_FOO"))
     assert actual["APPTAINER_TMPDIR"].startswith(str(launcher.DELIVERY))
+    assert actual["TZ"] == "UTC" and actual["SLURM_TIME_FORMAT"] == "standard"
 
 
 def test_actual_allocation_clock_two_independent_representations():
@@ -188,6 +200,32 @@ def test_terminal_accounting_is_own_job_and_actual_cost_not_client_wall():
             launcher.accounting_summary(bad, "123456")
     overrun = launcher.accounting_summary(line.replace("|240|", "|901|"), "123456")
     assert not overrun["within_gpu_budget"]
+
+
+@pytest.mark.parametrize("change", [
+    {"start": "not-a-date"}, {"end": "2026-11-04T09:59:00"},
+    {"start": "2026-02-30T10:00:00"}, {"code": "unknown"},
+    {"allocation": "cpu=4,mem=32G,node=1,gres/gpu=1,gres/gpu:g4090=2"},
+    {"allocation": "cpu=4,mem=32G,node=1,gres/gpu=1,gres/gpu:g3090=1"},
+])
+def test_terminal_accounting_rejects_invalid_dates_exit_and_contradictory_gpu_counts(change):
+    fields = {"start": "2026-11-04T10:00:00", "end": "2026-11-04T10:04:00", "code": "0:0",
+              "allocation": "cpu=4,mem=32G,node=1,gres/gpu=1,gres/gpu:g4090=1"}
+    fields.update(change)
+    line = "123456|COMPLETED|{code}|{start}|{end}|240|{allocation}".format(**fields)
+    with pytest.raises(ValueError):
+        launcher.accounting_summary(line, "123456")
+
+
+def test_accounting_preserves_elapsed_wall_difference_and_gates_both_budgets():
+    line = "123456|COMPLETED|0:0|2026-11-04T10:00:00|2026-11-04T10:04:00|200|gres/gpu:g4090=1"
+    actual = launcher.accounting_summary(line, "123456")
+    assert actual["actual_wall_seconds"] == 240 and actual["actual_elapsed_seconds"] == 200
+    assert actual["actual_gpu_hours"] == 200 / 3600
+    assert actual["allocation_wall_gpu_hours"] == 240 / 3600
+    assert actual["within_gpu_budget"]
+    wall_overrun = launcher.accounting_summary(line.replace("10:04:00", "10:16:00"), "123456")
+    assert not wall_overrun["within_gpu_budget"]
 
 
 def test_bind_path_delimiters_are_not_interpreted():

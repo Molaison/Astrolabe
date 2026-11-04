@@ -67,7 +67,8 @@ Inside the newly named job, the launcher queries only `scontrol show job JOBID`
 and `scontrol show step JOBID.STEPID`. It verifies the current UID, unique name,
 account, QOS, partition, running state, one node/task, four CPUs, 32 GiB, one
 g4090 and the exact 900-second time limit. Its actual allocation clock comes
-from Slurm epoch fields and/or its own UTC `scontrol` timestamps; conflicting or
+from Slurm epoch fields and/or its own UTC `scontrol` timestamps, with
+`SLURM_TIME_FORMAT=standard` fixed for scheduler queries; conflicting or
 unknown clocks fail. Container startup, all failures and cleanup count against
 this allocation. Thirty seconds are reserved for outer cleanup; insufficient
 time for the unchanged experiment plus startup causes a recorded failure.
@@ -114,8 +115,11 @@ exits, the outer launcher queries `sacct` **only for the recorded new job ID** a
 retains the complete raw reply. The top-level job row supplies actual start,
 end, exit/state, allocated TRES and elapsed seconds. Actual one-GPU cost is that
 allocation elapsed time divided by 3600; client queue time and the harness's
-inner timer are reported separately. Elapsed allocation time over 900 seconds
-is a budget failure even if the scheduler allowed shutdown grace/overrun.
+inner timer are reported separately. Parsed UTC start/end must be ordered, and
+all reported generic/typed GPU counts must consistently equal one. The report
+retains both allocation wall duration and `ElapsedRaw`; suspension can make
+them differ, so equality is not assumed. Either duration over 900 seconds is a
+budget failure even if the scheduler allowed shutdown grace/overrun.
 
 Delayed or unavailable accounting yields `PARTIAL_ACCOUNTING_OR_BUDGET`, never
 an invented release. The exact own-job `sacct` argv remains in `submission.json`
