@@ -1,0 +1,50 @@
+{
+  "RAW_MANIFEST.json": {
+    "bytes": 114158,
+    "sha256": "a1b3db521fa2abd5a634a46fce4306f74f4da407039b01f826bf345c073ecf2e"
+  },
+  "README.md": {
+    "bytes": 8759,
+    "sha256": "d529935704f0d0d9c07284517d33bd1e474cf422aa9b98cd79d57075acb51ab5"
+  },
+  "archive-observations.json": {
+    "bytes": 4296,
+    "sha256": "ecb1fc52d3eac95817599010bc21b72dd28f4506d7a997b77f13b1b4d536563b"
+  },
+  "audit/input-manifest.json": {
+    "bytes": 114158,
+    "sha256": "a1b3db521fa2abd5a634a46fce4306f74f4da407039b01f826bf345c073ecf2e"
+  },
+  "audit/invocation.json": {
+    "bytes": 2066,
+    "sha256": "b6ce6d501caf9c023be8e76a6b4d31c51cce82bb7b2e25fb6eb521133c7117fc"
+  },
+  "audit/local-reader-execution.json": {
+    "bytes": 4343,
+    "sha256": "31094441d28606f888cf33a3ad19bf57bf6fdbe7ee142d999a17731c239f4152"
+  },
+  "audit/prior-c90-comparison.json": {
+    "bytes": 679,
+    "sha256": "823b3a2d0e321c73c4e041ac03bc6da2ed8ac2f722a4e3bb645e3609033fce1f"
+  },
+  "audit/report.json": {
+    "bytes": 29460,
+    "sha256": "9fcbe91ca1cab6486dc5e4c477b99f572f4e52f6962bf535d32851206a91d9a5"
+  },
+  "download-verification.json": {
+    "bytes": 465,
+    "sha256": "08245ec59a3e6466b5b86ba7961fc2fdad03c7af7193a67c38e156c0b8982482"
+  },
+  "prior-c90-plan.json": {
+    "bytes": 178628,
+    "sha256": "06a6cd7e205518899bfa2e4c5f58412a36d003a42a639dd0e542d13b670d6dae"
+  },
+  "review_startup_w0.py": {
+    "bytes": 3544,
+    "sha256": "c3c271052d12c29dc99251e6ba3e48fc99cfe6a3a347aefd27d40fb4529171fb"
+  },
+  "w0-f9-raw.tar.xz": {
+    "bytes": 242004,
+    "sha256": "f030e4888f5af99ba46ca43391258a2e92cc67f28d51089ef0d2f600cd5e09b6"
+  }
+}

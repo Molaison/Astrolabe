@@ -1,0 +1,53 @@
+{
+  "initial": {
+    "params": {
+      "command": [
+        "python3",
+        "-c",
+        "from pathlib import Path\nimport io,json,hashlib,tarfile\nroot=Path('/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104')\nraw=root/'control/w0-startup-f9-vs9d-01';transfer=root/'transfer';assert transfer.is_dir()\nreport=json.loads((raw/'report.json').read_text());plan=json.loads((raw/'plan.json').read_text())\nassert report['status']=='DONE' and report['attempted_trials']==30\nheads={k:v['git_commit']for k,v in plan['sources'].items()};assert heads=={'baseline':'9d62b3eb86cb75a2266af49dc48cb851e69e0341','candidate':'f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f'}\na=transfer/'w0-startup-f9-vs9d-01-c-raw.tar.xz';mp=transfer/'w0-startup-f9-vs9d-01-c-manifest.json';assert not a.exists()and not mp.exists()\nfiles=sorted(p for p in raw.rglob('*')if p.is_file());manifest={str(p.relative_to(raw)):{'bytes':p.stat().st_size,'sha256':hashlib.sha256(p.read_bytes()).hexdigest()}for p in files}\nmb=(json.dumps(manifest,indent=2,sort_keys=True)+'\\n').encode()\nwith mp.open('xb')as f:f.write(mb)\nwith a.open('xb')as f:\n with tarfile.open(fileobj=f,mode='w:xz')as tar:\n  info=tarfile.TarInfo('MANIFEST.json');info.size=len(mb);info.mtime=0;tar.addfile(info,io.BytesIO(mb))\n  for p in files:tar.add(str(p),arcname=raw.name+'/'+str(p.relative_to(raw)),recursive=False)\nassert all(hashlib.sha256((raw/n).read_bytes()).hexdigest()==v['sha256']for n,v in manifest.items())\nprint(json.dumps({'archive':str(a),'archive_bytes':a.stat().st_size,'archive_sha256':hashlib.sha256(a.read_bytes()).hexdigest(),'manifest_sha256':hashlib.sha256(mb).hexdigest(),'raw_files':len(files),'raw_bytes':sum(v['bytes']for v in manifest.values()),'heads':heads,'status':report['status'],'attempted_trials':report['attempted_trials']},sort_keys=True))"
+      ],
+      "cwd": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104",
+      "env": {
+        "GIT_OPTIONAL_LOCKS": "0",
+        "PYTHONDONTWRITEBYTECODE": "1"
+      },
+      "timeoutMs": 10000,
+      "yieldTimeMs": 1000,
+      "outputBytesCap": 4096
+    },
+    "response": {
+      "content": [
+        {
+          "type": "text",
+          "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"38503041-81fc-4b23-ae29-937722e05fd5\",\"status\":\"running\",\"stdout\":\"\",\"stderr\":\"\",\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"21db1c44-8bd7-46af-abfd-c6100b3bfb93\"}"
+        }
+      ],
+      "structuredContent": null,
+      "isError": false
+    }
+  },
+  "completed": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"38503041-81fc-4b23-ae29-937722e05fd5\",\"status\":\"exited\",\"stdout\":\"{\\\"archive\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/transfer/w0-startup-f9-vs9d-01-c-raw.tar.xz\\\", \\\"archive_bytes\\\": 242004, \\\"archive_sha256\\\": \\\"f030e4888f5af99ba46ca43391258a2e92cc67f28d51089ef0d2f600cd5e09b6\\\", \\\"attempted_trials\\\": 30, \\\"heads\\\": {\\\"baseline\\\": \\\"9d62b3eb86cb75a2266af49dc48cb851e69e0341\\\", \\\"candidate\\\": \\\"f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f\\\"}, \\\"manifest_sha256\\\": \\\"a1b3db521fa2abd5a634a46fce4306f74f4da407039b01f826bf345c073ecf2e\\\", \\\"raw_bytes\\\": 7520683, \\\"raw_files\\\": 634, \\\"status\\\": \\\"DONE\\\"}\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"69f5fa74-2eba-446d-b90b-fec225af4269\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "metadata": {
+    "archive": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/transfer/w0-startup-f9-vs9d-01-c-raw.tar.xz",
+    "archive_bytes": 242004,
+    "archive_sha256": "f030e4888f5af99ba46ca43391258a2e92cc67f28d51089ef0d2f600cd5e09b6",
+    "attempted_trials": 30,
+    "heads": {
+      "baseline": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+      "candidate": "f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f"
+    },
+    "manifest_sha256": "a1b3db521fa2abd5a634a46fce4306f74f4da407039b01f826bf345c073ecf2e",
+    "raw_bytes": 7520683,
+    "raw_files": 634,
+    "status": "DONE"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "aggregate_same_mode": {
+    "direct": {
+      "aggregate_effective_throughput_change_percent": 69.07665127220157,
+      "baseline_completed_trajectories_per_second": 0.26232054156162804,
+      "candidate_completed_trajectories_per_second": 0.4435227872715044,
+      "five_pair_faster_count": 5,
+      "strict_range_separation": true
+    },
+    "resident_adaptive": {
+      "aggregate_effective_throughput_change_percent": 54.92063640195348,
+      "baseline_completed_trajectories_per_second": 0.08775940029772368,
+      "candidate_completed_trajectories_per_second": 0.13595742144377138,
+      "five_pair_faster_count": 5,
+      "strict_range_separation": true
+    },
+    "resident_serial": {
+      "aggregate_effective_throughput_change_percent": 69.99152247926585,
+      "baseline_completed_trajectories_per_second": 0.08436755840966072,
+      "candidate_completed_trajectories_per_second": 0.14341769701916615,
+      "five_pair_faster_count": 5,
+      "strict_range_separation": true
+    }
+  },
+  "all_same_mode_aggregate_gains_at_least_twenty_percent": true,
+  "arguments": {
+    "artifacts": "control/f102-startup-w0/c-download/extracted/w0-startup-f9-vs9d-01",
+    "out": "control/f102-startup-w0/c-audit",
+    "prior": [
+      "control/cpu-ci-04"
+    ],
+    "reader": "agent-c/evidence/runtime-next/agent-c/review_r1_ci.py",
+    "repo": "integration-f102"
+  },
+  "expected_heads_override": {
+    "baseline": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+    "candidate": "f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f"
+  },
+  "in_memory_layout_substitution": {
+    "new": "comparison = root",
+    "old": "comparison = root / \"comparison\""
+  },
+  "new_benchmark_run": false,
+  "reader_logic_otherwise_unchanged": true,
+  "reader_sha256": "eda968172261e7b266278a4616c65d17b8b70582f3e670b41b7249dff45f5a3a",
+  "scope": "all original CSV/provenance/config/runtime/telemetry rows, independent aggregate calculation",
+  "scope_limit": "CPU W0 only; no pretrained GPU throughput or accepted-mutation progress is certified.",
+  "stable_same_mode_improvement": true
+}

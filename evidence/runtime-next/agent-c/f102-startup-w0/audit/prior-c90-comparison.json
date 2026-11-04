@@ -1,0 +1,18 @@
+{
+  "all_frozen_fields_equal": {
+    "configuration": true,
+    "evaluations_per_trial": true,
+    "expected_trajectories": true,
+    "groups": true,
+    "max_output_bytes": true,
+    "measurement_source_sha256": true,
+    "protocol_sha256": true,
+    "requested_trials": true,
+    "trajectories_per_trial": true,
+    "walltime_budget_seconds": true
+  },
+  "current_plan_sha256": "8ca53c1a62f46f1323e165c49749221310f07a9ca1a58ea93370f8b9e877ad84",
+  "prior_plan": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/f102-w0-reuse/w0-reuse-c90-vs9d-01/plan.json",
+  "prior_plan_sha256": "06a6cd7e205518899bfa2e4c5f58412a36d003a42a639dd0e542d13b670d6dae",
+  "status": "PASS"
+}
