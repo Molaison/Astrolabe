@@ -58,6 +58,10 @@ REQUIRED_TESTS = (
     "tests/test_run_stage_transition.py", "tests/test_graceful_shutdown_repeat_boundary.py",
     "tests/test_runtime_validation_harness.py",
 )
+TORCH_CONTRACT_TESTS = (
+    "tests/test_esmfold_output_boundary.py", "tests/test_tree_codec_torch.py",
+    "tests/test_evaluator_rng_lifecycle.py", "tests/test_esmfold1_resident.py",
+)
 
 
 def fresh_directory(path):
@@ -361,7 +365,8 @@ def junit_result(path, returncode):
 
 def regressions(args):
     out = fresh_directory(args.out)
-    missing = [name for name in REQUIRED_TESTS if not (ROOT / name).is_file()]
+    required = TORCH_CONTRACT_TESTS if args.torch_contracts else REQUIRED_TESTS
+    missing = [name for name in required if not (ROOT / name).is_file()]
     environment = preflight()
     benchmark.json_write(out / "preflight.json", environment)
     if missing or environment["status"] != "DONE":
@@ -369,7 +374,7 @@ def regressions(args):
         benchmark.json_write(out / "report.json", result)
         print(json.dumps(result, indent=2))
         return 3
-    command = [sys.executable, "-m", "pytest", "-q", "-ra", *REQUIRED_TESTS, f"--junitxml={out / 'junit.xml'}"]
+    command = [sys.executable, "-m", "pytest", "-q", "-ra", *required, f"--junitxml={out / 'junit.xml'}"]
     benchmark.json_write(out / "command.json", command)
     test_env = dict(os.environ)
     test_env["PYTHONPATH"] = str(ROOT) + (os.pathsep + test_env["PYTHONPATH"] if test_env.get("PYTHONPATH") else "")
@@ -378,7 +383,7 @@ def regressions(args):
         process = subprocess.run(command, cwd=ROOT, env=test_env, stdout=log, stderr=subprocess.STDOUT)
     print((out / "stdout.log").read_text())
     result = junit_result(out / "junit.xml", process.returncode)
-    result["required_suites"] = list(REQUIRED_TESTS)
+    result["required_suites"] = list(required)
     benchmark.json_write(out / "report.json", result)
     return 0 if result["status"] == "DONE" else 2
 
@@ -386,15 +391,20 @@ def regressions(args):
 def summary(args):
     args.out.mkdir(parents=True, exist_ok=True)
     reports = {}
-    for phase in ("preflight", "regressions", "comparison"):
+    phases = ("preflight", "regressions") if args.torch_contracts else ("preflight", "regressions", "comparison")
+    for phase in phases:
         path = args.out / phase / "report.json"
         try:
             reports[phase] = json.loads(path.read_text())
         except (OSError, ValueError) as exc:
             reports[phase] = {"status": "BLOCKED", "reason": "no readable completed report", "error": str(exc)}
     overall = "DONE" if all(report.get("status") == "DONE" for report in reports.values()) else "PARTIAL"
-    lines = ["# Astrolabe runtime validation", "", f"Overall CPU validation: **{overall}**.",
-             f"Candidate: `{os.environ.get('GITHUB_SHA', 'local/unpublished')}`; frozen baseline: `{BASELINE}`.", "",
+    title = "CPU Torch contract validation" if args.torch_contracts else "runtime validation"
+    revision = f"Candidate: `{os.environ.get('GITHUB_SHA', 'local/unpublished')}`."
+    if not args.torch_contracts:
+        revision += f" Frozen baseline: `{BASELINE}`."
+    lines = [f"# Astrolabe {title}", "", f"Overall CPU validation: **{overall}**.",
+             revision, "",
              "| Gate | Status |", "| --- | --- |"]
     lines.extend(f"| {phase} | {report.get('status', 'BLOCKED')} |" for phase, report in reports.items())
     for phase, report in reports.items():
@@ -403,6 +413,8 @@ def summary(args):
     comparison = args.out / "comparison/report.md"
     if comparison.is_file():
         lines += ["", comparison.read_text()]
+    if args.torch_contracts:
+        lines += ["", "Scope: CPU Torch worker, output-boundary and lifecycle tests, including local fake-weight fixtures. No pretrained inference or performance benchmark is certified by this job."]
     lines += ["", "Real pretrained GPU backend certification: **BLOCKED** in this CPU-only job.",
               "The uploaded artifact preserves raw logs, configuration, traces, telemetry, test cases and skip reasons. Missing runs and failed work are retained and cannot count as acceleration.", ""]
     markdown = "\n".join(lines)
@@ -426,6 +438,9 @@ def main(argv=None):
             subparser.add_argument("--plan-only", action="store_true")
         if command == "summary":
             subparser.add_argument("--step-summary", type=Path)
+        if command in ("regressions", "summary"):
+            subparser.add_argument("--torch-contracts", action="store_true",
+                                   help="validate the four CPU Torch worker/lifecycle suites; no benchmark")
     args = parser.parse_args(argv)
     try:
         if args.command == "preflight":

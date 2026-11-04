@@ -40,6 +40,14 @@ required CPU suite without accepting skips. Missing pilot tests are blocking.
 JUnit includes any skip reasons. Framework/GPU-dependent suites not listed in
 the gate are outside its certification scope, not implicitly passing tests.
 
+A separate `runtime-torch-cpu` job installs the same base dependencies and
+`torch==2.7.1+cpu` from the official CPU wheel index. It runs the four fixed
+output-boundary, tree-codec, RNG-lifecycle and ESMFold1-resident suites with the
+same process/IPC preflight and zero-skip JUnit gate (`--torch-contracts`). Its
+runner, logs and artifact are separate from W0; Torch is never added to the W0
+environment. These are CPU contract tests, including local fake-weight model
+fixtures, and do not certify pretrained inference or GPU acceleration.
+
 For local planning only (safe on an executor without process ownership):
 
 ```bash

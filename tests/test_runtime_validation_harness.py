@@ -121,6 +121,20 @@ def test_required_suite_skip_reason_is_preserved_and_fails_gate(tmp_path):
     assert "tests/test_candidate_batch_policy.py" in validation.REQUIRED_TESTS
 
 
+def test_torch_contract_summary_does_not_require_or_claim_a_benchmark(tmp_path):
+    for phase in ("preflight", "regressions"):
+        directory = tmp_path / phase
+        directory.mkdir()
+        (directory / "report.json").write_text('{"status":"DONE"}')
+    assert validation.main(["summary", "--torch-contracts", "--out", str(tmp_path)]) == 0
+    report = json.loads((tmp_path / "summary.json").read_text())
+    assert report == {"status": "DONE", "gates": {"preflight": "DONE", "regressions": "DONE"}}
+    text = (tmp_path / "summary.md").read_text()
+    assert "CPU Torch contract validation" in text
+    assert "No pretrained inference or performance benchmark is certified" in text
+    assert "frozen baseline" not in text.lower()
+
+
 def test_existing_evidence_is_never_overwritten(tmp_path):
     marker = tmp_path / "already-measured.json"
     marker.write_text("original")
