@@ -1,0 +1,38 @@
+{
+  "RAW_MANIFEST.json": {
+    "bytes": 141257,
+    "sha256": "39878bd341a1424c8f24751d4b7448873a3950e5398c8086f87304e86f8fc1e5"
+  },
+  "README.md": {
+    "bytes": 9196,
+    "sha256": "a3f2ce28932928af7d3d8de86acd77d04e1bc63fa17d56990c4d80d3654a3756"
+  },
+  "archive-verification.json": {
+    "bytes": 648,
+    "sha256": "5e4ea717384177001c719faa2974e0fddb7012e7f0cbd8f0d7da120bbeb85553"
+  },
+  "final-head-c-raw-and-review.tar.xz": {
+    "bytes": 978288,
+    "sha256": "38adc3042896c0721787476fec737141dbe851ddf6ee1ffbc90f9f596de6b18a"
+  },
+  "final-source-identity.json": {
+    "bytes": 453,
+    "sha256": "c6cec5d21bbb9167e6097c4213902df60fdaa4a6a4af2d6db3bae0748e89b83a"
+  },
+  "independent-gates-review.json": {
+    "bytes": 4163,
+    "sha256": "01bad57bfeb31cc5fe6816fe759575d9d6250db98934515b54340855c882e9e3"
+  },
+  "review_final_ci.py": {
+    "bytes": 2637,
+    "sha256": "6a689e114407c1420d18e5267cdf1146f99918db993435ea2b504b05a910b7f5"
+  },
+  "review_final_gates.py": {
+    "bytes": 8464,
+    "sha256": "606d3aaccb6cc0182159f6bde0034c1a5a749fc8f21cfbddf61511c264485e78"
+  },
+  "summary.json": {
+    "bytes": 4894,
+    "sha256": "28b745ee6844c44fca373cd8c9953b3979193019ad2d0ee9b9317caab640cffc"
+  }
+}

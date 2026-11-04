@@ -1,0 +1,151 @@
+{
+  "artifact_verification": [
+    {
+      "artifact": 13299246383,
+      "bytes": 1451269,
+      "digest": "d7d70c6557c66a336bdc4dd63ed3d55b03a063ea87ca2df4146266adf9a1b002",
+      "extraction": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/final-head-c/cpu-artifact",
+      "files": 645,
+      "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+      "job": 126410101922,
+      "kind": "cpu",
+      "run_id": 41780311942,
+      "status": "PASS",
+      "uncompressed_bytes": 7005896,
+      "zip_path": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/final-head-c/cpu-artifact.zip"
+    },
+    {
+      "artifact": 13298249397,
+      "bytes": 10953,
+      "digest": "cd87c4af4c2e3c1ed931b4fa3c8f888329081a727e6889101bfa7c0a3ae5e1ee",
+      "extraction": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/final-head-c/torch-artifact",
+      "files": 15,
+      "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+      "job": 126410102337,
+      "kind": "torch",
+      "run_id": 41780311942,
+      "status": "PASS",
+      "uncompressed_bytes": 44448,
+      "zip_path": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/final-head-c/torch-artifact.zip"
+    }
+  ],
+  "candidate_resident_vs_direct": {
+    "resident_adaptive": {
+      "best_direct_variant": "candidate",
+      "median_resident_time_multiplier": 2.2464375571959954,
+      "median_speed_ratio": 0.4451492527787866,
+      "resident_faster_pairs": 0,
+      "speed_ratios_by_group": [
+        0.4451492527787866,
+        0.4627344574916514,
+        0.42973092389819645,
+        0.4319362558932524,
+        0.44920927989985987
+      ],
+      "twenty_percent_throughput_goal_met": false
+    },
+    "resident_serial": {
+      "best_direct_variant": "candidate",
+      "median_resident_time_multiplier": 2.298071445916255,
+      "median_speed_ratio": 0.43514748063078346,
+      "resident_faster_pairs": 0,
+      "speed_ratios_by_group": [
+        0.4505978983937258,
+        0.4541435659992019,
+        0.4297513936191546,
+        0.4268923129199308,
+        0.43514748063078346
+      ],
+      "twenty_percent_throughput_goal_met": false
+    }
+  },
+  "gpu_or_pretrained_certification": false,
+  "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "no_production_changes": true,
+  "regressions": {
+    "cpu": {
+      "failed": 0,
+      "passed": 378,
+      "required_source_suites_exact": true,
+      "skipped": 0
+    },
+    "torch": {
+      "failed": 0,
+      "passed": 181,
+      "required_source_suites_exact": true,
+      "skipped": 0
+    }
+  },
+  "run_attempt": 1,
+  "run_id": 41780311942,
+  "same_mode_aggregate": {
+    "direct": {
+      "aggregate_effective_throughput_change_percent": 63.81041540360519,
+      "faster_pairs": 5,
+      "strict_range_separation": true
+    },
+    "resident_adaptive": {
+      "aggregate_effective_throughput_change_percent": 86.69392587310708,
+      "faster_pairs": 5,
+      "strict_range_separation": true
+    },
+    "resident_serial": {
+      "aggregate_effective_throughput_change_percent": 84.33497275457795,
+      "faster_pairs": 5,
+      "strict_range_separation": true
+    }
+  },
+  "scientific_positive": {
+    "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+    "candidate": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+    "counts_per_source": {
+      "accepted_mutations": 1,
+      "actual_evaluator_calls": 4,
+      "mutation_attempts": 3,
+      "score_rows": 5,
+      "stage_entries": 1
+    },
+    "cpu_rng_streams": [
+      "Python",
+      "NumPy",
+      "Torch CPU"
+    ],
+    "harness_sha256": "6f52867a3d45e83985fc84b844cfdf7227e61761e615355a63b913d83eb4ed26",
+    "rows_owner_cpu_rng_outputs_exact": true,
+    "scope": "Actual direct CLI Dummy/MCMC positive control; no structures, pretrained/GPU or crash-resume certification",
+    "status": "PASS",
+    "unchanged_budget": {
+      "expected_evaluations_per_run": 4,
+      "expected_score_rows_per_run": 5,
+      "expected_stage_score_recomputations_per_run": 1,
+      "gpu_allocation": "",
+      "max_output_bytes_per_run": 16777216,
+      "mode": "direct",
+      "mutation_attempts_per_run": 3,
+      "repeats_per_run": 1,
+      "runs": 2,
+      "seed": 17,
+      "steps_per_run": 4,
+      "walltime_per_run_seconds": 45,
+      "warmups": 0
+    },
+    "workload_sha256": "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9"
+  },
+  "scope": "Exact final HEAD CPU CI and actual direct scientific positive control only",
+  "status": "DONE",
+  "tree": "6f763bfb04778ef4f32386ddb8aeb38ce4240bf1",
+  "w0_audit_errors": [],
+  "w0_counts": {
+    "accepted_improving_mutations": 0,
+    "accepted_initial_rows": 90,
+    "accepted_mutations": 0,
+    "completed_trajectories": 90,
+    "completed_trials": 30,
+    "empty_terminal_broker_ledgers": 20,
+    "evaluation_calls": 270,
+    "initial_rows": 90,
+    "mutation_attempts": 180,
+    "scientific_rows": 270,
+    "stage_entry_rows": 0
+  }
+}

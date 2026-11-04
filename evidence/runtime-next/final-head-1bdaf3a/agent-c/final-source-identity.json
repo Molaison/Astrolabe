@@ -1,0 +1,10 @@
+{
+  "cpu_scientific_harness_sha256": "6f52867a3d45e83985fc84b844cfdf7227e61761e615355a63b913d83eb4ed26",
+  "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "local_python": "Python 3.12.14",
+  "production_diff_vs_f9": "",
+  "scientific_workload_sha256": "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9",
+  "status": "PASS",
+  "tree": "6f763bfb04778ef4f32386ddb8aeb38ce4240bf1",
+  "working_tree_status_after_positive_control": ""
+}

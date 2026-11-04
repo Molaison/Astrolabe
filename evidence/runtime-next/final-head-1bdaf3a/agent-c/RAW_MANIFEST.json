@@ -1,0 +1,2842 @@
+{
+  "README.md": {
+    "bytes": 8126,
+    "sha256": "76749ca529b9d0049b00798aa417a5068b2ab7ebe202dc85b263541efdc8bb9b"
+  },
+  "api/runs-by-exact-head.json": {
+    "bytes": 45864,
+    "sha256": "c2fa0482668ab8ef4058ae108b656446f3be946cb878fdbcf6b808cef867be8d"
+  },
+  "api/runtime-artifacts.json": {
+    "bytes": 1886,
+    "sha256": "9269c7048b55db25595cb28256a0b9797e9e9922d65ebfcf68cef6ed676f53da"
+  },
+  "api/runtime-jobs.json": {
+    "bytes": 9448,
+    "sha256": "a9344950a5e87c803b448643cec1e907d5430ed59acbed1b9376af2d55f23b6d"
+  },
+  "artifact-download-verification.json": {
+    "bytes": 1102,
+    "sha256": "628a0bc3a057f4f5bb9bcd2d87aa12641f32ef30891999e15ef5eeec5e7cf8ef"
+  },
+  "cpu-artifact-manifest.json": {
+    "bytes": 122582,
+    "sha256": "db03ce0d2cf5bf3053076f7614cafd8630965ed50ece432e296eadc404293f40"
+  },
+  "cpu-artifact.zip": {
+    "bytes": 1451269,
+    "sha256": "d7d70c6557c66a336bdc4dd63ed3d55b03a063ea87ca2df4146266adf9a1b002"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/config.yaml": {
+    "bytes": 29043,
+    "sha256": "e94c95a6cc731906c6253dba7e21516142d23226cfe41ba79c70ebc434ec2ad3"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "46b8cc719d93e492b7edbd6514ff86ec47b7cbd8d9dd451aac59ad23c39d9cf9"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15387,
+    "sha256": "d1239f245de02839036808e6330c6d58ca428533e0b9a3aada7311bbd6fac6f0"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11679,
+    "sha256": "ef7bdc01c6c6308819bbb5fe39ad42f73d4ea54eb79f24ff445073322f17d46d"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "fa6b7a244289361e7cd39f7d28b42a9bbfdc0b5bed15cedb2fd13fb4ff110158"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "08dc1c73efbfea739e1b12d81b9f130624dbba6dd66bd921f3e4ef1c1754c004"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "ac3bd142a3b0464f11093f5bf1512d8044729fb4d89891b781457daccb90eb40"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "d4fc17febec70fd524349d0145b3c7b93fc5608683fcc5f39a44802c254e47db"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "82a6c7ce1e05b5f82d06ab36c3fcab74e61fe44e0778007015c3ff76bba5da66"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "f5df3a4abcae8c6109b8f20692ed6b756dcceda6e2a7cebc7fcffe15753b38a3"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "ab56020cf67101336bb1c3a6e9ada08e0e614916edc27c4edac2e48cb80a6360"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "67d9d1201590773ecf249d85325f84ef4f52e5a74b7ceaa14181b58f48434b14"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "59d3f20cdd5f29f9d9bf0643b5d5599f3aed603d4a6569ced185103e46eaff52"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/runtime.jsonl": {
+    "bytes": 6344,
+    "sha256": "06c837c1cd33f020471054dcdf3f8325326378707ab53c011e4c8d502e4999e4"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/stderr.log": {
+    "bytes": 26586,
+    "sha256": "b50a8fbaa811917df1bd7049fa77842f7e0c023f88af6e031729c6c2338d8b89"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/001_baseline_direct/telemetry.jsonl": {
+    "bytes": 1283,
+    "sha256": "93ffab14463b1eaa24de4b851fee566b94d5e5731acec88ce57522d3b87347db"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/config.yaml": {
+    "bytes": 29045,
+    "sha256": "abd393fedc9a6630432b3c9a1546d31f65fc9edab3276d9b0e0bc9a1b14af09f"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "a078a89118283fa187215fa2d369cad4fc598424952ed288cf486d04a28b5002"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "93922466973ab3994a51396c9df4eff5564500af22221a6752b377f0299df5aa"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "4f328e3cba183d533d6b7e34267548ac52d5555d3d3485ee84885c390fb9db7b"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "386bb7bc82a9146d45df9d3bee800b8cf297095f6c706a8026e532fede0ab50b"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "6af8e0400b40de513efee094eac78caf512221305e0455af5c227b1365c68c9b"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "a212d6f644c6a1758bbe3d34ba56cd3395a924eb0c02bb769d6bb78df5fffab9"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "dfa5d763e863038686c6e0fbc7b7203ff10b71dfe388a7fb023c67d7aefeb278"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "2b5dc83d67891f96ecd51a89b1307cdcd8977355f43a33f07887a50b230101f0"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "89eb05046816fb83779ed505618f00b14444d4a747c4208248aeaa52619874e0"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "74ae885078a3d2a4482121060d98a918b892434306be4e40d83901190de4967b"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "7f92d9a09a8557700ac43d448c4bb17a2235b8fe31839c2be5c8ad45bedb33b7"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "81fcb193729811ebfd07209b6c5243778b38c684cc9ee5a212bf90432457698c"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/runtime.jsonl": {
+    "bytes": 6353,
+    "sha256": "cb07b4985d7135251fbfbed3ab2213289a822f0232c7369d2661f4079943a8e6"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "409a3d726450ff905cb10787764675a3b95db1105bf8557b8081fb49c9addd7a"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/002_candidate_direct/telemetry.jsonl": {
+    "bytes": 846,
+    "sha256": "8a60d5cd647b85a091be749b91eba5f0b73e77cf5b1afff765391df06cf0afd3"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/config.yaml": {
+    "bytes": 29063,
+    "sha256": "306fabc92932aa158f3cf7e70c4034442d6f99a30782d0c033558a3a85182886"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "6fc475d5e72873b0830ebc421668322e2ceafbb61b34d01afe8523f7b9752a8b"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "05852f5dc16ef4692379f934dbfec51bbfa9cc4267b697c56f9139ba94a67740"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "c399534b727f25d309ef338531f8149bca8ab71d0dbb2899be650750c88fa149"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "7e1820b7b03b9986573626509a82fb06b08020b6423775e8d3e518ed462b2d20"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "10a86d74f4967b48ad100a1e6a8cc25e55c27524411d1341bbb46f5bc69672e9"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "d59d2cc690deb61e3fc88d34e25a8ce789e4c73bc192cf30aa695ee5a91b12c2"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "6fe8599ea08ff7b1f927ad1688a13121b4a1c7dd3db95286db4979d2212b92de"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "8a9b032f56e4585cd982152f4050fd19472b4e08b24e240b54788f67b3eb1b7b"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "8aef05ea5e337c238ecdbf8ae048f8b4d81f20eecc17890fdc2398be548ebbe4"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "02ec6b82d5ada24f8b0e4309d7090c14d1b03138a2ce99a7363e0dffbd03a4f2"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "b1dc52a7820e4f39ad76d7327196743efec9d6ae3dc2bc2209177ca554118f87"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "6ed45a73b6ab8518a8e5ab82fd0d2ddf59951656d67a22ea579c814c97af1485"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/runtime.jsonl": {
+    "bytes": 12697,
+    "sha256": "f32785f58fb7d836d3b3e0a43ad1143f436fa20b55e902eb7cf01baefb748a08"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "5dfc1a6e23b5dec2f9185be8917f5d9d32e40d782ab0e77e4507fa2b708b4f4d"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/003_baseline_resident_serial/telemetry.jsonl": {
+    "bytes": 3002,
+    "sha256": "018531af769f26978988cc88b0af4fef11b21cabb78de1d409326a8944365819"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/config.yaml": {
+    "bytes": 29065,
+    "sha256": "983a998c6cda721ac6ce635f0628fe22d6929442e77762aaa3c07ae53ebfaaf9"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "f3aa22f81e1412dabc0188fe3e63727bbbd87b95991133452cba71838f4669a3"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "6230fb292be36eede75d8c6c89ed8ab5b3d74426051d75fb64261f234a1071b9"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "44d177831f35bb33c28c8879dfdda7bcdbc8b2d4a199cd60080f3c5681679747"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "e60df06dca3d22d0c734f5ce4a251bc2dd3c196c20b0a0abcd10a9b5ab15a05e"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "450940732573fb27bac7d99df948bcb2cc3244f30c709b6ddb9aad5a6c6e2333"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "aa15c606c23050c7c8be706e3698d97a0f768e30d524193ae414536f3564f35c"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "1fd0a105662e12116833026cbcbe8a9dd0e43b55243ab7e727258f682cd6e94d"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "5ed881c8a74ea0eb7f69bee07329b4269671f68cf67f2d2e70c5c72f819cd944"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "bbf705e9efc775e126bb7f01037896cd41d3ea2331841ca7b2f69de2c4f88657"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "c16649548b9413bf7e510eb2cefeb6881df9311e57f605d600821387f6a0fd02"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "9f40fadee85b0e6fa1bb1681624d8eb75612466bd2349f4ab8cc5037706fce46"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "be6de5a8b450032d539e0a62503ed2946c3370fd7dcb8f574187092ddc3816bb"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/runtime.jsonl": {
+    "bytes": 9944,
+    "sha256": "3753b2e579f04fe6b178073e016dc6be3a214d22d3884b31c358cc21e85facdc"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "c75cbac899575774bf9cbcc67b99c0a49ff43b385ceedaa81eedb8e9c0c13898"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/004_candidate_resident_serial/telemetry.jsonl": {
+    "bytes": 1503,
+    "sha256": "148ccb409cae5d31566f7862a97843eeaa4b253ffc00126bd8ac12732077fb91"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/config.yaml": {
+    "bytes": 29070,
+    "sha256": "7a04c812b122d74c124d930e9a6d60aeb6bb869864a9e81f4ac6a546cbfe80d7"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "c89cd4ad979ea0d431c85d65520ec8d44f42f58ea2faba40e3d7c10b5466b0b6"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "a676ef5a4adc7742f4e8c195389727c81e9e151385cfe2a23b46f19440d12bd7"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "ab113726558cc9ef5eed1a0d19620971f910886bef76622d1b030c7fd2b925c3"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "fbb41ebe62268df20811d6473c3f0a8785c3118a4901b6ba5bad0c8309097d22"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "b4ce407cfd92c0da3a83b192d8b078fc8ef96482c78897bc89421bc1280f5fcf"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "0f83f74cdfe8b4f9f790ec6cf0169301d0bb765d3b24b2d48aed6a84df8b5693"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "a2e120670e10bc151552263a7ec4342d293319534167cee87f1802f88153bbc9"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "435f5c971f1706538c93df24f7ca49a1811c6b4af6a17533f7b5730067499b0c"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "f8997d69a5666664e6a6066fc118c62578de9698231417fcd306c7a9e40665da"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "f59e62fd854e1535b5c9ff6036785966d744916aa1816593958ce1658dec691a"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "693cfb220f6a6070713151224429ba993ca6f86209e3921b0af1e23a957aa38e"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "f93a93c3e8cf65188321de64d8a061d20bb73e54aacd6afeb4e38726fdd866fc"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/runtime.jsonl": {
+    "bytes": 12715,
+    "sha256": "076fd441e4e5b9c2c77164aa0a059082119fc6ff818a9e7abf52c99d2d45bc82"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "0929aacb094377068ff16278223a6f1fe62bcd991213d35f7dc5885d24d69900"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/005_baseline_resident_adaptive/telemetry.jsonl": {
+    "bytes": 2968,
+    "sha256": "a0ae3d6c3d0320525a563c56cec490f99feb269a01ab0ef2c80a124f0e4c08c1"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/config.yaml": {
+    "bytes": 29072,
+    "sha256": "9c6ab733f2407e1a2aae5f1f69419f5564bee1617cb70ad4a00ee31efb982b4b"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "b27eea2bf72fe0d8b444f8be797159e2639fea70255cec00ef0b797a0a6a5958"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "3ffc63454a6dbe3fc4723eebf99478da5aa17230a08d7c95281d1bf4e2ea54be"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "3c2995568d942fedf9feb545f87005ab607d11bb1d0be0b5e9cacd48278c2aaa"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "f1fab61bd5b3ad467176ab444c7c4371751e5f6f5c6f2cb6c693455f7058b234"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "bb3c8f7dde0c553ef899bdb865053a9b2c8f93456ee3a2b7126019f50e5b79ff"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "e3d95bab1a6d70a4f1db36880938a18f832305eeb12d584bfbdb673f6f1b60d5"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "4e62fadb3c03b150558a22838b71b41a65ee268a264b213e91a76db48cb777c8"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "4f3cc0ab51e167bf825a60a63534f46577a1def29aea0604271718d7428fc62a"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "0d66ddf80d5b8d9a5ff4fe93664a73966e4e5b967daa768f669bd6a69ec61a1c"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "4583e8400afc3e5ab0c92d25ab2ae00c7dbecda2686e2cd8b0b1697b3a5a39cc"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "a3fec5a944012b817759f015cef0c0103296699a905c8746efdd1773584e7d20"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "39f04e78df80b903ebdde7683975cc3e3d133475db50bb525f2e2ea25093942e"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/runtime.jsonl": {
+    "bytes": 9946,
+    "sha256": "d1add09f8bd251480f5775a6b4af88f0a062a52a791a25152b5f1d13b0aaeac4"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "f03c14262c10675b3a3a82bf239284713cebf5372885d28e21ee884092fd4ca0"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/006_candidate_resident_adaptive/telemetry.jsonl": {
+    "bytes": 1692,
+    "sha256": "c6e1c1c2f484d100ec5e0a2cc8bff9fd8210c32feb6e247a083be03dcc55dd42"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/config.yaml": {
+    "bytes": 29065,
+    "sha256": "2c6ff68bca66c3c21cb47b594231c4cef59c1ad2b30aebb2118c6267df682e31"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "e0b09935dfc079909f2f19abe65bf0f1e06deb2d28c79d00a8c5d9c73a5a5aab"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "8d20a364107ad275a6f6241a4a015a142beb5432554ebff9132fda7bbc144b94"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "c6129e6b41862cbf45cac5699f7648abbc33ccf6ac702e7b6446f4818c464191"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "9bca92fc116a9ee4ececa62d993688ab48e63138fa9f6044a6ae5c6e9eb0472e"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "d8d9c8e7546306a5a706656f7ae6905a2c12e6a879151910bb499a576a4c0604"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "ca4952eea0b56a89260e0a4f0c6c58c06a96835bf4b57ea343410ca66aa00706"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "8788c8a9a047de25760d2adba8f2508b5c9bcf352e50245bc29f4b9ed56b853b"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "d839e6980d7f32332478fb1837982e676fa529a91f2dd990fde4b7ff0328ca99"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "b6c4c24afec76ab42b1ffba945dbb21a66b7456bf9feffdd5b3a7ae9497dac51"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "f79841c6e41c54af188bd79e3f55ff25b81a55947c1a086cf244a6d147e6889f"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "0d09f4170eac38627c9eb1af0b9a3215585026ac230494be62a537962c831f3a"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "41dcf4475ea73aa4845421da6fa0333cedc5eb3745d80832e73926c149ae871e"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/runtime.jsonl": {
+    "bytes": 9939,
+    "sha256": "f3ffd4876cc6cbe98306a331d5ec684cfb200b257af0573b6893f6244383c379"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "0ca0feb41e2f37c2bdbf808ef209c54803687ab84ed9ad5c5f5c9c814154c93a"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/007_candidate_resident_serial/telemetry.jsonl": {
+    "bytes": 1710,
+    "sha256": "5298f8d33238553d035bd9840cca4335ba4627c1752d3f8c43d7296a617aa8de"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/config.yaml": {
+    "bytes": 29063,
+    "sha256": "4b6b5be90570f7aaf9d5d096f06e884678013e1654ad6b904de24e8b7460ecf2"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "28c09231112fabe8edd74568450e4a9f062463a370782d4100785da1f0885f7d"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "627f3cbed802d16679d9bd051f7906b69cfd0ffda9ac630a28d87ca22b04438a"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "f90a4cd5799bc8da5ec42ed4e2509278e720a6e1b137195448fc7e58269cb554"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "71bf11fd05d00b9b68fa6c5d34abe464cc4c12a426422d822b15bac7c0ddbf1f"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "276740aaed720fc3368cc70a54fe43e0433fa4317a68510cb4125361b4f25927"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "411e12f5c9cf03ffb2657b8744cf3299024e68ba9a2b65be5f560955461189b5"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "2b77a3fa96446821978bc8da1d5e36fbd4771e677c2a1db70e173d39ef1ec101"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "5b0e91fc6d0487d24594116888bf0b28faf4f9eaf96ddc977b316780f1e90103"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "69b31d7f0c7095329097fcf0dad84c4d1eb2d805081ffe413710b271a20c5b31"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "f2394b55f1759d491b85eb0a9dfb5184466b507e1c4fc5042c2425bd9551c431"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "6de043dc01ce3228ee91f8598de1924dd2d698a3f0af45e1e868a414663ea44f"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "b7ab893403e9ac03d4cb2eb17c9fd7567bc6a109c1c5ac7e4acf9de0763e98c8"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/runtime.jsonl": {
+    "bytes": 12718,
+    "sha256": "ca78a1ff2af838c57fb9c198657482d4be52a2b70dac6ebf4bfa619722240874"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "2d69c6675728299209a037525781604c187779e37ef1b34d82b7d9ce07ddf3a3"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/008_baseline_resident_serial/telemetry.jsonl": {
+    "bytes": 2788,
+    "sha256": "74d5800435f4ff46aa5443c83cf9a58e0c4749452b5a2e524966c111a3915e49"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/config.yaml": {
+    "bytes": 29072,
+    "sha256": "1eaeb3105264b2b2533d4a5d257ee1608f8e8dc554dc851969ec3bfdda68bb51"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "101922870b5a0ca5a12adde3d7775e86141c414229f094c24abfa1510b419bbd"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "3b4fef5f785c3a5419e8d92fe14ccd450e8ffa7360eb3419ca80a4222190964e"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "6ceb756f57eb87fdb13e5faf1fcd120630a51edf03746cbca65f9cc53e378302"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "9b11635dd40aa10d5f0360c9ddf06132c7a786334ec73b80e7e751d02698d074"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "c2006e70ba24a7b1fb8775980851796c9ce3125d2b84241754fb899bfe465fd1"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "c75aa83f71eba30bca281f2828a9f6107a6f265e1e2b1df4a4c9464510d88e42"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "a51a92acd45fdba0e1f89cc8b9ad10c941bf6b72dfd90357e63fe5fc2c19e534"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "a51faf6106c4f0703e2fa0aab13e7e65e95cf818f3696849be0702ee41df5477"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "4e04161a840e302fc3a0a2775bd6d54e2725c9ec3c8eafc8f9a461089b8b30f6"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "bc9ffa3dbdc44767ef13e8ad1e79cc5c4a63605be7594fd2c1bfb82ef371ce87"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "cd71139c05be2625bbcf85d01dd5f6d8aea7b226c629e8591de9a21f902799fb"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "2e7e4b7f2b12e03e043978436d3afe8c4ab2b27e9388c9a0cd035575c5d42c75"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/runtime.jsonl": {
+    "bytes": 9942,
+    "sha256": "b184e6f5bd85628e1c4de6c9a0d0226b04f6adc9ce77f9547d450bb94b5d78ba"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "3a62a330f741066fd2e9ddf8080d73664640ed552f92a5942b41e5b9acfcea7f"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/009_candidate_resident_adaptive/telemetry.jsonl": {
+    "bytes": 1508,
+    "sha256": "7e3b19a7f2c7bde50d88989d91a1ec1bdaa8888c91ffac21137cf285e7fd3e7e"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/config.yaml": {
+    "bytes": 29070,
+    "sha256": "2975d1872712d4fc062ac1141c1bfddd907f7e07f3e8006ea4e53e042fa17d83"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "330e4f5cb4ef790c7c00c459f05129985d6828d5e0ad668b81cea923a4a44530"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "ac0caadc19311a1bb2f4589b98f2152e93c51f7a7f59e0e287aeba5ef3b3a077"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "7213361cc1b726b7e8ff993473b4776a593e06bf8bae1107a0057d173cffb94e"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "ad4af12f4752fc239b2cad3e500654f1aaffa30ee30115c276b81d530379fbf4"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "ed89be0807b96f03474ee30d10e68fd31c053ecedd7c1da7cbb0739aea5dfd59"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "4409acc2be64d7e42fafb2b8caadef2b926c987c0fc2a7a5ac51887fed2b95ea"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "4755046da798f883f3a27ab4ffba9249d9d2189609668cb0c233a6c3c93663d8"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "490263a0fe3186462e583843674197607ddc53418dcb8d7c35cb1b8f38e690b1"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "c0ea003406ebfbb5855c7022e212ec6399552b5ebcc81eff7a67a2876d0903e5"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "c39ee0b0132cf9d2107cfeb566c5436c4dad9ae78f6ae91416ed79a0dbecbd69"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "f92bd6741ce621222559eac59af3660f601808961e92204104cd1eb9868717b1"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "6e1cf7351ad86c810ce161f699eb0ed4c23c8812cc575e81a15ec6a266163198"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/runtime.jsonl": {
+    "bytes": 12714,
+    "sha256": "7305705ddc85dc6bd7072ee88092da6537afa28c756aadbd8cd68ceb01ce997c"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "b8337ee9d3150123683119dfa9b8761ee9b586f9f11042c1d74f57f976883419"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/010_baseline_resident_adaptive/telemetry.jsonl": {
+    "bytes": 2966,
+    "sha256": "5781fe6e3fa19aea4ec7fea56b57a40b6746574b97a942f186435581e4a172eb"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/config.yaml": {
+    "bytes": 29045,
+    "sha256": "2f91dc4cdb2ecca1769437f592c33a69c5bf6ebb250158fd9ba65bae042f44af"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "7c0bbac72238abad4ab2d5efeda3c00795d0948b919e2f261f64eac824b168b6"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "648925c56c1bd251fd0f2dc12fd99a8a1520df8982cc6b09572cff107429fe77"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "0aa8315cddc42751ca6a1ad3a62446f3e2c6a8162c1c39accea436b0926d5121"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "d232bd17b21870e453f61f49213e617ef7d0b0e66383450d6d1cd8e23dfe8e2b"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "429034b3c3a3edb32f0cd2c407563145a86fad70ea58b7a6f107ebc07729dd0c"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "4b71e1c5a73b3da4decac0612ed90b0e384a6097ef7cef198eb927912da4adfc"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "497916c7f7fde3db8de348da3e2bb1670ff7d0e55827d50b7692d266ed2d76b4"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "b0d15e0754c45e068a349110e6a2d2d17c75cadabffceb4be33221f6b9f91fc6"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "d6e5946174e7713a1daf89283a038e2bb05d906021af405d77891c63e7ae830d"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "9e7bfc9d37ed53bad71de53cc6293475e7023cb8436f193c5f2753c2ce283d3a"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "352eac424bb23975c7f20e05497e9285fdde7eb64b13073e3ff404ba46dffa08"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "d63d17a59e8aba1e68aee10a8221c4736a01a135d7ad066d649469b52ad8e0a6"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/runtime.jsonl": {
+    "bytes": 6347,
+    "sha256": "7403ae7c71f995549c4988d564e93bbd9b398d98207dfea95452f30d32da3669"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "e85d08635d998db7b49dbaafa0dd6054807c2b679b78fc72f32eefab92f635c6"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/011_candidate_direct/telemetry.jsonl": {
+    "bytes": 845,
+    "sha256": "902dbf6bcfa98d36903ab87c565e532d0d271bec3dbf7ce317596013b6bb2faa"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/config.yaml": {
+    "bytes": 29043,
+    "sha256": "3c095fff296e48c26c4d969a371bfb7793cecfd654bc0c6ef733d47e78a93f18"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "21459eed97b1cf49721da95e0ade8681b5fca996b736f38100c3872c71bd8992"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "abf1ca48b5b8ca3b4893ed63f8e33cd2cad8bf93436b08885c5885953ac6a1bb"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "c722f4ab66f61af00bed510c5035b8c3ecc48775677db6ece4efdac4e8950eb0"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "bb2096b1be8dbd08d06bd454fd8e14053d78861d3af768da078f22b6a58980f7"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "acaacc592824cad8dec4c4138ce4c33589e55542948ac94b386fb5e940f423a2"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "4695be4e68aee7aa10c7380f4e05ac5875732af9439f0726c91cd39697389287"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "f1e9ce3cfaa66b988f5803ec4bc6f17c9369a44d75e57815e1d9b1dc5cebed28"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "52789f8b0125cbb4a5cb852ecb161d0826e4eedff33d6553b9ad1130af57e4ba"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "9c80297a89c0d5551ea12ec4b01aa33a213ded713533c5f1c25becfbfe58f64a"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "b170d63b8b79581ad40736289b4d206362e3582d8b61b414d8e418230b38590f"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "7f066c106946eaf29c73558e85a50a20c72eff8c5ab028fa90a529cf1413ca71"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "9289a256fdc768a9759065a7c46f3bdd557a3519257879a2676a5bc04038ae31"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/runtime.jsonl": {
+    "bytes": 6352,
+    "sha256": "20ced67328cb2dcc22a695a27dc75a59a46c652cf7c57848d21ed96d189fae67"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "a3e97746ef3a5389262c527dc037cac92b726a08ac50f6d11d55ee1f8f406e48"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/012_baseline_direct/telemetry.jsonl": {
+    "bytes": 1058,
+    "sha256": "d8eddcf30e71329f34d8426e98443fe30066e9df2142f49f4837b02548724e01"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/config.yaml": {
+    "bytes": 29070,
+    "sha256": "a0c004d5690d7240dadd4e0851142a9db530d93c821f80c4f5e969d2818fc3dd"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "f10b9f584900762584113e9cb84e84a6a2087e198ed2b41a1bf44b58f30ec6df"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "568439ad126977b046ec60cb79c5a7411a2b160c2718b522beb01a4c7e9b835d"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "768d2474768928f7f48bda4741fd05e983619005a9b6d0872f580889f2ac4e19"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "93966dc4900b4cc61799fe5cabe167f9e9f72fcf7622a281de2611930a5b38d1"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "48c9226ddb04a9473b2540aa75b1fbdd653ca51e54d553394c7f01c1c8b65112"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "217fb7ac7b02468893fb0111b0bb15f726c30c0a73ca7a3ff1a76dc4d0063d20"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "2db519d9924c0d8de17684cdfa7e815c769e1adcc1c0982282098a436279f4cc"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "3ebf9a80694a6eb6459a31832dd078661531256d1278a73f124e939206c3d270"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "99d798ecd154d5889a779c78b4f873c578486c89a8227ebc6519de2443cdd8f4"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "7ba24cc7e25f0c3ad25a01b324a6a26898a173f920400c30922986a905c245c9"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "b051fc36d901a7285e60c0c3a48de8d5f1622eb31d5ac3b5561700dcfb1acc18"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "7e91fa16aff708d5664883988900d4672f258ab9ee180acb0f9fdc499ee2add9"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/runtime.jsonl": {
+    "bytes": 12715,
+    "sha256": "e7057f2d101a36ce58381d2527a3cbdb0e1125a6c90c95e366ab6c15b8f4db75"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "bbc8727714de4194775e09a423abfb41276fbbbb7b9a3308400223f8a2d78272"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/013_baseline_resident_adaptive/telemetry.jsonl": {
+    "bytes": 2776,
+    "sha256": "f4ab52f2eee9f47f467b718f14641b7c4983feee9e26c7f0783e375b20ec162f"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/config.yaml": {
+    "bytes": 29072,
+    "sha256": "0194e1c0065743aae1dbf31f277f1e9c0d0da025467d6b9c1710bcb93f62057a"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "72930f46c59311204180afd1ec414cd1c41057cc6cc469636c03e2435994f082"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "4ce160f983a959caa7be607bda0cf4422ef739cfb310795af411a5bec7b6f034"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "01f02e646d4512b1030e4b8903d208718a3c9f92721973ede398483a0d89f344"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "5c194d8be5ca7ae2dd9456da2b651998b2ad277c670ff65bc0b2333862ab8469"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "4a43fd54be7098e136aede61c100ddb4465c37bf03f01cca9eb9b9c71f838adc"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "2b63a52432f3cad24b7297628dfbd3daf345cef5015df7526c1cb0b0c0f10735"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "70d28383d45d58772401a37d7e806aa5caa75227a74ee10d902d7203792f6f1a"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "3d6ba92b67dd6a1c23f42033c1c41738e86456234cb7c5095fbbf0a8bc729bbb"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "e97d57d6c647e172f491bb4ceaddc0905dee2560ce764a47a5ce474f493fdd9f"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "6cb216f22376fe7d17c96163804f72dd36d2a100fafd74b2183a7de2bde2e5b1"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "f47d073ab46fcea1b32d8343773090c4f7bacbd3090bc57aacf2da09bbeadd2e"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "418bf50c7c921c9f8923b8dfb10cf8b32bd792b79562935cacd6c8f1d9c400b5"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/runtime.jsonl": {
+    "bytes": 9941,
+    "sha256": "1df7f3c08471035a2165319b863c1cfd70f880697d945f6c55e23e58729cdf87"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "a49266ef218167475a6bfbe05885ed0efe73adbcd5258d18719791bf08e9e85c"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/014_candidate_resident_adaptive/telemetry.jsonl": {
+    "bytes": 1732,
+    "sha256": "69b4e5620b89cae9c6674091a9270f60ea4290cc1c80e224d4b9bae3bd29f912"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/config.yaml": {
+    "bytes": 29043,
+    "sha256": "7ca2642f67d9aa75764eaa3eaec8594775a8b232aa1ceb3cd2514eb83e2d5a7e"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "b951ebd4b0dcdf95d3eeec2338fd61793c775361944df953868d9af3f90e4ec3"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "02bf06efa4e92f536aca62c7e7b537a0bdf524caef3943c030717cbdc9096115"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "35751e53986759ea116618c5d8ff249646a92653390c8e679c98856323d6d3e7"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "0f4978deaef82477f5a047ab0b3643facdaaf6eff27a54b5007ea1c8efb1c1ca"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "35a1950aa2810366ebb5ee8452ad65aa8b5aebae98a32fe92eb92cad41400997"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "c59f1f4376a13480b76bacd4f2b77cca3327d7b15c89052e5244bcb3b2c7b520"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "41e0cfc2dcd56d39f538fa02a1306e4ad04f611122cd99c0f516a55e32de7504"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "9b607b27bcd7d8535459f2b11aa4e73bdec908168bfbeacb84eec26ff63d3a37"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "c4fada60b6343344277e80aa028fa97f644cd1093ade70cd290e8b8da92affea"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "abf3533769c086c35da11cf1ef5ce53239d2c824450f43c81c962a9502d29c9d"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "02661dd989c1e66d28b2e263b46854017ce6cfd10140a069e4b39595129df35b"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "82d09192b43438ff83224e97c5a60e3d8426566ac912b1d2da794aaff37991d6"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/runtime.jsonl": {
+    "bytes": 6356,
+    "sha256": "0a5fce3d158b306f1cbb9e991edc0f80f5cb67583b48472aca0cc148cc8b0e04"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "af36a7cdcdf762f82d239c2e172752a0a064adff301c35cec0ab8da920dc9cf2"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/015_baseline_direct/telemetry.jsonl": {
+    "bytes": 1060,
+    "sha256": "f8edae799155cb3e23d458b4b03eb2fac434c923f626ed13be26defd34826824"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/config.yaml": {
+    "bytes": 29045,
+    "sha256": "765b3d3aea85d3040118f805353e5a44347b0e99fdb221a1174dac928d7264d8"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "2904dbcd6dea259fda2c37d35425974351729adc424721dd2e6b00907bc55338"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "2abfa944dbacd5d4608432a3a179db0ec21cd2418d5bbd8a88f92b1798f6782b"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "ffba85e315a346558463a31d15f8df520b73e141dfbf8441aeee880c68bf74f8"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "a15ca22da050031f443d965083b62007584d40a5143ec06bf9c562d444537e00"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "7a9dd8a8d69cc3aba13d932505477c221c3c660394dbea809af0b1ff33a59d8d"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "e5a8c1314e5ec1c57de6751923f1dcc856d4165828aed91d6d0c7fa3bd86b505"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "8f50c885858c28d358d90451ff3da6453955625830515aa675faff17c856d7ef"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "d1ae6363d98538c778461fca3f71a406fbd24e6f894aed3d5f72ea195fc3cb52"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "78e9fb99fe151d365cf292cb1bccb1d862a4a3ee33565c06e1cb834acd76a14b"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "2217d33dee2c0f318ffe200c30e0ef64454b63f8c946eb06a8d657aea55d8266"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "c3de409596cdbd53bf368d3e3bdcf39fe9fab1d6b549938607aba2e4d81513bd"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "23cc23f733748b0872ad28f2d8b12abcfd6434a66ed48af4e6d5d51c3d01a282"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/runtime.jsonl": {
+    "bytes": 6349,
+    "sha256": "eab4b571e454a6a7b8aa745fb3c78daeff4a0a46d436c47cf457583479beede3"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "1c6f8a5e18e121d41cd77217b38ba0b29e44ace79b44d0f89c0964d81ae87917"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/016_candidate_direct/telemetry.jsonl": {
+    "bytes": 839,
+    "sha256": "f6c4b2780f472d79b1994c83742e20038323faab5998af6d807f780d7184155b"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/config.yaml": {
+    "bytes": 29063,
+    "sha256": "8d7b39870ef294d33414fb76110dddf7b91457dd62d16abd13f415a26b1552bd"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "adb9815e9cef32e3b40adb9192e4672fa4531e500a35fb85c28cd71c7cd9b4cf"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "41674be3bf5be29b9d1ce2cdfeb2dde801c2620dad1910f3e4f855239b5eb180"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "bafcc7d2342fe6e16d39f8d84d01b4481f8463f753cb110e55821ec8bef05e27"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "b4a80a941078d3053ec8cc9f2cc0c1ae052f4d235f257e038cdf2ae67edece34"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "87a18d473d44dc009b062ae2c12dec05b6b161b000a6f679484922f083e5cc2e"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "d48fdfe2033904c7f05a276539f4923aa2c59c3f7d9953ce10214ee5c105ef67"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "c034a47c9045fc4cbd546ca722cc268d1713832866a3c97a4d16d2b19d745d1b"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "0ef8cafb8c945c09416b20649dbf4355c42ee6d32a00146a8025fc0b82305f1a"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "98b9a0c43feb26e44cb1d316c3a84372edea894522ab28f88403f8fbb9444333"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "ed252b0fe45d09843f856e8616f8ca45095abacc4e33f22c26b45dd80d273d26"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "b4c5fca4a073e4582dfaada4af0fe487ef6345ecc399710ab57bb30c083ff1f6"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "c4110dd9984e691fcc55ffa3e56cdef296a71d122579854c01a024daeef156f8"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/runtime.jsonl": {
+    "bytes": 12708,
+    "sha256": "139a4b0135da263fb09a88c5a49b2090226ac4ae0d94e1245dc56a36b2334f74"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "f60cd19214305cc3556472bbb5dcd2591ded053d2a966d77da9abb525aae77fa"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/017_baseline_resident_serial/telemetry.jsonl": {
+    "bytes": 2997,
+    "sha256": "f2e817ada09b70d2fe07ace6c32afe9fdcec16167ed077cdd40423171c133041"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/config.yaml": {
+    "bytes": 29065,
+    "sha256": "931db14d1f009fdd1191fe997a95b946802918b7e126136d46433f0819d7d01c"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "4eb7262ee80d5b0857b840620f4331b2893299ab7e5cf66723342d64d5ba7fa5"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "183072dde9f1d736529a61fb37e28f3f34a030c1a93bc41c098d70a3c28b4809"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "2dfebb0b0c9301d969f95955488ab3c377a1ce088a6263cbe89fb493febcab3e"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "5dbecf2d69e0cdecd8ac141bcd9082ff896ae3fbfb7137e78ca8b678a1594c74"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "c793b9b2ad97ba88bd73f34e5093806d3ebec224ea2fd043192a0ef9e1fb8fb5"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "b11b348deede117be4a6609581e6c77b2fed81604864b2fa94daacaa9b6e22ab"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "0eda6b9bba7fea4949c9396a725653f82cea6bd21f6b0874b794b80414836e64"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "fd28edfa889dac5f52d85fa4c32e1a6fb8ae7bf7ca8526850f8b713314f51ef8"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "07c2121cf206942797e443270c4314f12c80e9c7c3225f8f78659477f1237bef"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "3c28ce35c6fcb61aa798d23b9dfe17a37399ffbc88825c25d345cf06d589a88b"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "160cde172ffa1b94021aa1ab040405cf9333928aeb16b3f641037e760d073f22"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "abf7bfffc99b3978f10c491ad9f002f398dda244f98e5847117e972281f8f86e"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/runtime.jsonl": {
+    "bytes": 9940,
+    "sha256": "f954970e1b20b66abdff46ca24da90eacac8aff47b21080d3088db422f06994b"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "bc0f0428d3ed5f566de2bfb74ee1086c0c486fd519ab686ceb4da2294e63d8a5"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/018_candidate_resident_serial/telemetry.jsonl": {
+    "bytes": 1718,
+    "sha256": "8b99c7b67bce5d2dd714606cc2e0201dc444bfb3e53b97522a99f171df21a713"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/config.yaml": {
+    "bytes": 29045,
+    "sha256": "028aa984e41208f4879a228158f37f9696696121ddb8ebf1df1361043688a031"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "c86d8e501fe2b0da1af21a8e0ed3334343892d8b9b351d82bd87707242cb9618"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "78217df3afc68962590444bd4fbdc41376b969d8d07796bbff9fc3c479858f62"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "9fb25db5d9375c4e0b0794759f89f591b83d211aec0aa98fdc7f567b0f4f9341"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "fdc95d4b7d68d087b75372eb34b938e4592aea61e60dd9f579cdfa7caf39345e"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "5408d1df1c8ac6125c059f8b6a2de98411af09f00edca44d084b58d5608408be"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "d27539ebaca8507a090f119fde32856dea42c5d330955f6032fe29b50a99535c"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "3313646448d56f6dc2f46ce7ceb2a54175cd2552446416e657e5b6c7ba7202a8"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "ce0a506586b072bb35dad3bc3a2af5bfbc806a609f805a3b11b2380ac04a5467"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "b3189338d6d54a58957ac887b5a178142e9dc4d5c73633bc59b381ea1959e1bc"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "9c7cd05544262bf75ee60e889ad7439577a9934988e477812cdb478b30fe303f"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "38f5e35ab6640835e25468ce406f2350894c2a2477af4fef27312a581cf22040"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "5a702f289d00bd7b9c41b22d9281c19f922d822362ec41a70e233acba652a300"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/runtime.jsonl": {
+    "bytes": 6358,
+    "sha256": "d36b6f4ee3ba43c9b1e8cfb34922b1a1e64725fdef004bae8ef405cf74662973"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "782fb22e2bbd8deacf49cd54d6953cd308b7bdea16525c1f70ac2f358b75e625"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/019_candidate_direct/telemetry.jsonl": {
+    "bytes": 837,
+    "sha256": "01c2bb2803c001697c2276cf7fc652aa14fc48307e2df6149fed2042fbb49747"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/config.yaml": {
+    "bytes": 29043,
+    "sha256": "3639695f5e33019674aacfe9537f62a6a962d15303df6920a044b4caba856758"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "f434ff60489036056ae4fa10e49be96ac9f0b67bc90fa35d501b0fc2d9ef0d27"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "d0cfe8a83576f9e4886d46ab73a143b2d3a13f4fcd1cdb3764cea831699da397"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "ebe27bb4fb2b790af16171df92380e0dd4b9b5a8c10334543c5c57458383462b"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "668c1bd96eb47139b7bf32ee92c44ff07e602e36a6e6fbaef25052f1267cd10d"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "9a99cdedbf65cb9584aa48e0070c0aad87a12836363a63f715894a8635a213d8"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "ed115eef5a9ed75c0b27c6a95f2c92578e60847039cfb672f6e4f10cf8deaf54"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "0674c4a21706a89a6f963867cfae0e74483d87951b12dc1f17e97517a0d12abd"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "8a5dd4ba61b6c2a066ab6e152fc02bb8a9d598f2a8f9d1027b39b6f3affd9c44"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "517cd9bb40947283977700cd1901d63151b76a153efed2cf129d9005cd2257d7"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "74b31fa8e4c13b3769f6f84459b4304d0d86e1c831721dd8e93ff370483d9c5f"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "189ba90ef4bcf6175458ea0a608a5822218391aebcdce38656a5d0bd7825635f"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "930168b07251138eb840b93cdea7957ea051c64420bd14e055b3ceaf57e96d81"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/runtime.jsonl": {
+    "bytes": 6357,
+    "sha256": "a292ccdb1388b65f9e47293bb0c9cbf13d6b9f0194cfa515006d6cb7d51bb248"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "6bf0cf85f75a41b8c2a1661848e89a95c2b9b53c07e164877d1c6ad839596efb"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/020_baseline_direct/telemetry.jsonl": {
+    "bytes": 1059,
+    "sha256": "60dbd578fb686e897c411274d7d218944a150f3d3127148dd0adeab4637e4b42"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/config.yaml": {
+    "bytes": 29065,
+    "sha256": "e2adbf353f53b07fdb84448db8338a0eb58fef7285161b74cb986e9c840f3f80"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "fc1b55e1ae75db19eb7f5d7c28265a456e427eec7e5a431a482da5ea52915063"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "4e9db48afadd5f543bf0581b9733e55b53d175f975ed4b7b35779933078c2349"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "8516a6120a31b10c1e4390b7a75b044f136d4ff3efafd40916f3b2b351ac7208"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "a5179ed831ae827383f02d6b65421ec14518da49dd199b5385a27baf81857750"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "7d8d93cc92c2eaf492e942da297cefcede7f3f3bfb21c5913fd2354a76a5b6b1"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "447b678cf093ec39b353e23eca34eddc095b833036cce5a8ef5bf4b4a2ef3cc3"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "5018bfa7ffbc8650d0bc6e5c5bbb579b6329ea240f1098fe2546bbd091176bd9"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "a2002d850ecd601113fe839fc322e76048ce080f0c4dae4a944b5a0d6799b3c2"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "3a2cbd3c70403627840bb8ac25ea6fd4a31aece2e89da01e2d8bbfc6fcd3b33e"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "d280583b427c999280ff36aaa18614328178954c55b0f445e16679f619a42abf"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "1ea23a4a4991bd1bbb6af922ec16887da6647e22a36e8ea721f5e4b828c14042"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "aeb280ad9e3e5df8b4a30912f043329274cb82945c3645304bfc68588ecbb990"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/runtime.jsonl": {
+    "bytes": 9950,
+    "sha256": "7663f3f1cbb536c8c00afafafea4d9139129744e724a15c353f2865ab592daa5"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "9016bd125cadf8e2d7711d2ea34e83b35ba51d7f52ccb7987091070c10d342a0"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/021_candidate_resident_serial/telemetry.jsonl": {
+    "bytes": 1744,
+    "sha256": "e3c4a28a053696fa73f4b116a3945dc22311e9a1ff8aaddd3616d114f42bc4e8"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/config.yaml": {
+    "bytes": 29063,
+    "sha256": "1ba40fedf52106ed689fcf642c20ab007ed1ebc7a35a3fd78d3bce99916bf673"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "8583b69628b6d04e8b8ad91ac9b6d5bbd940d886a68f7b8506645a9dfa28b93d"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "625e54f5d5aaa01bcccdd18aa16dd390aec2cf89350cca684f53a730bb98d5df"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "630e4b64b6a629fb2c8c4535e985e8318bd2a7cdf0ed5538464cf92b493ec3cd"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "508753f8b8b7ed59065e99e17576ee74d5a70f9638c86982f3263a5c94cf9190"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "e65a72576ac18ce30261bb5943f4e92fe60f215840d36e2abc412f6bd2c92ccc"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "879acba01afcf1634c740966a70c0f7907caa9b1351c2f756639d7d10f2c1323"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "675d211c29e4eb7a9c65787fe15807775c8e16bac5fb489ebfa39070856df2d6"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "b4d1bba086e1a8775b099cd7df5df62aa068bc8d121396418fe74d470eb34db0"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "f568a3523196017a972f65cc5b47ca0b4ea664194141ed90176cb03bb549745d"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "21ac6fca1496ee0208a376fdd91ab4d4c3bf090de3cec7686ec2a899404f6d0a"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "ba3d72963632399837170bae8de23a7081ef07fe99d6d020fc859ac562b5fa81"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "462e132781acbddf8c182aae88a90eb07f7375a1cf827c828ab94eefe510bab6"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/runtime.jsonl": {
+    "bytes": 12718,
+    "sha256": "c64ecf884b85775559b380514cf131625d2064c62f85ed5b96064827a365c256"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "d673613b6dd17bcc7933d1b95e42120fb57f054bed07c9bd5a696e6594751a32"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/022_baseline_resident_serial/telemetry.jsonl": {
+    "bytes": 2993,
+    "sha256": "07f45e64b1926fc3360289608f34032ce5fecf3cbd8e4c27bc568ab388acc42f"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/config.yaml": {
+    "bytes": 29072,
+    "sha256": "97d5c61fddee8baddd775ed72a1c8bb334074f21585ce894c7a2fb0da75284d6"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "174ddd082709bebc547f8717056dc79300a71c990e9a3e58dea5574f6a2e69d2"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "191c2c56a95645748097397345811192ac6b0d551c3c98fee2c5696703fe34d7"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "6ceab89d17efac22685161ec6033ce8f7c3914dbce3f026371de0c2d34f4ff1e"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "738ae813a3b76e85f48f8e9ed37ec0591130186c0fb9d5fe3752b18f48b62a2d"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "00528158983e109e9d668ca27dbea3645d759e356db11164ffb66c5c2e5f9645"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "7a12d63cc0cd328446716a9008f0dbe87e8e5d7a4f9a389f946d46b6547fe5c0"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "4816ead00ca485446639cb4dfde194ec7fab8f5a7af101664e3fa5e4d7eb3f94"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "90761d59b8e2f327e0dfda74d9a5a24d049dfa53829a3f8dc12335c6655839dd"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "da042a8005327257d7e6df1966f2d5296ad6b8f1dd8eca8ba5f733dd51cbbc4d"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "eb654106313d05c8af5b8a265dacfda8da66a826f5d84ec06a7436a194a69155"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "9e7ddca8bcaf8d6c4e05810ecee46a8d578e7239d7b083f9a563c66a2b299f37"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "dacfeda8308ce8f4f1b566e5fe6db7a1b4e9927c9ac04a73a4a39bb459474dd6"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/runtime.jsonl": {
+    "bytes": 9946,
+    "sha256": "f0cad66260aa6ae4419d4316395b373912e5270698b640ea381fb08594ee1673"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "e1b6c4c0180f2f3886512fc8d1c67f2dc01068b7e4a889ab20c37f7b1164c694"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/023_candidate_resident_adaptive/telemetry.jsonl": {
+    "bytes": 1705,
+    "sha256": "87b238c39ddfdb12ed4b5d40f42c0f97d78bf62bfcd5a9a47a5af8859d5ae685"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/config.yaml": {
+    "bytes": 29070,
+    "sha256": "dc1c12922e55f7e7728b63eaabc2252938c8a4616e4149aa832494685cb8d96f"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "a46b0d825ff61c96c6a754bbcaf3c7d6715fa14fa8836d07f4d5f3592191af5d"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "c32bc5852793cbaa351df37ee924047283f6e9762927dccee96784c59885a508"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "9d7fc2aff267dafcf0ffd983e6f2a6f50e033b5a743673c34d71de96808199c5"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "26c301a606871f49de21f7e308ce6a5e2f0aaa6b1ce18392af2aa5f77016b9ed"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "b4b5d90cdd12b0d50009b3c51ae7b02c75ae450b50807f56ce63fd5f5de55dab"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "2614cdd60c6b64c12c18873421550634fb9ea0d24dd80e25322f0e57b0d4def2"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "a70d1e80f965161f5e404fd2346c99e74398f1ddecd48a703e68e6a30668795d"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "67976362754cf6cf641a544a1a1e549086a8bc43e7448e88c00b34228bf3a1ee"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "324ff6af3133028cca0df8be681c30e1a742273951fdb2b51a96e68031ea2e70"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "353a6b2a6eaca398cb87f429cdb2a8e7f832f61778f457b699efae88356e03f9"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "e571dae012a15a9d7a19e882594c954621ff468e38fda2cc0efd39811bdfc555"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "95ca8c9c1cd928a2496dede641eb9bc2808b151239e84edd0530c62827e434b3"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/runtime.jsonl": {
+    "bytes": 12712,
+    "sha256": "5904521894f505da01cc63cffea1f40d753d10ca972dbe686711559c965e1cd1"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "1ffb10821e87e6f0b050d9462f41bb53dde8659187f79a108d94408e3ad7232f"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/024_baseline_resident_adaptive/telemetry.jsonl": {
+    "bytes": 2997,
+    "sha256": "c3cf662324823964b3d2c248c344cdc4ca38a9198899e7540f12fa747efb5313"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/config.yaml": {
+    "bytes": 29063,
+    "sha256": "8c3a35c9a36c3d1d232d1d891d5d6f4d3dec029bd97551a23a25ffc816485968"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "d28758818ca7f12e99c018f039fc3046dbdb8512a2ee0097c58acde33e60a0b8"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "0a7b8caa9fe08ed5c2f16460654050430293909fd1cee6f2e3cbe3833e5651f0"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "7b51811480b79f1c95acd116a16a68ba742bc2f8c9404d7a787504ef2d5fb6e6"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "328d1b8ff243ab602419e3dba047dbdf561794e086bebdc12f8e2f6cb2b1473a"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "b87094205ecbb169426ef2b725dd9c088b2ee7596f3efe73d34bd3c2fd0ae570"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "7ad0ae3c9dacb7e45b91f669dd3ea0ff1408b3c8ed404d0b096d02200ad20fd0"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "9b019223f8a64ff4d35966ffe668c80643f160349b4c73ebe4b035db57314e87"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "2730a23ea0e1db9e3e0b8224c2be55153dc2a70c35a56cdea12be9fe050f0da0"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16520,
+    "sha256": "e9a9e959f13a8006a112e50ab68001e57d4cb6624884d8f9ffec1ddb0676eb37"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "f420a68bdbc3fa1c99d1733c9ba4a03b7f291191950a244aab4ca7dffe0cf822"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "a2df33408dc00535dfb125a2ea6d25a55b8d7b3528cdd70132c9c966e50b52b3"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1988,
+    "sha256": "76bfc01f4583a1d61401ee0b5de0d3872d23cfa747157d4c5368160ee211ef97"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/runtime.jsonl": {
+    "bytes": 12707,
+    "sha256": "b1d345f8bb5fe230a6a672b178b9e8aea1c0ab14f6c276b72ff7dcdbb69285f9"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "ae94e87c12b6a4767f5ef87250859ab9095d6a9dc7084c1d490f7be22c930ae8"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/025_baseline_resident_serial/telemetry.jsonl": {
+    "bytes": 2986,
+    "sha256": "8ba2e6d4ed6c5357c1465aa81e78f1249e60a0fb6f2c19c7674da0243d519271"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/config.yaml": {
+    "bytes": 29065,
+    "sha256": "368a5c5ec577bb7519c7713d4aba0a9f5f0c1c24617196c64eac143182104da9"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "6f93faa1e07ce30ab9872dd61ed3036319c457ee92529553e09241468c958af6"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "7ebd260cb1a953de3c2eda0e48d0e38363f3c89793fea5716d2306572f750bfc"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "e17876e6e0cb8e9037342892e502d8cd51c2145974edb6a2208d98f998daba0a"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "3e641636859a28e7533502fac555dacef4ae4afdaf36c3aee9abe5ffc0398a12"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "4c8a03923b3f9d2c7905197ded1e835cb9b1c6962c561c01f8fa41c5f08ca459"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "e59293b4def447342265558b6ffff10c8012c8666b1ad08777aa6a9faa36b19f"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "5e4bdb6ba30bcd3341ae0b046d167d9d47477384cf1e57d41494b9656b7a1cf4"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "687cea48a8b9314148991387ad483cce034d2c41754a4d115c4f9e9170f2e8e5"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16522,
+    "sha256": "ee35f7bdd4821b400fc763b99c18045e97773c04ae1d42c4732a92822c7c6761"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "c351223f0a926b34d28086cc1aeaf4a13e99f14eb2eefd0bae5249e2b4e9055e"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "db21579aecd57a9e1cf652fe5959e74e3c56a129831ac4881196bb220ba54bb3"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "70ced68ac86ce4afe7f08b1bdaa48c986dc34c580135c0a8321b8e5b455ce816"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/runtime.jsonl": {
+    "bytes": 9947,
+    "sha256": "4d1ff27281ccf5fba427c174962986222494a32bb03345572eb4b8b77681bdcc"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/stderr.log": {
+    "bytes": 26834,
+    "sha256": "a3dd0883796f1294f01e004b85ec47453ebce2dcc2c669f1aca3cfc863ed5a29"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/026_candidate_resident_serial/telemetry.jsonl": {
+    "bytes": 1720,
+    "sha256": "ff49088183a871dfb1f3fbe34f163be495add3e6147e0dbfd95de6b20f45f2e1"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/config.yaml": {
+    "bytes": 29070,
+    "sha256": "60846b8511d2a1816ecdabb9143b69f566f9471194326fbd25a114e2cda0beb3"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "02a10e5699f72937bb41b0b28102e096973e0159952711bd97e72538b160b21f"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "ebdadd34edbed441c670e2c9436d5960d6b02683d1917df37171aaba3abfae12"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "685ed24bddab830690c693848311badc1c79d30e5f6eee75bf9ba8b4ce5e5904"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "20f4a0030ec262cbd84910104123579fa8dc4adaef54595fe248ecdf6e0219af"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "996ce1d42895731d1814d4484b8ebc3893d37e8fc0cfa5ad165fc9d494dbe382"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "ccb1a8538b5d20779ba2bcf3045ac45111cb6c539c45f9e3203cbbcb850f5b4a"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "0833aecb59d38a770bbadc11d1663a66112ea7776fe6e58c8c45ff48075c3dad"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "1009f3f9bf0434d2400043b0aee973f3902f0da7b917338005222fd0f00b4d71"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16527,
+    "sha256": "926ec44d2552e3547b8d39e2ef558554f6e31f2afd2ec7d2f22df268dde238f1"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "49e368c36aefa35fc07d625002f680968ec4c9625bcda843e69911d0fa5cb5a3"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "529d069f6951e689e4d345c6b3644c45bdbf1174a3edd87b65c55e8bfa7bca13"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1990,
+    "sha256": "2369dbca80f19084fb858ecf1fa4dd15e041eb70d50d25f10f1f2a116d320ddf"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/runtime.jsonl": {
+    "bytes": 12710,
+    "sha256": "819282fe7fef8c007a09ef80634490ef9992f766b417dc6e523eeb556ba6f8ed"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "d947a39721391cdefc0c8528a9848e89c2fe6ab766e66aeb020e0ef55b2cd802"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/027_baseline_resident_adaptive/telemetry.jsonl": {
+    "bytes": 2987,
+    "sha256": "adaa9d1586691f11ef7df851d7d2c80703ef7ad14a3d6890eebe4aa4766aa650"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/config.yaml": {
+    "bytes": 29072,
+    "sha256": "23a36c7911600a87f5b4cb30c899e58f6804f6f9c699fcb3cb4c70645607a192"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "825836276b5bf40da8eb3af110e82a74e338850be0003f558c829e2c10d9608a"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "52305da85e4cdd3be9e5428a9938218c66d1018e9f923242be4a34a06f708afd"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "77ed7ddb4b932acf0091ccfff1f1f86422c09778ec5298ff90d10dc1ddfbc1e1"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "37d1540f2a83143b205ff28b379ad361466957516d12390a10c7df9fbe9cbe09"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "512a82bd1e2b3b21eee674a3f14bc58535e5af108b9c4da3fd3b6f09cb74505f"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "c202ec283656c4e94688844eb6720af71165a232db30d8b58085e4d0863a72e7"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "492811f512a28c8da99d54276c996a8d427ef199b76f89ac6c9f961730609b3d"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "5758b99d03f5f16dd5e76a45396a73fc50608261019cd39212a60321f2bb5edc"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16529,
+    "sha256": "d248df3e57efd92b2f379b7d3ba39b00deb5d89d73e334709084a9e20ea8875b"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "b55b95f64b27e1d642764a309cce654b9520405a8d56db7d709113172eab7c5c"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "e522556ea25f6f2370994ac74fbb76fd5acfe294a8b3d37c7eccfb54ce6556ae"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1992,
+    "sha256": "a47eeb5d7b9e8cb10e8beb4a80beacb900539182049ba8b7fbdfa5fab1d50ff7"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/runtime.jsonl": {
+    "bytes": 9944,
+    "sha256": "b3c777daa909434f792a8c7c17dd380e04ef92c4968a13c62f15d78b30e4093d"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/stderr.log": {
+    "bytes": 26834,
+    "sha256": "70084975934703e6122af15da2bd081b055ec467ba913c805d41df82f649a6d3"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/stdout.log": {
+    "bytes": 90,
+    "sha256": "bcd612043c76c4014d2a1e4de82a8610d749f7d3ead16ba4e7def9203ae8b33a"
+  },
+  "cpu-artifact/comparison/028_candidate_resident_adaptive/telemetry.jsonl": {
+    "bytes": 1508,
+    "sha256": "211bc0be08233fb91545ac0ebf87f0d8d0cb6cc3cf34acfc285ac08b518a3535"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/config.yaml": {
+    "bytes": 29043,
+    "sha256": "1aa98f3e9172746c2cc40b3bdd2edfbe580c696fcd121759b18c5cdbe98c33ae"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "e86417c0f886b6ddcef5897beb881674cb99b6c95ac575c21773d7a50888c5cb"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "e7afe6d15bff1347e1bc364e2b1e39edc96ad0894b391e330840615cd0576f6e"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "a75aff761ab26806b732484cc34bb708010812a9fc56bfef54990a4c91302172"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "0c188e686aeada1c7994289d4886a33247834cdd21fd271a7432628748b1adc2"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "ca778acc5578bd08303a8504e616f627e392ea3844c3f84f6063cede427bbc7f"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15386,
+    "sha256": "4c55eab936438e964963a6ff41bb72111cee2d05e650a73a373c0c31f70b8367"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "5068acf7d0ae3c8c1cafde336ff343354a0a6270ea3b818a059892c8eb3ee979"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "de9484a67ae50b6fd7c034fb9d9807722aa5b5bd3e4ac78c5c42f14059799961"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16500,
+    "sha256": "0741db33a2d3c50480bce14bbf613f04cc4910e4b2af690ef4aa47fda5dfd52b"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "87112c26eb3c29ac8780ff70e123ad930bb5d689aefc3eef6b2afab71035637c"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "925ade5eabf5e3cf4bd5d0c7f794f2f62132f4f37911db16e4d00b9bed8df92b"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1979,
+    "sha256": "b7b1b5551fa0e1ab8627b737bb95cb23105813cf4ecc51c946d4528e1f941dc9"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/runtime.jsonl": {
+    "bytes": 6352,
+    "sha256": "d5f02eefd0f24e442a172a26f745bb7afdaf96d35ff2c697f3148126db433881"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "e9139e022c892a68daf3561c7018641146d6b88f9534223bca0f3b939ae3c986"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/029_baseline_direct/telemetry.jsonl": {
+    "bytes": 1060,
+    "sha256": "dfb5f62ac7eb0727a4c374201d2a0985f2e9a71305449f9517b1e78541a8b826"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/config.yaml": {
+    "bytes": 29045,
+    "sha256": "7365fd9cc6b83d9fd70d464eea0f284de978ad98f5e7bc09ab3d4fafb7116f51"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/001_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "7b27e2da1736626d7687d3eea173a928eff5244f477945dbf767b506a2512d36"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/001_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "7fe012d17c9fc4df0516bf15e291ba8853b83abeb7318bf613428c8e88d852ba"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/001_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "9bf19dc5732aa16acf6f4670b693ea76266c8ff9ac600737ec283283c6529f63"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/001_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "4d41f7ee832986769708a6c8de42b9651562050b27987796c48913dcd71d8aa5"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/001_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "d09b11db81050a2579b1e18881cb69655c0f312acb067ed08774009c84941d9b"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/002_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "08f063ec4386770fc626dba9ea46d832c14b4c4788cd3948ebedb26dfe52743c"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/002_run/logs/debug.log": {
+    "bytes": 15390,
+    "sha256": "1ec616030694d1f6d592ca8c0db65abda40bb07867d7a039fa4705eb6c8062bf"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/002_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "024b23c10dcabbff9ebf3ac0ad07f333b3f883d658dd13fcf4e89c75b235c237"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/002_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "541ff2723f628ae1747fe61db7e0c6dc19a39ad5b5e783920d1509906a33fd3b"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/002_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "a1312169995b726e9a9e60b2bbffe32a1ee8c94c1aa7e39a27ad0a2bc0510aff"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/003_run/config.yaml": {
+    "bytes": 16502,
+    "sha256": "e58324a1f290f9c68405e411ccfb808c1f2b34c03aac1b30f95fb3404fb1f936"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/003_run/logs/debug.log": {
+    "bytes": 14612,
+    "sha256": "6abb928026e3df9209723d3932f12682f02e0fe1d61f1110d3f85fc258a56790"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/003_run/logs/info.log": {
+    "bytes": 11678,
+    "sha256": "ca72b6607af0e75643c48a342c0bc2512cce72e3dd033126f922455c5d866754"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/003_run/provenance.json": {
+    "bytes": 1981,
+    "sha256": "45a949f3ad9e18093a35d784af36b2476253582f704903eb523ab3bb2d4f3308"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/003_run/scores.csv": {
+    "bytes": 993,
+    "sha256": "06c42ccac687ff5cd58e999b021e41a7132b81c46cd3265c6360df8d61f743d7"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/results/runtime_cpu_protocol/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/runtime.jsonl": {
+    "bytes": 6356,
+    "sha256": "d03bc73d5e7a164e309915f177d151ef40c96acc60367fc45a503a52282f342d"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/stderr.log": {
+    "bytes": 26585,
+    "sha256": "269a95f755c2c52902431842809607cb317a601a69ed5cf85ae9079bb352ca14"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/stdout.log": {
+    "bytes": 57,
+    "sha256": "f920dfef2a385099715c9a2248b34650c46013f402bc9a6fa1f691ecf09337b2"
+  },
+  "cpu-artifact/comparison/030_candidate_direct/telemetry.jsonl": {
+    "bytes": 845,
+    "sha256": "4d859bece8946c319d70dc3e725e99d964143c3e262b1ace296541d357c65ccf"
+  },
+  "cpu-artifact/comparison/plan.json": {
+    "bytes": 169791,
+    "sha256": "7bca8375cc737cee6242d6078309ca6ae6ceac1f845fc16fc86c2b71bb6123de"
+  },
+  "cpu-artifact/comparison/preflight.json": {
+    "bytes": 1209,
+    "sha256": "78bdeda24100326ec5240237f3734f52e000d9bf03a7c65384836b9786ea51e2"
+  },
+  "cpu-artifact/comparison/report.json": {
+    "bytes": 605252,
+    "sha256": "cb026a2564086997de5c4e5e0a22978a5b37e2773979ffe2f17bd25cc50bf49d"
+  },
+  "cpu-artifact/comparison/report.md": {
+    "bytes": 2116,
+    "sha256": "c422aa3c07b30d324934d11cee2418ac620f227b80bb769c9e0014278bae5272"
+  },
+  "cpu-artifact/environment/install.log": {
+    "bytes": 5935,
+    "sha256": "3839336195368e53fa94386700ed0e96d460597d10d8e659dc0fbbba44664121"
+  },
+  "cpu-artifact/environment/pip-freeze.txt": {
+    "bytes": 377,
+    "sha256": "8e550545230b13f361a17a0d792f4b13bbdeb77218f05d0abbac4252516fd7c4"
+  },
+  "cpu-artifact/preflight/report.json": {
+    "bytes": 1212,
+    "sha256": "cbd591ae5f9364f2f1ea403306dc1150707f6bda42968b787b8748c4f56ba837"
+  },
+  "cpu-artifact/regressions/command.json": {
+    "bytes": 1318,
+    "sha256": "fb557bc82964ef9a93b40b0bff218b0a5f84473d30291873a9c8798de0bbb275"
+  },
+  "cpu-artifact/regressions/environment.json": {
+    "bytes": 113,
+    "sha256": "8a0a96a888084dbd657a526ea96bfc0af836157d0f45ed89a5613d6da040e4c5"
+  },
+  "cpu-artifact/regressions/junit.xml": {
+    "bytes": 53827,
+    "sha256": "93d2a5e6d1cbbdfa1852e972d785b02c347d31c9b5c5b18f3656f2af4a567a77"
+  },
+  "cpu-artifact/regressions/preflight.json": {
+    "bytes": 1212,
+    "sha256": "cbd591ae5f9364f2f1ea403306dc1150707f6bda42968b787b8748c4f56ba837"
+  },
+  "cpu-artifact/regressions/report.json": {
+    "bytes": 1388,
+    "sha256": "b2d0b465fd07a742b674a856f3b279832439d04caa09ba2f53d32e8e7f911a17"
+  },
+  "cpu-artifact/regressions/stdout.log": {
+    "bytes": 511,
+    "sha256": "52f8fbf5d86b9a98d825253ddbd2d6dd52b3c4668c77a2a8158c2a7549f68bf2"
+  },
+  "cpu-artifact/summary.json": {
+    "bytes": 183,
+    "sha256": "d46328486969a5a66cd5b081717519017ce8499ce0839fb73bf9cf9902d4e93c"
+  },
+  "cpu-artifact/summary.md": {
+    "bytes": 2660,
+    "sha256": "ce03e3e54e66500d6cf061000165ae0e8773b1d114d438cf5d69d7736a7c531e"
+  },
+  "f9-frozen-workload-comparison.json": {
+    "bytes": 555,
+    "sha256": "11328659c522695d993c8fff8a9e532a0ace4d268077d1d14c8e70e79d4f7e07"
+  },
+  "final-source-identity.json": {
+    "bytes": 453,
+    "sha256": "c6cec5d21bbb9167e6097c4213902df60fdaa4a6a4af2d6db3bae0748e89b83a"
+  },
+  "independent-gates-review.json": {
+    "bytes": 4163,
+    "sha256": "01bad57bfeb31cc5fe6816fe759575d9d6250db98934515b54340855c882e9e3"
+  },
+  "independent-w0-reader-completion.json": {
+    "bytes": 4256,
+    "sha256": "1ae791a7801e8232e0d5a21c4235dc091e556877647072572913a0c911d30f34"
+  },
+  "independent-w0-review/input-manifest.json": {
+    "bytes": 122582,
+    "sha256": "db03ce0d2cf5bf3053076f7614cafd8630965ed50ece432e296eadc404293f40"
+  },
+  "independent-w0-review/reader-invocation.json": {
+    "bytes": 1297,
+    "sha256": "771064e473ee0986ae04f2adcd1852123f4062926a8580259ead1a21598a391f"
+  },
+  "independent-w0-review/report.json": {
+    "bytes": 31083,
+    "sha256": "0b396349afd3c2021c1a694e0e16efb9f50abaf9e78f495370737bff61259976"
+  },
+  "prior-plans/ci-01/comparison/plan.json": {
+    "bytes": 169154,
+    "sha256": "01c60ff734c3936d85caa43f963bf2b122ea48826f8946cfbd77db92d4081eb4"
+  },
+  "prior-plans/ci-02/comparison/plan.json": {
+    "bytes": 169272,
+    "sha256": "01d8ba34613ee24429dd788b38d2532f4fa6740a687cf9551eab1aa2f08a5683"
+  },
+  "prior-plans/ci-03/comparison/plan.json": {
+    "bytes": 169531,
+    "sha256": "2c0738de2645d26b750e77331313abbf1d220dd7878608e11bce1806db0340e6"
+  },
+  "prior-plans/ci-04/comparison/plan.json": {
+    "bytes": 169531,
+    "sha256": "4990e65756328880aa435a8d696a3fa342d5d950e37dba40a9e5599ae630d6f5"
+  },
+  "review_final_ci.py": {
+    "bytes": 2637,
+    "sha256": "6a689e114407c1420d18e5267cdf1146f99918db993435ea2b504b05a910b7f5"
+  },
+  "review_final_gates.py": {
+    "bytes": 8464,
+    "sha256": "606d3aaccb6cc0182159f6bde0034c1a5a749fc8f21cfbddf61511c264485e78"
+  },
+  "review_r1_ci.py": {
+    "bytes": 20046,
+    "sha256": "eda968172261e7b266278a4616c65d17b8b70582f3e670b41b7249dff45f5a3a"
+  },
+  "scientific-cli-completion.json": {
+    "bytes": 834,
+    "sha256": "aa82130cfd0f0b982a69711c2920d8dee4ce2f22f0c3c611b3b22a4da1a9710b"
+  },
+  "scientific-positive-01/baseline/cli.log": {
+    "bytes": 15037,
+    "sha256": "a1da4e1b32f4307394adc2303b2a3ce11f2af2800626c12cce42bb7d719e4f2e"
+  },
+  "scientific-positive-01/baseline/command.json": {
+    "bytes": 752,
+    "sha256": "a18d19f0ba756b30d0781653fb1d144baa5d7d91d211b20d0773228eab59df0a"
+  },
+  "scientific-positive-01/baseline/results/runtime_cpu_scientific_control/001_run/config.yaml": {
+    "bytes": 16790,
+    "sha256": "19dbb1f6ee08f01a4cd8ddb31fc2e35e6b353f6abcbce50eb01f1ed17c5b9ebd"
+  },
+  "scientific-positive-01/baseline/results/runtime_cpu_scientific_control/001_run/logs/debug.log": {
+    "bytes": 24201,
+    "sha256": "7f7729e18c0b55ece648ce46d49751089e339b895e1ee52ef1b90106924829e0"
+  },
+  "scientific-positive-01/baseline/results/runtime_cpu_scientific_control/001_run/logs/info.log": {
+    "bytes": 19377,
+    "sha256": "33ad7a43f102dfa340f2b7e87937d1f058c034fea90eb7a4dd22701db978b4cb"
+  },
+  "scientific-positive-01/baseline/results/runtime_cpu_scientific_control/001_run/provenance.json": {
+    "bytes": 2063,
+    "sha256": "4720747705a471e827d79008ffb80bd63af2eec2291c1221f020367d1ca7e563"
+  },
+  "scientific-positive-01/baseline/results/runtime_cpu_scientific_control/001_run/scores.csv": {
+    "bytes": 1437,
+    "sha256": "ae24138cfada92ded7c0251cd160b42f18b1f8f1070f2725aad36e4744812936"
+  },
+  "scientific-positive-01/baseline/results/runtime_cpu_scientific_control/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "scientific-positive-01/baseline/runtime.jsonl": {
+    "bytes": 2869,
+    "sha256": "500b4ee8eb43315fdafbe2bbfc2029dbd48cc092ce33cfd49a9a1893fea4e600"
+  },
+  "scientific-positive-01/baseline/terminal-scientific-state.json": {
+    "bytes": 75133,
+    "sha256": "6ba7db69cd5d094f5bbf5dd7cf396623d8c04a40bca768bee7652dcbcec91223"
+  },
+  "scientific-positive-01/baseline/validation.json": {
+    "bytes": 95010,
+    "sha256": "70cd66128888c3a99be438e3cd43fde368e7a71d1913531a17b859c3a84800d6"
+  },
+  "scientific-positive-01/candidate/cli.log": {
+    "bytes": 15038,
+    "sha256": "90d268165092de91de6544bc17ffb3781ddbb831d3aea3127dc4cf92e37e0114"
+  },
+  "scientific-positive-01/candidate/command.json": {
+    "bytes": 768,
+    "sha256": "e6833f81251b413978fba012d03e94a8f53043bff792dcb8300a8dfb03d2352a"
+  },
+  "scientific-positive-01/candidate/results/runtime_cpu_scientific_control/001_run/config.yaml": {
+    "bytes": 16792,
+    "sha256": "f920cafc080912cbe442e3046f1881c3696511286c3befcca377e222839aee33"
+  },
+  "scientific-positive-01/candidate/results/runtime_cpu_scientific_control/001_run/logs/debug.log": {
+    "bytes": 24202,
+    "sha256": "89d260b2b7d1ef8f46a6da1fd812725664359b7c0a3c04ef84eb28c6020eae41"
+  },
+  "scientific-positive-01/candidate/results/runtime_cpu_scientific_control/001_run/logs/info.log": {
+    "bytes": 19378,
+    "sha256": "8cb115b8fb935e28bcd21eddae0461c6203ac33a405da914f8334d3eb8350d7e"
+  },
+  "scientific-positive-01/candidate/results/runtime_cpu_scientific_control/001_run/provenance.json": {
+    "bytes": 2078,
+    "sha256": "4a0e1ceb1c1a8857751de5ff8aab100592bb9ee7157051923551078a726a3aad"
+  },
+  "scientific-positive-01/candidate/results/runtime_cpu_scientific_control/001_run/scores.csv": {
+    "bytes": 1437,
+    "sha256": "ae24138cfada92ded7c0251cd160b42f18b1f8f1070f2725aad36e4744812936"
+  },
+  "scientific-positive-01/candidate/results/runtime_cpu_scientific_control/runs.lock": {
+    "bytes": 0,
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "scientific-positive-01/candidate/runtime.jsonl": {
+    "bytes": 2873,
+    "sha256": "d0f6cefac0ca0cea57749f3ff4ed11c5c94c9227e6a169f7db9af6669dcbda0a"
+  },
+  "scientific-positive-01/candidate/terminal-scientific-state.json": {
+    "bytes": 75133,
+    "sha256": "6ba7db69cd5d094f5bbf5dd7cf396623d8c04a40bca768bee7652dcbcec91223"
+  },
+  "scientific-positive-01/candidate/validation.json": {
+    "bytes": 95010,
+    "sha256": "70cd66128888c3a99be438e3cd43fde368e7a71d1913531a17b859c3a84800d6"
+  },
+  "scientific-positive-01/plan.json": {
+    "bytes": 2355,
+    "sha256": "c816d6969464c3ef360fb1035ee9a3eee7fbe39473b750b39d0b32e3c5ef6820"
+  },
+  "scientific-positive-01/report.json": {
+    "bytes": 243816,
+    "sha256": "07929619a1d577d0634c8034d72e1be854e18204dabfc59045c050be3a05eb93"
+  },
+  "scientific-positive-01/workload.yaml": {
+    "bytes": 1221,
+    "sha256": "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9"
+  },
+  "summary.json": {
+    "bytes": 4894,
+    "sha256": "28b745ee6844c44fca373cd8c9953b3979193019ad2d0ee9b9317caab640cffc"
+  },
+  "torch-artifact-manifest.json": {
+    "bytes": 2035,
+    "sha256": "54f1809d6df3ac49be13f44e21981a2cebbc22954ee84ba07f69ceb131ef231c"
+  },
+  "torch-artifact.zip": {
+    "bytes": 10953,
+    "sha256": "cd87c4af4c2e3c1ed931b4fa3c8f888329081a727e6889101bfa7c0a3ae5e1ee"
+  },
+  "torch-artifact/environment/install-cpu.log": {
+    "bytes": 8038,
+    "sha256": "db67e73fa9e3370c56bc434dddcd7171d40dfa20016a31fe1adeb25fc9cf7999"
+  },
+  "torch-artifact/environment/install-geometry.log": {
+    "bytes": 2581,
+    "sha256": "94634d8f5f670da45923bf6eedb7b0635c18d30e39b008fbe6be730dd70ec580"
+  },
+  "torch-artifact/environment/install-torch.log": {
+    "bytes": 2719,
+    "sha256": "17035e8616080cb3bc0352b7ef77c0d6938e1dd47ae7697416252acbf74fe627"
+  },
+  "torch-artifact/environment/pip-check.log": {
+    "bytes": 30,
+    "sha256": "9261363b733079a641c2e4cc9bc46ffa1d8336945a87f807b6cf68847dbc9b09"
+  },
+  "torch-artifact/environment/pip-freeze.txt": {
+    "bytes": 609,
+    "sha256": "58e073c27e697c3043bce6b1698b24ed8080add6563fa9e356f1801696931bfd"
+  },
+  "torch-artifact/environment/torch.json": {
+    "bytes": 45,
+    "sha256": "43a666fe3f38c771062cb3f0c2d9f043ddb6c4f2300a2c717a313aeb4bf521e6"
+  },
+  "torch-artifact/preflight/report.json": {
+    "bytes": 1206,
+    "sha256": "b434b5893479d36f4b99583fcd532a40e94285b4a3aed4a12f156f28217648e4"
+  },
+  "torch-artifact/regressions/command.json": {
+    "bytes": 629,
+    "sha256": "75c53d0a4ef45a38b88bb8c6f454f9c0a3fa4394b9c860a1a95df27bddaf36f2"
+  },
+  "torch-artifact/regressions/environment.json": {
+    "bytes": 113,
+    "sha256": "8a0a96a888084dbd657a526ea96bfc0af836157d0f45ed89a5613d6da040e4c5"
+  },
+  "torch-artifact/regressions/junit.xml": {
+    "bytes": 25549,
+    "sha256": "bd759712c6edfac1f1ba3bec6cea0460468264f402c3d7b939e1c1a65fb97655"
+  },
+  "torch-artifact/regressions/preflight.json": {
+    "bytes": 1206,
+    "sha256": "b434b5893479d36f4b99583fcd532a40e94285b4a3aed4a12f156f28217648e4"
+  },
+  "torch-artifact/regressions/report.json": {
+    "bytes": 659,
+    "sha256": "32a899fb074e7bc316a13d4151bf406b1bafad42f745ce31ecdbb4db92045489"
+  },
+  "torch-artifact/regressions/stdout.log": {
+    "bytes": 261,
+    "sha256": "88aaf21cff617400eaa02bf98c577e16cf8f1f13c8c6dbc28b595b2023ff7e48"
+  },
+  "torch-artifact/summary.json": {
+    "bytes": 92,
+    "sha256": "837d90608b78fc82b4e96804a75037b900553aa3f3475810b8257f1de09a0c9e"
+  },
+  "torch-artifact/summary.md": {
+    "bytes": 711,
+    "sha256": "18d9f131125b96afd78216c9e5af935e24d15f702866758f7f2d8202546d5ef6"
+  }
+}

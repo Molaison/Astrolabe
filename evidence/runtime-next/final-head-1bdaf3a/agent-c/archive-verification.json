@@ -1,0 +1,16 @@
+{
+  "all_archived_file_hashes_match": true,
+  "archive": "final-head-c-raw-and-review.tar.xz",
+  "archive_bytes": 978288,
+  "archive_file_members": 711,
+  "archive_sha256": "38adc3042896c0721787476fec737141dbe851ddf6ee1ffbc90f9f596de6b18a",
+  "ci_raw_files": {
+    "cpu": 645,
+    "torch": 15
+  },
+  "preserved_files_excluding_snapshot_manifest": 710,
+  "scope": "original ZIPs, complete extracted CI and scientific CLI raw, API, independent readers/reports and prior plans; no production modifications",
+  "source_head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "source_tree": "6f763bfb04778ef4f32386ddb8aeb38ce4240bf1",
+  "status": "PASS"
+}

@@ -1,0 +1,109 @@
+{
+  "benchmark_run_by_this_reader": false,
+  "head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "production_and_config_bytes_equal_startup_f9": true,
+  "regressions": {
+    "cpu": {
+      "failed": 0,
+      "junit_sha256": "93d2a5e6d1cbbdfa1852e972d785b02c347d31c9b5c5b18f3656f2af4a567a77",
+      "passed": 378,
+      "required_source_suites_exact": true,
+      "skipped": 0,
+      "status": "PASS",
+      "test_counts_by_suite": {
+        "tests/test_app.py": 3,
+        "tests/test_candidate_batch_policy.py": 26,
+        "tests/test_candidate_batch_runner.py": 25,
+        "tests/test_evaluator_lifecycle_contract.py": 12,
+        "tests/test_execution_identity.py": 6,
+        "tests/test_gpu_slurm_launcher.py": 50,
+        "tests/test_graceful_shutdown_repeat_boundary.py": 2,
+        "tests/test_loss_import_lifecycle.py": 1,
+        "tests/test_mutator_subprocess_protocol.py": 2,
+        "tests/test_resource_shutdown.py": 3,
+        "tests/test_run_stage_transition.py": 6,
+        "tests/test_runtime_benchmark_processes.py": 12,
+        "tests/test_runtime_broker_deadline.py": 12,
+        "tests/test_runtime_context.py": 2,
+        "tests/test_runtime_contracts.py": 8,
+        "tests/test_runtime_controller.py": 7,
+        "tests/test_runtime_execution.py": 28,
+        "tests/test_runtime_ingress.py": 13,
+        "tests/test_runtime_process_observations.py": 13,
+        "tests/test_runtime_request_isolation.py": 40,
+        "tests/test_runtime_requirements_source.py": 10,
+        "tests/test_runtime_resources.py": 12,
+        "tests/test_runtime_saturation.py": 6,
+        "tests/test_runtime_structure_parity.py": 1,
+        "tests/test_runtime_trace_report.py": 2,
+        "tests/test_runtime_validation_harness.py": 22,
+        "tests/test_stage_transaction.py": 41,
+        "tests/test_workflow_benchmark.py": 13
+      }
+    },
+    "torch": {
+      "failed": 0,
+      "junit_sha256": "bd759712c6edfac1f1ba3bec6cea0460468264f402c3d7b939e1c1a65fb97655",
+      "passed": 181,
+      "required_source_suites_exact": true,
+      "skipped": 0,
+      "status": "PASS",
+      "test_counts_by_suite": {
+        "tests/test_design_screening_geometry.py": 4,
+        "tests/test_esmfold1_resident.py": 1,
+        "tests/test_esmfold_output_boundary.py": 23,
+        "tests/test_evaluator_rng_lifecycle.py": 4,
+        "tests/test_gpu_mutator_control.py": 69,
+        "tests/test_interaction_ipae.py": 3,
+        "tests/test_ligand_reference_pose_distance.py": 16,
+        "tests/test_loss_import_lifecycle.py": 1,
+        "tests/test_pyrosetta_lazy_import.py": 8,
+        "tests/test_repeat_symmetry.py": 15,
+        "tests/test_tree_codec_torch.py": 37
+      }
+    }
+  },
+  "scientific_control": {
+    "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+    "candidate": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+    "counts_per_source": {
+      "accepted_mutations": 1,
+      "actual_evaluator_calls": 4,
+      "mutation_attempts": 3,
+      "score_rows": 5,
+      "stage_entries": 1
+    },
+    "cpu_rng_streams": [
+      "Python",
+      "NumPy",
+      "Torch CPU"
+    ],
+    "harness_sha256": "6f52867a3d45e83985fc84b844cfdf7227e61761e615355a63b913d83eb4ed26",
+    "rows_owner_cpu_rng_outputs_exact": true,
+    "scope": "Actual direct CLI Dummy/MCMC positive control; no structures, pretrained/GPU or crash-resume certification",
+    "status": "PASS",
+    "unchanged_budget": {
+      "expected_evaluations_per_run": 4,
+      "expected_score_rows_per_run": 5,
+      "expected_stage_score_recomputations_per_run": 1,
+      "gpu_allocation": "",
+      "max_output_bytes_per_run": 16777216,
+      "mode": "direct",
+      "mutation_attempts_per_run": 3,
+      "repeats_per_run": 1,
+      "runs": 2,
+      "seed": 17,
+      "steps_per_run": 4,
+      "walltime_per_run_seconds": 45,
+      "warmups": 0
+    },
+    "workload_sha256": "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9"
+  },
+  "status": "PASS",
+  "torch": {
+    "cuda_build": null,
+    "version": "2.7.1+cpu"
+  },
+  "tree": "6f763bfb04778ef4f32386ddb8aeb38ce4240bf1",
+  "validate_wrapper_sha256": "8bf9d34f91f1144596f79a2d62d22dbc6248e3f10a03eb2315f40583a852951f"
+}
