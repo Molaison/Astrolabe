@@ -68,6 +68,8 @@ REQUIRED_TESTS = (
     "tests/test_run_stage_transition.py", "tests/test_graceful_shutdown_repeat_boundary.py",
     "tests/test_runtime_validation_harness.py",
     "tests/test_loss_import_lifecycle.py",
+    "tests/test_pyrosetta_lazy_import.py", "tests/test_runtime_requirements_source.py",
+    "tests/test_gpu_slurm_launcher.py",
 )
 TORCH_CONTRACT_TESTS = (
     "tests/test_esmfold_output_boundary.py", "tests/test_tree_codec_torch.py",
