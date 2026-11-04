@@ -1,0 +1,500 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites name="pytest tests"><testsuite name="pytest" errors="0" failures="8" skipped="0" tests="98" time="25.192" timestamp="2026-11-03T21:15:55.464394-08:00" hostname="0aa27884e4e9"><testcase classname="tests.test_runtime_validation_harness" name="test_all_fixed_work_is_required_before_any_speed_ratio" time="0.003" /><testcase classname="tests.test_runtime_validation_harness" name="test_candidate_direct_cannot_expand_scientific_tolerance" time="0.001" /><testcase classname="tests.test_runtime_validation_harness" name="test_invalid_work_cannot_be_a_speedup[failed_fast]" time="0.001" /><testcase classname="tests.test_runtime_validation_harness" name="test_invalid_work_cannot_be_a_speedup[duplicate]" time="0.002" /><testcase classname="tests.test_runtime_validation_harness" name="test_invalid_work_cannot_be_a_speedup[nonfinite]" time="0.002" /><testcase classname="tests.test_runtime_validation_harness" name="test_invalid_work_cannot_be_a_speedup[wrong_sequence]" time="0.002" /><testcase classname="tests.test_runtime_validation_harness" name="test_trace_and_scientific_rows_prove_different_work_counts" time="0.006" /><testcase classname="tests.test_runtime_validation_harness" name="test_environment_denial_is_reported_without_a_fallback" time="0.009" /><testcase classname="tests.test_runtime_validation_harness" name="test_required_suite_skip_reason_is_preserved_and_fails_gate" time="0.001" /><testcase classname="tests.test_runtime_validation_harness" name="test_torch_contract_summary_does_not_require_or_claim_a_benchmark" time="0.002" /><testcase classname="tests.test_runtime_validation_harness" name="test_existing_evidence_is_never_overwritten" time="0.001" /><testcase classname="tests.test_runtime_validation_harness" name="test_real_w0_composition_retains_frozen_scientific_protocol" time="0.326" /><testcase classname="tests.test_runtime_validation_harness" name="test_plan_preserves_work_and_alternates_complete_revision_pairs[d66ee714f2e755948534f95d9d125287ce8dbd91]" time="2.332" /><testcase classname="tests.test_runtime_validation_harness" name="test_plan_preserves_work_and_alternates_complete_revision_pairs[9d62b3eb86cb75a2266af49dc48cb851e69e0341]" time="2.254" /><testcase classname="tests.test_runtime_validation_harness" name="test_compare_cli_selects_only_the_requested_baseline[default-d66]" time="0.002" /><testcase classname="tests.test_runtime_validation_harness" name="test_compare_cli_selects_only_the_requested_baseline[explicit-9d]" time="0.001" /><testcase classname="tests.test_runtime_validation_harness" name="test_source_identity_rejects_a_checkout_with_the_wrong_requested_head" time="0.001" /><testcase classname="tests.test_runtime_validation_harness" name="test_measurement_drift_is_rejected_even_when_both_copies_match" time="0.003" /><testcase classname="tests.test_runtime_validation_harness" name="test_summary_uses_observed_baseline_and_never_invents_d66[missing-identity]" time="0.002" /><testcase classname="tests.test_runtime_validation_harness" name="test_summary_uses_observed_baseline_and_never_invents_d66[actual-9d]" time="0.002" /><testcase classname="tests.test_runtime_validation_harness" name="test_missing_new_suites_block_instead_of_skipping[recovered-runtime]" time="0.003" /><testcase classname="tests.test_runtime_validation_harness" name="test_missing_new_suites_block_instead_of_skipping[gpu-control-checker]" time="0.002" /><testcase classname="tests.test_runtime_backend_certification" name="test_inventory_matches_actual_builtin_registry_imports" time="1.903" /><testcase classname="tests.test_runtime_backend_certification" name="test_generator_runs_without_site_packages_and_preserves_evidence_scopes" time="0.126" /><testcase classname="tests.test_runtime_backend_certification" name="test_incomplete_or_failed_preflight_cannot_be_consumed_as_success[changes0]" time="0.001" /><testcase classname="tests.test_runtime_backend_certification" name="test_incomplete_or_failed_preflight_cannot_be_consumed_as_success[changes1]" time="0.000" /><testcase classname="tests.test_runtime_backend_certification" name="test_incomplete_or_failed_preflight_cannot_be_consumed_as_success[changes2]" time="0.000" /><testcase classname="tests.test_runtime_backend_certification" name="test_cpu_summary_must_match_completed_raw_command_even_with_updated_manifest" time="0.004" /><testcase classname="tests.test_runtime_backend_certification" name="test_registry_drift_cannot_silently_reuse_certification_scope[new_key]" time="0.011" /><testcase classname="tests.test_runtime_backend_certification" name="test_registry_drift_cannot_silently_reuse_certification_scope[changed_factory]" time="0.014" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_python36_grammar_and_no_shell_execution" time="0.011" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_scheduler_assignment_cgroup_remap_and_scoped_query" time="0.001" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_complete_scheduler_uuid_survives_allocation_query_reply_roundtrip" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes0]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes1]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes2]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes3]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes4]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes5]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes6]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes7]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes8]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes9]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes10]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_ambiguous_or_missing_binding_fails_before_any_query[changes11]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes0]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes1]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes2]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes3]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes4]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes5]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes6]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes7]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes8]" time="0.001" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes9]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes10]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes11]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes12]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes13]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_wrong_actual_scheduler_allocation_rejected[changes14]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_gpu_metadata_must_match_single_assigned_id[5, GPU-12345678-1234-1234-1234-123456789abc, name, driver, bus, 24564, 0]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_gpu_metadata_must_match_single_assigned_id[4, GPU-short, name, driver, bus, 24564, 0]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_gpu_metadata_must_match_single_assigned_id[reply2]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_gpu_metadata_must_match_single_assigned_id[]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_gpu_metadata_must_match_single_assigned_id[4, GPU-12345678-1234-1234-1234-123456789abc, name, driver, bus, N/A, 0]" time="0.001" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_no_existing_job_submission" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_exact_bounded_new_srun_argv_no_node_or_gpu_pin" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_container_gpu_visibility_readonly_sources_private_temp_and_cleanenv" time="0.001" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_global_gpu_five_inherited_zero_binds_verified_uuid_before_cuda" time="0.001" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_untrusted_container_overrides_removed_without_breaking_slurm_client_libraries" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_actual_allocation_clock_two_independent_representations" time="0.002" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_terminal_accounting_is_own_job_and_actual_cost_not_client_wall" time="0.001" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_terminal_accounting_rejects_invalid_dates_exit_and_contradictory_gpu_counts[change0]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_terminal_accounting_rejects_invalid_dates_exit_and_contradictory_gpu_counts[change1]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_terminal_accounting_rejects_invalid_dates_exit_and_contradictory_gpu_counts[change2]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_terminal_accounting_rejects_invalid_dates_exit_and_contradictory_gpu_counts[change3]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_terminal_accounting_rejects_invalid_dates_exit_and_contradictory_gpu_counts[change4]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_terminal_accounting_rejects_invalid_dates_exit_and_contradictory_gpu_counts[change5]" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_accounting_preserves_elapsed_wall_difference_and_gates_both_budgets" time="0.000" /><testcase classname="tests.test_gpu_slurm_launcher" name="test_bind_path_delimiters_are_not_interpreted" time="0.000" /><testcase classname="tests.test_pyrosetta_lazy_import" name="test_runner_import_preserves_registry_without_importing_pyrosetta" time="2.213"><failure message="AssertionError: Traceback (most recent call last):&#10;    File &quot;&lt;string&gt;&quot;, line 20, in &lt;module&gt;&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;    File &quot;/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py&quot;, line 41, in &lt;module&gt;&#10;      from astrolabe.utils.file_parser import parse_mmcif, parse_pdb&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;[+7 more lines; full report in element text]">def test_runner_import_preserves_registry_without_importing_pyrosetta() -&gt; None:
+&gt;       _run_isolated("""
+            import run
+            from astrolabe.losses.base import loss_registry
+            for name in (
+                "ipae", "contact_molecular_surface", "chain_holes_diff",
+                "buried_fraction_allala", "ligand_protein_hbond",
+            ):
+                assert loss_registry.get_function(name).__module__ == interaction.__name__
+            assert attempts == [], attempts
+            assert "pyrosetta" not in sys.modules
+            assert not interaction._PYROSETTA_IMPORT_ATTEMPTED
+        """)
+
+tests/test_pyrosetta_lazy_import.py:120: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = '\n        import run\n        from astrolabe.losses.base import loss_registry\n        for name in (\n            "ip...empts\n        assert "pyrosetta" not in sys.modules\n        assert not interaction._PYROSETTA_IMPORT_ATTEMPTED\n    '
+
+    def _run_isolated(code: str) -&gt; None:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1")
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (str(REPO_ROOT), env.get("PYTHONPATH")) if path
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", textwrap.dedent(_PRELUDE) + textwrap.dedent(code)],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+&gt;       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "&lt;string&gt;", line 20, in &lt;module&gt;
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py", line 41, in &lt;module&gt;
+E             from astrolabe.utils.file_parser import parse_mmcif, parse_pdb
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/utils/file_parser.py", line 9, in &lt;module&gt;
+E             from rdkit import Chem
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E         ModuleNotFoundError: No module named 'rdkit'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python', '-c', '\nimport builtins\nfro...m rdkit import Chem\n  File "&lt;string&gt;", line 17, in block_pyrosetta\nModuleNotFoundError: No module named \'rdkit\'\n').returncode
+
+tests/test_pyrosetta_lazy_import.py:116: AssertionError</failure></testcase><testcase classname="tests.test_pyrosetta_lazy_import" name="test_first_use_publishes_symbols_without_initialization_or_reimport" time="2.336"><failure message="AssertionError: Traceback (most recent call last):&#10;    File &quot;&lt;string&gt;&quot;, line 20, in &lt;module&gt;&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;    File &quot;/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py&quot;, line 41, in &lt;module&gt;&#10;      from astrolabe.utils.file_parser import parse_mmcif, parse_pdb&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;[+7 more lines; full report in element text]">def test_first_use_publishes_symbols_without_initialization_or_reimport() -&gt; None:
+&gt;       _run_isolated("""
+            expected = install_fake()
+            assert interaction.sasa_calculator(object()).tolist() == [1.25, 2.5]
+            for name, symbol in expected.items():
+                assert getattr(interaction, name) is symbol, name
+            first_attempts = list(attempts)
+            assert first_attempts
+            interaction._require_pyrosetta()
+            assert attempts == first_attempts
+            assert interaction._PYROSETTA_IMPORT_ATTEMPTED
+            assert interaction._PYROSETTA_IMPORT_ERROR is None
+        """)
+
+tests/test_pyrosetta_lazy_import.py:135: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = '\n        expected = install_fake()\n        assert interaction.sasa_calculator(object()).tolist() == [1.25, 2.5]\n  ...      assert interaction._PYROSETTA_IMPORT_ATTEMPTED\n        assert interaction._PYROSETTA_IMPORT_ERROR is None\n    '
+
+    def _run_isolated(code: str) -&gt; None:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1")
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (str(REPO_ROOT), env.get("PYTHONPATH")) if path
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", textwrap.dedent(_PRELUDE) + textwrap.dedent(code)],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+&gt;       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "&lt;string&gt;", line 20, in &lt;module&gt;
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py", line 41, in &lt;module&gt;
+E             from astrolabe.utils.file_parser import parse_mmcif, parse_pdb
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/utils/file_parser.py", line 9, in &lt;module&gt;
+E             from rdkit import Chem
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E         ModuleNotFoundError: No module named 'rdkit'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python', '-c', '\nimport builtins\nfro...m rdkit import Chem\n  File "&lt;string&gt;", line 17, in block_pyrosetta\nModuleNotFoundError: No module named \'rdkit\'\n').returncode
+
+tests/test_pyrosetta_lazy_import.py:116: AssertionError</failure></testcase><testcase classname="tests.test_pyrosetta_lazy_import" name="test_optional_import_failure_is_cached_with_original_cause[False]" time="2.164"><failure message="AssertionError: Traceback (most recent call last):&#10;    File &quot;&lt;string&gt;&quot;, line 20, in &lt;module&gt;&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;    File &quot;/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py&quot;, line 41, in &lt;module&gt;&#10;      from astrolabe.utils.file_parser import parse_mmcif, parse_pdb&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;[+7 more lines; full report in element text]">native_failure = False
+
+    @pytest.mark.parametrize("native_failure", [False, True])
+    def test_optional_import_failure_is_cached_with_original_cause(native_failure: bool) -&gt; None:
+&gt;       _run_isolated(f"""
+            native_failure = {native_failure!r}
+            cause = unavailable
+            if native_failure:
+                cause = RuntimeError("isolated native symbol load failure")
+                install_fake(failure=cause)
+            expected_message = (
+                "PyRosetta is required for these losses/selectors but is not available. "
+                "Install it (e.g. via `pyrosetta-installer`) or remove PyRosetta-based terms."
+            )
+            first_attempts = None
+            for _ in range(2):
+                try:
+                    interaction._require_pyrosetta()
+                except ImportError as exc:
+                    assert str(exc) == expected_message
+                    assert exc.__cause__ is cause
+                else:
+                    raise AssertionError("missing optional dependency must fail")
+                if first_attempts is None:
+                    first_attempts = list(attempts)
+                assert attempts == first_attempts
+            assert interaction._PYROSETTA_IMPORT_ATTEMPTED
+            assert interaction._PYROSETTA_IMPORT_ERROR is cause
+            assert all(getattr(interaction, name) is None for name in symbol_names)
+        """)
+
+tests/test_pyrosetta_lazy_import.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = '\n        native_failure = False\n        cause = unavailable\n        if native_failure:\n            cause = Runtim...PYROSETTA_IMPORT_ERROR is cause\n        assert all(getattr(interaction, name) is None for name in symbol_names)\n    '
+
+    def _run_isolated(code: str) -&gt; None:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1")
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (str(REPO_ROOT), env.get("PYTHONPATH")) if path
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", textwrap.dedent(_PRELUDE) + textwrap.dedent(code)],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+&gt;       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "&lt;string&gt;", line 20, in &lt;module&gt;
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py", line 41, in &lt;module&gt;
+E             from astrolabe.utils.file_parser import parse_mmcif, parse_pdb
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/utils/file_parser.py", line 9, in &lt;module&gt;
+E             from rdkit import Chem
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E         ModuleNotFoundError: No module named 'rdkit'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python', '-c', '\nimport builtins\nfro...m rdkit import Chem\n  File "&lt;string&gt;", line 17, in block_pyrosetta\nModuleNotFoundError: No module named \'rdkit\'\n').returncode
+
+tests/test_pyrosetta_lazy_import.py:116: AssertionError</failure></testcase><testcase classname="tests.test_pyrosetta_lazy_import" name="test_optional_import_failure_is_cached_with_original_cause[True]" time="2.231"><failure message="AssertionError: Traceback (most recent call last):&#10;    File &quot;&lt;string&gt;&quot;, line 20, in &lt;module&gt;&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;    File &quot;/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py&quot;, line 41, in &lt;module&gt;&#10;      from astrolabe.utils.file_parser import parse_mmcif, parse_pdb&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;[+7 more lines; full report in element text]">native_failure = True
+
+    @pytest.mark.parametrize("native_failure", [False, True])
+    def test_optional_import_failure_is_cached_with_original_cause(native_failure: bool) -&gt; None:
+&gt;       _run_isolated(f"""
+            native_failure = {native_failure!r}
+            cause = unavailable
+            if native_failure:
+                cause = RuntimeError("isolated native symbol load failure")
+                install_fake(failure=cause)
+            expected_message = (
+                "PyRosetta is required for these losses/selectors but is not available. "
+                "Install it (e.g. via `pyrosetta-installer`) or remove PyRosetta-based terms."
+            )
+            first_attempts = None
+            for _ in range(2):
+                try:
+                    interaction._require_pyrosetta()
+                except ImportError as exc:
+                    assert str(exc) == expected_message
+                    assert exc.__cause__ is cause
+                else:
+                    raise AssertionError("missing optional dependency must fail")
+                if first_attempts is None:
+                    first_attempts = list(attempts)
+                assert attempts == first_attempts
+            assert interaction._PYROSETTA_IMPORT_ATTEMPTED
+            assert interaction._PYROSETTA_IMPORT_ERROR is cause
+            assert all(getattr(interaction, name) is None for name in symbol_names)
+        """)
+
+tests/test_pyrosetta_lazy_import.py:151: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = '\n        native_failure = True\n        cause = unavailable\n        if native_failure:\n            cause = Runtime...PYROSETTA_IMPORT_ERROR is cause\n        assert all(getattr(interaction, name) is None for name in symbol_names)\n    '
+
+    def _run_isolated(code: str) -&gt; None:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1")
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (str(REPO_ROOT), env.get("PYTHONPATH")) if path
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", textwrap.dedent(_PRELUDE) + textwrap.dedent(code)],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+&gt;       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "&lt;string&gt;", line 20, in &lt;module&gt;
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py", line 41, in &lt;module&gt;
+E             from astrolabe.utils.file_parser import parse_mmcif, parse_pdb
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/utils/file_parser.py", line 9, in &lt;module&gt;
+E             from rdkit import Chem
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E         ModuleNotFoundError: No module named 'rdkit'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python', '-c', '\nimport builtins\nfro...m rdkit import Chem\n  File "&lt;string&gt;", line 17, in block_pyrosetta\nModuleNotFoundError: No module named \'rdkit\'\n').returncode
+
+tests/test_pyrosetta_lazy_import.py:116: AssertionError</failure></testcase><testcase classname="tests.test_pyrosetta_lazy_import" name="test_concurrent_first_use_loads_once_and_publishes_only_complete_symbols[False]" time="2.056"><failure message="AssertionError: Traceback (most recent call last):&#10;    File &quot;&lt;string&gt;&quot;, line 20, in &lt;module&gt;&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;    File &quot;/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py&quot;, line 41, in &lt;module&gt;&#10;      from astrolabe.utils.file_parser import parse_mmcif, parse_pdb&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;[+7 more lines; full report in element text]">fail = False
+
+    @pytest.mark.parametrize("fail", [False, True])
+    def test_concurrent_first_use_loads_once_and_publishes_only_complete_symbols(fail: bool) -&gt; None:
+&gt;       _run_isolated(f"""
+            fail = {fail!r}
+            entered = threading.Event()
+            release = threading.Event()
+            barrier = threading.Barrier(8)
+            cause = RuntimeError("isolated native symbol load failure") if fail else None
+    
+            def before_last():
+                entered.set()
+                assert release.wait(10), "test did not release import"
+    
+            expected = install_fake(before_last=before_last, failure=cause)
+    
+            def require():
+                barrier.wait(timeout=10)
+                try:
+                    interaction._require_pyrosetta()
+                except ImportError as exc:
+                    assert fail
+                    assert exc.__cause__ is cause
+                    return
+                assert not fail
+                assert all(getattr(interaction, name) is symbol for name, symbol in expected.items())
+    
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                futures = [pool.submit(require) for _ in range(8)]
+                try:
+                    assert entered.wait(10), "loader did not reach final symbol import"
+                    assert all(getattr(interaction, name) is None for name in symbol_names)
+                    assert not interaction._PYROSETTA_IMPORT_ATTEMPTED
+                finally:
+                    release.set()
+                for future in futures:
+                    future.result(timeout=10)
+    
+            assert attempts.count("pyrosetta") == 1
+            assert all(count == 1 for count in Counter(attempts).values()), attempts
+            assert interaction._PYROSETTA_IMPORT_ATTEMPTED
+            if fail:
+                assert all(getattr(interaction, name) is None for name in symbol_names)
+            else:
+                assert all(getattr(interaction, name) is symbol for name, symbol in expected.items())
+        """)
+
+tests/test_pyrosetta_lazy_import.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = '\n        fail = False\n        entered = threading.Event()\n        release = threading.Event()\n        barrier = t...        else:\n            assert all(getattr(interaction, name) is symbol for name, symbol in expected.items())\n    '
+
+    def _run_isolated(code: str) -&gt; None:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1")
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (str(REPO_ROOT), env.get("PYTHONPATH")) if path
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", textwrap.dedent(_PRELUDE) + textwrap.dedent(code)],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+&gt;       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "&lt;string&gt;", line 20, in &lt;module&gt;
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py", line 41, in &lt;module&gt;
+E             from astrolabe.utils.file_parser import parse_mmcif, parse_pdb
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/utils/file_parser.py", line 9, in &lt;module&gt;
+E             from rdkit import Chem
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E         ModuleNotFoundError: No module named 'rdkit'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python', '-c', '\nimport builtins\nfro...m rdkit import Chem\n  File "&lt;string&gt;", line 17, in block_pyrosetta\nModuleNotFoundError: No module named \'rdkit\'\n').returncode
+
+tests/test_pyrosetta_lazy_import.py:116: AssertionError</failure></testcase><testcase classname="tests.test_pyrosetta_lazy_import" name="test_concurrent_first_use_loads_once_and_publishes_only_complete_symbols[True]" time="2.139"><failure message="AssertionError: Traceback (most recent call last):&#10;    File &quot;&lt;string&gt;&quot;, line 20, in &lt;module&gt;&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;    File &quot;/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py&quot;, line 41, in &lt;module&gt;&#10;      from astrolabe.utils.file_parser import parse_mmcif, parse_pdb&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;[+7 more lines; full report in element text]">fail = True
+
+    @pytest.mark.parametrize("fail", [False, True])
+    def test_concurrent_first_use_loads_once_and_publishes_only_complete_symbols(fail: bool) -&gt; None:
+&gt;       _run_isolated(f"""
+            fail = {fail!r}
+            entered = threading.Event()
+            release = threading.Event()
+            barrier = threading.Barrier(8)
+            cause = RuntimeError("isolated native symbol load failure") if fail else None
+    
+            def before_last():
+                entered.set()
+                assert release.wait(10), "test did not release import"
+    
+            expected = install_fake(before_last=before_last, failure=cause)
+    
+            def require():
+                barrier.wait(timeout=10)
+                try:
+                    interaction._require_pyrosetta()
+                except ImportError as exc:
+                    assert fail
+                    assert exc.__cause__ is cause
+                    return
+                assert not fail
+                assert all(getattr(interaction, name) is symbol for name, symbol in expected.items())
+    
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                futures = [pool.submit(require) for _ in range(8)]
+                try:
+                    assert entered.wait(10), "loader did not reach final symbol import"
+                    assert all(getattr(interaction, name) is None for name in symbol_names)
+                    assert not interaction._PYROSETTA_IMPORT_ATTEMPTED
+                finally:
+                    release.set()
+                for future in futures:
+                    future.result(timeout=10)
+    
+            assert attempts.count("pyrosetta") == 1
+            assert all(count == 1 for count in Counter(attempts).values()), attempts
+            assert interaction._PYROSETTA_IMPORT_ATTEMPTED
+            if fail:
+                assert all(getattr(interaction, name) is None for name in symbol_names)
+            else:
+                assert all(getattr(interaction, name) is symbol for name, symbol in expected.items())
+        """)
+
+tests/test_pyrosetta_lazy_import.py:181: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = '\n        fail = True\n        entered = threading.Event()\n        release = threading.Event()\n        barrier = th...        else:\n            assert all(getattr(interaction, name) is symbol for name, symbol in expected.items())\n    '
+
+    def _run_isolated(code: str) -&gt; None:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1")
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (str(REPO_ROOT), env.get("PYTHONPATH")) if path
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", textwrap.dedent(_PRELUDE) + textwrap.dedent(code)],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+&gt;       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "&lt;string&gt;", line 20, in &lt;module&gt;
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py", line 41, in &lt;module&gt;
+E             from astrolabe.utils.file_parser import parse_mmcif, parse_pdb
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/utils/file_parser.py", line 9, in &lt;module&gt;
+E             from rdkit import Chem
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E         ModuleNotFoundError: No module named 'rdkit'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python', '-c', '\nimport builtins\nfro...m rdkit import Chem\n  File "&lt;string&gt;", line 17, in block_pyrosetta\nModuleNotFoundError: No module named \'rdkit\'\n').returncode
+
+tests/test_pyrosetta_lazy_import.py:116: AssertionError</failure></testcase><testcase classname="tests.test_pyrosetta_lazy_import" name="test_direct_symbol_helpers_guard_before_using_native_dependencies" time="2.288"><failure message="AssertionError: Traceback (most recent call last):&#10;    File &quot;&lt;string&gt;&quot;, line 20, in &lt;module&gt;&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;    File &quot;/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py&quot;, line 41, in &lt;module&gt;&#10;      from astrolabe.utils.file_parser import parse_mmcif, parse_pdb&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;[+7 more lines; full report in element text]">def test_direct_symbol_helpers_guard_before_using_native_dependencies() -&gt; None:
+&gt;       _run_isolated("""
+            class GuardReached(Exception):
+                pass
+    
+            def guard():
+                raise GuardReached
+    
+            interaction._require_pyrosetta = guard
+            calls = (
+                lambda: interaction._chain_region_selector(None, "A"),
+                lambda: interaction._chain_group_region_selector(None, ["A", "B"]),
+                lambda: interaction._per_residue_sasa_calculator(False),
+                lambda: interaction._per_residue_sasa_calculator(True),
+                lambda: interaction.calculate_holes_diff(),
+                lambda: interaction._load_pose_cached("unused.pdb", None, ()),
+                lambda: interaction.mutate_pose_to_all_ala(None),
+            )
+            for call in calls:
+                try:
+                    call()
+                except GuardReached:
+                    continue
+                raise AssertionError("helper used native dependency without guard")
+            assert attempts == []
+        """)
+
+tests/test_pyrosetta_lazy_import.py:227: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = '\n        class GuardReached(Exception):\n            pass\n\n        def guard():\n            raise GuardReached\n\...\n            raise AssertionError("helper used native dependency without guard")\n        assert attempts == []\n    '
+
+    def _run_isolated(code: str) -&gt; None:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1")
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (str(REPO_ROOT), env.get("PYTHONPATH")) if path
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", textwrap.dedent(_PRELUDE) + textwrap.dedent(code)],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+&gt;       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "&lt;string&gt;", line 20, in &lt;module&gt;
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py", line 41, in &lt;module&gt;
+E             from astrolabe.utils.file_parser import parse_mmcif, parse_pdb
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/utils/file_parser.py", line 9, in &lt;module&gt;
+E             from rdkit import Chem
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E         ModuleNotFoundError: No module named 'rdkit'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python', '-c', '\nimport builtins\nfro...m rdkit import Chem\n  File "&lt;string&gt;", line 17, in block_pyrosetta\nModuleNotFoundError: No module named \'rdkit\'\n').returncode
+
+tests/test_pyrosetta_lazy_import.py:116: AssertionError</failure></testcase><testcase classname="tests.test_pyrosetta_lazy_import" name="test_existing_global_and_guard_monkeypatch_patterns_remain_supported" time="2.175"><failure message="AssertionError: Traceback (most recent call last):&#10;    File &quot;&lt;string&gt;&quot;, line 20, in &lt;module&gt;&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;    File &quot;/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py&quot;, line 41, in &lt;module&gt;&#10;      from astrolabe.utils.file_parser import parse_mmcif, parse_pdb&#10;    File &quot;&lt;string&gt;&quot;, line 17, in block_pyrosetta&#10;[+7 more lines; full report in element text]">def test_existing_global_and_guard_monkeypatch_patterns_remain_supported() -&gt; None:
+&gt;       _run_isolated("""
+            # Existing load_pose tests replace only the module global.
+            fake_module = SimpleNamespace()
+            interaction.pyrosetta = fake_module
+            interaction._require_pyrosetta()
+            interaction.load_pose_with_optional_mmcif_pdb_fallback = (
+                lambda module, *args, **kwargs: module
+            )
+            assert interaction._load_pose_cached("unused.pdb", None, ()) is fake_module
+            assert not interaction._PYROSETTA_IMPORT_ATTEMPTED
+    
+            # Existing scoring tests replace the guard and individual native symbols.
+            interaction.pyrosetta = None
+            interaction._require_pyrosetta = lambda: None
+            interaction.PerResidueSasaMetric = lambda: SimpleNamespace(
+                calculate=lambda pose: {1: 3.0}
+            )
+            assert interaction.sasa_calculator(object()).tolist() == [3.0]
+            assert attempts == []
+        """)
+
+tests/test_pyrosetta_lazy_import.py:255: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+code = '\n        # Existing load_pose tests replace only the module global.\n        fake_module = SimpleNamespace()\n      ...        )\n        assert interaction.sasa_calculator(object()).tolist() == [3.0]\n        assert attempts == []\n    '
+
+    def _run_isolated(code: str) -&gt; None:
+        env = dict(os.environ, CUDA_VISIBLE_DEVICES="", PYTHONDONTWRITEBYTECODE="1")
+        env["PYTHONPATH"] = os.pathsep.join(
+            path for path in (str(REPO_ROOT), env.get("PYTHONPATH")) if path
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", textwrap.dedent(_PRELUDE) + textwrap.dedent(code)],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=90,
+        )
+&gt;       assert result.returncode == 0, result.stdout + result.stderr
+E       AssertionError: Traceback (most recent call last):
+E           File "&lt;string&gt;", line 20, in &lt;module&gt;
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/losses/interaction.py", line 41, in &lt;module&gt;
+E             from astrolabe.utils.file_parser import parse_mmcif, parse_pdb
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E           File "/workspace/scratch/1a0b1639644d/cloud-20261104/integration-f102/astrolabe/utils/file_parser.py", line 9, in &lt;module&gt;
+E             from rdkit import Chem
+E           File "&lt;string&gt;", line 17, in block_pyrosetta
+E         ModuleNotFoundError: No module named 'rdkit'
+E         
+E       assert 1 == 0
+E        +  where 1 = CompletedProcess(args=['/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python', '-c', '\nimport builtins\nfro...m rdkit import Chem\n  File "&lt;string&gt;", line 17, in block_pyrosetta\nModuleNotFoundError: No module named \'rdkit\'\n').returncode
+
+tests/test_pyrosetta_lazy_import.py:116: AssertionError</failure></testcase><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9(): return 'pyrosetta.\U0001f600'  # not part of node-\n]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9(): return 'pyrosetta.\U0001f600'  # not part of node-\r\n]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9(): return 'pyrosetta.\U0001f600'  # not part of node-\r]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9():\n    text = 'a\x0cb\x0bc\u2028d'\n    return text-\n]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9():\n    text = 'a\x0cb\x0bc\u2028d'\n    return text-\r\n]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9():\n    text = 'a\x0cb\x0bc\u2028d'\n    return text-\r]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9(\n    x='\U0001f600',\n):\n    return ('pyrosetta.', x)-\n]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9(\n    x='\U0001f600',\n):\n    return ('pyrosetta.', x)-\r\n]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_utf8_and_line_boundaries[def caf\xe9(\n    x='\U0001f600',\n):\n    return ('pyrosetta.', x)-\r]" time="0.000" /><testcase classname="tests.test_runtime_requirements_source" name="test_source_segment_matches_ast_for_registered_loss_corpus" time="0.195" /></testsuite></testsuites>

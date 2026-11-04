@@ -1,0 +1,44 @@
+{
+  "candidate": "f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f",
+  "baseline": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "protocol_sha256": "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5",
+  "freeze": {
+    "groups": 5,
+    "trials": 30,
+    "trajectories": 90,
+    "evaluations": 270,
+    "wall_seconds": 900,
+    "max_output_bytes": 260000000,
+    "gpus": 0,
+    "target_gain": 0.2,
+    "scientific_workload_change": false,
+    "profiler_overlap": false
+  },
+  "gate": "Native installed-PyRosetta independent C gate passed; keep only complete scientific/release gates and repeatable improvement outside paired variation; all negatives retained; compare against previous best 9d on same host only",
+  "hypothesis": "Reuse previous oldopt lazy PyRosetta and AST source extraction, preserving prior SciPy lazy imports, to reduce cold launch/config costs without changing native losses/registry/RNG; runtime fixes alone showed no reliable speedup",
+  "command": [
+    "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/control/test-container-cpu",
+    "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/startup-candidate-f9ce87b",
+    "benchmarks/runtime/validate.py",
+    "compare",
+    "--baseline",
+    "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/repo-offline",
+    "--baseline-commit",
+    "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+    "--out",
+    "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/control/w0-startup-f9-vs9d-01"
+  ],
+  "response": {
+    "execution": "accepted",
+    "result": {
+      "processId": "d6536b59-5854-458b-9450-aeb776ea4422",
+      "status": "running",
+      "stdout": "",
+      "stderr": "No site-local environment: using env=env. Configure model paths before inference (see README installation).\n",
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    },
+    "requestId": "6f16a30a-b4b4-4a51-9f68-c1acae34ad7a"
+  },
+  "local_recording_note": "Initial local JSON serialization attempt failed on escaped stderr newline after native start; corrected local recording only; no native command or trial replay"
+}

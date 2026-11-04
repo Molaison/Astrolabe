@@ -1,0 +1,8 @@
+{
+  "returncode": 1,
+  "passed": 90,
+  "failed": 8,
+  "reason": "Eight real child imports in test_pyrosetta_lazy_import require RDKit, which is absent from the intentionally minimal core CPU environment",
+  "action": "Move that mandatory suite to existing Torch/geometry validation job; do not alter frozen CPU benchmark dependencies or skip tests",
+  "earlier_command_typo": "Initial invocation named nonexistent test_runtime_validation_entrypoint.py and exited4 before anytests; corrected to observed test_runtime_validation_harness.py"
+}

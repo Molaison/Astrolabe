@@ -64,3 +64,44 @@ Broker admission now charges pending-memory wait, compute wait, worker-lock wait
 The ESMFold-specific split preserves audited native atom conversion and required host materialization inside device admission, then formats detached CPU outputs outside it. Exact native CPU differential tests and worker-boundary negative controls verify this representation/lifetime contract. Requested host payload fell from 635,728 to 20,648 bytes and from 34,256,928 to 326,672 bytes for the two synthetic output shapes. Those counts are not measured CUDA transfers. Independent CPU total timings include regressions, so neither CPU nor GPU throughput acceleration is certified by this change.
 
 The first actual same-runner CPU comparison of the correctness changes completed 30/30 trials and all scientific/resource-release gates. Candidate median direct/resident-serial/resident-adaptive times were 2.8286/7.2894/7.3085 seconds; frozen d66 baseline times were 2.7900/7.3248/7.3731 seconds. Paired ranges overlap. This is retained as a negative performance result and a clean starting point for a separate R1 import-cost hypothesis. A narrower deferred-SciPy import candidate can preserve the existing owner/process/stop architecture; it must earn its own end-to-end result before a performance keep decision.
+
+
+## f102 continuation: recover existing owners, preserve scientific boundaries
+
+The server inspection recovered unmerged `cloud-20261103-fix` and `opt` linked
+worktrees. Their complete tracked/untracked snapshots were preserved before reuse;
+these original directories are not independent clones and were not reset or edited.
+The selected implementation incorporates the already written absolute wire
+deadlines, separate business/control/nested ingress lanes, cancellation,
+CPU-worker/physical-GPU failure isolation and retained prepared-resource ownership.
+A root-reproduced waiting-count leak after actual compute admission was then fixed
+by tracking the transition actually counted, rather than clearing a guessed state.
+The resulting source passed 309 real Linux process/AF_UNIX contracts, zero skips.
+This broad correctness integration alone did not earn an additional speedup:
+the full same-host 30-trial comparison was noisy/negative and is preserved.
+
+The next performance pilot reuses the old opt lazy PyRosetta loader and source
+scanner; it retains previously verified SciPy deferral. The native import set is
+published atomically under the existing first-use lock, and six direct helper
+entry points require it before access. Loss formula bodies/registry signatures
+and all scientific settings remain unchanged. Installed-PyRosetta controls and
+complete W0 passed independently; the five paired comparisons improve every
+mode beyond the 20% CPU engineering target. This does not make resident the
+fastest route for short CPU work, and is not a GPU speed claim.
+
+No new general actor/scheduler, speculative MCMC proposal, durable commit store
+or dependency cache was added. Generation prevalidation remains finite and
+scheduler-local; OutcomeUnknown fences work without claiming crash-persistent
+exactly-once semantics. The proposed stream-wide lineage/backpressure/ordered
+commit architecture and GPU overlap are still incomplete.
+
+The real pretrained pilot entry is a narrow public ProteinMPNN runner control,
+with identical native inputs/settings for legacy and private-resident execution.
+Both modes retain their model; there is no artificial reload baseline. It cannot
+certify evaluator W1, full registry selector/acceptance, other variants, shared
+broker fairness or OOM recovery. One separately owned Slurm allocation is required;
+its independently resolved GPU UUID is bound before CUDA initialization. Resource
+metadata/adversarial CPU tests only validate the launcher contract. Actual device,
+terminal accounting and every request's scientific/lifecycle evidence must come
+from the recorded GPU run. Frozen source remains in an immutable worktree; result
+reports are added on a separate evidence branch.

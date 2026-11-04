@@ -62,3 +62,19 @@ git fetch evidence/runtime-next/source-anchors.bundle \
 ```
 
 This makes original SHA anchors such as 605bad0 and cf62f85 resolvable without moving any worktree branch. It contains committed source/review history only; existing untracked resource files are not included.
+
+
+## f102 continuation (2026-11-04)
+
+- [Recovered Runtime contracts](f102-runtime-host/README.md): real 309-test CPU process gate and complete archive.
+- [Recovered Runtime W0 negative](f102-w0-reuse/README.md): no stable added performance gain; all 30 trials retained.
+- [Native startup diagnosis](f102-startup-reuse/README.md): reused old work, real importtime and all negative controls.
+- [Independent PyRosetta science](agent-c/f102-startup/README.md): actual installed native results, complete RNG/geometry and raw archive.
+- [Independent startup W0](agent-c/f102-startup-w0/README.md): 30 valid trials, >20% CPU target, exact original raw records.
+- [GPU checker resource review](gpu-control-resource-review/README.md) and [Slurm launcher review](gpu-launcher-resource-review/README.md): controlled CPU contracts, not GPU execution.
+- [Root independent verification](root-f102-review/README.md): own comparisons, before/after counterexamples and preserved environment failures.
+- `source-anchors-continuation.bundle` retains critical original source SHAs with a declared 9d prerequisite; `source-anchors-continuation.json` records exact refs/digest. The earlier source bundle remains unchanged.
+- `decision.tsv` now includes baseline, patch, errors, work count, cost and decision columns. `decision-legacy.tsv` preserves the unmodified earlier log; unspecified old row fields explicitly point to its archived evidence.
+
+Actual final-HEAD/GPU results are attached on the separate evidence branch so
+these tested sources remain immutable. No pre-run matrix row is a real device certificate.
