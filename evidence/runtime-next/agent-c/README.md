@@ -10,6 +10,7 @@ This directory records Agent C's producer correctness changes, independent revie
 | A deadline/ownership review | **DONE** for scoped control-plane gates; two preexisting bugs found, fixed separately by A and independently retested | `review-a-report.md`, `review-a-*.json`, independent timeout probes |
 | B ESMFold boundary review | **DONE** for scoped CPU/native-output contracts; pretrained GPU and workflow performance remain **BLOCKED** | `review-b-report.md`, `review-b-independent-differential.json`, `review-b-output-comparison.json` |
 | Actual CLI accepted mutation and stage entry | **DONE** for the separate fixed CPU control; root also reports an independent integrated-HEAD replay | `scientific-positive-report.md`, `scientific-positive-02/report.json` |
+| R1 W0 raw CI audit | **DONE** for independent raw-data verification; 20% target unmet, resident remains slower than direct | `review-r1-ci-report.md`, `review-r1-ci-02/report.json`, `review_r1_ci.py` |
 
 ## Negative evidence retained
 
