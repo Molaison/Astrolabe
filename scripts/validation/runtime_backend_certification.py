@@ -76,7 +76,7 @@ def catalog():
           'audited native atom14->37 and required D2H/RNG under lease; host PDB formatting; unknown helper composite fallback',
           ['tests/test_esmfold_output_boundary.py','tests/test_esmfold1_resident.py'],
           pins=['vendor/esm2','vendor/openfold_esm2'],
-          note='Current W1 real checkpoint/model installation is not configured or run. CPU native-output differential is synthetic, not pretrained ESMFold1.'),
+          note='f102 located a 2,097,152,000-byte invalid ZIP folding checkpoint; fair-esm/OpenFold distribution metadata and the expected audited ESM helper path are absent. No actual ESM import test or pretrained run is inferred. CPU native-output differential remains synthetic.'),
         entry('esmfold2','_build_esmfold2_evaluator',
           [scope('Biohub default',model_name='biohub/ESMFold2'),scope('configured Biohub snapshot/model name')],
           ['model_name and folding snapshot','nested ESMC snapshot','esmc_precision','num_loops','num_sampling_steps',
@@ -247,6 +247,108 @@ def _git(root, *arguments):
     return result.stdout.strip() if result.returncode == 0 else None
 
 
+def _successful_remote_json(result):
+    if (result.get('status') != 'exited' or result.get('exitCode') != 0
+            or result.get('outputTruncated') is not False):
+        raise ValueError('recorded preflight result is incomplete, failed or truncated')
+    return json.loads(result['stdout'])
+
+
+def f102_preflight(root):
+    """Read immutable CPU/asset records; never treat readiness as GPU execution."""
+    relative = Path('evidence/runtime-next/agent-b/f102-backend-preflight')
+    directory = root/relative
+    manifest = json.loads((directory/'manifest.json').read_text())
+    provenance = {}
+    for name, identity in manifest['files'].items():
+        data = (directory/name).read_bytes()
+        if len(data) != identity['bytes'] or hashlib.sha256(data).hexdigest() != identity['sha256']:
+            raise ValueError(f'f102 recorded preflight evidence changed: {name}')
+        provenance[str(relative/name)] = identity
+    commands = json.loads((directory/'commands.json').read_text())
+    compatibility_commands = json.loads((directory/'commands-42-46.json').read_text())
+
+    def command_json(records, command_id, compatibility=False):
+        matches = [record for record in records if record['id'] == command_id]
+        if len(matches) != 1:
+            raise ValueError(f'f102 command identity is missing or ambiguous: {command_id}')
+        record = matches[0]
+        if compatibility:
+            record = record.get('poll_response', record['initial_response'])
+        return _successful_remote_json(record['result'])
+
+    cpu = json.loads((directory/'CPU_COMPATIBILITY.json').read_text())
+    if (cpu['module_import'] != command_json(compatibility_commands, '45', True)
+            or cpu['checkpoint_and_structure'] != command_json(compatibility_commands, '46', True)):
+        raise ValueError('f102 CPU summary differs from its actual completed command output')
+    parsed_record = json.loads((directory/'gpu-control-parse-true.json').read_text())
+    parsed = _successful_remote_json(parsed_record['completed']['result'])
+    protocol_path = Path('benchmarks/runtime/workloads/proteinmpnn_gpu_control.json')
+    protocol = json.loads((root/protocol_path).read_text())
+    weights = cpu['checkpoint_and_structure']
+    if (weights['weights_sha256'] != protocol['assets']['checkpoint']['sha256']
+            or weights['input_sha256'] != protocol['assets']['pdb']['sha256']
+            or weights['missing_keys'] or weights['unexpected_keys']
+            or weights['model_forward_calls'] != 0 or weights['cuda_initialized']
+            or cpu['module_import']['cuda_initialized'] or parsed['cuda_initialized']
+            or parsed['chain_counts'] != protocol['assets']['pdb']['chain_counts']
+            or parsed['mask_sum'] != protocol['assets']['pdb']['residues']
+            or parsed['mask_values'] != [1]
+            or parsed['native_sequence_sha256'] != protocol['assets']['pdb']['native_sequence_sha256']
+            or parsed['settings'] != protocol['numerical_settings']):
+        raise ValueError('f102 CPU preflight does not match the recorded unsampled control assets/settings')
+    observed_sources = {Path(path).name: value['sha256'] for path, value in cpu['module_import']['source'].items()}
+    matching = all(observed_sources.get(Path(path).name) == sha
+                   and (root/path).is_file() and hashlib.sha256((root/path).read_bytes()).hexdigest() == sha
+                   for path, sha in protocol['native_sources'].items())
+    main_weight = command_json(commands, '23')
+    installation = command_json(commands, '38')
+    archives = command_json(commands, '30')
+    filesystem = command_json(commands, '27')
+    runner = {
+        'id':protocol['name'],
+        'api':'build_runner("ligandmpnn", model_type="protein_mpnn")',
+        'scope':protocol['scope'],
+        'registry_certification':False,
+        'registry_rows_not_certified':['mutator/ligandmpnn','mutator/proteinmpnn'],
+        'comparison':'same candidate legacy wrapper versus existing private resident runner; both reuse one model per trial',
+        'protocol':str(protocol_path),'protocol_sha256':hashlib.sha256((root/protocol_path).read_bytes()).hexdigest(),
+        'harness':'benchmarks/runtime/gpu_mutator_control.py',
+        'harness_sha256':hashlib.sha256((root/'benchmarks/runtime/gpu_mutator_control.py').read_bytes()).hexdigest(),
+        'assets':protocol['assets'],
+        'cpu_preflight':{
+            'status':'DONE' if matching else 'PARTIAL','kind':'real_pretrained_weights_strict_cpu_architecture_load_and_native_input_parse',
+            'native_sources_match_checkout':matching,'source_digests':protocol['native_sources'],
+            'model_forward_calls':0,'gpu_execution':False,'cuda_initialized':False,
+            'checkpoint_keys':weights['checkpoint_keys'],'strict_missing_keys':weights['missing_keys'],
+            'strict_unexpected_keys':weights['unexpected_keys'],'state_tensor_count':weights['state_tensor_count'],
+            'parameter_count':weights['parameter_count'],'parameter_dtypes':weights['parameter_dtypes'],'num_edges':weights['num_edges'],
+            'environment':{key:value for key,value in cpu['module_import'].items() if key!='source'},
+            'native_parse':parsed,
+            'limitation':'Actual architecture load and parse only; zero forward/sample calls. This is not a completed public-runner constructor/decode, GPU measurement, registry selector/proposal/acceptance test or full workflow.'},
+        'planned_gpu_control':{'status':'NOT_RUN','evidence':None,'interleaved_groups':len(protocol['groups']),
+            'trials':sum(len(order) for order in protocol['mode_order']),
+            'design_requests':sum(len(order) for order in protocol['mode_order'])*protocol['requests_per_trial'],
+            'warmup_requests':protocol['warmup_requests'],'budget':protocol['budget'],
+            'gate':'Final source/CPU freeze, launcher preparation and one new verified Slurm allocation are still required. Readiness never implies an executed GPU certificate.'},
+        'performance_certification':{'status':'BLOCKED','effective_throughput_improvement_proved':False},
+        'exclusions':['pretrained evaluator W1','full registry mutator selector/proposal/acceptance','MCMC or stage transitions',
+                      'shared broker','other MPNN model types, grouped/native-tie/multistate variants','revision-attributed speedup'],
+    }
+    return {
+        'status':'DONE','kind':'recorded_read_only_asset_and_actual_cpu_preflight','provenance':provenance,
+        'backend_execution_certificate':False,
+        'esmfold':{'main_checkpoint':main_weight,'installation_metadata':installation,
+            'actual_esm_or_openfold_import_executed':False,'pretrained_execution':False,
+            'blockers':['Located ESMFold1 main checkpoint is an invalid ZIP (2,097,152,000 bytes; BadZipFile).',
+                        'fair-esm/OpenFold distribution metadata and expected audited ESM helper path were absent in the inspected SIF; import usability remains unverified.',
+                        'No repaired/downloaded assets, complete source/environment pairing or pretrained ESMFold execution.']},
+        'other_assets':{'filesystem_metadata':filesystem,'archive_metadata':archives,
+            'qualification':'Directory metadata, readable ZIP directories and recorded sidecar digests only. No fresh full checksum/state-dict/inference validation is inferred, except the separately named ProteinMPNN CPU control.'},
+        'runner_control':runner,
+    }
+
+
 def build_matrix(root):
     root = Path(root).resolve()
     specs = catalog()
@@ -275,8 +377,8 @@ def build_matrix(root):
                       'real_backend_gates':{gate:'BLOCKED' if is_gpu else 'NOT_RUN_IN_THIS_GENERATION' for gate in REAL_GATES},
                       'evidence_kind':'available code/contract tests; not executed by this generator',
                       'source_references':{},
-                      'blockers':(['No approved real GPU run evidence supplied',
-                                   'Exact installed source/environment and pretrained weights not configured',
+                      'blockers':(['No executed real GPU certificate supplied for this exact registry/configuration scope',
+                                   'Complete source/environment/checkpoint pairing has not been certified for this registry scope',
                                    'Real frozen workload numerical/lifecycle/failure/throughput gates not run'] if is_gpu
                                   else ['No current full backend certification is run by this inventory tool'])}
             for path in spec['vendor_gitlinks']:
@@ -343,14 +445,26 @@ def build_matrix(root):
                     'torch':torch_ci['torch'],'test_cases':torch_ci['regressions']['test_cases'],
                     'skips':torch_ci['regressions']['skips'],'required_suites':torch_ci['regressions']['required_suites'],
                     'limitation':'65 CPU tests including real resident process reuse and constructor precision/RNG; fake ESM model/weights and synthetic native outputs; no pretrained/GPU or throughput certification'}
+    preflight = f102_preflight(root)
+    for record in records:
+        if record['kind']=='evaluator' and record['key']=='esmfold':
+            record['f102_asset_preflight'] = preflight['esmfold']
+            record['blockers'] = preflight['esmfold']['blockers'] + record['blockers']
+        if record['kind']=='mutator' and record['key'] in {'ligandmpnn','proteinmpnn'}:
+            record['related_runner_preflight'] = {
+                'control_id':preflight['runner_control']['id'],'registry_certification':False,
+                'limitation':'Actual protein_mpnn CPU architecture/input compatibility only; public runner GPU control has not executed and does not cover this registry selector.'}
     return {
-        'schema_version':1,'head':_git(root,'rev-parse','HEAD'),
+        'schema_version':2,'head':_git(root,'rev-parse','HEAD'),
         'generator_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         'scope':'Builtin factories only; external plugin registrations/configurations require separate enumeration and certification',
         'status':{'inventory':'DONE','pretrained_gpu_certification':'BLOCKED','full_backend_runtime_certification':'PARTIAL'},
         'counts':{kind:{'registry_keys':len(inventories[kind]),
                         'factories':len({r['factory'] for r in inventories[kind].values()})} for kind in REGISTRIES},
+        'registry_status_counts':{state:sum(record['status']==state for record in records) for state in ('DONE','PARTIAL','BLOCKED')},
         'interpretation':'This command validates inventory and evidence provenance only. It never upgrades a registered key, alias, CPU fixture, or source pin into pretrained/GPU certification.',
+        'f102_asset_preflight':{key:value for key,value in preflight.items() if key!='runner_control'},
+        'runner_controls':[preflight['runner_control']],
         'records':records,
     }
 
@@ -358,12 +472,14 @@ def build_matrix(root):
 def markdown(matrix):
     lines = ['# Runtime backend certification matrix','',
         f"Registry inventory HEAD: `{matrix['head']}`. Generated by `scripts/validation/runtime_backend_certification.py`.",'',
-        '**DONE:** all builtin registry keys are enumerated with factory/variant/config scope. **PARTIAL:** CPU and synthetic contract evidence exists only for the explicitly named scopes. **BLOCKED:** every learned/pretrained GPU backend lacks a configured, approved real run and its complete numerical/lifecycle/performance certificate in this evidence set.','',
+        '**DONE:** all builtin registry keys are enumerated with factory/variant/config scope. **PARTIAL:** CPU and synthetic contract evidence exists only for the explicitly named scopes. **BLOCKED:** every learned/pretrained GPU registry scope lacks its complete real numerical/lifecycle/performance certificate in this evidence set. Located assets and a CPU-compatible pretrained checkpoint do not constitute GPU execution.','',
         'Generation does not execute any backend. Vendor pins identify source references; actual installed files, local patches, checkpoints and environment must be fingerprinted for a real run. Alias rows share a factory, not a broader scientific certification.','',
         '## Exact registry coverage','',
         '| Kind | Keys | Factories |','|---|---:|---:|']
     for kind,count in matrix['counts'].items():
         lines.append(f"| {kind} | {count['registry_keys']} | {count['factories']} |")
+    counts=matrix['registry_status_counts']
+    lines += ['',f"Registry status: **{counts['DONE']} DONE / {counts['PARTIAL']} PARTIAL / {counts['BLOCKED']} BLOCKED**. These counts do not include narrower preflight or contract scopes."]
     for kind in REGISTRIES:
         lines += ['',f'## {kind.title()} matrix','',
                   '| Actual normalized key | Variant/configuration scope | Execution boundary | Real backend status |',
@@ -384,12 +500,25 @@ def markdown(matrix):
             details='; '.join(r['configuration_to_freeze'])
             refs='; '.join(f'`{path}` @ `{sha}`' for path,sha in r['source_references'].items())
             lines.append(f"- {keys}: freeze {details}. Source: {refs}. {r['note']}")
-    lines += ['', '## Evidence interpretation','',
+    control=matrix['runner_controls'][0]
+    cpu=control['cpu_preflight']
+    lines += ['', '## f102 actual assets and CPU preflight','',
+        'Immutable commands, failed discovery attempts, full bounded responses, summaries and file digests are preserved under `evidence/runtime-next/agent-b/f102-backend-preflight/`. The generator verifies their digest manifest and checks the CPU summary against the completed native command outputs. These are recorded observations, not commands executed by matrix generation.','',
+        '| Scope | Actual evidence | Certification limit |','|---|---|---|',
+        '| ESMFold1 | Located folding checkpoint is 2,097,152,000 bytes, has no readable ZIP directory and raises `BadZipFile`. `fair-esm`/`openfold` distribution metadata and the expected audited ESM helper path were absent in the inspected SIF. | W1 remains BLOCKED. Actual `import esm`/`import openfold` was not tested; absence of metadata is not an observed import exception. No repair/download or pretrained inference. |',
+        f"| ProteinMPNN v48_020 | Real checkpoint freshly hashed; strict CPU architecture load accepted {cpu['state_tensor_count']} state tensors, {cpu['parameter_count']:,} float32 parameters, zero missing/unexpected keys. | Zero forward/sample calls; CUDA remained uninitialized. Architecture compatibility is not full public-runner or registry certification. |",
+        '| 4GYT input | Full byte-identical 531,114-byte PDB, A177 + B177; native CPU parse with `parse_atoms_with_zero_occupancy=True`, both masks all ones, frozen native sequence digest and numerical settings. | 354 residues retained. This establishes the independent input mask; native returned design output does not itself contain a mask. |',
+        '| AF2 / AF3 / Protenix / Boltz / ESM trunk | Existing path/size metadata, selected ZIP-directory readability and historical sidecar digests are recorded. | No new full checksum/state-dict/inference certification; installed Boltz 2.2.1 metadata does not add a Boltz2 registry loader. |','',
+        '### Separate public-runner control: GPU NOT_RUN','',
+        f"`{control['api']}` is the sole planned runner API. Protocol: `{control['protocol']}` (SHA-256 `{control['protocol_sha256']}`). It compares the same candidate's existing legacy wrapper with its existing private resident runner; both construct once and reuse the model for three sequential requests. This does not certify the complete registry `ligandmpnn` or `proteinmpnn` scientific selector/proposal/acceptance path.",'',
+        'The fixed plan contains five alternating groups, seeds 17–21, ten model constructions, thirty requests and no warmup; complete 4GYT AB354, temperature 0.3, omit C, batch 1×1, all native kwargs and scientific gates are explicit. The maximum allocation is one GPU, four CPUs, 32 GiB, 900 seconds / 0.25 GPU-hours. Final source/CPU freeze, launcher preparation and a newly verified Slurm allocation are still required. No successful GPU result or speedup is recorded here.','',
+        'The task-specific entrypoints are documented in `benchmarks/runtime/gpu_mutator_control.md` and `benchmarks/runtime/gpu_slurm_launcher.md`. Later raw GPU evidence can qualify only this exact runner control. Evaluator W1, shared broker, MCMC/stage transitions, other model types, grouped/tied/multistate behavior and revision-attributed speedup remain excluded.','',
+        '## Evidence interpretation','',
         '- The preserved actual CPU Dummy/MCMC report is `evidence/runtime-20261103/cpu-three-mode-02/report.json`: 27 completed trajectories, exact recorded score/decision agreement, no structure-coordinate certificate. Resident modes were slower. It is historical evidence, not a current HEAD or GPU rerun.',
         '- The task W0 CPU CI summary is `evidence/runtime-next/agent-b/cpu-ci-01-summary.json` (canonical source under `evidence/runtime-next/ci/`). Candidate 6620da6 versus baseline d66 ran 30 trials / 90 trajectories / 270 evaluations in five interleaved groups, with confirmed release. Its 90 initial evaluations are not accepted scientific progress: all 180 mutation attempts were rejected. This only updates the exact Dummy/MCMC W0 scope; no structure-coordinate, learned-model, other CPU-backend or performance certificate is inferred. The full raw archive is delivered by the main integration report.',
-        '- ESMFold1 output evidence is `evidence/runtime-next/agent-b/esmfold-output-report.md`: real CPU torch tensors and pinned native helper excerpts, exact PDB/score/RNG checks, synthetic inputs, no pretrained inference. Requested host-payload reduction is not actual GPU transfer measurement or effective throughput. CPU negative/noise results are retained. KEEP applies only to resource lifecycle/boundary correctness and requested payload reduction; performance certification remains BLOCKED.',
+        '- ESMFold1 output evidence is `evidence/runtime-next/agent-b/esmfold-output-report.md`: real CPU torch tensors and pinned native helper excerpts, exact PDB/score/RNG checks, synthetic inputs, no pretrained inference. Requested host-payload reduction is not actual GPU transfer measurement or effective throughput. Independent C output-only CPU timings were slower by 9.31% / 6.68% for the two fixed shapes (`evidence/runtime-next/agent-c/review-b-output-comparison.json`); negative results are retained. KEEP applies only to resource lifecycle/boundary correctness and requested payload reduction; performance certification remains BLOCKED.',
         '- The ESMFold CPU process CI at `db937f9706270cb109e799cda29f52d2872726b5` completed all four focused suites: 65 passed, zero skips/deselections, torch 2.7.1+cpu with cuda_build=null. `evidence/runtime-next/agent-b/torch-ci-01-summary.json` records source/run/job/artifact identity. This closes the local process-test limitation for the recorded fake-model/synthetic-checkpoint scope, including one resident load and constructor precision/RNG behavior. It does not certify a pretrained ESMFold model or GPU.',
-        '- Existing MPNN tests include an actual CPU architecture with synthetic checkpoints. NA-MPNN/Surf/DPLM lifecycle fixtures and mock loaders do not certify their pretrained variants. Tests listed in JSON are available verification entry points, not proof this generator executed them.',
+        '- Existing MPNN contract tests use an actual CPU architecture with synthetic checkpoints; the separate f102 readiness record above uses the actual pretrained v48_020 checkpoint but performs no sampling. Neither certifies a real GPU registry workload. NA-MPNN/Surf/DPLM lifecycle fixtures and mock loaders do not certify their pretrained variants. Tests listed in JSON are available verification entry points, not proof this generator executed them.',
         '- Each real variant must pass single request, continuous requests/load count, device boundary/residency, cache invalidation, numerical/PDB parity, RNG/proposal/acceptance/stage parity, failure/recovery, and repeated fixed-workload effective throughput. Every exact seed/sample/recycle/precision/constraint setting remains frozen.',
         '- Boltz is Boltz1; no Boltz2 is registered. Mol-1 has independent aliases and is not certified by Protenix. Protenix requested/effective constraint model must be recorded separately. Legacy FarApartTiedMultitargetLigandMPNN aliases require protein_mpnn. NA-MPNN seed 0 remains one-shot.',
         '', '## Regenerate without models or GPU','', '```bash',
@@ -397,7 +526,7 @@ def markdown(matrix):
         '```','',
         'The tool fails on registry/catalog drift, changed factory ownership or missing named evidence/test files. JSON records exact factory locations, source digests, variants, required configuration, pins, evidence classification and all unrun gates. It does not download weights, use shared GPUs or change configuration.','',
         '## Real backend verification entry','',
-        'After selecting an existing supported configuration and provisioning an explicitly authorized allocation with local pretrained assets, use the repository workflow benchmark. W1 ESMFold1 remains not configured for real execution in this matrix; a source pin or output fixture is not a model installation.','',
+        'After selecting an existing supported configuration and provisioning an explicitly authorized allocation with valid local pretrained assets, use the repository workflow benchmark. W1 ESMFold1 remains blocked by the located invalid folding checkpoint and unverified usable ESM/OpenFold installation; a source pin or output fixture is not a model installation.','',
         '```bash',
         'python -m astrolabe --config-dir config run --standalone /absolute/path/frozen-workload.yaml --no-chdir',
         'python scripts/validation/runtime_workflow_benchmark.py --config /absolute/path/frozen-workload.yaml --config-dir config --out /absolute/path/new-empty-benchmark-directory --repetitions 5 --walltime-budget APPROVED_SECONDS --require-gpu',

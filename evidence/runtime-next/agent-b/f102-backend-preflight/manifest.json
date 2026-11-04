@@ -1,0 +1,30 @@
+{
+  "files": {
+    "CPU_COMPATIBILITY.json": {
+      "bytes": 2347,
+      "sha256": "3451bdbdcf9d5307919d12e00305a97f104e99a25b666aef37205eb031e567e1"
+    },
+    "ESMFOLD_EXISTING_WORK_REVIEW.md": {
+      "bytes": 3602,
+      "sha256": "ee63a9a3243b0f8c52d4aa808487353ce7cfe691d1e76f49981c266fda3b9a90"
+    },
+    "PREFLIGHT.md": {
+      "bytes": 9775,
+      "sha256": "520afafade7b389f5d05f899775594625754edd756cdc642311ba3f3e4d5897b"
+    },
+    "commands-42-46.json": {
+      "bytes": 11221,
+      "sha256": "1c3e2ae08bed7f63433dc77d2b3b3c8afa364dc271fb2c756d175cda3bf5c07c"
+    },
+    "commands.json": {
+      "bytes": 108824,
+      "sha256": "041e8190bd61527421b9ad393328ea0b24794610065fc1491ed08bab9e6ad3ee"
+    },
+    "gpu-control-parse-true.json": {
+      "bytes": 3398,
+      "sha256": "159651073cd490311622414ba87e3962159726e0d921638df7fa7b38ca002daa"
+    }
+  },
+  "scope": "Immutable read-only f102 preflight snapshots; zero pretrained forward/sample or GPU use. Later protocol readiness does not upgrade registry certification.",
+  "source_directory": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/f102-backend-preflight"
+}

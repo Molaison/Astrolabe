@@ -1,0 +1,45 @@
+{
+  "command": {
+    "command": [
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-container",
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/repo-offline",
+      "-c",
+      "import json,hashlib,torch,collections; from astrolabe.evaluators.torch_rng import capture_settings; from astrolabe.mutators.wrappers.ligandmpnn_utils import parse_PDB,alphabet; p=parse_PDB('/readonly-mpnn-inputs/4GYT.pdb',device='cpu',chains=['A','B'],parse_all_atoms=False,parse_atoms_with_zero_occupancy=True)[0]; print(json.dumps({'settings':capture_settings(),'torch':torch.__version__,'cuda_initialized':torch.cuda.is_initialized(),'shapes':{k:list(v.shape) for k,v in p.items() if hasattr(v,'shape')},'chain_counts':dict(collections.Counter(str(c) for c in p['chain_letters'])),'mask_sum':int(p['mask'].sum()),'mask_values':sorted(set(p['mask'].tolist())),'native_sequence':''.join(alphabet[int(i)] for i in p['S']),'native_sequence_sha256':hashlib.sha256(''.join(alphabet[int(i)] for i in p['S']).encode()).hexdigest()},sort_keys=True))"
+    ],
+    "cwd": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation",
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "TMPDIR": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp",
+      "APPTAINER_TMPDIR": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp/apptainer",
+      "APPTAINER_BINDPATH": "/xcf26/zpzeng/gitrepo/ligandmpnn/inputs:/readonly-mpnn-inputs:ro"
+    },
+    "outputBytesCap": 4096,
+    "timeoutMs": 10000,
+    "yieldTimeMs": 5000
+  },
+  "initial": {
+    "execution": "accepted",
+    "result": {
+      "processId": "8d36546f-5003-4b8a-8ecf-eb98b979ea3e",
+      "status": "running",
+      "stdout": "",
+      "stderr": "",
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    },
+    "requestId": "8d9f7dee-505e-484d-b121-d1b9c6033f39"
+  },
+  "completed": {
+    "execution": "accepted",
+    "result": {
+      "processId": "8d36546f-5003-4b8a-8ecf-eb98b979ea3e",
+      "status": "exited",
+      "stdout": "{\"chain_counts\": {\"A\": 177, \"B\": 177}, \"cuda_initialized\": false, \"mask_sum\": 354, \"mask_values\": [1], \"native_sequence\": \"SLHLPKYDDFVQSISVLALTMSGSELHGIMCGYLCAGADSQGEAYIRALLNNKKDEQSRNALLSMFSVFSISQQQMNNFDFEFEMLLPDDDESLVTRAQAFSEWCEGFTQGLTIAGVGMEQFYEEESQDALQHLMEFAELDCESLEVGEEDERALMEVSEYTRMAVLRLHSDLVLHESLHLPKYDDFVQSISVLALTMSGSELHGIMCGYLCAGADSQGEAYIRALLNNKKDEQSRNALLSMFSVFSISQQQMNNFDFEFEMLLPDDDESLVTRAQAFSEWCEGFTQGLTIAGVGMEQFYEEESQDALQHLMEFAELDCESLEVGEEDERALMEVSEYTRMAVLRLHSDLVLHE\", \"native_sequence_sha256\": \"a149f24cd9a0ca21eaeed7478450b91dfec6800b5d372e06655511e6b49a8e44\", \"settings\": {\"cudnn_benchmark\": false, \"cudnn_deterministic\": false, \"cudnn_tf32\": true, \"default_dtype\": \"float32\", \"deterministic\": false, \"deterministic_warn_only\": false, \"float32_matmul_precision\": \"highest\", \"matmul_tf32\": false}, \"shapes\": {\"R_idx\": [354], \"S\": [354], \"X\": [354, 4, 3], \"Y\": [2, 3], \"Y_m\": [2], \"Y_t\": [2], \"chain_labels\": [354], \"chain_letters\": [354], \"mask\": [354], \"xyz_37\": [354, 37, 3], \"xyz_37_m\": [354, 37]}, \"torch\": \"2.7.1+cu126\"}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    },
+    "requestId": "91495419-2dd2-41f0-9761-7f12185037b0"
+  }
+}

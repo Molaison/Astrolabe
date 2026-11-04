@@ -1,0 +1,178 @@
+[
+  {
+    "id": "42",
+    "command": "from pathlib import Path\nimport json\np=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104\")\nprint(json.dumps({'exists':p.exists(),'entries':[x.name for x in sorted(p.iterdir())] if p.exists() else []}))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "cwd": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation",
+    "timeout_ms": 10000,
+    "yield_time_ms": 5000,
+    "output_bytes_cap": 4096,
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    },
+    "initial_response": {
+      "execution": "accepted",
+      "result": {
+        "processId": "70736bde-7078-4e56-a415-d4ef922af74e",
+        "status": "exited",
+        "stdout": "{\"exists\": true, \"entries\": [\"DELIVERY_STATUS.json\", \"repo\", \"transfer\"]}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "outputTruncated": false,
+        "outputBytesCap": 4096
+      },
+      "requestId": "99ce0559-78bc-4183-9162-510813a2dfa9"
+    }
+  },
+  {
+    "id": "43",
+    "command": [
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-container",
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/repo",
+      "-c",
+      "import sys,json,hashlib,importlib.metadata as m\nfrom pathlib import Path\nimport torch\nfrom astrolabe.mutators.wrappers import ligandmpnn_run,ligandmpnn_utils\nout={'python':sys.version,'executable':sys.executable,'torch':torch.__version__,'cuda_build':torch.version.cuda,'cuda_initialized':torch.cuda.is_initialized(),'prody':m.version('prody'),'source':{}}\nfor module in [ligandmpnn_run,ligandmpnn_utils]:\n p=Path(module.__file__);out['source'][str(p)]={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'class_present':hasattr(module,'ProteinMPNN') if module is ligandmpnn_utils else hasattr(module,'LigandMPNN')}\nassert not torch.cuda.is_initialized()\nprint(json.dumps(out))"
+    ],
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "cwd": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation",
+    "timeout_ms": 10000,
+    "yield_time_ms": 5000,
+    "output_bytes_cap": 4096,
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "TMPDIR": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp",
+      "APPTAINER_TMPDIR": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp/apptainer"
+    },
+    "initial_response": {
+      "execution": "accepted",
+      "result": {
+        "processId": "0de82b7f-2986-48a6-a88f-2a3a5971ace5",
+        "status": "exited",
+        "stdout": "",
+        "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 4, in <module>\nModuleNotFoundError: No module named 'astrolabe'\n",
+        "exitCode": 1,
+        "outputTruncated": false,
+        "outputBytesCap": 4096
+      },
+      "requestId": "c9343b0b-448e-4542-b3ba-340fb9c8ef4b"
+    }
+  },
+  {
+    "id": "44",
+    "command": "from pathlib import Path\nimport json\np=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/repo\")\nprint(json.dumps({'entries':[x.name for x in sorted(p.iterdir())[:15]],'astrolabe_exists':(p/'astrolabe').exists()}))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "cwd": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation",
+    "timeout_ms": 10000,
+    "yield_time_ms": 5000,
+    "output_bytes_cap": 4096,
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1"
+    },
+    "initial_response": {
+      "execution": "accepted",
+      "result": {
+        "processId": "e7f619b2-1137-43df-95ea-04cd3cb02d2d",
+        "status": "exited",
+        "stdout": "{\"entries\": [\".git\"], \"astrolabe_exists\": false}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "outputTruncated": false,
+        "outputBytesCap": 4096
+      },
+      "requestId": "72882e4a-44d7-4e50-9745-4f0a4086bf70"
+    }
+  },
+  {
+    "id": "45",
+    "command": [
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-container",
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix",
+      "-c",
+      "import sys,json,hashlib,importlib.metadata as m\nfrom pathlib import Path\nimport torch\nfrom astrolabe.mutators.wrappers import ligandmpnn_run,ligandmpnn_utils\nout={'python':sys.version,'executable':sys.executable,'torch':torch.__version__,'cuda_build':torch.version.cuda,'cuda_initialized':torch.cuda.is_initialized(),'prody':m.version('prody'),'source':{}}\nfor module in [ligandmpnn_run,ligandmpnn_utils]:\n p=Path(module.__file__);out['source'][str(p)]={'sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'class_present':hasattr(module,'ProteinMPNN') if module is ligandmpnn_utils else hasattr(module,'LigandMPNN')}\nassert not torch.cuda.is_initialized()\nprint(json.dumps(out))"
+    ],
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "cwd": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation",
+    "timeout_ms": 10000,
+    "yield_time_ms": 5000,
+    "output_bytes_cap": 4096,
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "TMPDIR": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp",
+      "APPTAINER_TMPDIR": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp/apptainer"
+    },
+    "initial_response": {
+      "execution": "accepted",
+      "result": {
+        "processId": "03054ebf-f2cf-4258-910e-bfe32332467c",
+        "status": "running",
+        "stdout": "",
+        "stderr": "",
+        "outputTruncated": false,
+        "outputBytesCap": 4096
+      },
+      "requestId": "bbf2a0e2-0956-4911-82c5-1c8071ece64d"
+    },
+    "poll_response": {
+      "execution": "accepted",
+      "result": {
+        "processId": "03054ebf-f2cf-4258-910e-bfe32332467c",
+        "status": "exited",
+        "stdout": "{\"python\": \"3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]\", \"executable\": \"/alphafold3_venv/bin/python\", \"torch\": \"2.7.1+cu126\", \"cuda_build\": \"12.6\", \"cuda_initialized\": false, \"prody\": \"2.6.1\", \"source\": {\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix/astrolabe/mutators/wrappers/ligandmpnn_run.py\": {\"sha256\": \"c8aa0cc7ea214a54eeb45f298e3f0e0a9c0fb275b41fc090e6977511286f048f\", \"class_present\": true}, \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix/astrolabe/mutators/wrappers/ligandmpnn_utils.py\": {\"sha256\": \"8efd500f1791e06c020ee5b87962f225778246a49f2700eda032aac691dc9f75\", \"class_present\": true}}}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "outputTruncated": false,
+        "outputBytesCap": 4096
+      },
+      "requestId": "ce73b7f4-4e01-4eff-afb1-ca4b723bdab3"
+    }
+  },
+  {
+    "id": "46",
+    "command": [
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-container",
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix",
+      "-c",
+      "import json,hashlib,collections\nfrom pathlib import Path\nimport torch\nfrom astrolabe.mutators.wrappers.ligandmpnn_utils import ProteinMPNN,parse_PDB\nassert not torch.cuda.is_initialized()\np=Path('/readonly-mpnn-weights/proteinmpnn_v_48_020.pt'); q=Path('/readonly-mpnn-inputs/4GYT.pdb')\ncheckpoint=torch.load(p,map_location='cpu',weights_only=True)\nmodel=ProteinMPNN(node_features=128,edge_features=128,hidden_dim=128,num_encoder_layers=3,num_decoder_layers=3,k_neighbors=checkpoint['num_edges'],device=torch.device('cpu'),atom_context_num=1,model_type='protein_mpnn',ligand_mpnn_use_side_chain_context=0)\ncompat=model.load_state_dict(checkpoint['model_state_dict'],strict=True)\nprotein,*rest=parse_PDB(str(q),device='cpu',chains=['A','B'],parse_all_atoms=False,parse_atoms_with_zero_occupancy=False)\nout={'weights_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'checkpoint_keys':sorted(checkpoint),'num_edges':checkpoint['num_edges'],'state_tensor_count':len(checkpoint['model_state_dict']),'missing_keys':compat.missing_keys,'unexpected_keys':compat.unexpected_keys,'parameter_count':sum(x.numel() for x in model.parameters()),'parameter_dtypes':sorted({str(x.dtype) for x in model.parameters()}),'input_sha256':hashlib.sha256(q.read_bytes()).hexdigest(),'parsed_keys':sorted(protein),'parsed_chains':dict(collections.Counter(str(x) for x in protein['chain_letters'])),'tensor_shapes':{k:list(v.shape) for k,v in protein.items() if isinstance(v,torch.Tensor)},'model_forward_calls':0,'cuda_initialized':torch.cuda.is_initialized()}\nassert not out['cuda_initialized']\nprint(json.dumps(out))"
+    ],
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "cwd": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation",
+    "timeout_ms": 10000,
+    "yield_time_ms": 5000,
+    "output_bytes_cap": 4096,
+    "env": {
+      "PYTHONDONTWRITEBYTECODE": "1",
+      "TMPDIR": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp",
+      "APPTAINER_TMPDIR": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp/apptainer",
+      "APPTAINER_BINDPATH": "/xcf26/zpzeng/gitrepo/ligandmpnn/model_params:/readonly-mpnn-weights:ro,/xcf26/zpzeng/gitrepo/ligandmpnn/inputs:/readonly-mpnn-inputs:ro"
+    },
+    "initial_response": {
+      "execution": "accepted",
+      "result": {
+        "processId": "ccf0f18c-e928-4ba5-84b0-7a860912aaf0",
+        "status": "running",
+        "stdout": "",
+        "stderr": "",
+        "outputTruncated": false,
+        "outputBytesCap": 4096
+      },
+      "requestId": "f8509b8f-d6f4-4c79-b489-3d0d61329b55"
+    },
+    "poll_response": {
+      "execution": "accepted",
+      "result": {
+        "processId": "ccf0f18c-e928-4ba5-84b0-7a860912aaf0",
+        "status": "exited",
+        "stdout": "{\"weights_sha256\": \"c9cb4a671d79604111231f8dbfc7c590e06f1197453b7a6854ac6661a642f5bd\", \"checkpoint_keys\": [\"model_state_dict\", \"noise_level\", \"num_edges\"], \"num_edges\": 48, \"state_tensor_count\": 118, \"missing_keys\": [], \"unexpected_keys\": [], \"parameter_count\": 1660485, \"parameter_dtypes\": [\"torch.float32\"], \"input_sha256\": \"c05c06773ae8c00d2d033f7f7a103c4048981d79418c6c1a2579b15da455b2b7\", \"parsed_keys\": [\"R_idx\", \"S\", \"X\", \"Y\", \"Y_m\", \"Y_t\", \"chain_labels\", \"chain_letters\", \"chain_list\", \"mask\", \"mask_c\", \"xyz_37\", \"xyz_37_m\"], \"parsed_chains\": {\"A\": 177, \"B\": 177}, \"tensor_shapes\": {\"X\": [354, 4, 3], \"mask\": [354], \"Y\": [2, 3], \"Y_t\": [2], \"Y_m\": [2], \"R_idx\": [354], \"chain_labels\": [354], \"S\": [354], \"xyz_37\": [354, 37, 3], \"xyz_37_m\": [354, 37]}, \"model_forward_calls\": 0, \"cuda_initialized\": false}\n",
+        "stderr": "",
+        "exitCode": 0,
+        "outputTruncated": false,
+        "outputBytesCap": 4096
+      },
+      "requestId": "e602ffad-a23c-428c-bb0d-f39c096acc61"
+    }
+  }
+]

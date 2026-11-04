@@ -1,0 +1,97 @@
+{
+  "scope": "CPU compatibility preflight only. Genuine local pretrained checkpoint; strict CPU load and native PDB parsing. Zero forwards/samples/GPU calls. Not GPU certification.",
+  "module_import": {
+    "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+    "executable": "/alphafold3_venv/bin/python",
+    "torch": "2.7.1+cu126",
+    "cuda_build": "12.6",
+    "cuda_initialized": false,
+    "prody": "2.6.1",
+    "source": {
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix/astrolabe/mutators/wrappers/ligandmpnn_run.py": {
+        "sha256": "c8aa0cc7ea214a54eeb45f298e3f0e0a9c0fb275b41fc090e6977511286f048f",
+        "class_present": true
+      },
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix/astrolabe/mutators/wrappers/ligandmpnn_utils.py": {
+        "sha256": "8efd500f1791e06c020ee5b87962f225778246a49f2700eda032aac691dc9f75",
+        "class_present": true
+      }
+    }
+  },
+  "checkpoint_and_structure": {
+    "weights_sha256": "c9cb4a671d79604111231f8dbfc7c590e06f1197453b7a6854ac6661a642f5bd",
+    "checkpoint_keys": [
+      "model_state_dict",
+      "noise_level",
+      "num_edges"
+    ],
+    "num_edges": 48,
+    "state_tensor_count": 118,
+    "missing_keys": [],
+    "unexpected_keys": [],
+    "parameter_count": 1660485,
+    "parameter_dtypes": [
+      "torch.float32"
+    ],
+    "input_sha256": "c05c06773ae8c00d2d033f7f7a103c4048981d79418c6c1a2579b15da455b2b7",
+    "parsed_keys": [
+      "R_idx",
+      "S",
+      "X",
+      "Y",
+      "Y_m",
+      "Y_t",
+      "chain_labels",
+      "chain_letters",
+      "chain_list",
+      "mask",
+      "mask_c",
+      "xyz_37",
+      "xyz_37_m"
+    ],
+    "parsed_chains": {
+      "A": 177,
+      "B": 177
+    },
+    "tensor_shapes": {
+      "X": [
+        354,
+        4,
+        3
+      ],
+      "mask": [
+        354
+      ],
+      "Y": [
+        2,
+        3
+      ],
+      "Y_t": [
+        2
+      ],
+      "Y_m": [
+        2
+      ],
+      "R_idx": [
+        354
+      ],
+      "chain_labels": [
+        354
+      ],
+      "S": [
+        354
+      ],
+      "xyz_37": [
+        354,
+        37,
+        3
+      ],
+      "xyz_37_m": [
+        354,
+        37
+      ]
+    },
+    "model_forward_calls": 0,
+    "cuda_initialized": false
+  }
+}
