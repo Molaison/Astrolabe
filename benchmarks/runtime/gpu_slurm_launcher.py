@@ -217,6 +217,8 @@ def container_argv(plan, gpu=None, allocation_env=None):
     env = {"HOME": private["home"], "TMPDIR": "/tmp", "XDG_CACHE_HOME": private["cache"],
            "TORCH_HOME": private["cache"] + "/torch", "CUDA_CACHE_PATH": private["cache"] + "/cuda",
            "PYTHONNOUSERSITE": "1", "PYTHONDONTWRITEBYTECODE": "1", "OMP_NUM_THREADS": "1",
+           "MKL_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1", "NUMEXPR_NUM_THREADS": "1",
+           "GH_CUDA_PREINITIALIZE": "0", "HIP_VISIBLE_DEVICES": "", "ROCR_VISIBLE_DEVICES": "",
            "PYTHONPATH": str(ROOT) + os.pathsep + str(TEST_ENV / "lib/python3.11/site-packages"),
            "JAX_PLATFORMS": "cpu", "HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1", "TZ": "UTC",
            "CUDA_VISIBLE_DEVICES": "", "NVIDIA_VISIBLE_DEVICES": "void"}
@@ -299,7 +301,7 @@ CPU_CHECK = """import json,os,sys,numpy,torch
 from astrolabe.evaluators.torch_rng import capture_settings
 assert os.environ.get('CUDA_VISIBLE_DEVICES') == ''
 assert not torch.cuda.is_available() and not torch.cuda.is_initialized()
-print('CPU_CONTAINER_CHECK=' + json.dumps({'python':sys.version,'executable':sys.executable,'torch':str(torch.__version__),'numpy':numpy.__version__,'cuda_build':torch.version.cuda,'settings':capture_settings(),'cuda_initialized':torch.cuda.is_initialized(),'gpu_forward_calls':0,'environment':{k:os.environ.get(k) for k in ('HOME','TMPDIR','PYTHONPATH','CUDA_VISIBLE_DEVICES','NVIDIA_VISIBLE_DEVICES')}}))
+print('CPU_CONTAINER_CHECK=' + json.dumps({'python':sys.version,'executable':sys.executable,'torch':str(torch.__version__),'numpy':numpy.__version__,'cuda_build':torch.version.cuda,'settings':capture_settings(),'cuda_initialized':torch.cuda.is_initialized(),'gpu_forward_calls':0,'environment':{k:os.environ.get(k) for k in ('HOME','TMPDIR','PYTHONPATH','CUDA_VISIBLE_DEVICES','NVIDIA_VISIBLE_DEVICES','HIP_VISIBLE_DEVICES','ROCR_VISIBLE_DEVICES','OMP_NUM_THREADS','MKL_NUM_THREADS','OPENBLAS_NUM_THREADS','NUMEXPR_NUM_THREADS','GH_CUDA_PREINITIALIZE')}}))
 """
 
 

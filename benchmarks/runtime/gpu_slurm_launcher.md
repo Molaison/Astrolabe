@@ -5,6 +5,10 @@ not change the 4GYT input, model, precision, seeds, requests or scientific gates
 The host entrypoint is `/usr/bin/python3` (f102 Python 3.6.8); the container uses
 the same `/alphafold3_venv/bin/python`, SIF and `test-env` as the native CPU
 preflight. No new packages, weights or images are downloaded.
+OMP, MKL, OpenBLAS and NumExpr threads all remain one, matching root's CPU
+freeze wrapper. `GH_CUDA_PREINITIALIZE=0` prevents the old profile's eager CUDA
+initialization; HIP/ROCR visibility is empty in both modes. CPU preparation has
+no visible accelerator, while the GPU run exposes only inherited CUDA binding.
 
 ## Preconditions and exact entrypoints
 

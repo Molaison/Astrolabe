@@ -134,6 +134,9 @@ def test_container_gpu_visibility_readonly_sources_private_temp_and_cleanenv(env
     assert "--pid" not in argv and "--containall" not in argv  # Existing observer namespace preserved.
     assert env["CUDA_VISIBLE_DEVICES"] == environment["CUDA_VISIBLE_DEVICES"]
     assert env["NVIDIA_VISIBLE_DEVICES"] == UUID
+    assert all(env[key] == "1" for key in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"))
+    assert env["GH_CUDA_PREINITIALIZE"] == "0"
+    assert env["HIP_VISIBLE_DEVICES"] == env["ROCR_VISIBLE_DEVICES"] == ""
     assert env["TMPDIR"] == "/tmp" and env["HOME"].startswith(str(launcher.DELIVERY))
     binds = [argv[i + 1] for i, token in enumerate(argv) if token == "--bind"]
     assert plan["private"]["tmp"] + ":/tmp:rw" in binds
@@ -142,6 +145,7 @@ def test_container_gpu_visibility_readonly_sources_private_temp_and_cleanenv(env
     assert "/readonly/input.pdb:/readonly/input.pdb:ro" in binds
     cpu_argv, cpu_env = launcher.container_argv(plan)
     assert "--nv" not in cpu_argv and cpu_env["CUDA_VISIBLE_DEVICES"] == "" and cpu_env["NVIDIA_VISIBLE_DEVICES"] == "void"
+    assert cpu_env["HIP_VISIBLE_DEVICES"] == cpu_env["ROCR_VISIBLE_DEVICES"] == ""
 
 
 def test_untrusted_container_overrides_removed_without_breaking_slurm_client_libraries():
