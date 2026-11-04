@@ -4,6 +4,7 @@ import importlib.util
 import json
 from pathlib import Path
 import socket
+from types import SimpleNamespace
 
 import pytest
 
@@ -11,6 +12,12 @@ PATH = Path(__file__).resolve().parents[1] / "benchmarks/runtime/validate.py"
 SPEC = importlib.util.spec_from_file_location("runtime_validation", PATH)
 validation = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(validation)
+
+VALIDATED_BASELINE = "9d62b3eb86cb75a2266af49dc48cb851e69e0341"
+RECOVERED_RUNTIME_SUITES = (
+    "tests/test_runtime_ingress.py", "tests/test_runtime_request_isolation.py",
+    "tests/test_runtime_saturation.py",
+)
 
 
 def scientific_rows():
@@ -151,15 +158,18 @@ def test_real_w0_composition_retains_frozen_scientific_protocol():
     assert identities == [{"repeat_index": i, "seed": 17 + i} for i in range(3)]
 
 
-def test_plan_preserves_work_and_alternates_complete_revision_pairs(tmp_path, monkeypatch):
+@pytest.mark.parametrize("baseline_commit", [validation.BASELINE, VALIDATED_BASELINE])
+def test_plan_preserves_work_and_alternates_complete_revision_pairs(tmp_path, monkeypatch, baseline_commit):
     baseline, out = tmp_path / "baseline", tmp_path / "plan"
     out.mkdir()
     for name in validation.MEASUREMENT_FILES:
         path = baseline / name
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes((validation.ROOT / name).read_bytes())
-    monkeypatch.setattr(validation, "source_identity", lambda *args, **kwargs: {"git_commit": validation.BASELINE})
-    plan = validation.build_plan(baseline, validation.ROOT, out)
+    monkeypatch.setattr(validation, "source_identity", lambda *args, **kwargs: {
+        "git_commit": kwargs.get("baseline_commit", validation.BASELINE)})
+    plan = validation.build_plan(baseline, validation.ROOT, out, baseline_commit=baseline_commit)
+    assert plan["sources"]["baseline"]["git_commit"] == baseline_commit
     assert plan["requested_trials"] == 30
     assert plan["walltime_budget_seconds"] == 900
     assert plan["max_output_bytes"] == 260_000_000
@@ -174,3 +184,77 @@ def test_plan_preserves_work_and_alternates_complete_revision_pairs(tmp_path, mo
     for variant in validation.VARIANTS:
         for mode in validation.MODES:
             assert sum((row["variant"], row["mode"]) == (variant, mode) for row in plan["runs"]) == 5
+
+
+@pytest.mark.parametrize("explicit", [False, True], ids=["default-d66", "explicit-9d"])
+def test_compare_cli_selects_only_the_requested_baseline(tmp_path, monkeypatch, explicit):
+    observed = {}
+    def compare(args):
+        observed["baseline_commit"] = args.baseline_commit
+        return 0
+    monkeypatch.setattr(validation, "compare", compare)
+    argv = ["compare", "--baseline", str(tmp_path), "--out", str(tmp_path / "out"), "--plan-only"]
+    if explicit:
+        argv += ["--baseline-commit", VALIDATED_BASELINE]
+    assert validation.main(argv) == 0
+    assert observed["baseline_commit"] == (VALIDATED_BASELINE if explicit else validation.BASELINE)
+
+
+def test_source_identity_rejects_a_checkout_with_the_wrong_requested_head(tmp_path, monkeypatch):
+    monkeypatch.setattr(validation.benchmark, "execution_environment", lambda repository: {
+        "git_commit": validation.BASELINE})
+    with pytest.raises(ValueError, match="baseline must be " + VALIDATED_BASELINE):
+        validation.source_identity(tmp_path, baseline=True, baseline_commit=VALIDATED_BASELINE)
+
+
+def test_measurement_drift_is_rejected_even_when_both_copies_match(tmp_path, monkeypatch):
+    wrapper, baseline, out = tmp_path / "wrapper", tmp_path / "baseline", tmp_path / "plan"
+    candidate = validation.ROOT
+    for directory in (wrapper, baseline):
+        for name in validation.MEASUREMENT_FILES:
+            path = directory / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes((candidate / name).read_bytes())
+        changed = directory / validation.MEASUREMENT_FILES[0]
+        changed.write_bytes(changed.read_bytes() + b"\n# changed measurement must never become its own reference\n")
+    out.mkdir()
+    monkeypatch.setattr(validation, "ROOT", wrapper)
+    monkeypatch.setattr(validation, "source_identity", lambda *args, **kwargs: {"git_commit": validation.BASELINE})
+    with pytest.raises(ValueError, match="measurement implementation differs from immutable d66"):
+        validation.build_plan(baseline, candidate, out)
+    assert not list(out.iterdir())
+
+
+@pytest.mark.parametrize("has_plan", [False, True], ids=["missing-identity", "actual-9d"])
+def test_summary_uses_observed_baseline_and_never_invents_d66(tmp_path, has_plan):
+    for phase in ("preflight", "regressions", "comparison"):
+        directory = tmp_path / phase
+        directory.mkdir()
+        (directory / "report.json").write_text('{"status":"DONE"}')
+    if has_plan:
+        (tmp_path / "comparison/plan.json").write_text(json.dumps({"sources": {
+            "baseline": {"git_commit": VALIDATED_BASELINE}, "candidate": {"git_commit": "a" * 40}}}))
+    assert validation.main(["summary", "--out", str(tmp_path)]) == 0
+    text = (tmp_path / "summary.md").read_text()
+    result = json.loads((tmp_path / "summary.json").read_text())
+    assert validation.BASELINE not in text
+    assert result["baseline_commit"] == (VALIDATED_BASELINE if has_plan else None)
+    assert (VALIDATED_BASELINE if has_plan else "unavailable") in text
+
+
+def test_missing_recovered_runtime_suites_block_instead_of_skipping(tmp_path, monkeypatch):
+    root, out = tmp_path / "checkout", tmp_path / "evidence"
+    for name in validation.REQUIRED_TESTS:
+        if name not in RECOVERED_RUNTIME_SUITES:
+            path = root / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+    monkeypatch.setattr(validation, "ROOT", root)
+    monkeypatch.setattr(validation, "preflight", lambda: {"status": "DONE"})
+    def unexpected_pytest(*args, **kwargs):
+        pytest.fail("missing required suites must block before pytest starts")
+    monkeypatch.setattr(validation.subprocess, "run", unexpected_pytest)
+    assert validation.regressions(SimpleNamespace(out=out, torch_contracts=False)) == 3
+    report = json.loads((out / "report.json").read_text())
+    assert report["status"] == "BLOCKED"
+    assert set(report["missing_required_suites"]) == set(RECOVERED_RUNTIME_SUITES)

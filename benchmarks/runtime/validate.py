@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""CPU-only CI gates and a fixed, interleaved d66/candidate W0 comparison.
+"""CPU-only CI gates and a fixed, interleaved baseline/candidate W0 comparison.
 
 Measurement, process ownership and scientific comparison are delegated to the
 existing validation harness. This module only selects revisions, counts W0 work
@@ -28,6 +28,7 @@ from scripts.validation import runtime_workflow_benchmark as benchmark
 from astrolabe.runtime.telemetry import process_namespace_supported
 
 BASELINE = "d66ee714f2e755948534f95d9d125287ce8dbd91"
+BASELINE_COMMITS = (BASELINE, "9d62b3eb86cb75a2266af49dc48cb851e69e0341")
 PROTOCOL = "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5"
 GROUPS = 5
 VARIANTS = ("baseline", "candidate")
@@ -44,11 +45,20 @@ MEASUREMENT_FILES = (
     "scripts/validation/runtime_trace_report.py",
     "scripts/validation/runtime_structure_parity.py",
 )
+# The measurement reference stays d66 even when the compared baseline changes.
+MEASUREMENT_SHA256 = dict(zip(MEASUREMENT_FILES, (
+    "8873b26f63a0d232bdae672c826fba1d7506fa6e4bbc48a9708dcec91e7b1094",
+    "e4089c2021586807db8c3e9499ccd99204aee69ae19f3e2cd2e3c4f574c6356c",
+    "add56b60843f3b4b3855203c62d1e7a75631d30025ed9c329988e38041ec89f5",
+    "1a5c6a0afb2868cba9bc0b9d794614035c917a577e1c5fbec2a344ee2f397242",
+)))
 REQUIRED_TESTS = (
     "tests/test_candidate_batch_policy.py", "tests/test_candidate_batch_runner.py",
     "tests/test_execution_identity.py", "tests/test_app.py",
     "tests/test_runtime_execution.py", "tests/test_runtime_contracts.py",
     "tests/test_runtime_broker_deadline.py",
+    "tests/test_runtime_ingress.py", "tests/test_runtime_request_isolation.py",
+    "tests/test_runtime_saturation.py",
     "tests/test_runtime_resources.py", "tests/test_runtime_controller.py",
     "tests/test_runtime_context.py", "tests/test_runtime_process_observations.py",
     "tests/test_runtime_benchmark_processes.py", "tests/test_runtime_trace_report.py",
@@ -122,11 +132,13 @@ def preflight():
             "packages": packages, "gpu_certification": "BLOCKED: no GPU execution in this workflow"}
 
 
-def source_identity(repository, *, baseline=False):
+def source_identity(repository, *, baseline=False, baseline_commit=BASELINE):
     repository = repository.resolve()
+    if baseline and baseline_commit not in BASELINE_COMMITS:
+        raise ValueError(f"unsupported frozen baseline commit: {baseline_commit}")
     result = benchmark.execution_environment(repository)
-    if baseline and result["git_commit"] != BASELINE:
-        raise ValueError(f"baseline must be {BASELINE}, observed {result['git_commit']!r}")
+    if baseline and result["git_commit"] != baseline_commit:
+        raise ValueError(f"baseline must be {baseline_commit}, observed {result['git_commit']!r}")
     if not result["git_commit"] or not (repository / "astrolabe/__main__.py").is_file():
         raise ValueError(f"not a committed Astrolabe checkout: {repository}")
     status = subprocess.run(["git", "-C", str(repository), "status", "--porcelain=v1", "--",
@@ -137,16 +149,18 @@ def source_identity(repository, *, baseline=False):
     return result
 
 
-def build_plan(baseline, candidate, out):
+def build_plan(baseline, candidate, out, *, baseline_commit=BASELINE):
     from omegaconf import OmegaConf
-    sources = {"baseline": source_identity(baseline, baseline=True), "candidate": source_identity(candidate)}
+    sources = {"baseline": source_identity(baseline, baseline=True, baseline_commit=baseline_commit),
+               "candidate": source_identity(candidate)}
     measurement = {}
     for name in MEASUREMENT_FILES:
-        measured = hashlib.sha256((ROOT / name).read_bytes()).hexdigest()
-        expected = hashlib.sha256((baseline / name).read_bytes()).hexdigest()
-        if measured != expected:
-            raise ValueError(f"measurement implementation differs from the frozen baseline: {name}")
-        measurement[name] = measured
+        expected = MEASUREMENT_SHA256[name]
+        for label, repository in (("wrapper", ROOT), ("baseline", baseline), ("candidate", candidate)):
+            measured = hashlib.sha256((repository / name).read_bytes()).hexdigest()
+            if measured != expected:
+                raise ValueError(f"measurement implementation differs from immutable d66 in {label}: {name}")
+        measurement[name] = expected
     fixture = candidate / "scripts/validation/fixtures/runtime_cpu.yaml"
     config_dir = candidate / "config"
     base = benchmark.compose(fixture, config_dir)
@@ -173,6 +187,7 @@ def build_plan(baseline, candidate, out):
                              "repository": str(repository), "directory": str(directory), "command": command,
                              "config_sha256": hashlib.sha256(config_path.read_bytes()).hexdigest()})
     return {"schema_version": 1, "protocol_sha256": PROTOCOL, "configuration": base, "sources": sources,
+            "baseline_commit": baseline_commit, "measurement_reference_commit": BASELINE,
             "measurement_source_sha256": measurement,
             "wrapper_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
             "working_directory": str(fixture.parent), "expected_trajectories": trajectories,
@@ -278,6 +293,7 @@ def comparison_markdown(result):
     def value(number):
         return "unavailable" if number is None else f"{number:.4f}"
     lines = ["# Runtime CPU W0 comparison", "", f"Status: **{result['status']}**. Completed trial contract: **{result['complete']}**.",
+             f"Baseline: `{result.get('baseline_commit') or 'unavailable'}`. Candidate: `{result.get('candidate_commit') or 'unavailable'}`.",
              f"Protocol: `{PROTOCOL}`. {result['attempted_trials']} / {result['requested_trials']} trials attempted.", "",
              "| Revision / mode | Valid / attempted | Evaluations | Median seconds | Range seconds | Effective trajectories/s |",
              "| --- | ---: | ---: | ---: | --- | ---: |"]
@@ -301,7 +317,10 @@ def comparison_markdown(result):
 
 def compare(args):
     out = fresh_directory(args.out)
-    plan = build_plan(args.baseline.resolve(), ROOT, out)
+    plan = build_plan(args.baseline.resolve(), ROOT, out, baseline_commit=args.baseline_commit)
+    provenance = {"baseline_commit": plan["sources"]["baseline"]["git_commit"],
+                  "candidate_commit": plan["sources"]["candidate"]["git_commit"],
+                  "measurement_reference_commit": BASELINE}
     benchmark.json_write(out / "plan.json", plan)
     if args.plan_only:
         print(f"PLAN ONLY: {out / 'plan.json'}; no work was executed")
@@ -309,7 +328,7 @@ def compare(args):
     environment = preflight()
     benchmark.json_write(out / "preflight.json", environment)
     if environment["status"] != "DONE":
-        benchmark.json_write(out / "report.json", {"status": "BLOCKED", "preflight": environment,
+        benchmark.json_write(out / "report.json", {**provenance, "status": "BLOCKED", "preflight": environment,
                                                    "performance_claim": "not measured", "runs": []})
         print("BLOCKED: " + ", ".join(environment["blocking_reasons"]))
         return 3
@@ -337,13 +356,13 @@ def compare(args):
         measured["valid_workload"] = (measured["exit_code"] == 0 and not failures and counts["certified"]
             and not measured["stop_reason"] and measured.get("process_release", {}).get("release_confirmed") is True)
         records.append(measured)
-        checkpoint = comparison_report(records)
+        checkpoint = {**comparison_report(records), **provenance}
         benchmark.json_write(out / "report.json", checkpoint)
         print(f"{trial['run']:02d}/30 {trial['variant']}/{trial['mode']}: valid={measured['valid_workload']} trajectories={len(rows)} evaluations={counts['evaluation_calls']} seconds={measured['seconds']:.4f}", flush=True)
         if measured["stop_reason"]:
             stop_reason = measured["stop_reason"]
             break
-    result = comparison_report(records)
+    result = {**comparison_report(records), **provenance}
     result["experiment"] = {"wall_seconds": time.monotonic() - started, "walltime_budget_seconds": WALL_BUDGET,
                             "max_output_bytes": OUTPUT_BUDGET, "stop_reason": stop_reason, "allocated_gpu_hours": 0,
                             "scope": "all trials, failed work and between-trial analysis; bounded observer cleanup may extend a deadline"}
@@ -405,8 +424,15 @@ def summary(args):
     overall = "DONE" if all(report.get("status") == "DONE" for report in reports.values()) else "PARTIAL"
     title = "CPU Torch and structural contract validation" if args.torch_contracts else "runtime validation"
     revision = f"Candidate: `{os.environ.get('GITHUB_SHA', 'local/unpublished')}`."
+    baseline_commit = None
     if not args.torch_contracts:
-        revision += f" Frozen baseline: `{BASELINE}`."
+        try:
+            plan = json.loads((args.out / "comparison/plan.json").read_text())
+            baseline_commit = plan["sources"]["baseline"]["git_commit"]
+            revision = f"Candidate: `{plan['sources']['candidate']['git_commit']}`."
+        except (OSError, ValueError, KeyError, TypeError):
+            pass
+        revision += f" Compared baseline: `{baseline_commit or 'unavailable'}`."
     lines = [f"# Astrolabe {title}", "", f"Overall CPU validation: **{overall}**.",
              revision, "",
              "| Gate | Status |", "| --- | --- |"]
@@ -423,7 +449,10 @@ def summary(args):
               "The uploaded artifact preserves raw logs, configuration, traces, telemetry, test cases and skip reasons. Missing runs and failed work are retained and cannot count as acceleration.", ""]
     markdown = "\n".join(lines)
     (args.out / "summary.md").write_text(markdown)
-    benchmark.json_write(args.out / "summary.json", {"status": overall, "gates": {key: value.get("status") for key, value in reports.items()}})
+    summary_result = {"status": overall, "gates": {key: value.get("status") for key, value in reports.items()}}
+    if not args.torch_contracts:
+        summary_result["baseline_commit"] = baseline_commit
+    benchmark.json_write(args.out / "summary.json", summary_result)
     if args.step_summary:
         with args.step_summary.open("a") as stream:
             stream.write(markdown)
@@ -439,6 +468,8 @@ def main(argv=None):
         subparser.add_argument("--out", type=Path, required=True)
         if command == "compare":
             subparser.add_argument("--baseline", type=Path, required=True)
+            subparser.add_argument("--baseline-commit", choices=BASELINE_COMMITS, default=BASELINE,
+                                   help="exact expected baseline HEAD; defaults to the original d66 baseline")
             subparser.add_argument("--plan-only", action="store_true")
         if command == "summary":
             subparser.add_argument("--step-summary", type=Path)
