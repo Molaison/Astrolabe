@@ -279,6 +279,17 @@ class CandidatePoolScheduler:
                 raw = self.worker(task)
                 duration = time.monotonic() - started
                 if isinstance(raw, CandidateResult):
+                    if (
+                        raw.task.candidate_id != task.candidate_id
+                        or raw.task.generation != task.generation
+                    ):
+                        raise ValueError(
+                            "candidate result identity mismatch: "
+                            f"submitted candidate_id={task.candidate_id!r}, "
+                            f"generation={task.generation!r}; "
+                            f"received candidate_id={raw.task.candidate_id!r}, "
+                            f"generation={raw.task.generation!r}"
+                        )
                     result = raw
                 else:
                     result = CandidateResult(
