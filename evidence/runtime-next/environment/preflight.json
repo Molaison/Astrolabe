@@ -1,0 +1,29 @@
+{
+  "task_date": "2026-11-04",
+  "host_utc": "2026-11-04T01:59:14.208959+00:00",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "executable": "/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python",
+  "gpu_devices": [],
+  "destination_exists": false,
+  "requested_destination": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104",
+  "native_remote_executor_connected": false,
+  "packages": {
+    "numpy": "2.3.5",
+    "scipy": "1.17.0",
+    "pytest": "9.2.0",
+    "omegaconf": "2.3.0",
+    "hydra-core": "1.3.2",
+    "biopython": "1.86",
+    "jax": "0.4.34",
+    "jaxlib": "0.4.34",
+    "psutil": "7.2.2"
+  },
+  "process_namespace_supported": false,
+  "unix_socket": {
+    "error_type": "PermissionError",
+    "errno": 1,
+    "message": "[Errno 1] Operation not permitted"
+  },
+  "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "worktrees": "worktree /workspace/scratch/1a0b1639644d/cloud-20261104/repo\nHEAD d66ee714f2e755948534f95d9d125287ce8dbd91\nbranch refs/heads/feat/runtime-validated-pipeline-20261104\n\nworktree /workspace/scratch/1a0b1639644d/cloud-20261104/agent-a\nHEAD d66ee714f2e755948534f95d9d125287ce8dbd91\nbranch refs/heads/work/runtime-a-20261104\n\nworktree /workspace/scratch/1a0b1639644d/cloud-20261104/agent-b\nHEAD d66ee714f2e755948534f95d9d125287ce8dbd91\nbranch refs/heads/work/runtime-b-20261104\n\nworktree /workspace/scratch/1a0b1639644d/cloud-20261104/agent-c\nHEAD d66ee714f2e755948534f95d9d125287ce8dbd91\nbranch refs/heads/work/runtime-c-20261104\n\nworktree /workspace/scratch/1a0b1639644d/cloud-20261104/baseline\nHEAD d66ee714f2e755948534f95d9d125287ce8dbd91\ndetached\n\n"
+}
