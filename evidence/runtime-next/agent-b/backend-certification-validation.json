@@ -1,0 +1,26 @@
+{
+  "certified_scope": "builtin registry inventory and evidence classification only",
+  "counts": {
+    "evaluator": {
+      "factories": 13,
+      "registry_keys": 14
+    },
+    "mutator": {
+      "factories": 17,
+      "registry_keys": 20
+    }
+  },
+  "cpu_ci_summary_sha256": "3c82812c296fb619f9f703fa5bef7cb0ec184ec2077e0fcd59a9d1fce8b6e392",
+  "cpu_registry_keys": 6,
+  "gate_scope": "Live imported builtin registries versus AST; stdlib-only inventory generation; new-key and changed-factory negative controls",
+  "generator_sha256": "a3c337bc407d5f8a15edfcbbf7fafae3d170ddc9e77b57a2b606545d9e79c8ad",
+  "gpu_execution_performed": false,
+  "head": "a55c28553917742ed451aa016ce7dc62cdfea95c",
+  "learned_gpu_registry_keys_blocked": 28,
+  "raw_gpu_status": "BLOCKED; matrix creation and CPU contracts never certify pretrained/GPU variants",
+  "real_backend_execution_performed": false,
+  "status": "DONE",
+  "tests": "....                                                                     [100%]\n4 passed in 1.73s",
+  "torch_ci_summary_sha256": "9cb00700a385ef781ade98cdc08d9881d873fa35419f9ee58be67cf0b79496fa",
+  "variant_config_scopes": 63
+}

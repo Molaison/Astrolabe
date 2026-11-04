@@ -70,3 +70,17 @@ The final same-harness rerun is `esmfold-output-comparison.json`; its source has
 - Final 2 × 128: CPU total 9.3309 → 9.1273 ms (-2.18%); requested host bytes 34,256,928 → 326,672; output/RNG/input gates pass.
 
 Small CPU timings vary across samples and establish no repeatable total-time win. The retained byte reduction is deterministic for these output shapes.
+
+## Independent interrogate outcome
+
+Agent C reviewed exact commit `a55c28553917742ed451aa016ce7dc62cdfea95c` in a clean detached worktree and independently reran 63 tests (one process-dependent test deselected), 36 separately constructed float16/32/64 differential cases, and four changed-dependency/fallback controls. All scoped correctness gates passed. The main agent independently repeated the 63-test gate and old/new handler control as well.
+
+C's unchanged seven-alternating-trial benchmark reproduced **21 → 9** host-materialization requests and the same payload counts. Its CPU output-only medians were **1.1807 → 1.2907 ms (+9.31%)** for 1×24 and **10.1178 → 10.7941 ms (+6.68%)** for 2×128. These independent negative measurements reinforce the absence of a demonstrated performance win. **KEEP is exclusively a resource-lifecycle/boundary and requested-payload decision; performance certification remains BLOCKED.**
+
+Independent artifacts are `evidence/runtime-next/agent-c/review-b-report.md`, `review-b-output-comparison.json`, `review-b-independent-differential.json`, and `probe_esmfold_differential.py`, collected by the main agent. Their native-output/recording-lease scope is explicit; none certifies a pretrained GPU backend.
+
+## Eligible-host CPU process closure
+
+The main agent's actual GitHub Actions run `41762677554`, job `126353753501`, at commit `db937f9706270cb109e799cda29f52d2872726b5` completed **65 tests passed, zero skips/deselections** with torch `2.7.1+cpu` and `cuda_build=null`. The full four suites include the previously locally excluded constructor precision/RNG test and `test_esmfold1_resident.py`, which exercises the actual factory/daemon process using a fake model and synthetic local checkpoint. This closes the local process-environment blocker for that precise CPU contract.
+
+The small receipt is `torch-ci-01-summary.json`; the main integration delivers the canonical summary and lossless 14-file raw archive for artifact `13290473709` (artifact SHA256 `92a8aa6863c0112aba3bfed62700bee0bb548b6f0d3f66a80dab845eefdf77a7`). Earlier local deselection remains recorded honestly. There is still no pretrained model execution, CUDA/GPU certificate or end-to-end throughput improvement.

@@ -1,0 +1,97 @@
+{
+  "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "method": "AST only; does not import heavy backends or certify they can execute",
+  "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+  "key_count": 14,
+  "factory_count": 13,
+  "keys": [
+    {
+      "registry_key": "alphafold3",
+      "factory": "_build_alphafold3_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 159
+    },
+    {
+      "registry_key": "rf3",
+      "factory": "_build_rf3_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 194
+    },
+    {
+      "registry_key": "alphafold2",
+      "factory": "_build_alphafold2_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 213
+    },
+    {
+      "registry_key": "esmfold",
+      "factory": "_build_esmfold_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 301
+    },
+    {
+      "registry_key": "esmfold2",
+      "factory": "_build_esmfold2_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 318
+    },
+    {
+      "registry_key": "chai1",
+      "factory": "_build_chai1_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 338
+    },
+    {
+      "registry_key": "boltz",
+      "factory": "_build_boltz_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 355
+    },
+    {
+      "registry_key": "opendde",
+      "factory": "_build_opendde_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 374
+    },
+    {
+      "registry_key": "mol-1",
+      "factory": "_build_mol1_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 395
+    },
+    {
+      "registry_key": "mol1",
+      "factory": "_build_mol1_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 396
+    },
+    {
+      "registry_key": "protenix",
+      "factory": "_build_protenix_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 411
+    },
+    {
+      "registry_key": "rhofold",
+      "factory": "_build_rhofold_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 549
+    },
+    {
+      "registry_key": "dummy",
+      "factory": "_build_dummy_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 592
+    },
+    {
+      "registry_key": "rosetta_crystal",
+      "factory": "_build_rosetta_crystal_evaluator",
+      "file": "astrolabe/evaluators/utils.py",
+      "line": 618
+    }
+  ],
+  "aliases": {
+    "mol1": "mol-1"
+  },
+  "absent_backend": "Boltz2 is absent from registry; boltz factory instantiates Boltz1Runner"
+}

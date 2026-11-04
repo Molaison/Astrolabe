@@ -1,0 +1,144 @@
+{
+  "scope": "AST execution of actual worker+native helper with fake tensors, inference, formatter and device admission; code-contract evidence only",
+  "real_gpu": false,
+  "real_pretrained_model": false,
+  "timing_claim": null,
+  "worker_sha256": "aae2d7817d14c05780aec099d2c4c4efbed7ee8a5be6c61e7e53a86d9a3823dd",
+  "native_sha256": "549484dc90dec7b23d7ca35a69f150aed822a3bfca96c7c9fa6697fb42e7960c",
+  "host_formatter_inside_lease": true,
+  "unused_output_copied": true,
+  "events": [
+    {
+      "event": "lease_enter",
+      "device_lease_active": true
+    },
+    {
+      "event": "rng_restore",
+      "device_lease_active": true
+    },
+    {
+      "event": "fake_model_infer",
+      "device_lease_active": true
+    },
+    {
+      "event": "atom14_to_atom37",
+      "device_lease_active": true
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "positions",
+      "bytes": 336
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "aatype",
+      "bytes": 16
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "atom37_mask",
+      "bytes": 296
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "residue_index",
+      "bytes": 16
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "chain_index",
+      "bytes": 16
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "plddt",
+      "bytes": 296
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "mean_plddt",
+      "bytes": 8
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "ptm",
+      "bytes": 8
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "pae",
+      "bytes": 32
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "unused_pair",
+      "bytes": 512
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "atom37",
+      "bytes": 888
+    },
+    {
+      "event": "OFProtein",
+      "device_lease_active": true
+    },
+    {
+      "event": "native_host_to_pdb",
+      "device_lease_active": true
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "chain_index",
+      "bytes": 16
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "plddt",
+      "bytes": 296
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "mean_plddt",
+      "bytes": 8
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "ptm",
+      "bytes": 8
+    },
+    {
+      "event": "tensor_to_host",
+      "device_lease_active": true,
+      "name": "pae",
+      "bytes": 32
+    },
+    {
+      "event": "lifecycle",
+      "device_lease_active": true
+    },
+    {
+      "event": "lease_exit",
+      "device_lease_active": true
+    },
+    {
+      "event": "result_codec",
+      "device_lease_active": false
+    }
+  ]
+}
