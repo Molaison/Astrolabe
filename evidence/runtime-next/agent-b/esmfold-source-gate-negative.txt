@@ -1,0 +1,278 @@
+FFFFFFFFFF.........FFF.........................................          [100%]
+=================================== FAILURES ===================================
+________________ test_fixture_integrity_and_actual_source_gate _________________
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+
+    def test_fixture_integrity_and_actual_source_gate(native):
+        path = Path(native.__file__)
+        manifest = json.loads(path.with_suffix('.json').read_text())
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == manifest['fixture_sha256']
+        assert manifest['esm_ref'] == '43c67d952da30d2471f609848931d20ec8c98532'
+        assert manifest['openfold_ref'] == '8396098268a5675b0ff776ec274f15d380a4ccf5'
+>       assert resolve_pdb_boundary(native.NativeModel()) is not None
+E       AssertionError: assert None is not None
+E        +  where None = resolve_pdb_boundary(<_native_esmfold_output_test.NativeModel object at 0x7ff0e0029370>)
+E        +    where <_native_esmfold_output_test.NativeModel object at 0x7ff0e0029370> = <class '_native_esmfold_output_test.NativeModel'>()
+E        +      where <class '_native_esmfold_output_test.NativeModel'> = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>.NativeModel
+
+tests/test_esmfold_output_boundary.py:83: AssertionError
+_____ test_native_pdb_score_dtype_atom_order_and_rng_exact[False-dtype0-1] _____
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+batch = 1, dtype = torch.float32, padded = False
+
+    @pytest.mark.parametrize('batch', [1, 2])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('padded', [False, True])
+    def test_native_pdb_score_dtype_atom_order_and_rng_exact(native, batch, dtype, padded):
+        output = make_output(native, batch=batch, dtype=dtype, padded=padded)
+        original = {key: value.clone() for key, value in output.items()}
+        state = capture('cpu')
+        expected_pdbs = native.output_to_pdb(output)
+        expected_scores = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+        expected_state = capture('cpu')
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:97: AttributeError
+_____ test_native_pdb_score_dtype_atom_order_and_rng_exact[False-dtype0-2] _____
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+batch = 2, dtype = torch.float32, padded = False
+
+    @pytest.mark.parametrize('batch', [1, 2])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('padded', [False, True])
+    def test_native_pdb_score_dtype_atom_order_and_rng_exact(native, batch, dtype, padded):
+        output = make_output(native, batch=batch, dtype=dtype, padded=padded)
+        original = {key: value.clone() for key, value in output.items()}
+        state = capture('cpu')
+        expected_pdbs = native.output_to_pdb(output)
+        expected_scores = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+        expected_state = capture('cpu')
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:97: AttributeError
+_____ test_native_pdb_score_dtype_atom_order_and_rng_exact[False-dtype1-1] _____
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+batch = 1, dtype = torch.float64, padded = False
+
+    @pytest.mark.parametrize('batch', [1, 2])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('padded', [False, True])
+    def test_native_pdb_score_dtype_atom_order_and_rng_exact(native, batch, dtype, padded):
+        output = make_output(native, batch=batch, dtype=dtype, padded=padded)
+        original = {key: value.clone() for key, value in output.items()}
+        state = capture('cpu')
+        expected_pdbs = native.output_to_pdb(output)
+        expected_scores = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+        expected_state = capture('cpu')
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:97: AttributeError
+_____ test_native_pdb_score_dtype_atom_order_and_rng_exact[False-dtype1-2] _____
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+batch = 2, dtype = torch.float64, padded = False
+
+    @pytest.mark.parametrize('batch', [1, 2])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('padded', [False, True])
+    def test_native_pdb_score_dtype_atom_order_and_rng_exact(native, batch, dtype, padded):
+        output = make_output(native, batch=batch, dtype=dtype, padded=padded)
+        original = {key: value.clone() for key, value in output.items()}
+        state = capture('cpu')
+        expected_pdbs = native.output_to_pdb(output)
+        expected_scores = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+        expected_state = capture('cpu')
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:97: AttributeError
+_____ test_native_pdb_score_dtype_atom_order_and_rng_exact[True-dtype0-1] ______
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+batch = 1, dtype = torch.float32, padded = True
+
+    @pytest.mark.parametrize('batch', [1, 2])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('padded', [False, True])
+    def test_native_pdb_score_dtype_atom_order_and_rng_exact(native, batch, dtype, padded):
+        output = make_output(native, batch=batch, dtype=dtype, padded=padded)
+        original = {key: value.clone() for key, value in output.items()}
+        state = capture('cpu')
+        expected_pdbs = native.output_to_pdb(output)
+        expected_scores = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+        expected_state = capture('cpu')
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:97: AttributeError
+_____ test_native_pdb_score_dtype_atom_order_and_rng_exact[True-dtype0-2] ______
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+batch = 2, dtype = torch.float32, padded = True
+
+    @pytest.mark.parametrize('batch', [1, 2])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('padded', [False, True])
+    def test_native_pdb_score_dtype_atom_order_and_rng_exact(native, batch, dtype, padded):
+        output = make_output(native, batch=batch, dtype=dtype, padded=padded)
+        original = {key: value.clone() for key, value in output.items()}
+        state = capture('cpu')
+        expected_pdbs = native.output_to_pdb(output)
+        expected_scores = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+        expected_state = capture('cpu')
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:97: AttributeError
+_____ test_native_pdb_score_dtype_atom_order_and_rng_exact[True-dtype1-1] ______
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+batch = 1, dtype = torch.float64, padded = True
+
+    @pytest.mark.parametrize('batch', [1, 2])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('padded', [False, True])
+    def test_native_pdb_score_dtype_atom_order_and_rng_exact(native, batch, dtype, padded):
+        output = make_output(native, batch=batch, dtype=dtype, padded=padded)
+        original = {key: value.clone() for key, value in output.items()}
+        state = capture('cpu')
+        expected_pdbs = native.output_to_pdb(output)
+        expected_scores = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+        expected_state = capture('cpu')
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:97: AttributeError
+_____ test_native_pdb_score_dtype_atom_order_and_rng_exact[True-dtype1-2] ______
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+batch = 2, dtype = torch.float64, padded = True
+
+    @pytest.mark.parametrize('batch', [1, 2])
+    @pytest.mark.parametrize('dtype', [torch.float32, torch.float64])
+    @pytest.mark.parametrize('padded', [False, True])
+    def test_native_pdb_score_dtype_atom_order_and_rng_exact(native, batch, dtype, padded):
+        output = make_output(native, batch=batch, dtype=dtype, padded=padded)
+        original = {key: value.clone() for key, value in output.items()}
+        state = capture('cpu')
+        expected_pdbs = native.output_to_pdb(output)
+        expected_scores = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+        expected_state = capture('cpu')
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:97: AttributeError
+__________________ test_missing_chain_preserves_native_error ___________________
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+
+    def test_missing_chain_preserves_native_error(native):
+        output = make_output(native)
+        del output['chain_index']
+        boundary = resolve_pdb_boundary(native.NativeModel())
+        with pytest.raises(AttributeError) as expected:
+            native.output_to_pdb(output)
+>       with pytest.raises(type(expected.value), match='astype') as actual:
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AssertionError: Regex pattern did not match.
+E         Expected regex: 'astype'
+E         Actual message: "'NoneType' object has no attribute 'finalize_pdb'"
+
+tests/test_esmfold_output_boundary.py:113: AssertionError
+__________ test_host_finalizer_never_copies_or_accepts_device_tensors __________
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff10fc43530>
+
+    def test_host_finalizer_never_copies_or_accepts_device_tensors(native, monkeypatch):
+        boundary = resolve_pdb_boundary(native.NativeModel())
+>       host = boundary.prepare_output(make_output(native))
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:143: AttributeError
+____________ test_materialization_visits_only_required_fields_once _____________
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7ff0df71cfb0>
+
+    def test_materialization_visits_only_required_fields_once(native, monkeypatch):
+        boundary = resolve_pdb_boundary(native.NativeModel())
+        output = make_output(native)
+        original_cpu = torch.Tensor.cpu
+        copies = []
+        def observed_cpu(tensor, *args, **kwargs):
+            copies.append((tensor.data_ptr(), tensor.numel()*tensor.element_size()))
+            return original_cpu(tensor, *args, **kwargs)
+        monkeypatch.setattr(torch.Tensor, 'cpu', observed_cpu)
+>       host = boundary.prepare_output(output)
+               ^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'NoneType' object has no attribute 'prepare_output'
+
+tests/test_esmfold_output_boundary.py:163: AttributeError
+______ test_actual_worker_boundary_output_rng_and_unused_lifetime[False] _______
+
+native = <module '_native_esmfold_output_test' from '/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/tests/fixtures/esmfold_output_native.py'>
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-25/test_actual_worker_boundary_ou0')
+custom = False
+
+    @pytest.mark.parametrize('custom', [False, True])
+    def test_actual_worker_boundary_output_rng_and_unused_lifetime(native, tmp_path, custom):
+        state = {'lease': False}
+        unused = []
+        class Model(native.NativeModel):
+            def infer(self, sequences):
+                random.random(); np.random.random(); torch.rand(3)
+                output = make_output(native)
+                unused.append(weakref.ref(output['s_z']))
+                return output
+        if custom:
+            def custom_pdb(self, output):
+                # Unknown vendor code may consume RNG; preserve it inside the lease
+                # before RNG capture and return its exact custom result.
+                return [str(random.random()), str(torch.rand(1).item())]
+            Model.output_to_pdb = custom_pdb
+        model = Model()
+        boundary = resolve_pdb_boundary(model)
+>       assert (boundary is None) is custom
+E       assert (None is None) is False
+
+tests/test_esmfold_output_boundary.py:201: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_esmfold_output_boundary.py::test_fixture_integrity_and_actual_source_gate
+FAILED tests/test_esmfold_output_boundary.py::test_native_pdb_score_dtype_atom_order_and_rng_exact[False-dtype0-1]
+FAILED tests/test_esmfold_output_boundary.py::test_native_pdb_score_dtype_atom_order_and_rng_exact[False-dtype0-2]
+FAILED tests/test_esmfold_output_boundary.py::test_native_pdb_score_dtype_atom_order_and_rng_exact[False-dtype1-1]
+FAILED tests/test_esmfold_output_boundary.py::test_native_pdb_score_dtype_atom_order_and_rng_exact[False-dtype1-2]
+FAILED tests/test_esmfold_output_boundary.py::test_native_pdb_score_dtype_atom_order_and_rng_exact[True-dtype0-1]
+FAILED tests/test_esmfold_output_boundary.py::test_native_pdb_score_dtype_atom_order_and_rng_exact[True-dtype0-2]
+FAILED tests/test_esmfold_output_boundary.py::test_native_pdb_score_dtype_atom_order_and_rng_exact[True-dtype1-1]
+FAILED tests/test_esmfold_output_boundary.py::test_native_pdb_score_dtype_atom_order_and_rng_exact[True-dtype1-2]
+FAILED tests/test_esmfold_output_boundary.py::test_missing_chain_preserves_native_error
+FAILED tests/test_esmfold_output_boundary.py::test_host_finalizer_never_copies_or_accepts_device_tensors
+FAILED tests/test_esmfold_output_boundary.py::test_materialization_visits_only_required_fields_once
+FAILED tests/test_esmfold_output_boundary.py::test_actual_worker_boundary_output_rng_and_unused_lifetime[False]
+13 failed, 50 passed, 1 deselected in 1.86s

@@ -1,0 +1,126 @@
+{
+  "esm_ref": "43c67d952da30d2471f609848931d20ec8c98532",
+  "evidence_kind": "exact native source excerpts; no checkpoint or inference",
+  "excerpts": {
+    "ESMFold.output_to_pdb": {
+      "file": "esmfold.py",
+      "first_line": 341,
+      "last_line": 343,
+      "normalized_source_sha256": "c8c02d8ac6635864e241d9d3e342d5ef9063cb8bb496de25439c186bf8e5d79c"
+    },
+    "PDB_CHAIN_IDS": {
+      "file": "protein.py",
+      "first_line": 39,
+      "last_line": 39,
+      "normalized_source_sha256": "3c0fb6131f2bf1e526ca562acb332fccd8161422ff392a49059629ebe26ebb6a"
+    },
+    "PDB_MAX_CHAINS": {
+      "file": "protein.py",
+      "first_line": 40,
+      "last_line": 40,
+      "normalized_source_sha256": "d5f8b8ba14bbca18bf63b1047694e73f1230955bfa06198f2aa9199433d6bcf6"
+    },
+    "Protein": {
+      "file": "protein.py",
+      "first_line": 44,
+      "last_line": 86,
+      "normalized_source_sha256": "d92b7c3e111832aa6e985b49e917f1906cb04751b892fb515fb5c11c2d1f55af"
+    },
+    "_chain_end": {
+      "file": "protein.py",
+      "first_line": 241,
+      "last_line": 246,
+      "normalized_source_sha256": "82f09006cceffbb8b194ddf6f29dafe28b95a4d4f062ec483eaf335941badcaa"
+    },
+    "atom14_to_atom37": {
+      "file": "feats.py",
+      "first_line": 56,
+      "last_line": 66,
+      "normalized_source_sha256": "f7d3e281630fdb0e8338d8d04665ffac7e7c4f14384b6652b54d4b779621a3b8"
+    },
+    "atom_order": {
+      "file": "residue_constants.py",
+      "first_line": 595,
+      "last_line": 595,
+      "normalized_source_sha256": "b066077ef491e2529594d49322a3225c41227d65cee1d685f5815513788c2080"
+    },
+    "atom_types": {
+      "file": "residue_constants.py",
+      "first_line": 556,
+      "last_line": 594,
+      "normalized_source_sha256": "0f1b451759eb04e76466d4acc0dffb6078e1d1e2bc1f8e9043f93a1e557d02dc"
+    },
+    "batched_gather": {
+      "file": "tensor_utils.py",
+      "first_line": 83,
+      "last_line": 95,
+      "normalized_source_sha256": "0db9097bfa3bb1c854f4a4c5de9c52b966597915fa9d4898f36eb521fe1491da"
+    },
+    "get_pdb_headers": {
+      "file": "protein.py",
+      "first_line": 249,
+      "last_line": 268,
+      "normalized_source_sha256": "c086b681057d8cf2d3161891bcd61087eb1e021ef5a0b47a497039d54a12c339"
+    },
+    "make_atom14_masks": {
+      "file": "data_transforms.py",
+      "first_line": 607,
+      "last_line": 678,
+      "normalized_source_sha256": "b44219e6687f7416f8824df604633078e5708cf3f8964edc7890025cd5ebc3f3"
+    },
+    "output_to_pdb": {
+      "file": "misc.py",
+      "first_line": 93,
+      "last_line": 116,
+      "normalized_source_sha256": "e3f7c8a33a0322f7d2dd95aaebefb308c7ab4b229babf067c4c1bca4bba3d698"
+    },
+    "residue_atoms": {
+      "file": "residue_constants.py",
+      "first_line": 355,
+      "last_line": 404,
+      "normalized_source_sha256": "7df395ef8782d47f6e31bc69789a39aa3a737ace7a13654f4538b666144509ab"
+    },
+    "restype_1to3": {
+      "file": "residue_constants.py",
+      "first_line": 931,
+      "last_line": 952,
+      "normalized_source_sha256": "c31a38e40f804882ca3f013553dbf1fa4708fe273073685395677cad555ec68e"
+    },
+    "restype_name_to_atom14_names": {
+      "file": "residue_constants.py",
+      "first_line": 601,
+      "last_line": 848,
+      "normalized_source_sha256": "852c05aa9739c524f0d06e272548bb1311515ca001b439041254eb5ff52041b2"
+    },
+    "restype_num": {
+      "file": "residue_constants.py",
+      "first_line": 878,
+      "last_line": 878,
+      "normalized_source_sha256": "a3e229a3af0c3ffcae9047f4c4492507fa29ec3f6c75532f6ccb66313cbbc85c"
+    },
+    "restypes": {
+      "file": "residue_constants.py",
+      "first_line": 855,
+      "last_line": 876,
+      "normalized_source_sha256": "35e1117a0ca1d61daf352d5201b2a8a6bbbe355a455c443150618598125f9e1e"
+    },
+    "to_pdb": {
+      "file": "protein.py",
+      "first_line": 321,
+      "last_line": 443,
+      "normalized_source_sha256": "c6f17231f2556cf355d8ca7b686248d64d2ed22b0569c1280774f1b2a977eab8"
+    }
+  },
+  "fixture_sha256": "cad35fb34a3bdae3ab7d6f2f03b525528b5ea4bb416f80a4dd046e7a6a46015d",
+  "normalization": "dedent; strip leading/trailing source whitespace; trim line-end whitespace (no scientific statements changed)",
+  "openfold_ref": "8396098268a5675b0ff776ec274f15d380a4ccf5",
+  "source_sha256": {
+    "data_transforms.py": "000cc73fcd68603173af05dcbbcbd2663c97c467759d073783d20f38febf8311",
+    "esmfold.py": "133aa578cb2c3e0cc4ae8412eaf4a2dd268316026dac9f381ac5b13296f09fa2",
+    "feats.py": "2f8023f07f8499569158b0edf9a7da7a6a3b377af7e175fdd472cc0b5beaeb4c",
+    "misc.py": "549484dc90dec7b23d7ca35a69f150aed822a3bfca96c7c9fa6697fb42e7960c",
+    "protein.py": "339a2ebbd18d8e8ee7938719f2979fa01f3983ec301245fe84e3b5ddb143233d",
+    "residue_constants.py": "19c94d0c104cf45ab303efb5b21fed36e746402163b742da0726bd2a8484a52b",
+    "tensor_utils.py": "1727607c6866968db8e1c0e07cd1dc5ee54492762c38ea0a343e621874d3a1c4"
+  }
+}

@@ -1,0 +1,1056 @@
+{
+  "schema_version": 1,
+  "evidence_kind": "real torch CPU tensors and source-extracted native output routines; synthetic inputs",
+  "pretrained": false,
+  "gpu": false,
+  "actual_d2h_measured": false,
+  "torch": "2.7.1+cpu",
+  "numpy": "2.3.5",
+  "torch_threads": 1,
+  "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "harness_sha256": "d3a0c08b52ba260763f6a8fc826654893f6a37f8d8c058dd8e1c6df286d550b5",
+  "workloads": [
+    {
+      "batch": 1,
+      "length": 24,
+      "repetitions": 7,
+      "input_tensor_shapes": {
+        "aatype": [
+          1,
+          24
+        ],
+        "atom14_atom_exists": [
+          1,
+          24,
+          14
+        ],
+        "residx_atom14_to_atom37": [
+          1,
+          24,
+          14
+        ],
+        "residx_atom37_to_atom14": [
+          1,
+          24,
+          37
+        ],
+        "atom37_atom_exists": [
+          1,
+          24,
+          37
+        ],
+        "positions": [
+          2,
+          1,
+          24,
+          14,
+          3
+        ],
+        "residue_index": [
+          1,
+          24
+        ],
+        "chain_index": [
+          1,
+          24
+        ],
+        "plddt": [
+          1,
+          24,
+          37
+        ],
+        "mean_plddt": [
+          1
+        ],
+        "ptm": [
+          1
+        ],
+        "predicted_aligned_error": [
+          1,
+          24,
+          24
+        ],
+        "s_z": [
+          1,
+          24,
+          24,
+          128
+        ],
+        "distogram_logits": [
+          1,
+          24,
+          24,
+          64
+        ],
+        "ptm_logits": [
+          1,
+          24,
+          24,
+          64
+        ]
+      },
+      "pdb_bytes": 16767,
+      "pdb_sha256": [
+        "7481208cb6b95f6ff644caf627d2bc663369682b3e436035e63b1202cd2fcefa"
+      ],
+      "methods": {
+        "baseline": {
+          "raw_trials": [
+            {
+              "total_seconds": 0.0009991729998546361,
+              "candidate_device_block_cpu_seconds": 0.0009981009998227819,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009254809997401026,
+              "candidate_device_block_cpu_seconds": 0.0009236379996764299,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009044889998222061,
+              "candidate_device_block_cpu_seconds": 0.000902906999726838,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009201739999298297,
+              "candidate_device_block_cpu_seconds": 0.0009183110000776651,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009018659998218936,
+              "candidate_device_block_cpu_seconds": 0.0009004230000755342,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009304479999627802,
+              "candidate_device_block_cpu_seconds": 0.0009289159997933893,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0008998130001600657,
+              "candidate_device_block_cpu_seconds": 0.0008980090001386998,
+              "pdb_count": 1,
+              "error_count": 0
+            }
+          ],
+          "median_total_seconds": 0.0009201739999298297,
+          "median_candidate_device_block_cpu_seconds": 0.0009183110000776651,
+          "host_materializations": {
+            "events": [
+              {
+                "method": "to_cpu",
+                "field": "aatype",
+                "shape": [
+                  1,
+                  24
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 192
+              },
+              {
+                "method": "to_cpu",
+                "field": "atom14_atom_exists",
+                "shape": [
+                  1,
+                  24,
+                  14
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 1344
+              },
+              {
+                "method": "to_cpu",
+                "field": "residx_atom14_to_atom37",
+                "shape": [
+                  1,
+                  24,
+                  14
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 2688
+              },
+              {
+                "method": "to_cpu",
+                "field": "residx_atom37_to_atom14",
+                "shape": [
+                  1,
+                  24,
+                  37
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 7104
+              },
+              {
+                "method": "to_cpu",
+                "field": "atom37_atom_exists",
+                "shape": [
+                  1,
+                  24,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 3552
+              },
+              {
+                "method": "to_cpu",
+                "field": "positions",
+                "shape": [
+                  2,
+                  1,
+                  24,
+                  14,
+                  3
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8064
+              },
+              {
+                "method": "to_cpu",
+                "field": "residue_index",
+                "shape": [
+                  1,
+                  24
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 192
+              },
+              {
+                "method": "to_cpu",
+                "field": "chain_index",
+                "shape": [
+                  1,
+                  24
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 192
+              },
+              {
+                "method": "to_cpu",
+                "field": "plddt",
+                "shape": [
+                  1,
+                  24,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 3552
+              },
+              {
+                "method": "to_cpu",
+                "field": "mean_plddt",
+                "shape": [
+                  1
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 4
+              },
+              {
+                "method": "to_cpu",
+                "field": "ptm",
+                "shape": [
+                  1
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 4
+              },
+              {
+                "method": "to_cpu",
+                "field": "predicted_aligned_error",
+                "shape": [
+                  1,
+                  24,
+                  24
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 2304
+              },
+              {
+                "method": "to_cpu",
+                "field": "s_z",
+                "shape": [
+                  1,
+                  24,
+                  24,
+                  128
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 294912
+              },
+              {
+                "method": "to_cpu",
+                "field": "distogram_logits",
+                "shape": [
+                  1,
+                  24,
+                  24,
+                  64
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 147456
+              },
+              {
+                "method": "to_cpu",
+                "field": "ptm_logits",
+                "shape": [
+                  1,
+                  24,
+                  24,
+                  64
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 147456
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24,
+                  37,
+                  3
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 10656
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 192
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 3552
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 4
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 4
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24,
+                  24
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 2304
+              }
+            ],
+            "requested_bytes": 635728,
+            "calls": 21,
+            "actual_gpu_transfer_bytes": null
+          }
+        },
+        "candidate": {
+          "raw_trials": [
+            {
+              "total_seconds": 0.0009560270000292803,
+              "candidate_device_block_cpu_seconds": 0.00012423799989846884,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009364779998577433,
+              "candidate_device_block_cpu_seconds": 8.728200009500142e-05,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009173980001833115,
+              "candidate_device_block_cpu_seconds": 7.756800005154219e-05,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009176290000141307,
+              "candidate_device_block_cpu_seconds": 7.787799995639944e-05,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0010267950001434656,
+              "candidate_device_block_cpu_seconds": 7.62949998716067e-05,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009850210003605753,
+              "candidate_device_block_cpu_seconds": 8.604999993622187e-05,
+              "pdb_count": 1,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.0009457720002501446,
+              "candidate_device_block_cpu_seconds": 8.009100019990001e-05,
+              "pdb_count": 1,
+              "error_count": 0
+            }
+          ],
+          "median_total_seconds": 0.0009457720002501446,
+          "median_candidate_device_block_cpu_seconds": 8.009100019990001e-05,
+          "host_materializations": {
+            "events": [
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 192
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 3552
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 192
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 3552
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 192
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 4
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 4
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24,
+                  24
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 2304
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  1,
+                  24,
+                  37,
+                  3
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 10656
+              }
+            ],
+            "requested_bytes": 20648,
+            "calls": 9,
+            "actual_gpu_transfer_bytes": null
+          }
+        }
+      },
+      "science_checks": {
+        "pdb_byte_identical": true,
+        "score_tensors_exact": true,
+        "rng_exact": true,
+        "inputs_unchanged": true
+      }
+    },
+    {
+      "batch": 2,
+      "length": 128,
+      "repetitions": 7,
+      "input_tensor_shapes": {
+        "aatype": [
+          2,
+          128
+        ],
+        "atom14_atom_exists": [
+          2,
+          128,
+          14
+        ],
+        "residx_atom14_to_atom37": [
+          2,
+          128,
+          14
+        ],
+        "residx_atom37_to_atom14": [
+          2,
+          128,
+          37
+        ],
+        "atom37_atom_exists": [
+          2,
+          128,
+          37
+        ],
+        "positions": [
+          2,
+          2,
+          128,
+          14,
+          3
+        ],
+        "residue_index": [
+          2,
+          128
+        ],
+        "chain_index": [
+          2,
+          128
+        ],
+        "plddt": [
+          2,
+          128,
+          37
+        ],
+        "mean_plddt": [
+          2
+        ],
+        "ptm": [
+          2
+        ],
+        "predicted_aligned_error": [
+          2,
+          128,
+          128
+        ],
+        "s_z": [
+          2,
+          128,
+          128,
+          128
+        ],
+        "distogram_logits": [
+          2,
+          128,
+          128,
+          64
+        ],
+        "ptm_logits": [
+          2,
+          128,
+          128,
+          64
+        ]
+      },
+      "pdb_bytes": 173340,
+      "pdb_sha256": [
+        "bbf64df15ea7af026cf96a157ff2c30871c4e0aec04cd6815fcf2a7f67e356da",
+        "d5aff66c75ff9ee3ff4fb1823857e1a1540ac075d1d38a7e6adb8651b344f2c5"
+      ],
+      "methods": {
+        "baseline": {
+          "raw_trials": [
+            {
+              "total_seconds": 0.008256317999894236,
+              "candidate_device_block_cpu_seconds": 0.008250520000274264,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008011838000129501,
+              "candidate_device_block_cpu_seconds": 0.00800896400005513,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008327956999892194,
+              "candidate_device_block_cpu_seconds": 0.008325582999987091,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008281877000172244,
+              "candidate_device_block_cpu_seconds": 0.008279594000214274,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008203797999613016,
+              "candidate_device_block_cpu_seconds": 0.008202166000046418,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.00818754399961108,
+              "candidate_device_block_cpu_seconds": 0.008184379000340414,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008166311999957543,
+              "candidate_device_block_cpu_seconds": 0.008164178999777505,
+              "pdb_count": 2,
+              "error_count": 0
+            }
+          ],
+          "median_total_seconds": 0.008203797999613016,
+          "median_candidate_device_block_cpu_seconds": 0.008202166000046418,
+          "host_materializations": {
+            "events": [
+              {
+                "method": "to_cpu",
+                "field": "aatype",
+                "shape": [
+                  2,
+                  128
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 2048
+              },
+              {
+                "method": "to_cpu",
+                "field": "atom14_atom_exists",
+                "shape": [
+                  2,
+                  128,
+                  14
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 14336
+              },
+              {
+                "method": "to_cpu",
+                "field": "residx_atom14_to_atom37",
+                "shape": [
+                  2,
+                  128,
+                  14
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 28672
+              },
+              {
+                "method": "to_cpu",
+                "field": "residx_atom37_to_atom14",
+                "shape": [
+                  2,
+                  128,
+                  37
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 75776
+              },
+              {
+                "method": "to_cpu",
+                "field": "atom37_atom_exists",
+                "shape": [
+                  2,
+                  128,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 37888
+              },
+              {
+                "method": "to_cpu",
+                "field": "positions",
+                "shape": [
+                  2,
+                  2,
+                  128,
+                  14,
+                  3
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 86016
+              },
+              {
+                "method": "to_cpu",
+                "field": "residue_index",
+                "shape": [
+                  2,
+                  128
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 2048
+              },
+              {
+                "method": "to_cpu",
+                "field": "chain_index",
+                "shape": [
+                  2,
+                  128
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 2048
+              },
+              {
+                "method": "to_cpu",
+                "field": "plddt",
+                "shape": [
+                  2,
+                  128,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 37888
+              },
+              {
+                "method": "to_cpu",
+                "field": "mean_plddt",
+                "shape": [
+                  2
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8
+              },
+              {
+                "method": "to_cpu",
+                "field": "ptm",
+                "shape": [
+                  2
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8
+              },
+              {
+                "method": "to_cpu",
+                "field": "predicted_aligned_error",
+                "shape": [
+                  2,
+                  128,
+                  128
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 131072
+              },
+              {
+                "method": "to_cpu",
+                "field": "s_z",
+                "shape": [
+                  2,
+                  128,
+                  128,
+                  128
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 16777216
+              },
+              {
+                "method": "to_cpu",
+                "field": "distogram_logits",
+                "shape": [
+                  2,
+                  128,
+                  128,
+                  64
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8388608
+              },
+              {
+                "method": "to_cpu",
+                "field": "ptm_logits",
+                "shape": [
+                  2,
+                  128,
+                  128,
+                  64
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8388608
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128,
+                  37,
+                  3
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 113664
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 2048
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 37888
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128,
+                  128
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 131072
+              }
+            ],
+            "requested_bytes": 34256928,
+            "calls": 21,
+            "actual_gpu_transfer_bytes": null
+          }
+        },
+        "candidate": {
+          "raw_trials": [
+            {
+              "total_seconds": 0.008321937999880902,
+              "candidate_device_block_cpu_seconds": 0.00021515599974009092,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008188967000023695,
+              "candidate_device_block_cpu_seconds": 0.00023500600036641117,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008232081000187463,
+              "candidate_device_block_cpu_seconds": 0.0002009340000768134,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008239343000241206,
+              "candidate_device_block_cpu_seconds": 0.0002033179998761625,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.011728824999863718,
+              "candidate_device_block_cpu_seconds": 0.0002003839999815682,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008339124000031006,
+              "candidate_device_block_cpu_seconds": 0.00034943900027428754,
+              "pdb_count": 2,
+              "error_count": 0
+            },
+            {
+              "total_seconds": 0.008781343000009656,
+              "candidate_device_block_cpu_seconds": 0.0002044689999820548,
+              "pdb_count": 2,
+              "error_count": 0
+            }
+          ],
+          "median_total_seconds": 0.008321937999880902,
+          "median_candidate_device_block_cpu_seconds": 0.0002044689999820548,
+          "host_materializations": {
+            "events": [
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 2048
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 37888
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 2048
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128,
+                  37
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 37888
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128
+                ],
+                "dtype": "torch.int64",
+                "requested_bytes": 2048
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 8
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128,
+                  128
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 131072
+              },
+              {
+                "method": "cpu",
+                "field": "derived_or_detached",
+                "shape": [
+                  2,
+                  128,
+                  37,
+                  3
+                ],
+                "dtype": "torch.float32",
+                "requested_bytes": 113664
+              }
+            ],
+            "requested_bytes": 326672,
+            "calls": 9,
+            "actual_gpu_transfer_bytes": null
+          }
+        }
+      },
+      "science_checks": {
+        "pdb_byte_identical": true,
+        "score_tensors_exact": true,
+        "rng_exact": true,
+        "inputs_unchanged": true
+      }
+    }
+  ],
+  "error_count": 0
+}

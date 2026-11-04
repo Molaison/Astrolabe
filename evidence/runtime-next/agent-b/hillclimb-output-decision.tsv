@@ -1,0 +1,2 @@
+attempt	hypothesis	before	after	gate	verdict	note
+B1	audited selective host materialization and post-lease PDB formatting	635728 / 34256928 requested host bytes	20648 / 326672 requested host bytes	23 native CPU tests and focused codec/RNG regression; baseline handler red, fixed green	KEEP boundary and payload reduction	CPU total +1-3%; GPU transfer and throughput BLOCKED; negative data retained
