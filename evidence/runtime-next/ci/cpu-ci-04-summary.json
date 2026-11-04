@@ -1,0 +1,1427 @@
+{
+  "archive_path": "evidence/runtime-next/ci/runtime-cpu-9d62b3e.tar.xz",
+  "archive_sha256": "93a5682f8860cc953975e0db9169f87c4d99facff62076f1876041ff4a6e4438",
+  "artifact_id": 13293088703,
+  "artifact_sha256": "d46330158d79a18da6df6813b0d9a5f8779c325547fa1951f98af541640cccc8",
+  "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "candidate": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "candidate_vs_best_direct": [
+    {
+      "candidate_mode": "direct",
+      "direct_variant": "candidate",
+      "median_paired_speed_ratio": 1.0,
+      "paired_speed_ratios": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "candidate_mode": "resident_serial",
+      "direct_variant": "candidate",
+      "median_paired_speed_ratio": 0.40188195055379733,
+      "paired_speed_ratios": [
+        0.40188195055379733,
+        0.4028637800699807,
+        0.398164628377423,
+        0.39539039579047786,
+        0.4070752900425189
+      ]
+    },
+    {
+      "candidate_mode": "resident_adaptive",
+      "direct_variant": "candidate",
+      "median_paired_speed_ratio": 0.3998361147959892,
+      "paired_speed_ratios": [
+        0.3982733284138743,
+        0.40099062014993225,
+        0.40107804924003104,
+        0.39407046830012865,
+        0.3998361147959892
+      ]
+    }
+  ],
+  "correctness": {
+    "certified": true,
+    "comparison": "scientific scores and decisions only",
+    "coordinate_parity": "requires backend conformance evidence",
+    "delivered_structure_parity": {
+      "certified": null,
+      "reason": "workflow emitted no structure artifacts; model coordinate parity not measured"
+    },
+    "differences": [],
+    "direct_repetitions": 5,
+    "tolerance_source": "maximum same-cell absolute deviation from the first direct repeat",
+    "tolerances": [
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(0, 17)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_iptm",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_plddt",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_prefix_steps",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_ptm",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_weighted_score",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_after_mean",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_before_mean",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_delta",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_selected_count",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_after_mean",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_before_mean",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_delta",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_selected_count",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_iptm",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_plddt",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_prefix_steps",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_ptm",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_weighted_score",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(0, 17)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_iptm",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_plddt",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_prefix_steps",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_ptm",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_weighted_score",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_after_mean",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_before_mean",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_delta",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_selected_count",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_after_mean",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_before_mean",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_delta",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_selected_count",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_iptm",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_plddt",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_prefix_steps",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_ptm",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_weighted_score",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(0, 17)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(1, 18)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_iptm",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_plddt",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_prefix_steps",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_ptm",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_weighted_score",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_after_mean",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_before_mean",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_delta",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_selected_count",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_after_mean",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_before_mean",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_delta",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_selected_count",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_iptm",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_plddt",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_prefix_steps",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_ptm",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_weighted_score",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(1, 18)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_iptm",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_plddt",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_prefix_steps",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_ptm",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_weighted_score",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_after_mean",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_before_mean",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_delta",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_selected_count",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_after_mean",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_before_mean",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_delta",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_selected_count",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_iptm",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_plddt",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_prefix_steps",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_ptm",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_weighted_score",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(1, 18)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(2, 19)",
+        "row": 0
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_iptm",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_plddt",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_prefix_steps",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_ptm",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_weighted_score",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_after_mean",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_before_mean",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_delta",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_selected_count",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_after_mean",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_before_mean",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_delta",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_selected_count",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_iptm",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_plddt",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_prefix_steps",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_ptm",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_weighted_score",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(2, 19)",
+        "row": 1
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.iptm",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.plddt",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A.ptm",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "A_length",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_iptm",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_plddt",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_prefix_steps",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_ptm",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "delta_weighted_score",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "iptm",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_after_mean",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_before_mean",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_plddt_delta",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_pA_selected_count",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_after_mean",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_before_mean",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_plddt_delta",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "mutator_selector_MCMC_selected_count",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "plddt",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "prefix_steps",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_iptm",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_plddt",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_prefix_steps",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_ptm",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "previous_weighted_score",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "ptm",
+        "identity": "(2, 19)",
+        "row": 2
+      },
+      {
+        "absolute": 0.0,
+        "field": "weighted_score",
+        "identity": "(2, 19)",
+        "row": 2
+      }
+    ]
+  },
+  "experiment": {
+    "allocated_gpu_hours": 0,
+    "max_output_bytes": 260000000,
+    "scope": "all trials, failed work and between-trial analysis; bounded observer cleanup may extend a deadline",
+    "stop_reason": null,
+    "wall_seconds": 172.17864768400003,
+    "walltime_budget_seconds": 900.0
+  },
+  "groups": {
+    "baseline/direct": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 1.0040783167094225,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 2.9347418870000013,
+      "range_seconds": [
+        2.8564652980000176,
+        3.2777282839999913
+      ],
+      "valid": 5
+    },
+    "baseline/resident_adaptive": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.3938687768077577,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 7.606921921999984,
+      "range_seconds": [
+        7.4840793479999945,
+        7.7559456889999865
+      ],
+      "valid": 5
+    },
+    "baseline/resident_serial": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.39658441633360586,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 7.548037899000008,
+      "range_seconds": [
+        7.46784285199999,
+        7.675808192000005
+      ],
+      "valid": 5
+    },
+    "candidate/direct": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 1.1200985731428839,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 2.6722769040000003,
+      "range_seconds": [
+        2.6414957920000006,
+        2.7453391469999815
+      ],
+      "valid": 5
+    },
+    "candidate/resident_adaptive": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.44673244752140756,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 6.662735368,
+      "range_seconds": [
+        6.613290675000002,
+        6.866161023000018
+      ],
+      "valid": 5
+    },
+    "candidate/resident_serial": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.4492257933246445,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 6.711487443999999,
+      "range_seconds": [
+        6.572815196999997,
+        6.779879264999977
+      ],
+      "valid": 5
+    }
+  },
+  "job_id": 126367434238,
+  "performance_claim": "CPU W0 timings only; inspect paired variation",
+  "preflight": {
+    "af_unix_error": null,
+    "blocking_reasons": [],
+    "checks": {
+      "af_unix": true,
+      "bounded_cpu_threads": true,
+      "cpu_framework_policy": true,
+      "linux": true,
+      "matching_process_namespace": true,
+      "no_gpu_allocation": true,
+      "not_inside_broker": true,
+      "python_3_11": true,
+      "required_cpu_dependencies": true
+    },
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "gpu_certification": "BLOCKED: no GPU execution in this workflow",
+    "gpu_visibility": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "HIP_VISIBLE_DEVICES": "",
+      "NVIDIA_VISIBLE_DEVICES": "void",
+      "ROCR_VISIBLE_DEVICES": ""
+    },
+    "load_average": [
+      0.5458984375,
+      0.142578125,
+      0.04833984375
+    ],
+    "packages": {
+      "biopython": "1.86",
+      "hydra-core": "1.3.2",
+      "jax": "0.4.34",
+      "jaxlib": "0.4.34",
+      "numpy": "2.3.5",
+      "omegaconf": "2.3.0",
+      "psutil": "7.2.2",
+      "pytest": "9.2.0",
+      "scipy": "1.17.0"
+    },
+    "python": "3.11.17 (main, Oct  1 2026, 14:32:31) [GCC 13.3.0]",
+    "status": "DONE",
+    "thread_environment": {
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    }
+  },
+  "protocol_sha256": "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5",
+  "regressions": {
+    "failures": [],
+    "required_suites": [
+      "tests/test_candidate_batch_policy.py",
+      "tests/test_candidate_batch_runner.py",
+      "tests/test_execution_identity.py",
+      "tests/test_app.py",
+      "tests/test_runtime_execution.py",
+      "tests/test_runtime_contracts.py",
+      "tests/test_runtime_broker_deadline.py",
+      "tests/test_runtime_resources.py",
+      "tests/test_runtime_controller.py",
+      "tests/test_runtime_context.py",
+      "tests/test_runtime_process_observations.py",
+      "tests/test_runtime_benchmark_processes.py",
+      "tests/test_runtime_trace_report.py",
+      "tests/test_runtime_structure_parity.py",
+      "tests/test_workflow_benchmark.py",
+      "tests/test_evaluator_lifecycle_contract.py",
+      "tests/test_resource_shutdown.py",
+      "tests/test_mutator_subprocess_protocol.py",
+      "tests/test_stage_transaction.py",
+      "tests/test_run_stage_transition.py",
+      "tests/test_graceful_shutdown_repeat_boundary.py",
+      "tests/test_runtime_validation_harness.py",
+      "tests/test_loss_import_lifecycle.py"
+    ],
+    "returncode": 0,
+    "skip_policy": "no skips accepted for these required CPU suites",
+    "skips": [],
+    "status": "DONE",
+    "test_cases": 248
+  },
+  "run_id": 41766956074,
+  "runs": 30,
+  "same_mode_pairs": [
+    {
+      "all_five_pairs_improved": true,
+      "candidate_faster_pairs": 5,
+      "median_paired_speed_ratio": 1.0947673450708097,
+      "mode": "direct",
+      "paired_speed_ratios": [
+        1.2408606873146935,
+        1.1002364390728876,
+        1.068925639301943,
+        1.0947673450708097,
+        1.0754434377356648
+      ],
+      "strict_range_separation": true
+    },
+    {
+      "all_five_pairs_improved": true,
+      "candidate_faster_pairs": 5,
+      "median_paired_speed_ratio": 1.1361711273136823,
+      "mode": "resident_serial",
+      "paired_speed_ratios": [
+        1.1361711273136823,
+        1.1439912456183523,
+        1.1246445682838722,
+        1.1210981433310272,
+        1.1381587770252874
+      ],
+      "strict_range_separation": true
+    },
+    {
+      "all_five_pairs_improved": true,
+      "candidate_faster_pairs": 5,
+      "median_paired_speed_ratio": 1.1316725236789917,
+      "mode": "resident_adaptive",
+      "paired_speed_ratios": [
+        1.1469388374703868,
+        1.1316725236789917,
+        1.1282271140623814,
+        1.1348216242595495,
+        1.1295898338269958
+      ],
+      "strict_range_separation": true
+    }
+  ],
+  "scope": "actual CPU Dummy/MCMC workflow at recorded source; mutation progress counted separately; no pretrained/GPU certification",
+  "status": "DONE",
+  "valid_evaluations_per_second": {
+    "baseline/direct": 3.0122349501282675,
+    "baseline/resident_adaptive": 1.1816063304232731,
+    "baseline/resident_serial": 1.1897532490008176,
+    "candidate/direct": 3.3602957194286516,
+    "candidate/resident_adaptive": 1.3401973425642226,
+    "candidate/resident_serial": 1.3476773799739337
+  }
+}

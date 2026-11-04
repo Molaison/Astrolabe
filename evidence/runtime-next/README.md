@@ -2,6 +2,8 @@
 
 Read the [final report](../../docs/runtime_final_report.md), [frozen contract](../../docs/runtime_benchmark_contract.md) and [architecture decision](../../docs/runtime_architecture_decision.md) first. Overall delivery is **PARTIAL**. CPU scope is independently verified; pretrained GPU certification and the requested server destination remain **BLOCKED**.
 
+**Final source HEAD 9d62b3e passed all actual gates.** See the [final validation record](final/README.md), including its second complete 30-trial CPU comparison, independent raw-data review, direct CLI acceptance/stage/RNG rerun, and original artifacts. This evidence branch attaches the completed results while preserving the tested PR HEAD.
+
 ## Production and review anchors
 
 | Evidence | Entry point |

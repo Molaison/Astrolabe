@@ -4,9 +4,23 @@
 
 **整体状态：PARTIAL。** 本轮交付了实际生产代码、三代理独立调查与交叉审查、可复现 CPU 端到端对照、科学正控制和完整 backend inventory。R1 在固定 workload 上取得可重复的 CPU 吞吐改善；冻结的 20% 工程目标尚未达到。真实 pretrained GPU 认证、GPU 吞吐改善和目标服务器目录写入均为 **BLOCKED**。
 
-代码以 [draft PR #9](https://github.com/Molaison/Astrolabe/pull/9) 叠加在用户指定分支上。初始 HEAD 为 `d66ee714f2e755948534f95d9d125287ce8dbd91`，已有 Repository Mental Model 的来源为 `b537b8a`；调查时将历史模型与当前源码逐项区分。原有 worktree 中的未提交资源文件保留。最新完整性能证据对应源码 `71c7592e27d02b2772d984d9b1f5ed9fea47fd6c`；后续 evidence 提交的源码同一性由交付 manifest 记录，最终集成 HEAD 的 CI 状态见 PR。
+代码以 [draft PR #9](https://github.com/Molaison/Astrolabe/pull/9) 叠加在用户指定分支上。初始 HEAD 为 `d66ee714f2e755948534f95d9d125287ce8dbd91`，已有 Repository Mental Model 的来源为 `b537b8a`；调查时将历史模型与当前源码逐项区分。原有 worktree 中的未提交资源文件保留。最终代码 HEAD 为 `9d62b3eb86cb75a2266af49dc48cb851e69e0341`，已完成完整 CI 和独立科学正控制复验。最终验证证据保存在 `evidence/runtime-final-validation-20261104` 分支，PR 的已验证代码 HEAD 保持固定。
 
 主要入口：[架构 ADR](runtime_architecture_decision.md)、[冻结 benchmark 合同](runtime_benchmark_contract.md)、[backend 矩阵](runtime_backend_certification.md)、[证据索引](../evidence/runtime-next/README.md)、[hillclimb 决策记录](../evidence/runtime-next/decision.tsv)。
+
+## 最终 HEAD 复验
+
+**DONE（CPU 验证范围）**：[最终 CI 41766956074](https://github.com/Molaison/Astrolabe/actions/runs/41766956074) 在 `9d62b3e` 完成 248 项 runtime 回归、104 项 CPU Torch/结构测试及 30/30 固定 W0 trials，零 skip。Python 3.11/3.12 的 push 和 PR 安装验证全部通过；主代理在该 HEAD 另跑 backend matrix 4 项检查，以及真实 CLI acceptance/stage/RNG 正控制，全部通过。
+
+| 模式 | Baseline 中位耗时（s） | 最终 HEAD 中位耗时（s） | 中位耗时降低 | 总有效 eval/s 提高 |
+|---|---:|---:|---:|---:|
+| direct | 2.9347 | 2.6723 | 8.94% | 11.55% |
+| resident_serial | 7.5480 | 6.7115 | 11.08% | 13.27% |
+| resident_adaptive | 7.6069 | 6.6627 | 12.41% | 13.42% |
+
+比较总 wall time 172.18 s，在原 900 s 预算内。三个模式再次各 5/5 组更快、前后范围严格分离；两轮 R1 阶段 CI 共 60 trials，每轮只在本轮 runner 内计算前后比率。最终 resident serial/adaptive 的有效 eval/s 分别为 1.1898→1.3477、1.1816→1.3402；这些 CPU 改善仍低于 20% 目标，resident 仍约为 direct 的 2.5 倍耗时。
+
+最终 W0 再次包含 90 trajectories、270 evaluations、180 rejected mutation attempts；accepted 初始化不计进展。独立科学正控制再次出现一次 accepted mutation 和一次 stage transition，rows、终态 owner、Python/NumPy/Torch CPU RNG、输出 hash 精确相同。主代理与 C 分别从最终原始文件复核；[最终验证记录](../evidence/runtime-next/final/README.md) 给出源码、CI、raw archive 与复现入口。正文第 2 节保留首次 R1 对照，便于追踪两轮证据；其绝对时间未与本轮相除。
 
 ## 1. 实际实施与审查
 

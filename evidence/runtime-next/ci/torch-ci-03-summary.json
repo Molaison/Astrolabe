@@ -1,0 +1,88 @@
+{
+  "archive_path": "evidence/runtime-next/ci/runtime-torch-9d62b3e.tar.xz",
+  "archive_sha256": "c49e6c67b49849401b25e0a29d154d495ac3002267e5b599a8a48aaba65d557c",
+  "artifact_id": 13293197994,
+  "artifact_sha256": "5618e1d3c6395075905762636f919950a06fabb935ac6c82e7f868d5440b74c5",
+  "baseline": null,
+  "candidate": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "job_id": 126367434543,
+  "preflight": {
+    "af_unix_error": null,
+    "blocking_reasons": [],
+    "checks": {
+      "af_unix": true,
+      "bounded_cpu_threads": true,
+      "cpu_framework_policy": true,
+      "linux": true,
+      "matching_process_namespace": true,
+      "no_gpu_allocation": true,
+      "not_inside_broker": true,
+      "python_3_11": true,
+      "required_cpu_dependencies": true
+    },
+    "cpu_affinity": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "gpu_certification": "BLOCKED: no GPU execution in this workflow",
+    "gpu_visibility": {
+      "CUDA_VISIBLE_DEVICES": "",
+      "HIP_VISIBLE_DEVICES": "",
+      "NVIDIA_VISIBLE_DEVICES": "void",
+      "ROCR_VISIBLE_DEVICES": ""
+    },
+    "load_average": [
+      0.98046875,
+      0.49365234375,
+      0.20654296875
+    ],
+    "packages": {
+      "biopython": "1.86",
+      "hydra-core": "1.3.2",
+      "jax": "0.4.34",
+      "jaxlib": "0.4.34",
+      "numpy": "2.3.5",
+      "omegaconf": "2.3.0",
+      "psutil": "7.2.2",
+      "pytest": "9.2.0",
+      "scipy": "1.17.0"
+    },
+    "python": "3.11.17 (main, Oct  1 2026, 14:32:31) [GCC 13.3.0]",
+    "status": "DONE",
+    "thread_environment": {
+      "MKL_NUM_THREADS": "1",
+      "NUMEXPR_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "VECLIB_MAXIMUM_THREADS": "1"
+    }
+  },
+  "regressions": {
+    "failures": [],
+    "required_suites": [
+      "tests/test_esmfold_output_boundary.py",
+      "tests/test_tree_codec_torch.py",
+      "tests/test_evaluator_rng_lifecycle.py",
+      "tests/test_esmfold1_resident.py",
+      "tests/test_interaction_ipae.py",
+      "tests/test_repeat_symmetry.py",
+      "tests/test_ligand_reference_pose_distance.py",
+      "tests/test_design_screening_geometry.py",
+      "tests/test_loss_import_lifecycle.py"
+    ],
+    "returncode": 0,
+    "skip_policy": "no skips accepted for these required CPU suites",
+    "skips": [],
+    "status": "DONE",
+    "test_cases": 104
+  },
+  "run_id": 41766956074,
+  "scope": "real CPU Torch processes with synthetic weights plus real SciPy/RDKit geometry; no pretrained model or GPU",
+  "status": "DONE",
+  "torch": {
+    "cuda_build": null,
+    "version": "2.7.1+cpu"
+  }
+}

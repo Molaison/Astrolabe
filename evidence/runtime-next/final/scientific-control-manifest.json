@@ -1,0 +1,130 @@
+{
+  "archive_sha256": "e3d1ca97a7d23768d91e52827ba7ab80d427c3899ed85e2c3a585e4f1cec084e",
+  "files": [
+    {
+      "path": "final-scientific-control/baseline/cli.log",
+      "sha256": "2e84c675c2e90f8bd1a526f74b9b28b1ec480e8ee267e182dd3c434b99ecfb49",
+      "bytes": 15037
+    },
+    {
+      "path": "final-scientific-control/baseline/command.json",
+      "sha256": "7bc7327c906218c81d2315b8194cf71465e67534dc3398b00aab98122647e9af",
+      "bytes": 683
+    },
+    {
+      "path": "final-scientific-control/baseline/results/runtime_cpu_scientific_control/001_run/config.yaml",
+      "sha256": "4fe6f0da1003b31b0114899ec0a8a842ab2859c28871d3591892828aac7f31e1",
+      "bytes": 16764
+    },
+    {
+      "path": "final-scientific-control/baseline/results/runtime_cpu_scientific_control/001_run/logs/debug.log",
+      "sha256": "dcba5caf68cb573a093ef5a42b0ca72ad2209e815f2ee1b4187a5230cc8ef037",
+      "bytes": 24201
+    },
+    {
+      "path": "final-scientific-control/baseline/results/runtime_cpu_scientific_control/001_run/logs/info.log",
+      "sha256": "6e7ad04775cd5652b0b1d18a8b6517e439e5458473f1279622d95ccbe1b96478",
+      "bytes": 19377
+    },
+    {
+      "path": "final-scientific-control/baseline/results/runtime_cpu_scientific_control/001_run/provenance.json",
+      "sha256": "4d5b2851363f3af8c5c6917fd60ea94c3b4a3745720daac3c5a41db4c2172256",
+      "bytes": 2052
+    },
+    {
+      "path": "final-scientific-control/baseline/results/runtime_cpu_scientific_control/001_run/scores.csv",
+      "sha256": "ae24138cfada92ded7c0251cd160b42f18b1f8f1070f2725aad36e4744812936",
+      "bytes": 1437
+    },
+    {
+      "path": "final-scientific-control/baseline/results/runtime_cpu_scientific_control/runs.lock",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "final-scientific-control/baseline/runtime.jsonl",
+      "sha256": "af05c96004956a5ca9333da25f8300a66f125e9f149a4b925b304ebada2d1db0",
+      "bytes": 2842
+    },
+    {
+      "path": "final-scientific-control/baseline/terminal-scientific-state.json",
+      "sha256": "6ba7db69cd5d094f5bbf5dd7cf396623d8c04a40bca768bee7652dcbcec91223",
+      "bytes": 75133
+    },
+    {
+      "path": "final-scientific-control/baseline/validation.json",
+      "sha256": "70cd66128888c3a99be438e3cd43fde368e7a71d1913531a17b859c3a84800d6",
+      "bytes": 95010
+    },
+    {
+      "path": "final-scientific-control/candidate/cli.log",
+      "sha256": "7da71f38f0967e7d3e74d7365fd125f11aeefdc5beb1df0b6ae1c476dfcf2b55",
+      "bytes": 15037
+    },
+    {
+      "path": "final-scientific-control/candidate/command.json",
+      "sha256": "32e853223b920218732ceeaa572ed70ae62d5f585ae6ad7c907916540fab7353",
+      "bytes": 681
+    },
+    {
+      "path": "final-scientific-control/candidate/results/runtime_cpu_scientific_control/001_run/config.yaml",
+      "sha256": "2224156ded122c03a48f71dd393c9bc23dd553a5f888b77a5e12a1ac31761fa8",
+      "bytes": 16766
+    },
+    {
+      "path": "final-scientific-control/candidate/results/runtime_cpu_scientific_control/001_run/logs/debug.log",
+      "sha256": "ba411faa24480d25925d2573b44b27c9c209870321f41fe9aa6ae9073c358de4",
+      "bytes": 24201
+    },
+    {
+      "path": "final-scientific-control/candidate/results/runtime_cpu_scientific_control/001_run/logs/info.log",
+      "sha256": "ba8bc0edb3be853f795671569fd267f47ca1d929cb4d51bcf5ea972641d78c33",
+      "bytes": 19377
+    },
+    {
+      "path": "final-scientific-control/candidate/results/runtime_cpu_scientific_control/001_run/provenance.json",
+      "sha256": "211605f7bcffe491faf007af1767201501532b8a2b3a8f69611595782fbee946",
+      "bytes": 2085
+    },
+    {
+      "path": "final-scientific-control/candidate/results/runtime_cpu_scientific_control/001_run/scores.csv",
+      "sha256": "ae24138cfada92ded7c0251cd160b42f18b1f8f1070f2725aad36e4744812936",
+      "bytes": 1437
+    },
+    {
+      "path": "final-scientific-control/candidate/results/runtime_cpu_scientific_control/runs.lock",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "final-scientific-control/candidate/runtime.jsonl",
+      "sha256": "4d89d37d8a0efc7c2d71ef64063cb69eeed77cc272a978aa93dd214f82e4843f",
+      "bytes": 2850
+    },
+    {
+      "path": "final-scientific-control/candidate/terminal-scientific-state.json",
+      "sha256": "6ba7db69cd5d094f5bbf5dd7cf396623d8c04a40bca768bee7652dcbcec91223",
+      "bytes": 75133
+    },
+    {
+      "path": "final-scientific-control/candidate/validation.json",
+      "sha256": "70cd66128888c3a99be438e3cd43fde368e7a71d1913531a17b859c3a84800d6",
+      "bytes": 95010
+    },
+    {
+      "path": "final-scientific-control/plan.json",
+      "sha256": "10a45e2d808e9f7616b2b1a935b2d2fa536a109f89980b5203ef2bb6df405a83",
+      "bytes": 2308
+    },
+    {
+      "path": "final-scientific-control/report.json",
+      "sha256": "8ffe71632e911add81971756c0b2eee301161e2865eb4489a5603cf6a02d52b2",
+      "bytes": 243798
+    },
+    {
+      "path": "final-scientific-control/workload.yaml",
+      "sha256": "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9",
+      "bytes": 1221
+    }
+  ]
+}

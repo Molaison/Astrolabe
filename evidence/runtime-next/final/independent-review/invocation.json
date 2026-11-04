@@ -1,0 +1,24 @@
+{
+  "args": {
+    "artifacts": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/cpu-ci-04",
+    "out": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/final-ci-review",
+    "prior": [
+      "/workspace/scratch/1a0b1639644d/cloud-20261104/control/cpu-ci-01",
+      "/workspace/scratch/1a0b1639644d/cloud-20261104/control/cpu-ci-02",
+      "/workspace/scratch/1a0b1639644d/cloud-20261104/control/cpu-ci-03"
+    ],
+    "repo": "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c"
+  },
+  "benchmark_rerun": false,
+  "candidate_override_scope": "in-memory expected revision only; all source verification and data checks unchanged",
+  "code_files_modified": false,
+  "exit_code": 0,
+  "expected_heads": {
+    "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+    "candidate": "9d62b3eb86cb75a2266af49dc48cb851e69e0341"
+  },
+  "kind": "read_only_final_ci_reanalysis",
+  "prior_expected_candidate": "71c7592e27d02b2772d984d9b1f5ed9fea47fd6c",
+  "reviewer_script": "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c/evidence/runtime-next/agent-c/review_r1_ci.py",
+  "reviewer_sha256": "eda968172261e7b266278a4616c65d17b8b70582f3e670b41b7249dff45f5a3a"
+}

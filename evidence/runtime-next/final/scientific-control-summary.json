@@ -1,0 +1,152 @@
+{
+  "status": "DONE",
+  "passed": true,
+  "kind": "correctness_only_cli_positive_control",
+  "performance_data": false,
+  "comparisons": {
+    "rows_exact": true,
+    "scientific_output_sha256_exact": true,
+    "terminal_state_exact": true
+  },
+  "sources": {
+    "baseline": {
+      "config_tree_sha256": "0e2c6f1d5851f67c47fec4209d0fb9fa4eeba7e19422c9b6748f022a442fe1df",
+      "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "repository": "/workspace/scratch/1a0b1639644d/cloud-20261104/baseline"
+    },
+    "candidate": {
+      "config_tree_sha256": "0e2c6f1d5851f67c47fec4209d0fb9fa4eeba7e19422c9b6748f022a442fe1df",
+      "head": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+      "repository": "/workspace/scratch/1a0b1639644d/cloud-20261104/repo"
+    }
+  },
+  "plan_sha256": "10a45e2d808e9f7616b2b1a935b2d2fa536a109f89980b5203ef2bb6df405a83",
+  "limits": [
+    "Dummy is not pretrained inference",
+    "no structures are generated",
+    "snapshot is not resume certification"
+  ],
+  "runs": {
+    "baseline": {
+      "counts": {
+        "accepted_mutation_steps": [
+          1
+        ],
+        "mutation_attempts": 3,
+        "phase_counts": {
+          "cpu_execute": 4,
+          "cpu_finalize": 4,
+          "cpu_prepare": 4
+        },
+        "scientific_rows": 5,
+        "stage_entries": 1,
+        "stage_score_recomputations": 1
+      },
+      "errors": [],
+      "scientific_output_sha256": {
+        "scores.csv": "ae24138cfada92ded7c0251cd160b42f18b1f8f1070f2725aad36e4744812936"
+      },
+      "terminal_owner": {
+        "accepted_sequences": {
+          "A": "GAAA"
+        },
+        "accepted_steps": [
+          0,
+          1
+        ],
+        "current_stage": "accepted_mutation",
+        "last_accepted": 1,
+        "proposal_sequences": {
+          "0": {
+            "pA": "AAAA"
+          },
+          "1": {
+            "pA": "GAAA"
+          },
+          "2": {
+            "pA": "SAAA"
+          },
+          "3": {
+            "pA": "AAAA"
+          }
+        },
+        "stage_history": {
+          "0": "default",
+          "1": "accepted_mutation",
+          "2": "accepted_mutation",
+          "3": "accepted_mutation"
+        },
+        "step": 3,
+        "transition_gate_active": false,
+        "weighted_scores_hex": {
+          "0": "-0x1.0000000000000p+0",
+          "1": "-0x1.8000000000000p-1",
+          "2": "-0x1.8000000000000p-1",
+          "3": "-0x1.0000000000000p+0"
+        }
+      },
+      "terminal_state_sha256": "382fc654684b67b4dde09e11da313f9d72ddddc6529b1e5532ab09b0b336cc69"
+    },
+    "candidate": {
+      "counts": {
+        "accepted_mutation_steps": [
+          1
+        ],
+        "mutation_attempts": 3,
+        "phase_counts": {
+          "cpu_execute": 4,
+          "cpu_finalize": 4,
+          "cpu_prepare": 4
+        },
+        "scientific_rows": 5,
+        "stage_entries": 1,
+        "stage_score_recomputations": 1
+      },
+      "errors": [],
+      "scientific_output_sha256": {
+        "scores.csv": "ae24138cfada92ded7c0251cd160b42f18b1f8f1070f2725aad36e4744812936"
+      },
+      "terminal_owner": {
+        "accepted_sequences": {
+          "A": "GAAA"
+        },
+        "accepted_steps": [
+          0,
+          1
+        ],
+        "current_stage": "accepted_mutation",
+        "last_accepted": 1,
+        "proposal_sequences": {
+          "0": {
+            "pA": "AAAA"
+          },
+          "1": {
+            "pA": "GAAA"
+          },
+          "2": {
+            "pA": "SAAA"
+          },
+          "3": {
+            "pA": "AAAA"
+          }
+        },
+        "stage_history": {
+          "0": "default",
+          "1": "accepted_mutation",
+          "2": "accepted_mutation",
+          "3": "accepted_mutation"
+        },
+        "step": 3,
+        "transition_gate_active": false,
+        "weighted_scores_hex": {
+          "0": "-0x1.0000000000000p+0",
+          "1": "-0x1.8000000000000p-1",
+          "2": "-0x1.8000000000000p-1",
+          "3": "-0x1.0000000000000p+0"
+        }
+      },
+      "terminal_state_sha256": "382fc654684b67b4dde09e11da313f9d72ddddc6529b1e5532ab09b0b336cc69"
+    }
+  },
+  "raw_archive": "scientific-control-9d62b3e.tar.xz"
+}

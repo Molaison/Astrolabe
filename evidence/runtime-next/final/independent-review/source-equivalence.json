@@ -1,0 +1,11 @@
+{
+  "candidate_source_manifest_equal_previous_71": true,
+  "current_head": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "current_recorded_source_files": 436,
+  "current_runner": "runnervm48cm3",
+  "pooling_across_ci_runs": false,
+  "previous_head": "71c7592e27d02b2772d984d9b1f5ed9fea47fd6c",
+  "prior_full_config_equal": true,
+  "prior_runner": "runnervm48cm3",
+  "reviewer_unchanged_sha256": "eda968172261e7b266278a4616c65d17b8b70582f3e670b41b7249dff45f5a3a"
+}

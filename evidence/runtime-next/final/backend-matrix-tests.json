@@ -1,0 +1,14 @@
+{
+  "source": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "passed": 4,
+  "skips": 0,
+  "seconds": 2.02,
+  "command": [
+    "../venv/bin/python",
+    "-m",
+    "pytest",
+    "-q",
+    "tests/test_runtime_backend_certification.py",
+    "--junitxml=../control/final-backend-matrix.xml"
+  ]
+}
