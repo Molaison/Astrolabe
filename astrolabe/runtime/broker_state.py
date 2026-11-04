@@ -303,13 +303,15 @@ class State:
         return resources
 
     def call(self, req):
+        # Entry bookkeeping consumes admission budget. Its locks and cleanup
+        # may delay returning after expiry; dispatch still checks the budget.
+        start = time.monotonic()
         ident = self._track_request(req)
         key = req['handle']
         metadata = request_metadata(req.get('runtime'))
         timeout = req.get('timeout')
         if timeout is not None and (not isinstance(timeout, (int, float)) or timeout <= 0):
             raise ValueError('invalid timeout')
-        start = time.monotonic()
         deadline = None if timeout is None else start + timeout
 
         def remaining_timeout():

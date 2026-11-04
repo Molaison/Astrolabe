@@ -216,3 +216,42 @@ def test_waiter_cannot_clear_the_running_request_delegation(state, monkeypatch, 
     assert worker["delegated"] is None and worker["busy"] == 0
     assert state.ledger.snapshot()["pending"] == 0
     assert state.metrics["completed"] == 1
+
+
+@pytest.mark.parametrize("timeout,expired", [(.03, True), (1.0, False)], ids=["expired", "live"])
+def test_entry_lock_wait_consumes_admission_budget(state, monkeypatch, timeout, expired):
+    entered = threading.Event()
+    errors = []
+    track = state._track_request
+
+    def observe_track(value):
+        entered.set()
+        return track(value)
+
+    monkeypatch.setattr(state, "_track_request", observe_track)
+
+    def call():
+        try:
+            state.call(request(timeout=timeout))
+        except BaseException as exc:
+            errors.append(exc)
+
+    with state.lock:
+        thread = threading.Thread(target=call)
+        thread.start()
+        assert entered.wait(1)
+        threading.Event().wait(.12)
+    thread.join(timeout=2)
+    assert not thread.is_alive()
+    [error] = errors
+    if expired:
+        assert isinstance(error, TimeoutError), repr(error)
+        assert not state.workers["worker"]["client"].dispatches
+    else:
+        assert isinstance(error, DispatchReached), repr(error)
+        [dispatch] = state.workers["worker"]["client"].dispatches
+        assert 0 < dispatch["timeout"] < timeout - .1
+    assert_request_released(state)
+    assert not state.poisoned
+    with pytest.raises(ValueError, match="duplicate request"):
+        state.call(request(timeout=timeout))
