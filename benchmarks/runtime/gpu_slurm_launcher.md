@@ -8,7 +8,7 @@ preflight. No new packages, weights or images are downloaded.
 OMP, MKL, OpenBLAS and NumExpr threads all remain one, matching root's CPU
 freeze wrapper. `GH_CUDA_PREINITIALIZE=0` prevents the old profile's eager CUDA
 initialization; HIP/ROCR visibility is empty in both modes. CPU preparation has
-no visible accelerator, while the GPU run exposes only inherited CUDA binding.
+no visible accelerator, while the GPU run exposes only the verified assigned UUID.
 
 ## Preconditions and exact entrypoints
 
@@ -78,11 +78,13 @@ UUIDs or contradictions fail before any GPU query. Only then is `nvidia-smi -i
 ASSIGNED_ID` called, querying that single GPU's UUID, index, name, driver, PCI
 identity and memory. There is no login-node GPU query and no all-device query.
 
-The inherited single `CUDA_VISIBLE_DEVICES` value is passed through unchanged.
-An inherited zero can be Slurm's cgroup-local ordinal; it is never guessed or
-inserted by this launcher. The true allocated UUID is passed to the existing
-harness, which compares actual CUDA device properties before constructing the
-model. `NVIDIA_VISIBLE_DEVICES` is set to that UUID, never `all`.
+The inherited single `CUDA_VISIBLE_DEVICES` value is retained as provenance.
+An inherited zero can be Slurm's cgroup-local ordinal; the launcher does not
+assume that remapping is enforced correctly. After independently resolving the
+scheduler's global ID, both container `CUDA_VISIBLE_DEVICES` and
+`NVIDIA_VISIBLE_DEVICES` are set to the actual assigned UUID, never zero or
+`all`. This binds the intended GPU before the first CUDA context is created.
+The same UUID is passed to the harness for its additional actual-property check.
 
 Apptainer uses `--nv --cleanenv --no-eval --no-home`; automatic hostfs/site binds
 are disabled, explicit source/test-env/checkpoint/input mounts are readonly,

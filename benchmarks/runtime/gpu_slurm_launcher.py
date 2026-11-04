@@ -227,7 +227,10 @@ def container_argv(plan, gpu=None, allocation_env=None):
     if gpu is not None:
         binding = allocated_binding(allocation_env)
         env.update({key: allocation_env[key] for key in SLURM_FIELDS if allocation_env.get(key)})
-        env["CUDA_VISIBLE_DEVICES"] = binding["inherited_cuda_visible_devices"]
+        # The independently verified scheduler-assigned physical UUID is the
+        # only CUDA target. Preserve inherited ordinals in allocation.json;
+        # never rely on cgroup remapping before the first CUDA context exists.
+        env["CUDA_VISIBLE_DEVICES"] = gpu["uuid"]
         env["NVIDIA_VISIBLE_DEVICES"] = gpu["uuid"]
         argv.append("--nv")
     binds = [(str(DELIVERY), str(DELIVERY), "rw"), (str(ROOT), str(ROOT), "ro"),
@@ -434,6 +437,7 @@ def inside(args):
         require(query["returncode"] == 0, "assigned GPU metadata query failed")
         gpu = parse_gpu_reply(query["stdout"], binding)
         record["gpu"] = gpu
+        record["effective_cuda_visible_devices"] = gpu["uuid"]
         remaining = end_epoch - time.time()
         container_timeout = min(870., remaining - 30.)
         require(container_timeout >= frozen["protocol"]["budget"]["experiment_seconds"] + 10.,

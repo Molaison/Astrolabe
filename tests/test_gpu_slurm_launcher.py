@@ -132,7 +132,7 @@ def test_container_gpu_visibility_readonly_sources_private_temp_and_cleanenv(env
     argv, env = launcher.container_argv(plan, {"uuid": UUID}, environment)
     assert "--nv" in argv and "--cleanenv" in argv and "--no-eval" in argv and "--no-home" in argv
     assert "--pid" not in argv and "--containall" not in argv  # Existing observer namespace preserved.
-    assert env["CUDA_VISIBLE_DEVICES"] == environment["CUDA_VISIBLE_DEVICES"]
+    assert env["CUDA_VISIBLE_DEVICES"] == UUID
     assert env["NVIDIA_VISIBLE_DEVICES"] == UUID
     assert all(env[key] == "1" for key in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS", "NUMEXPR_NUM_THREADS"))
     assert env["GH_CUDA_PREINITIALIZE"] == "0"
@@ -146,6 +146,16 @@ def test_container_gpu_visibility_readonly_sources_private_temp_and_cleanenv(env
     cpu_argv, cpu_env = launcher.container_argv(plan)
     assert "--nv" not in cpu_argv and cpu_env["CUDA_VISIBLE_DEVICES"] == "" and cpu_env["NVIDIA_VISIBLE_DEVICES"] == "void"
     assert cpu_env["HIP_VISIBLE_DEVICES"] == cpu_env["ROCR_VISIBLE_DEVICES"] == ""
+
+
+def test_global_gpu_five_inherited_zero_binds_verified_uuid_before_cuda(environment):
+    environment.update(SLURM_STEP_GPUS="5", SLURM_JOB_GPUS="5", CUDA_VISIBLE_DEVICES="0")
+    binding = launcher.allocated_binding(environment)
+    gpu = launcher.parse_gpu_reply("5, " + UUID + ", synthetic RTX4090, driver, bus, 24564, 0", binding)
+    argv, env = launcher.container_argv(plan_fixture(), gpu, environment)
+    assert binding["inherited_cuda_visible_devices"] == "0"
+    assert env["CUDA_VISIBLE_DEVICES"] == env["NVIDIA_VISIBLE_DEVICES"] == UUID
+    assert "CUDA_VISIBLE_DEVICES=0" not in argv
 
 
 def test_untrusted_container_overrides_removed_without_breaking_slurm_client_libraries():
