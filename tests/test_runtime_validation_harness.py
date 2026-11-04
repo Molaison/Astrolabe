@@ -130,7 +130,7 @@ def test_torch_contract_summary_does_not_require_or_claim_a_benchmark(tmp_path):
     report = json.loads((tmp_path / "summary.json").read_text())
     assert report == {"status": "DONE", "gates": {"preflight": "DONE", "regressions": "DONE"}}
     text = (tmp_path / "summary.md").read_text()
-    assert "CPU Torch contract validation" in text
+    assert "CPU Torch and structural contract validation" in text
     assert "No pretrained inference or performance benchmark is certified" in text
     assert "frozen baseline" not in text.lower()
 

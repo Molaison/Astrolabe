@@ -57,10 +57,14 @@ REQUIRED_TESTS = (
     "tests/test_mutator_subprocess_protocol.py", "tests/test_stage_transaction.py",
     "tests/test_run_stage_transition.py", "tests/test_graceful_shutdown_repeat_boundary.py",
     "tests/test_runtime_validation_harness.py",
+    "tests/test_loss_import_lifecycle.py",
 )
 TORCH_CONTRACT_TESTS = (
     "tests/test_esmfold_output_boundary.py", "tests/test_tree_codec_torch.py",
     "tests/test_evaluator_rng_lifecycle.py", "tests/test_esmfold1_resident.py",
+    "tests/test_interaction_ipae.py", "tests/test_repeat_symmetry.py",
+    "tests/test_ligand_reference_pose_distance.py", "tests/test_design_screening_geometry.py",
+    "tests/test_loss_import_lifecycle.py",
 )
 
 
@@ -399,7 +403,7 @@ def summary(args):
         except (OSError, ValueError) as exc:
             reports[phase] = {"status": "BLOCKED", "reason": "no readable completed report", "error": str(exc)}
     overall = "DONE" if all(report.get("status") == "DONE" for report in reports.values()) else "PARTIAL"
-    title = "CPU Torch contract validation" if args.torch_contracts else "runtime validation"
+    title = "CPU Torch and structural contract validation" if args.torch_contracts else "runtime validation"
     revision = f"Candidate: `{os.environ.get('GITHUB_SHA', 'local/unpublished')}`."
     if not args.torch_contracts:
         revision += f" Frozen baseline: `{BASELINE}`."
@@ -414,7 +418,7 @@ def summary(args):
     if comparison.is_file():
         lines += ["", comparison.read_text()]
     if args.torch_contracts:
-        lines += ["", "Scope: CPU Torch worker, output-boundary and lifecycle tests, including local fake-weight fixtures. No pretrained inference or performance benchmark is certified by this job."]
+        lines += ["", "Scope: CPU Torch worker, output-boundary and lifecycle tests (including local fake-weight fixtures), plus structural loss tests using real SciPy/RDKit. No pretrained inference or performance benchmark is certified by this job."]
     lines += ["", "Real pretrained GPU backend certification: **BLOCKED** in this CPU-only job.",
               "The uploaded artifact preserves raw logs, configuration, traces, telemetry, test cases and skip reasons. Missing runs and failed work are retained and cannot count as acceleration.", ""]
     markdown = "\n".join(lines)
@@ -440,7 +444,7 @@ def main(argv=None):
             subparser.add_argument("--step-summary", type=Path)
         if command in ("regressions", "summary"):
             subparser.add_argument("--torch-contracts", action="store_true",
-                                   help="validate the four CPU Torch worker/lifecycle suites; no benchmark")
+                                   help="validate CPU Torch worker/lifecycle and structural loss suites; no benchmark")
     args = parser.parse_args(argv)
     try:
         if args.command == "preflight":

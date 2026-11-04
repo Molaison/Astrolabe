@@ -86,6 +86,7 @@ jobs:
           retention-days: 30
 
   runtime-torch-cpu:
+    name: CPU Torch and structural contracts
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -127,6 +128,7 @@ jobs:
           mkdir -p "$RUNTIME_TORCH_OUT/environment"
           python -m pip install -r candidate/benchmarks/runtime/requirements-cpu.txt 2>&1 | tee "$RUNTIME_TORCH_OUT/environment/install-cpu.log"
           python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.7.1+cpu 2>&1 | tee "$RUNTIME_TORCH_OUT/environment/install-torch.log"
+          python -m pip install -r candidate/benchmarks/runtime/requirements-geometry.txt 2>&1 | tee "$RUNTIME_TORCH_OUT/environment/install-geometry.log"
           python -m pip freeze --all > "$RUNTIME_TORCH_OUT/environment/pip-freeze.txt"
           python -m pip check 2>&1 | tee "$RUNTIME_TORCH_OUT/environment/pip-check.log"
           python - <<'PY' | tee "$RUNTIME_TORCH_OUT/environment/torch.json"
@@ -137,7 +139,7 @@ jobs:
           PY
       - name: Require Linux namespace and UNIX sockets
         run: python candidate/benchmarks/runtime/validate.py preflight --out "$RUNTIME_TORCH_OUT/preflight"
-      - name: Required CPU Torch process and lifecycle gates
+      - name: Required CPU Torch process, lifecycle and structural loss gates
         run: |
           python candidate/benchmarks/runtime/validate.py regressions --torch-contracts \
             --out "$RUNTIME_TORCH_OUT/regressions"
