@@ -1,0 +1,70 @@
+{
+  "root": "preservation",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 3883,
+      "sha256": "d88d61704eb95271effccbe21830ca9139959c3df25f52e8389506ea724be63c"
+    },
+    {
+      "path": "build_expected.py",
+      "bytes": 5403,
+      "sha256": "28042f1aab560cf23078711f0255df0af180de7e6d318ba92ee362ca98e0076f"
+    },
+    {
+      "path": "compare.py",
+      "bytes": 4151,
+      "sha256": "d8fcfa1b22c4b09e9cb7e8686c29c3d66643ea6067e09d145a308d4bb92ae0bf"
+    },
+    {
+      "path": "expected.json",
+      "bytes": 20927,
+      "sha256": "7165ff0c6e587efa93059f07b19d0b818f101730b0de345e9820f08a5768dc8c"
+    },
+    {
+      "path": "fix-current.json",
+      "bytes": 9342,
+      "sha256": "aed6a3e6af56edcdafbc58d152b50862748e94cfc65b3333da51f1a1003e2be6"
+    },
+    {
+      "path": "fix-native.json",
+      "bytes": 9264,
+      "sha256": "9cde8ab10594876e12d09dd71c26e4ce182d40a91591af9a906fe7f3e89d55ec"
+    },
+    {
+      "path": "negative-parser-note.txt",
+      "bytes": 373,
+      "sha256": "97378b4db20faa46dd7b30213924589efbd3369cd269ae53a1e2a8165fe44b20"
+    },
+    {
+      "path": "opt-current.json",
+      "bytes": 10200,
+      "sha256": "b47e8ed46446450349c358827ee052d068193087554bf6cf12ea5b6e058dde4f"
+    },
+    {
+      "path": "opt-native.json",
+      "bytes": 9726,
+      "sha256": "cf5ff5877019f4a1b496c68797bf73c662b556558ae547e4e38b0650e5c073cd"
+    },
+    {
+      "path": "preservation-proof.json",
+      "bytes": 37121,
+      "sha256": "bf40b4ea337cbd79d8ccfea155f9bd26115c0386543c677a5dbeffb70be02d2a"
+    },
+    {
+      "path": "probe_remote.py",
+      "bytes": 2915,
+      "sha256": "ec31e2ca57b98dcf67fc695329256d7df5ad6ee59cde257992d5b5d9b69e2ca9"
+    },
+    {
+      "path": "review-current.json",
+      "bytes": 3976,
+      "sha256": "cab89097041ee48ed8d13ab94a8962ac6ff9dd7779f94b49f6c306c43aa9ff8c"
+    },
+    {
+      "path": "review-native.json",
+      "bytes": 6435,
+      "sha256": "9dbec613d9ae566d0b9059a21aaa28019d9ece9a9415d28896dd2afa2ae47c2e"
+    }
+  ]
+}

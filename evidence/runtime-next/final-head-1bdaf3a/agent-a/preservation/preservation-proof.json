@@ -1,0 +1,1031 @@
+{
+  "differences": [],
+  "gpu_queries": 0,
+  "initial_evidence_root": "control/f102-source-preflight",
+  "limit": "A before/after content and state comparison. Unlisted ignored artifacts and transient changes between observations are outside its scope.",
+  "remote_mutations": 0,
+  "scientific_evaluations": 0,
+  "scope": "Three original linked worktrees; full normal-mode status/HEAD/branch/topology, all original modified tracked/untracked source and test files, plus originally hashed owner/report files. No whole-resource or model scan. No write, checkout, restoration or scientific execution.",
+  "status": "PASS_PRESERVED",
+  "tracked_hash_derivation": "Each original tracked postimage reconstructed in memory from exact d66 blob plus preserved original patch; every context and hunk count, old/new Git blob prefix, full patch SHA and overlapping initial direct SHA checked.",
+  "worktrees": {
+    "fix": {
+      "actual_bytes_hashed": 608112,
+      "actual_regular_files_hashed": 29,
+      "files": [
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": null
+          },
+          "current": {
+            "missing": true,
+            "sha256": null
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/esmfold_output.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "c993fdb92cb69f8247c7c7742b365fe994d8dfe74952720d56090d208f94abf4"
+          },
+          "current": {
+            "bytes": 4846,
+            "sha256": "c993fdb92cb69f8247c7c7742b365fe994d8dfe74952720d56090d208f94abf4"
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/esmfold_resident.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 3556,
+            "sha256": "651431f71616b451b4ea209fe5886276a4875cfd1bbbf51338ca5c3bdd289b3b"
+          },
+          "current": {
+            "bytes": 3556,
+            "sha256": "651431f71616b451b4ea209fe5886276a4875cfd1bbbf51338ca5c3bdd289b3b"
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/wrappers/esmfold_daemon.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "3e5a33605dcb38003b3c575b20a13d628dec45f7c7eac103af5b6893d83d13e0"
+          },
+          "current": {
+            "bytes": 14697,
+            "sha256": "3e5a33605dcb38003b3c575b20a13d628dec45f7c7eac103af5b6893d83d13e0"
+          },
+          "match": true,
+          "path": "astrolabe/experimental/candidate_batch_policy.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "b2cc468af11ef96f0b87226fed0978561f7c5beedf09225760525906afc214dd"
+          },
+          "current": {
+            "bytes": 62814,
+            "sha256": "b2cc468af11ef96f0b87226fed0978561f7c5beedf09225760525906afc214dd"
+          },
+          "match": true,
+          "path": "astrolabe/losses/design_screening.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "46250773fd226a9d6d376689d4a2c2929cd3f20c1337479db46e50b1bd9c5195"
+          },
+          "current": {
+            "bytes": 150944,
+            "sha256": "46250773fd226a9d6d376689d4a2c2929cd3f20c1337479db46e50b1bd9c5195"
+          },
+          "match": true,
+          "path": "astrolabe/losses/interaction.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "0c8f0c69b673c5037ba3d4866270faa43a2ae1f79be509098657813bc601508d"
+          },
+          "current": {
+            "bytes": 37710,
+            "sha256": "0c8f0c69b673c5037ba3d4866270faa43a2ae1f79be509098657813bc601508d"
+          },
+          "match": true,
+          "path": "astrolabe/losses/repeat_symmetry.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 14490,
+            "sha256": "8954d70bd1f78c1fb361bcb773b23a88802a442a68f0699944f0794f959c4a2d"
+          },
+          "current": {
+            "bytes": 14490,
+            "sha256": "8954d70bd1f78c1fb361bcb773b23a88802a442a68f0699944f0794f959c4a2d"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/admission.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 12300,
+            "sha256": "92ed56bd2e11788e051befb85abf1bbe1d2bbeeb4ae7e994ccea95def0f08705"
+          },
+          "current": {
+            "bytes": 12300,
+            "sha256": "92ed56bd2e11788e051befb85abf1bbe1d2bbeeb4ae7e994ccea95def0f08705"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 11895,
+            "sha256": "0485175d3bb030c01780f97dc21ea8cb6445750d3a2c6568c6f090a9c3320e44"
+          },
+          "current": {
+            "bytes": 11895,
+            "sha256": "0485175d3bb030c01780f97dc21ea8cb6445750d3a2c6568c6f090a9c3320e44"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker_client.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 54756,
+            "sha256": "69372ee1c22ac06f05a6eb11f75d9f91c32778a07457a493c1a5ee37d28cb27a"
+          },
+          "current": {
+            "bytes": 54756,
+            "sha256": "69372ee1c22ac06f05a6eb11f75d9f91c32778a07457a493c1a5ee37d28cb27a"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker_state.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 2438,
+            "sha256": "83d191123520fd2b9932617e44fb71f821186fd802c28be4b7650c396863ed9a"
+          },
+          "current": {
+            "bytes": 2438,
+            "sha256": "83d191123520fd2b9932617e44fb71f821186fd802c28be4b7650c396863ed9a"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker_transport.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 16104,
+            "sha256": "7e052a04b9b082d07b6100b1b242b7be21a0da5bcd16199623a56d260adbdccf"
+          },
+          "current": {
+            "bytes": 16104,
+            "sha256": "7e052a04b9b082d07b6100b1b242b7be21a0da5bcd16199623a56d260adbdccf"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/client.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 22171,
+            "sha256": "a3de42ff97ef6112fae2cf5373f4fecaeab74794c984a95ca0d5846131cf3f95"
+          },
+          "current": {
+            "bytes": 22171,
+            "sha256": "a3de42ff97ef6112fae2cf5373f4fecaeab74794c984a95ca0d5846131cf3f95"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/resources.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 21275,
+            "sha256": "9e929ba296d1b84a92b78a41556c151977a2fb8b24778a6a3e9964645f68fa64"
+          },
+          "current": {
+            "bytes": 21275,
+            "sha256": "9e929ba296d1b84a92b78a41556c151977a2fb8b24778a6a3e9964645f68fa64"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/session.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 7579,
+            "sha256": "d03b65146d938488cad39a450276c557df04efa7b2f151f9c9d34b3144f7b812"
+          },
+          "current": {
+            "bytes": 7579,
+            "sha256": "d03b65146d938488cad39a450276c557df04efa7b2f151f9c9d34b3144f7b812"
+          },
+          "match": true,
+          "path": "docs/runtime_execution.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "fcf15a765aaf78740a37c9e1775a87b3530a7f1cccc4f52a8b6737479278f421"
+          },
+          "current": {
+            "bytes": 11579,
+            "sha256": "fcf15a765aaf78740a37c9e1775a87b3530a7f1cccc4f52a8b6737479278f421"
+          },
+          "match": true,
+          "path": "docs/runtime_execution_guide.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "b699d613f1644c12e25184c447991ecd3f8a471677657f301291c389d217055b"
+          },
+          "current": {
+            "bytes": 3347,
+            "sha256": "b699d613f1644c12e25184c447991ecd3f8a471677657f301291c389d217055b"
+          },
+          "match": true,
+          "path": "docs/runtime_implementation_baseline.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "6f71a0fcc7404bba9f7e24418c3ac2cfdc00869698058eb067ce655e0cb3e9ba"
+          },
+          "current": {
+            "bytes": 18878,
+            "sha256": "6f71a0fcc7404bba9f7e24418c3ac2cfdc00869698058eb067ce655e0cb3e9ba"
+          },
+          "match": true,
+          "path": "docs/runtime_implementation_report.md"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 9158,
+            "sha256": "338c10e300ec21465aa403b4328725653d49b3d2d6aa9f729088139ee6c3286c"
+          },
+          "current": {
+            "bytes": 9158,
+            "sha256": "338c10e300ec21465aa403b4328725653d49b3d2d6aa9f729088139ee6c3286c"
+          },
+          "match": true,
+          "path": "scripts/validation/runtime_trace_report.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 36904,
+            "sha256": "38876bd4f99eafb3a40da9e66a42779334ab867d63372399c08ca5c255a33162"
+          },
+          "current": {
+            "bytes": 36904,
+            "sha256": "38876bd4f99eafb3a40da9e66a42779334ab867d63372399c08ca5c255a33162"
+          },
+          "match": true,
+          "path": "scripts/validation/runtime_workflow_benchmark.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 682,
+            "sha256": "176ffd33c09e56799e3cee9b06b4d67640d9b44ff85763e865c53296184da5e4"
+          },
+          "current": {
+            "bytes": 682,
+            "sha256": "176ffd33c09e56799e3cee9b06b4d67640d9b44ff85763e865c53296184da5e4"
+          },
+          "match": true,
+          "path": "tests/runtime_request_isolation_a_fixture.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 20810,
+            "sha256": "891eb04738cc70b043b238825d2266fa6815c2955a33d9a03c7cecfc213a4cb9"
+          },
+          "current": {
+            "bytes": 20810,
+            "sha256": "891eb04738cc70b043b238825d2266fa6815c2955a33d9a03c7cecfc213a4cb9"
+          },
+          "match": true,
+          "path": "tests/runtime_saturation_fixture.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 2743,
+            "sha256": "950ca5d561b0e6ffe10f50ddf726cd4892569d1eac7bea05854e6626215f1900"
+          },
+          "current": {
+            "bytes": 2743,
+            "sha256": "950ca5d561b0e6ffe10f50ddf726cd4892569d1eac7bea05854e6626215f1900"
+          },
+          "match": true,
+          "path": "tests/test_esmfold1_lease_lifetime.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 4947,
+            "sha256": "2bf35e8b0b85152a52cca98323a6077e68f8d2bcc2f04981d638b0fd30cbb9c1"
+          },
+          "current": {
+            "bytes": 4947,
+            "sha256": "2bf35e8b0b85152a52cca98323a6077e68f8d2bcc2f04981d638b0fd30cbb9c1"
+          },
+          "match": true,
+          "path": "tests/test_runtime_contracts.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 12583,
+            "sha256": "dde6bcba8f200ea96bdc00498e760f2fa084e845a7b0b5226ce72e6c81bad68e"
+          },
+          "current": {
+            "bytes": 12583,
+            "sha256": "dde6bcba8f200ea96bdc00498e760f2fa084e845a7b0b5226ce72e6c81bad68e"
+          },
+          "match": true,
+          "path": "tests/test_runtime_ingress.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 32380,
+            "sha256": "7cd2161b83f55124188ab4ccdaa8f1c4635554a536023b365e49ccb4b6d42463"
+          },
+          "current": {
+            "bytes": 32380,
+            "sha256": "7cd2161b83f55124188ab4ccdaa8f1c4635554a536023b365e49ccb4b6d42463"
+          },
+          "match": true,
+          "path": "tests/test_runtime_request_isolation.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 3539,
+            "sha256": "8058adcb96ca81b0805ec4185f63aa733cb156c5f7080e45d068bd374811c9d7"
+          },
+          "current": {
+            "bytes": 3539,
+            "sha256": "8058adcb96ca81b0805ec4185f63aa733cb156c5f7080e45d068bd374811c9d7"
+          },
+          "match": true,
+          "path": "tests/test_runtime_saturation.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 3009,
+            "sha256": "3b55a3ac4e7114f41b49e800459fc577e7d398d18e07924fb330d0795855790c"
+          },
+          "current": {
+            "bytes": 3009,
+            "sha256": "3b55a3ac4e7114f41b49e800459fc577e7d398d18e07924fb330d0795855790c"
+          },
+          "match": true,
+          "path": "tests/test_runtime_trace_report.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 9978,
+            "sha256": "61ebab989b123cafa3a6955f2a119600894d7b0b4fc2ae4fe45ba05a3e10aed8"
+          },
+          "current": {
+            "bytes": 9978,
+            "sha256": "61ebab989b123cafa3a6955f2a119600894d7b0b4fc2ae4fe45ba05a3e10aed8"
+          },
+          "match": true,
+          "path": "tests/test_workflow_benchmark.py"
+        }
+      ],
+      "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "metadata_checks": {
+        "branch": true,
+        "common_dir": true,
+        "git_dir": true,
+        "head": true,
+        "status": true,
+        "tracked_diff_bytes": true,
+        "tracked_diff_sha256": true,
+        "worktree": true
+      },
+      "original_modified_files_preserved": 21,
+      "original_tracked_modifications": 14,
+      "original_untracked_files": 7,
+      "status": "PASS",
+      "total_scoped_paths_checked": 30,
+      "utc": "2026-11-04T06:02:41.632048Z",
+      "worktree": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix"
+    },
+    "opt": {
+      "actual_bytes_hashed": 648346,
+      "actual_regular_files_hashed": 32,
+      "files": [
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": null
+          },
+          "current": {
+            "missing": true,
+            "sha256": null
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/esmfold_output.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "c993fdb92cb69f8247c7c7742b365fe994d8dfe74952720d56090d208f94abf4"
+          },
+          "current": {
+            "bytes": 4846,
+            "sha256": "c993fdb92cb69f8247c7c7742b365fe994d8dfe74952720d56090d208f94abf4"
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/esmfold_resident.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 3556,
+            "sha256": "651431f71616b451b4ea209fe5886276a4875cfd1bbbf51338ca5c3bdd289b3b"
+          },
+          "current": {
+            "bytes": 3556,
+            "sha256": "651431f71616b451b4ea209fe5886276a4875cfd1bbbf51338ca5c3bdd289b3b"
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/wrappers/esmfold_daemon.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "3e5a33605dcb38003b3c575b20a13d628dec45f7c7eac103af5b6893d83d13e0"
+          },
+          "current": {
+            "bytes": 14697,
+            "sha256": "3e5a33605dcb38003b3c575b20a13d628dec45f7c7eac103af5b6893d83d13e0"
+          },
+          "match": true,
+          "path": "astrolabe/experimental/candidate_batch_policy.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "b2cc468af11ef96f0b87226fed0978561f7c5beedf09225760525906afc214dd"
+          },
+          "current": {
+            "bytes": 62814,
+            "sha256": "b2cc468af11ef96f0b87226fed0978561f7c5beedf09225760525906afc214dd"
+          },
+          "match": true,
+          "path": "astrolabe/losses/design_screening.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 152291,
+            "sha256": "745e3b593cee9d76bdc765f84c3891a735cea5cadfb3eb09f3eb46927fed4d0c"
+          },
+          "current": {
+            "bytes": 152291,
+            "sha256": "745e3b593cee9d76bdc765f84c3891a735cea5cadfb3eb09f3eb46927fed4d0c"
+          },
+          "match": true,
+          "path": "astrolabe/losses/interaction.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "0c8f0c69b673c5037ba3d4866270faa43a2ae1f79be509098657813bc601508d"
+          },
+          "current": {
+            "bytes": 37710,
+            "sha256": "0c8f0c69b673c5037ba3d4866270faa43a2ae1f79be509098657813bc601508d"
+          },
+          "match": true,
+          "path": "astrolabe/losses/repeat_symmetry.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 14490,
+            "sha256": "8954d70bd1f78c1fb361bcb773b23a88802a442a68f0699944f0794f959c4a2d"
+          },
+          "current": {
+            "bytes": 14490,
+            "sha256": "8954d70bd1f78c1fb361bcb773b23a88802a442a68f0699944f0794f959c4a2d"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/admission.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 12300,
+            "sha256": "92ed56bd2e11788e051befb85abf1bbe1d2bbeeb4ae7e994ccea95def0f08705"
+          },
+          "current": {
+            "bytes": 12300,
+            "sha256": "92ed56bd2e11788e051befb85abf1bbe1d2bbeeb4ae7e994ccea95def0f08705"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 11895,
+            "sha256": "0485175d3bb030c01780f97dc21ea8cb6445750d3a2c6568c6f090a9c3320e44"
+          },
+          "current": {
+            "bytes": 11895,
+            "sha256": "0485175d3bb030c01780f97dc21ea8cb6445750d3a2c6568c6f090a9c3320e44"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker_client.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 54756,
+            "sha256": "69372ee1c22ac06f05a6eb11f75d9f91c32778a07457a493c1a5ee37d28cb27a"
+          },
+          "current": {
+            "bytes": 54756,
+            "sha256": "69372ee1c22ac06f05a6eb11f75d9f91c32778a07457a493c1a5ee37d28cb27a"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker_state.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 2438,
+            "sha256": "83d191123520fd2b9932617e44fb71f821186fd802c28be4b7650c396863ed9a"
+          },
+          "current": {
+            "bytes": 2438,
+            "sha256": "83d191123520fd2b9932617e44fb71f821186fd802c28be4b7650c396863ed9a"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker_transport.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 16104,
+            "sha256": "7e052a04b9b082d07b6100b1b242b7be21a0da5bcd16199623a56d260adbdccf"
+          },
+          "current": {
+            "bytes": 16104,
+            "sha256": "7e052a04b9b082d07b6100b1b242b7be21a0da5bcd16199623a56d260adbdccf"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/client.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 22171,
+            "sha256": "a3de42ff97ef6112fae2cf5373f4fecaeab74794c984a95ca0d5846131cf3f95"
+          },
+          "current": {
+            "bytes": 22171,
+            "sha256": "a3de42ff97ef6112fae2cf5373f4fecaeab74794c984a95ca0d5846131cf3f95"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/resources.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 21275,
+            "sha256": "9e929ba296d1b84a92b78a41556c151977a2fb8b24778a6a3e9964645f68fa64"
+          },
+          "current": {
+            "bytes": 21275,
+            "sha256": "9e929ba296d1b84a92b78a41556c151977a2fb8b24778a6a3e9964645f68fa64"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/session.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 26902,
+            "sha256": "c60dcfa62fcd5ea39246bff5373ebc548bfc106ac9b12d2d242b8da676a6d469"
+          },
+          "current": {
+            "bytes": 26902,
+            "sha256": "c60dcfa62fcd5ea39246bff5373ebc548bfc106ac9b12d2d242b8da676a6d469"
+          },
+          "match": true,
+          "path": "astrolabe/runtime_requirements.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 7579,
+            "sha256": "d03b65146d938488cad39a450276c557df04efa7b2f151f9c9d34b3144f7b812"
+          },
+          "current": {
+            "bytes": 7579,
+            "sha256": "d03b65146d938488cad39a450276c557df04efa7b2f151f9c9d34b3144f7b812"
+          },
+          "match": true,
+          "path": "docs/runtime_execution.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "fcf15a765aaf78740a37c9e1775a87b3530a7f1cccc4f52a8b6737479278f421"
+          },
+          "current": {
+            "bytes": 11579,
+            "sha256": "fcf15a765aaf78740a37c9e1775a87b3530a7f1cccc4f52a8b6737479278f421"
+          },
+          "match": true,
+          "path": "docs/runtime_execution_guide.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "b699d613f1644c12e25184c447991ecd3f8a471677657f301291c389d217055b"
+          },
+          "current": {
+            "bytes": 3347,
+            "sha256": "b699d613f1644c12e25184c447991ecd3f8a471677657f301291c389d217055b"
+          },
+          "match": true,
+          "path": "docs/runtime_implementation_baseline.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "6f71a0fcc7404bba9f7e24418c3ac2cfdc00869698058eb067ce655e0cb3e9ba"
+          },
+          "current": {
+            "bytes": 18878,
+            "sha256": "6f71a0fcc7404bba9f7e24418c3ac2cfdc00869698058eb067ce655e0cb3e9ba"
+          },
+          "match": true,
+          "path": "docs/runtime_implementation_report.md"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 9158,
+            "sha256": "338c10e300ec21465aa403b4328725653d49b3d2d6aa9f729088139ee6c3286c"
+          },
+          "current": {
+            "bytes": 9158,
+            "sha256": "338c10e300ec21465aa403b4328725653d49b3d2d6aa9f729088139ee6c3286c"
+          },
+          "match": true,
+          "path": "scripts/validation/runtime_trace_report.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 36904,
+            "sha256": "38876bd4f99eafb3a40da9e66a42779334ab867d63372399c08ca5c255a33162"
+          },
+          "current": {
+            "bytes": 36904,
+            "sha256": "38876bd4f99eafb3a40da9e66a42779334ab867d63372399c08ca5c255a33162"
+          },
+          "match": true,
+          "path": "scripts/validation/runtime_workflow_benchmark.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 682,
+            "sha256": "176ffd33c09e56799e3cee9b06b4d67640d9b44ff85763e865c53296184da5e4"
+          },
+          "current": {
+            "bytes": 682,
+            "sha256": "176ffd33c09e56799e3cee9b06b4d67640d9b44ff85763e865c53296184da5e4"
+          },
+          "match": true,
+          "path": "tests/runtime_request_isolation_a_fixture.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 20810,
+            "sha256": "891eb04738cc70b043b238825d2266fa6815c2955a33d9a03c7cecfc213a4cb9"
+          },
+          "current": {
+            "bytes": 20810,
+            "sha256": "891eb04738cc70b043b238825d2266fa6815c2955a33d9a03c7cecfc213a4cb9"
+          },
+          "match": true,
+          "path": "tests/runtime_saturation_fixture.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 2743,
+            "sha256": "950ca5d561b0e6ffe10f50ddf726cd4892569d1eac7bea05854e6626215f1900"
+          },
+          "current": {
+            "bytes": 2743,
+            "sha256": "950ca5d561b0e6ffe10f50ddf726cd4892569d1eac7bea05854e6626215f1900"
+          },
+          "match": true,
+          "path": "tests/test_esmfold1_lease_lifetime.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 10409,
+            "sha256": "59a2eab1c90519af1df71e92a83c2955b135bec5b84c68830fddf4a17ebaee72"
+          },
+          "current": {
+            "bytes": 10409,
+            "sha256": "59a2eab1c90519af1df71e92a83c2955b135bec5b84c68830fddf4a17ebaee72"
+          },
+          "match": true,
+          "path": "tests/test_pyrosetta_lazy_import.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 4947,
+            "sha256": "2bf35e8b0b85152a52cca98323a6077e68f8d2bcc2f04981d638b0fd30cbb9c1"
+          },
+          "current": {
+            "bytes": 4947,
+            "sha256": "2bf35e8b0b85152a52cca98323a6077e68f8d2bcc2f04981d638b0fd30cbb9c1"
+          },
+          "match": true,
+          "path": "tests/test_runtime_contracts.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 12583,
+            "sha256": "dde6bcba8f200ea96bdc00498e760f2fa084e845a7b0b5226ce72e6c81bad68e"
+          },
+          "current": {
+            "bytes": 12583,
+            "sha256": "dde6bcba8f200ea96bdc00498e760f2fa084e845a7b0b5226ce72e6c81bad68e"
+          },
+          "match": true,
+          "path": "tests/test_runtime_ingress.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 32380,
+            "sha256": "7cd2161b83f55124188ab4ccdaa8f1c4635554a536023b365e49ccb4b6d42463"
+          },
+          "current": {
+            "bytes": 32380,
+            "sha256": "7cd2161b83f55124188ab4ccdaa8f1c4635554a536023b365e49ccb4b6d42463"
+          },
+          "match": true,
+          "path": "tests/test_runtime_request_isolation.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 1576,
+            "sha256": "e1a2541272225aeaa144e8a9a1a58065f05d6babf89673ca47f487bcf1affe68"
+          },
+          "current": {
+            "bytes": 1576,
+            "sha256": "e1a2541272225aeaa144e8a9a1a58065f05d6babf89673ca47f487bcf1affe68"
+          },
+          "match": true,
+          "path": "tests/test_runtime_requirements_source.py"
+        },
+        {
+          "before": {
+            "basis": "original untracked snapshot",
+            "bytes": 3539,
+            "sha256": "8058adcb96ca81b0805ec4185f63aa733cb156c5f7080e45d068bd374811c9d7"
+          },
+          "current": {
+            "bytes": 3539,
+            "sha256": "8058adcb96ca81b0805ec4185f63aa733cb156c5f7080e45d068bd374811c9d7"
+          },
+          "match": true,
+          "path": "tests/test_runtime_saturation.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 3009,
+            "sha256": "3b55a3ac4e7114f41b49e800459fc577e7d398d18e07924fb330d0795855790c"
+          },
+          "current": {
+            "bytes": 3009,
+            "sha256": "3b55a3ac4e7114f41b49e800459fc577e7d398d18e07924fb330d0795855790c"
+          },
+          "match": true,
+          "path": "tests/test_runtime_trace_report.py"
+        },
+        {
+          "before": {
+            "basis": "original preserved patch + exact d66 blob",
+            "bytes": 9978,
+            "sha256": "61ebab989b123cafa3a6955f2a119600894d7b0b4fc2ae4fe45ba05a3e10aed8"
+          },
+          "current": {
+            "bytes": 9978,
+            "sha256": "61ebab989b123cafa3a6955f2a119600894d7b0b4fc2ae4fe45ba05a3e10aed8"
+          },
+          "match": true,
+          "path": "tests/test_workflow_benchmark.py"
+        }
+      ],
+      "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "metadata_checks": {
+        "branch": true,
+        "common_dir": true,
+        "git_dir": true,
+        "head": true,
+        "status": true,
+        "tracked_diff_bytes": true,
+        "tracked_diff_sha256": true,
+        "worktree": true
+      },
+      "original_modified_files_preserved": 25,
+      "original_tracked_modifications": 16,
+      "original_untracked_files": 9,
+      "status": "PASS",
+      "total_scoped_paths_checked": 33,
+      "utc": "2026-11-04T06:02:43.473864Z",
+      "worktree": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-opt"
+    },
+    "review": {
+      "actual_bytes_hashed": 355004,
+      "actual_regular_files_hashed": 11,
+      "files": [
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": null
+          },
+          "current": {
+            "missing": true,
+            "sha256": null
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/esmfold_output.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "c993fdb92cb69f8247c7c7742b365fe994d8dfe74952720d56090d208f94abf4"
+          },
+          "current": {
+            "bytes": 4846,
+            "sha256": "c993fdb92cb69f8247c7c7742b365fe994d8dfe74952720d56090d208f94abf4"
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/esmfold_resident.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "aae2d7817d14c05780aec099d2c4c4efbed7ee8a5be6c61e7e53a86d9a3823dd"
+          },
+          "current": {
+            "bytes": 3367,
+            "sha256": "aae2d7817d14c05780aec099d2c4c4efbed7ee8a5be6c61e7e53a86d9a3823dd"
+          },
+          "match": true,
+          "path": "astrolabe/evaluators/wrappers/esmfold_daemon.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "3e5a33605dcb38003b3c575b20a13d628dec45f7c7eac103af5b6893d83d13e0"
+          },
+          "current": {
+            "bytes": 14697,
+            "sha256": "3e5a33605dcb38003b3c575b20a13d628dec45f7c7eac103af5b6893d83d13e0"
+          },
+          "match": true,
+          "path": "astrolabe/experimental/candidate_batch_policy.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "b2cc468af11ef96f0b87226fed0978561f7c5beedf09225760525906afc214dd"
+          },
+          "current": {
+            "bytes": 62814,
+            "sha256": "b2cc468af11ef96f0b87226fed0978561f7c5beedf09225760525906afc214dd"
+          },
+          "match": true,
+          "path": "astrolabe/losses/design_screening.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "46250773fd226a9d6d376689d4a2c2929cd3f20c1337479db46e50b1bd9c5195"
+          },
+          "current": {
+            "bytes": 150944,
+            "sha256": "46250773fd226a9d6d376689d4a2c2929cd3f20c1337479db46e50b1bd9c5195"
+          },
+          "match": true,
+          "path": "astrolabe/losses/interaction.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "0c8f0c69b673c5037ba3d4866270faa43a2ae1f79be509098657813bc601508d"
+          },
+          "current": {
+            "bytes": 37710,
+            "sha256": "0c8f0c69b673c5037ba3d4866270faa43a2ae1f79be509098657813bc601508d"
+          },
+          "match": true,
+          "path": "astrolabe/losses/repeat_symmetry.py"
+        },
+        {
+          "before": {
+            "basis": "original relevant-owner hash snapshot",
+            "sha256": "56d42ea172252cb0ec79d16921e7c1202dfe41305acfe954207d9bef2a86b9e0"
+          },
+          "current": {
+            "bytes": 41042,
+            "sha256": "56d42ea172252cb0ec79d16921e7c1202dfe41305acfe954207d9bef2a86b9e0"
+          },
+          "match": true,
+          "path": "astrolabe/runtime/broker_state.py"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "54b07caef6cbede333b20dd66c273d1032101c2592e5f4bb46d85b5b39e7b021"
+          },
+          "current": {
+            "bytes": 5780,
+            "sha256": "54b07caef6cbede333b20dd66c273d1032101c2592e5f4bb46d85b5b39e7b021"
+          },
+          "match": true,
+          "path": "docs/runtime_execution.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "fcf15a765aaf78740a37c9e1775a87b3530a7f1cccc4f52a8b6737479278f421"
+          },
+          "current": {
+            "bytes": 11579,
+            "sha256": "fcf15a765aaf78740a37c9e1775a87b3530a7f1cccc4f52a8b6737479278f421"
+          },
+          "match": true,
+          "path": "docs/runtime_execution_guide.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "b699d613f1644c12e25184c447991ecd3f8a471677657f301291c389d217055b"
+          },
+          "current": {
+            "bytes": 3347,
+            "sha256": "b699d613f1644c12e25184c447991ecd3f8a471677657f301291c389d217055b"
+          },
+          "match": true,
+          "path": "docs/runtime_implementation_baseline.md"
+        },
+        {
+          "before": {
+            "basis": "original report hash snapshot",
+            "sha256": "6f71a0fcc7404bba9f7e24418c3ac2cfdc00869698058eb067ce655e0cb3e9ba"
+          },
+          "current": {
+            "bytes": 18878,
+            "sha256": "6f71a0fcc7404bba9f7e24418c3ac2cfdc00869698058eb067ce655e0cb3e9ba"
+          },
+          "match": true,
+          "path": "docs/runtime_implementation_report.md"
+        }
+      ],
+      "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "metadata_checks": {
+        "branch": true,
+        "common_dir": true,
+        "git_dir": true,
+        "head": true,
+        "status": true,
+        "tracked_diff_bytes": true,
+        "tracked_diff_sha256": true,
+        "worktree": true
+      },
+      "original_modified_files_preserved": 0,
+      "original_tracked_modifications": 0,
+      "original_untracked_files": 0,
+      "status": "PASS",
+      "total_scoped_paths_checked": 12,
+      "utc": "2026-11-04T06:02:40.012820Z",
+      "worktree": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-review"
+    }
+  }
+}
