@@ -1,0 +1,11 @@
+{
+  "exception": "TimeoutError",
+  "message": "request admission timed out before submission",
+  "elapsed_seconds": 0.120512220999899,
+  "request_timeout_seconds": 0.03,
+  "dispatches": [],
+  "pending_after_completion": 0,
+  "head": "aeba20a8d757fe7d01551064d19efa55ea56cb3b",
+  "broker_source_sha256": "eb32c6da3fd6df5d3907214d4ef69b115e60546f8cdca07acb6751bf0a1fadf6",
+  "scope": "Actual State entry lock wait, controlled worker boundary; no IPC/GPU/model execution"
+}

@@ -1,0 +1,847 @@
+﻿2026-11-04T02:19:49.8378233Z Current runner version: '2.338.2'
+2026-11-04T02:19:49.8393785Z ##[group]Runner Image Provisioner
+2026-11-04T02:19:49.8394341Z Hosted Compute Agent
+2026-11-04T02:19:49.8394703Z Version: 20261028.624
+2026-11-04T02:19:49.8395124Z Commit: 54898b74c23fde5556c9b3c3a2290865feef0dfe
+2026-11-04T02:19:49.8395586Z Build Date: 2026-10-28T21:51:42Z
+2026-11-04T02:19:49.8395986Z Worker ID: {9c5ea8de-e1fb-414f-9526-ea92133dbe71}
+2026-11-04T02:19:49.8396416Z Region: centralus
+2026-11-04T02:19:49.8397065Z Cloud: Azure
+2026-11-04T02:19:49.8397414Z ##[endgroup]
+2026-11-04T02:19:49.8398437Z ##[group]Operating System
+2026-11-04T02:19:49.8398797Z Ubuntu
+2026-11-04T02:19:49.8399093Z 24.04.5
+2026-11-04T02:19:49.8399452Z LTS
+2026-11-04T02:19:49.8399792Z ##[endgroup]
+2026-11-04T02:19:49.8400175Z ##[group]Runner Image
+2026-11-04T02:19:49.8400521Z Image: ubuntu-24.04
+2026-11-04T02:19:49.8400847Z Version: 20261101.360.1
+2026-11-04T02:19:49.8401650Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20261101.360/images/ubuntu/Ubuntu2404-Readme.md
+2026-11-04T02:19:49.8402527Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20261101.360
+2026-11-04T02:19:49.8403074Z ##[endgroup]
+2026-11-04T02:19:49.8403718Z ##[group]GITHUB_TOKEN Permissions
+2026-11-04T02:19:49.8404912Z Contents: read
+2026-11-04T02:19:49.8405241Z Metadata: read
+2026-11-04T02:19:49.8405634Z ##[endgroup]
+2026-11-04T02:19:49.8407091Z Secret source: Actions
+2026-11-04T02:19:49.8407734Z Cache mode: write
+2026-11-04T02:19:49.8408133Z Prepare workflow directory
+2026-11-04T02:19:49.8658143Z Prepare all required actions
+2026-11-04T02:19:49.8687900Z Getting action download info
+2026-11-04T02:19:50.0996739Z Download action repository 'actions/checkout@v4' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+2026-11-04T02:19:50.1647491Z Download action repository 'actions/setup-python@v5' (SHA:a26af69be951a213d495a4c3e4e4022e16d87065)
+2026-11-04T02:19:50.2598749Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2026-11-04T02:19:50.4547706Z Complete job name: runtime-cpu
+2026-11-04T02:19:50.4974832Z ##[group]Run echo "RUNTIME_VALIDATION_OUT=$RUNNER_TEMP/runtime-validation" >> "$GITHUB_ENV"
+2026-11-04T02:19:50.4975461Z [36;1mecho "RUNTIME_VALIDATION_OUT=$RUNNER_TEMP/runtime-validation" >> "$GITHUB_ENV"[0m
+2026-11-04T02:19:50.4975929Z [36;1mmkdir -p "$RUNNER_TEMP/runtime-validation"[0m
+2026-11-04T02:19:50.4994102Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-04T02:19:50.4994543Z env:
+2026-11-04T02:19:50.4994759Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:19:50.4995012Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:19:50.4995270Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:19:50.4995512Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:19:50.4995751Z   JAX_PLATFORMS: cpu
+2026-11-04T02:19:50.4995985Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:19:50.4996248Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:19:50.4996630Z   OMP_NUM_THREADS: 1
+2026-11-04T02:19:50.4996859Z   MKL_NUM_THREADS: 1
+2026-11-04T02:19:50.4997105Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:19:50.4997371Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:19:50.4997616Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:19:50.4997865Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:19:50.4998095Z ##[endgroup]
+2026-11-04T02:19:50.5197948Z ##[group]Run actions/checkout@v4
+2026-11-04T02:19:50.5198239Z with:
+2026-11-04T02:19:50.5198479Z   ref: 4358cc32548eb8913a19eb7958904966d54bf030
+2026-11-04T02:19:50.5198777Z   path: candidate
+2026-11-04T02:19:50.5199000Z   submodules: false
+2026-11-04T02:19:50.5199237Z   persist-credentials: false
+2026-11-04T02:19:50.5199502Z   repository: Molaison/Astrolabe
+2026-11-04T02:19:50.5201418Z   token: ***
+2026-11-04T02:19:50.5201633Z   ssh-strict: true
+2026-11-04T02:19:50.5201857Z   ssh-user: git
+2026-11-04T02:19:50.5202072Z   clean: true
+2026-11-04T02:19:50.5202301Z   sparse-checkout-cone-mode: true
+2026-11-04T02:19:50.5202568Z   fetch-depth: 1
+2026-11-04T02:19:50.5202872Z   fetch-tags: false
+2026-11-04T02:19:50.5203101Z   show-progress: true
+2026-11-04T02:19:50.5203515Z   lfs: false
+2026-11-04T02:19:50.5203734Z   set-safe-directory: true
+2026-11-04T02:19:50.5203993Z   allow-unsafe-pr-checkout: false
+2026-11-04T02:19:50.5204251Z env:
+2026-11-04T02:19:50.5204481Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:19:50.5204727Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:19:50.5204981Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:19:50.5205217Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:19:50.5205454Z   JAX_PLATFORMS: cpu
+2026-11-04T02:19:50.5205687Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:19:50.5205946Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:19:50.5206220Z   OMP_NUM_THREADS: 1
+2026-11-04T02:19:50.5206570Z   MKL_NUM_THREADS: 1
+2026-11-04T02:19:50.5206800Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:19:50.5207045Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:19:50.5207286Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:19:50.5207531Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:19:50.5207844Z   RUNTIME_VALIDATION_OUT: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:19:50.5208205Z ##[endgroup]
+2026-11-04T02:19:50.7296110Z Syncing repository: Molaison/Astrolabe
+2026-11-04T02:19:50.7297408Z ##[group]Getting Git version info
+2026-11-04T02:19:50.7297838Z Working directory is '/home/runner/work/Astrolabe/Astrolabe/candidate'
+2026-11-04T02:19:50.7298385Z [command]/usr/bin/git version
+2026-11-04T02:19:50.7381795Z git version 2.56.0
+2026-11-04T02:19:50.7395368Z ##[endgroup]
+2026-11-04T02:19:50.7405523Z Temporarily overriding HOME='/home/runner/work/_temp/47b6499e-91fe-48c5-9fbe-1574309e1750' before making global git config changes
+2026-11-04T02:19:50.7406315Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-04T02:19:50.7409482Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Astrolabe/Astrolabe/candidate
+2026-11-04T02:19:50.7457005Z ##[group]Initializing the repository
+2026-11-04T02:19:50.7459501Z [command]/usr/bin/git init /home/runner/work/Astrolabe/Astrolabe/candidate
+2026-11-04T02:19:50.7555508Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-04T02:19:50.7556253Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-04T02:19:50.7557185Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-04T02:19:50.7557688Z hint: call:
+2026-11-04T02:19:50.7557898Z hint:
+2026-11-04T02:19:50.7558183Z hint: 	git config --global init.defaultBranch <name>
+2026-11-04T02:19:50.7622372Z hint:
+2026-11-04T02:19:50.7623164Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-04T02:19:50.7624037Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-04T02:19:50.7624621Z hint:
+2026-11-04T02:19:50.7624934Z hint: 	git branch -m <name>
+2026-11-04T02:19:50.7625290Z hint:
+2026-11-04T02:19:50.7625774Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-04T02:19:50.7626833Z Initialized empty Git repository in /home/runner/work/Astrolabe/Astrolabe/candidate/.git/
+2026-11-04T02:19:50.7628035Z [command]/usr/bin/git remote add origin https://github.com/Molaison/Astrolabe
+2026-11-04T02:19:50.7628837Z ##[endgroup]
+2026-11-04T02:19:50.7629219Z ##[group]Disabling automatic garbage collection
+2026-11-04T02:19:50.7630809Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-04T02:19:50.7659668Z ##[endgroup]
+2026-11-04T02:19:50.7660047Z ##[group]Setting up auth
+2026-11-04T02:19:50.7665960Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T02:19:50.7700503Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T02:19:50.8010775Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T02:19:50.8045846Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T02:19:50.8234503Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T02:19:50.8270474Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T02:19:50.8450340Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-04T02:19:50.8489350Z ##[endgroup]
+2026-11-04T02:19:50.8489752Z ##[group]Fetching the repository
+2026-11-04T02:19:50.8497185Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin 4358cc32548eb8913a19eb7958904966d54bf030
+2026-11-04T02:19:52.4763747Z From https://github.com/Molaison/Astrolabe
+2026-11-04T02:19:52.4765430Z  * branch            4358cc32548eb8913a19eb7958904966d54bf030 -> FETCH_HEAD
+2026-11-04T02:19:52.4769164Z ##[endgroup]
+2026-11-04T02:19:52.4770368Z ##[group]Determining the checkout info
+2026-11-04T02:19:52.4771670Z ##[endgroup]
+2026-11-04T02:19:52.4776313Z [command]/usr/bin/git sparse-checkout disable
+2026-11-04T02:19:52.4827159Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-04T02:19:52.4860740Z ##[group]Checking out the ref
+2026-11-04T02:19:52.4862396Z [command]/usr/bin/git checkout --progress --force 4358cc32548eb8913a19eb7958904966d54bf030
+2026-11-04T02:19:52.8517490Z Note: switching to '4358cc32548eb8913a19eb7958904966d54bf030'.
+2026-11-04T02:19:52.8517838Z 
+2026-11-04T02:19:52.8518015Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-04T02:19:52.8518340Z changes and commit them, and you can discard any commits you make in this
+2026-11-04T02:19:52.8518661Z state without impacting any branches by switching back to a branch.
+2026-11-04T02:19:52.8518844Z 
+2026-11-04T02:19:52.8519005Z If you want to create a new branch to retain commits you create, you may
+2026-11-04T02:19:52.8519365Z do so (now or later) by using -c with the switch command. Example:
+2026-11-04T02:19:52.8519518Z 
+2026-11-04T02:19:52.8519606Z   git switch -c <new-branch-name>
+2026-11-04T02:19:52.8519719Z 
+2026-11-04T02:19:52.8519867Z Or undo this operation with:
+2026-11-04T02:19:52.8520003Z 
+2026-11-04T02:19:52.8520067Z   git switch -
+2026-11-04T02:19:52.8520188Z 
+2026-11-04T02:19:52.8520336Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-04T02:19:52.8520524Z 
+2026-11-04T02:19:52.8520672Z HEAD is now at 4358cc3 Initialize runtime evidence path after runner allocation
+2026-11-04T02:19:52.8561736Z ##[endgroup]
+2026-11-04T02:19:52.8608567Z [command]/usr/bin/git log -1 --format=%H
+2026-11-04T02:19:52.8635782Z 4358cc32548eb8913a19eb7958904966d54bf030
+2026-11-04T02:19:52.8642490Z ##[group]Removing auth
+2026-11-04T02:19:52.8644733Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T02:19:52.8676034Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T02:19:52.8859074Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T02:19:52.8888080Z http.https://github.com/.extraheader
+2026-11-04T02:19:52.8892686Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-04T02:19:52.8925969Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T02:19:52.9102786Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T02:19:52.9133067Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T02:19:52.9308495Z ##[endgroup]
+2026-11-04T02:19:52.9451347Z ##[group]Run actions/checkout@v4
+2026-11-04T02:19:52.9451521Z with:
+2026-11-04T02:19:52.9451672Z   ref: d66ee714f2e755948534f95d9d125287ce8dbd91
+2026-11-04T02:19:52.9451852Z   path: baseline
+2026-11-04T02:19:52.9451985Z   submodules: false
+2026-11-04T02:19:52.9452134Z   persist-credentials: false
+2026-11-04T02:19:52.9452299Z   repository: Molaison/Astrolabe
+2026-11-04T02:19:52.9453619Z   token: ***
+2026-11-04T02:19:52.9453751Z   ssh-strict: true
+2026-11-04T02:19:52.9453885Z   ssh-user: git
+2026-11-04T02:19:52.9454017Z   clean: true
+2026-11-04T02:19:52.9454162Z   sparse-checkout-cone-mode: true
+2026-11-04T02:19:52.9454324Z   fetch-depth: 1
+2026-11-04T02:19:52.9454457Z   fetch-tags: false
+2026-11-04T02:19:52.9454593Z   show-progress: true
+2026-11-04T02:19:52.9454729Z   lfs: false
+2026-11-04T02:19:52.9454864Z   set-safe-directory: true
+2026-11-04T02:19:52.9455026Z   allow-unsafe-pr-checkout: false
+2026-11-04T02:19:52.9455190Z env:
+2026-11-04T02:19:52.9455348Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:19:52.9455509Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:19:52.9455663Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:19:52.9455805Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:19:52.9455949Z   JAX_PLATFORMS: cpu
+2026-11-04T02:19:52.9456093Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:19:52.9456254Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:19:52.9456420Z   OMP_NUM_THREADS: 1
+2026-11-04T02:19:52.9456741Z   MKL_NUM_THREADS: 1
+2026-11-04T02:19:52.9456882Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:19:52.9457030Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:19:52.9457183Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:19:52.9457333Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:19:52.9457527Z   RUNTIME_VALIDATION_OUT: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:19:52.9457739Z ##[endgroup]
+2026-11-04T02:19:52.9994325Z Syncing repository: Molaison/Astrolabe
+2026-11-04T02:19:52.9995908Z ##[group]Getting Git version info
+2026-11-04T02:19:52.9997297Z Working directory is '/home/runner/work/Astrolabe/Astrolabe/baseline'
+2026-11-04T02:19:53.0020237Z [command]/usr/bin/git version
+2026-11-04T02:19:53.0081357Z git version 2.56.0
+2026-11-04T02:19:53.0093034Z ##[endgroup]
+2026-11-04T02:19:53.0102743Z Temporarily overriding HOME='/home/runner/work/_temp/6422ee4d-9859-46d7-b6bb-2e8b59df7fc1' before making global git config changes
+2026-11-04T02:19:53.0103733Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-04T02:19:53.0106069Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Astrolabe/Astrolabe/baseline
+2026-11-04T02:19:53.0140586Z ##[group]Initializing the repository
+2026-11-04T02:19:53.0141062Z [command]/usr/bin/git init /home/runner/work/Astrolabe/Astrolabe/baseline
+2026-11-04T02:19:53.0178108Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-11-04T02:19:53.0178840Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-11-04T02:19:53.0179431Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-11-04T02:19:53.0179788Z hint: call:
+2026-11-04T02:19:53.0180031Z hint:
+2026-11-04T02:19:53.0180320Z hint: 	git config --global init.defaultBranch <name>
+2026-11-04T02:19:53.0180741Z hint:
+2026-11-04T02:19:53.0181194Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-11-04T02:19:53.0181847Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-11-04T02:19:53.0182354Z hint:
+2026-11-04T02:19:53.0182760Z hint: 	git branch -m <name>
+2026-11-04T02:19:53.0183131Z hint:
+2026-11-04T02:19:53.0183604Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-11-04T02:19:53.0184286Z Initialized empty Git repository in /home/runner/work/Astrolabe/Astrolabe/baseline/.git/
+2026-11-04T02:19:53.0186979Z [command]/usr/bin/git remote add origin https://github.com/Molaison/Astrolabe
+2026-11-04T02:19:53.0216995Z ##[endgroup]
+2026-11-04T02:19:53.0217426Z ##[group]Disabling automatic garbage collection
+2026-11-04T02:19:53.0219772Z [command]/usr/bin/git config --local gc.auto 0
+2026-11-04T02:19:53.0245310Z ##[endgroup]
+2026-11-04T02:19:53.0245674Z ##[group]Setting up auth
+2026-11-04T02:19:53.0250233Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T02:19:53.0276052Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T02:19:53.0479541Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T02:19:53.0511305Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T02:19:53.0702290Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T02:19:53.0738244Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T02:19:53.0914247Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-11-04T02:19:53.0953903Z ##[endgroup]
+2026-11-04T02:19:53.0954316Z ##[group]Fetching the repository
+2026-11-04T02:19:53.0959811Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin d66ee714f2e755948534f95d9d125287ce8dbd91
+2026-11-04T02:19:54.5637944Z From https://github.com/Molaison/Astrolabe
+2026-11-04T02:19:54.5638357Z  * branch            d66ee714f2e755948534f95d9d125287ce8dbd91 -> FETCH_HEAD
+2026-11-04T02:19:54.5648898Z ##[endgroup]
+2026-11-04T02:19:54.5649800Z ##[group]Determining the checkout info
+2026-11-04T02:19:54.5656961Z ##[endgroup]
+2026-11-04T02:19:54.5657237Z [command]/usr/bin/git sparse-checkout disable
+2026-11-04T02:19:54.5695021Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-11-04T02:19:54.5728285Z ##[group]Checking out the ref
+2026-11-04T02:19:54.5738638Z [command]/usr/bin/git checkout --progress --force d66ee714f2e755948534f95d9d125287ce8dbd91
+2026-11-04T02:19:54.9336393Z Note: switching to 'd66ee714f2e755948534f95d9d125287ce8dbd91'.
+2026-11-04T02:19:54.9336855Z 
+2026-11-04T02:19:54.9337031Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-11-04T02:19:54.9337401Z changes and commit them, and you can discard any commits you make in this
+2026-11-04T02:19:54.9337796Z state without impacting any branches by switching back to a branch.
+2026-11-04T02:19:54.9338052Z 
+2026-11-04T02:19:54.9338219Z If you want to create a new branch to retain commits you create, you may
+2026-11-04T02:19:54.9338584Z do so (now or later) by using -c with the switch command. Example:
+2026-11-04T02:19:54.9338791Z 
+2026-11-04T02:19:54.9338894Z   git switch -c <new-branch-name>
+2026-11-04T02:19:54.9339064Z 
+2026-11-04T02:19:54.9339147Z Or undo this operation with:
+2026-11-04T02:19:54.9339351Z 
+2026-11-04T02:19:54.9339421Z   git switch -
+2026-11-04T02:19:54.9340720Z 
+2026-11-04T02:19:54.9340897Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-11-04T02:19:54.9341131Z 
+2026-11-04T02:19:54.9341303Z HEAD is now at d66ee71 Separate model lifecycles and unify resource-aware execution
+2026-11-04T02:19:54.9380444Z ##[endgroup]
+2026-11-04T02:19:54.9424282Z [command]/usr/bin/git log -1 --format=%H
+2026-11-04T02:19:54.9454390Z d66ee714f2e755948534f95d9d125287ce8dbd91
+2026-11-04T02:19:54.9462524Z ##[group]Removing auth
+2026-11-04T02:19:54.9465099Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T02:19:54.9499243Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T02:19:54.9695793Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T02:19:54.9721843Z http.https://github.com/.extraheader
+2026-11-04T02:19:54.9727160Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2026-11-04T02:19:54.9760673Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T02:19:54.9939414Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T02:19:54.9970655Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T02:19:55.0147253Z ##[endgroup]
+2026-11-04T02:19:55.0283481Z ##[group]Run actions/setup-python@v5
+2026-11-04T02:19:55.0283630Z with:
+2026-11-04T02:19:55.0283739Z   python-version: 3.11
+2026-11-04T02:19:55.0283854Z   cache: pip
+2026-11-04T02:19:55.0284026Z   cache-dependency-path: candidate/benchmarks/runtime/requirements-cpu.txt
+2026-11-04T02:19:55.0284244Z   check-latest: false
+2026-11-04T02:19:55.0285595Z   token: ***
+2026-11-04T02:19:55.0285705Z   update-environment: true
+2026-11-04T02:19:55.0285837Z   allow-prereleases: false
+2026-11-04T02:19:55.0285958Z   freethreaded: false
+2026-11-04T02:19:55.0286071Z env:
+2026-11-04T02:19:55.0286173Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:19:55.0286294Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:19:55.0286419Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:19:55.0286783Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:19:55.0286899Z   JAX_PLATFORMS: cpu
+2026-11-04T02:19:55.0287014Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:19:55.0287143Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:19:55.0287308Z   OMP_NUM_THREADS: 1
+2026-11-04T02:19:55.0287415Z   MKL_NUM_THREADS: 1
+2026-11-04T02:19:55.0287529Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:19:55.0287649Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:19:55.0287767Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:19:55.0287889Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:19:55.0288053Z   RUNTIME_VALIDATION_OUT: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:19:55.0288239Z ##[endgroup]
+2026-11-04T02:19:55.1097486Z ##[group]Installed versions
+2026-11-04T02:19:55.1199857Z (node:2408) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-04T02:19:55.1200377Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-04T02:19:55.1200709Z Successfully set up CPython (3.11.18)
+2026-11-04T02:19:55.1201022Z ##[endgroup]
+2026-11-04T02:19:55.1418259Z [command]/opt/hostedtoolcache/Python/3.11.18/x64/bin/pip cache dir
+2026-11-04T02:19:55.3889267Z /home/runner/.cache/pip
+2026-11-04T02:19:55.5396879Z pip cache is not found
+2026-11-04T02:19:55.5511035Z ##[group]Run mkdir -p "$RUNTIME_VALIDATION_OUT/environment"
+2026-11-04T02:19:55.5511465Z [36;1mmkdir -p "$RUNTIME_VALIDATION_OUT/environment"[0m
+2026-11-04T02:19:55.5527901Z [36;1mpython -m pip install -r candidate/benchmarks/runtime/requirements-cpu.txt 2>&1 | tee "$RUNTIME_VALIDATION_OUT/environment/install.log"[0m
+2026-11-04T02:19:55.5528335Z [36;1mpython -m pip freeze --all > "$RUNTIME_VALIDATION_OUT/environment/pip-freeze.txt"[0m
+2026-11-04T02:19:55.5547749Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-04T02:19:55.5547933Z env:
+2026-11-04T02:19:55.5548049Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:19:55.5548182Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:19:55.5548315Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:19:55.5548434Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:19:55.5548556Z   JAX_PLATFORMS: cpu
+2026-11-04T02:19:55.5548678Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:19:55.5548817Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:19:55.5548978Z   OMP_NUM_THREADS: 1
+2026-11-04T02:19:55.5549090Z   MKL_NUM_THREADS: 1
+2026-11-04T02:19:55.5549204Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:19:55.5549332Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:19:55.5549455Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:19:55.5549717Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:19:55.5549887Z   RUNTIME_VALIDATION_OUT: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:19:55.5550117Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:19:55.5550359Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib/pkgconfig
+2026-11-04T02:19:55.5550582Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:19:55.5550786Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:19:55.5550992Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:19:55.5551197Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib
+2026-11-04T02:19:55.5551380Z ##[endgroup]
+2026-11-04T02:19:56.2091853Z Collecting absl-py==2.3.1 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 2))
+2026-11-04T02:19:56.2857344Z   Downloading absl_py-2.3.1-py3-none-any.whl.metadata (3.3 kB)
+2026-11-04T02:19:56.3082241Z Collecting antlr4-python3-runtime==4.9.3 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 3))
+2026-11-04T02:19:56.3209517Z   Downloading antlr4-python3-runtime-4.9.3.tar.gz (117 kB)
+2026-11-04T02:19:56.3569487Z   Installing build dependencies: started
+2026-11-04T02:19:56.9081658Z   Installing build dependencies: finished with status 'done'
+2026-11-04T02:19:56.9085648Z   Getting requirements to build wheel: started
+2026-11-04T02:19:57.2446044Z   Getting requirements to build wheel: finished with status 'done'
+2026-11-04T02:19:57.2451932Z   Preparing metadata (pyproject.toml): started
+2026-11-04T02:19:57.3929617Z   Preparing metadata (pyproject.toml): finished with status 'done'
+2026-11-04T02:19:57.4615634Z Collecting biopython==1.86 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 4))
+2026-11-04T02:19:57.4770493Z   Downloading biopython-1.86-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (13 kB)
+2026-11-04T02:19:57.5678024Z Collecting filelock==3.32.7 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 5))
+2026-11-04T02:19:57.5811429Z   Downloading filelock-3.32.7-py3-none-any.whl.metadata (2.0 kB)
+2026-11-04T02:19:57.6043891Z Collecting hydra-core==1.3.2 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 6))
+2026-11-04T02:19:57.6170439Z   Downloading hydra_core-1.3.2-py3-none-any.whl.metadata (5.5 kB)
+2026-11-04T02:19:57.6363557Z Collecting iniconfig==2.3.1 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 7))
+2026-11-04T02:19:57.6490963Z   Downloading iniconfig-2.3.1-py3-none-any.whl.metadata (2.8 kB)
+2026-11-04T02:19:57.6870442Z Collecting jax==0.4.34 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 8))
+2026-11-04T02:19:57.7009856Z   Downloading jax-0.4.34-py3-none-any.whl.metadata (22 kB)
+2026-11-04T02:19:57.7470705Z Collecting jaxlib==0.4.34 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 9))
+2026-11-04T02:19:57.7610060Z   Downloading jaxlib-0.4.34-cp311-cp311-manylinux2014_x86_64.whl.metadata (983 bytes)
+2026-11-04T02:19:57.7884557Z Collecting ml_dtypes==0.6.0 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 10))
+2026-11-04T02:19:57.8008560Z   Downloading ml_dtypes-0.6.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (8.8 kB)
+2026-11-04T02:19:57.9211595Z Collecting numpy==2.3.5 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 11))
+2026-11-04T02:19:57.9340691Z   Downloading numpy-2.3.5-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+2026-11-04T02:19:57.9679361Z Collecting omegaconf==2.3.0 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 12))
+2026-11-04T02:19:57.9809862Z   Downloading omegaconf-2.3.0-py3-none-any.whl.metadata (3.9 kB)
+2026-11-04T02:19:58.0075596Z Collecting opt_einsum==3.4.0 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 13))
+2026-11-04T02:19:58.0199817Z   Downloading opt_einsum-3.4.0-py3-none-any.whl.metadata (6.3 kB)
+2026-11-04T02:19:58.0411313Z Collecting packaging==26.3 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 14))
+2026-11-04T02:19:58.0535076Z   Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+2026-11-04T02:19:58.0738171Z Collecting pluggy==1.7.0 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 15))
+2026-11-04T02:19:58.0861795Z   Downloading pluggy-1.7.0-py3-none-any.whl.metadata (5.0 kB)
+2026-11-04T02:19:58.1112681Z Collecting prompt_toolkit==3.0.53 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 16))
+2026-11-04T02:19:58.1238526Z   Downloading prompt_toolkit-3.0.53-py3-none-any.whl.metadata (6.4 kB)
+2026-11-04T02:19:58.1669063Z Collecting psutil==7.2.2 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 17))
+2026-11-04T02:19:58.1796318Z   Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+2026-11-04T02:19:58.2124733Z Collecting Pygments==2.21.0 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 18))
+2026-11-04T02:19:58.2247287Z   Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+2026-11-04T02:19:58.2496579Z Collecting pytest==9.2.0 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 19))
+2026-11-04T02:19:58.2622283Z   Downloading pytest-9.2.0-py3-none-any.whl.metadata (7.9 kB)
+2026-11-04T02:19:58.3049057Z Collecting PyYAML==6.0.3 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 20))
+2026-11-04T02:19:58.3173810Z   Downloading pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+2026-11-04T02:19:58.3896861Z Collecting scipy==1.17.0 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 21))
+2026-11-04T02:19:58.4023468Z   Downloading scipy-1.17.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+2026-11-04T02:19:58.4339841Z Collecting wcwidth==0.9.4 (from -r candidate/benchmarks/runtime/requirements-cpu.txt (line 22))
+2026-11-04T02:19:58.4463402Z   Downloading wcwidth-0.9.4-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (23 kB)
+2026-11-04T02:19:58.4701015Z Downloading absl_py-2.3.1-py3-none-any.whl (135 kB)
+2026-11-04T02:19:58.4890601Z Downloading biopython-1.86-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.2 MB)
+2026-11-04T02:19:58.5384845Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 3.2/3.2 MB 80.0 MB/s  0:00:00
+2026-11-04T02:19:58.5732454Z Downloading filelock-3.32.7-py3-none-any.whl (100 kB)
+2026-11-04T02:19:58.5890654Z Downloading hydra_core-1.3.2-py3-none-any.whl (154 kB)
+2026-11-04T02:19:58.6035673Z Downloading omegaconf-2.3.0-py3-none-any.whl (79 kB)
+2026-11-04T02:19:58.6179169Z Downloading iniconfig-2.3.1-py3-none-any.whl (7.6 kB)
+2026-11-04T02:19:58.6332170Z Downloading jax-0.4.34-py3-none-any.whl (2.1 MB)
+2026-11-04T02:19:58.6477946Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 2.1/2.1 MB 155.0 MB/s  0:00:00
+2026-11-04T02:19:58.6738595Z Downloading jaxlib-0.4.34-cp311-cp311-manylinux2014_x86_64.whl (86.1 MB)
+2026-11-04T02:20:00.1952704Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 86.1/86.1 MB 56.6 MB/s  0:00:01
+2026-11-04T02:20:00.2085907Z Downloading ml_dtypes-0.6.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (412 kB)
+2026-11-04T02:20:00.2268356Z Downloading numpy-2.3.5-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.9 MB)
+2026-11-04T02:20:00.4012613Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 16.9/16.9 MB 96.8 MB/s  0:00:00
+2026-11-04T02:20:00.4144466Z Downloading opt_einsum-3.4.0-py3-none-any.whl (71 kB)
+2026-11-04T02:20:00.4293119Z Downloading packaging-26.3-py3-none-any.whl (129 kB)
+2026-11-04T02:20:00.4575208Z Downloading pluggy-1.7.0-py3-none-any.whl (27 kB)
+2026-11-04T02:20:00.4753596Z Downloading prompt_toolkit-3.0.53-py3-none-any.whl (392 kB)
+2026-11-04T02:20:00.4904583Z Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+2026-11-04T02:20:00.5047483Z Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+2026-11-04T02:20:00.5145192Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 1.3/1.3 MB 230.6 MB/s  0:00:00
+2026-11-04T02:20:00.5274172Z Downloading pytest-9.2.0-py3-none-any.whl (411 kB)
+2026-11-04T02:20:00.5638114Z Downloading pyyaml-6.0.3-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (806 kB)
+2026-11-04T02:20:00.5695002Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 806.6/806.6 kB 180.0 MB/s  0:00:00
+2026-11-04T02:20:00.5960638Z Downloading scipy-1.17.0-cp311-cp311-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.1 MB)
+2026-11-04T02:20:00.9623826Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 35.1/35.1 MB 95.7 MB/s  0:00:00
+2026-11-04T02:20:00.9755273Z Downloading wcwidth-0.9.4-cp310-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (785 kB)
+2026-11-04T02:20:00.9790715Z    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 785.9/785.9 kB 213.4 MB/s  0:00:00
+2026-11-04T02:20:01.0970966Z Building wheels for collected packages: antlr4-python3-runtime
+2026-11-04T02:20:01.0978282Z   Building wheel for antlr4-python3-runtime (pyproject.toml): started
+2026-11-04T02:20:01.2368181Z   Building wheel for antlr4-python3-runtime (pyproject.toml): finished with status 'done'
+2026-11-04T02:20:01.2372360Z   Created wheel for antlr4-python3-runtime: filename=antlr4_python3_runtime-4.9.3-py3-none-any.whl size=144590 sha256=d26f5585f0ae2c6eb8c415c4276188468aa60be14609b9e9374dbb8a38bf00cd
+2026-11-04T02:20:01.2373148Z   Stored in directory: /home/runner/.cache/pip/wheels/1a/97/32/461f837398029ad76911109f07047fde1d7b661a147c7c56d1
+2026-11-04T02:20:01.2382978Z Successfully built antlr4-python3-runtime
+2026-11-04T02:20:01.2751857Z Installing collected packages: antlr4-python3-runtime, wcwidth, PyYAML, Pygments, psutil, pluggy, packaging, opt_einsum, numpy, iniconfig, filelock, absl-py, scipy, pytest, prompt_toolkit, omegaconf, ml_dtypes, biopython, jaxlib, hydra-core, jax
+2026-11-04T02:20:07.8475770Z 
+2026-11-04T02:20:07.8485788Z Successfully installed PyYAML-6.0.3 Pygments-2.21.0 absl-py-2.3.1 antlr4-python3-runtime-4.9.3 biopython-1.86 filelock-3.32.7 hydra-core-1.3.2 iniconfig-2.3.1 jax-0.4.34 jaxlib-0.4.34 ml_dtypes-0.6.0 numpy-2.3.5 omegaconf-2.3.0 opt_einsum-3.4.0 packaging-26.3 pluggy-1.7.0 prompt_toolkit-3.0.53 psutil-7.2.2 pytest-9.2.0 scipy-1.17.0 wcwidth-0.9.4
+2026-11-04T02:20:07.8491242Z 
+2026-11-04T02:20:07.8491489Z [notice] A new release of pip is available: 26.2.2 -> 26.3
+2026-11-04T02:20:07.8491808Z [notice] To update, run: pip install --upgrade pip
+2026-11-04T02:20:08.0712302Z ##[group]Run python candidate/benchmarks/runtime/validate.py preflight --out "$RUNTIME_VALIDATION_OUT/preflight"
+2026-11-04T02:20:08.0712738Z [36;1mpython candidate/benchmarks/runtime/validate.py preflight --out "$RUNTIME_VALIDATION_OUT/preflight"[0m
+2026-11-04T02:20:08.0731853Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-04T02:20:08.0732042Z env:
+2026-11-04T02:20:08.0732153Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:20:08.0732283Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:20:08.0732413Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:20:08.0732529Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:20:08.0732657Z   JAX_PLATFORMS: cpu
+2026-11-04T02:20:08.0732771Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:20:08.0732906Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:20:08.0733043Z   OMP_NUM_THREADS: 1
+2026-11-04T02:20:08.0733150Z   MKL_NUM_THREADS: 1
+2026-11-04T02:20:08.0733266Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:20:08.0733386Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:20:08.0733531Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:20:08.0733658Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:20:08.0733826Z   RUNTIME_VALIDATION_OUT: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:20:08.0734053Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:08.0734275Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib/pkgconfig
+2026-11-04T02:20:08.0734492Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:08.0734688Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:08.0734888Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:08.0735228Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib
+2026-11-04T02:20:08.0735400Z ##[endgroup]
+2026-11-04T02:20:08.3402288Z {
+2026-11-04T02:20:08.3402465Z   "status": "DONE",
+2026-11-04T02:20:08.3402644Z   "checks": {
+2026-11-04T02:20:08.3402807Z     "linux": true,
+2026-11-04T02:20:08.3402972Z     "python_3_11": true,
+2026-11-04T02:20:08.3403129Z     "matching_process_namespace": true,
+2026-11-04T02:20:08.3403281Z     "no_gpu_allocation": true,
+2026-11-04T02:20:08.3403418Z     "cpu_framework_policy": true,
+2026-11-04T02:20:08.3403554Z     "bounded_cpu_threads": true,
+2026-11-04T02:20:08.3403687Z     "not_inside_broker": true,
+2026-11-04T02:20:08.3403809Z     "af_unix": true,
+2026-11-04T02:20:08.3403934Z     "required_cpu_dependencies": true
+2026-11-04T02:20:08.3404066Z   },
+2026-11-04T02:20:08.3404167Z   "blocking_reasons": [],
+2026-11-04T02:20:08.3404289Z   "af_unix_error": null,
+2026-11-04T02:20:08.3404446Z   "python": "3.11.18 (main, Oct 26 2026, 02:48:34) [GCC 13.3.0]",
+2026-11-04T02:20:08.3404624Z   "cpu_affinity": [
+2026-11-04T02:20:08.3404729Z     0,
+2026-11-04T02:20:08.3404819Z     1,
+2026-11-04T02:20:08.3404928Z     2,
+2026-11-04T02:20:08.3405016Z     3
+2026-11-04T02:20:08.3405104Z   ],
+2026-11-04T02:20:08.3405196Z   "load_average": [
+2026-11-04T02:20:08.3405300Z     0.484375,
+2026-11-04T02:20:08.3405398Z     0.17578125,
+2026-11-04T02:20:08.3405500Z     0.060546875
+2026-11-04T02:20:08.3405596Z   ],
+2026-11-04T02:20:08.3405690Z   "gpu_visibility": {
+2026-11-04T02:20:08.3405807Z     "CUDA_VISIBLE_DEVICES": "",
+2026-11-04T02:20:08.3405941Z     "NVIDIA_VISIBLE_DEVICES": "void",
+2026-11-04T02:20:08.3406080Z     "HIP_VISIBLE_DEVICES": "",
+2026-11-04T02:20:08.3406204Z     "ROCR_VISIBLE_DEVICES": ""
+2026-11-04T02:20:08.3406319Z   },
+2026-11-04T02:20:08.3406417Z   "thread_environment": {
+2026-11-04T02:20:08.3406749Z     "OMP_NUM_THREADS": "1",
+2026-11-04T02:20:08.3406879Z     "MKL_NUM_THREADS": "1",
+2026-11-04T02:20:08.3407004Z     "OPENBLAS_NUM_THREADS": "1",
+2026-11-04T02:20:08.3407138Z     "NUMEXPR_NUM_THREADS": "1",
+2026-11-04T02:20:08.3407267Z     "VECLIB_MAXIMUM_THREADS": "1"
+2026-11-04T02:20:08.3407389Z   },
+2026-11-04T02:20:08.3407483Z   "packages": {
+2026-11-04T02:20:08.3407591Z     "numpy": "2.3.5",
+2026-11-04T02:20:08.3407702Z     "scipy": "1.17.0",
+2026-11-04T02:20:08.3407816Z     "hydra-core": "1.3.2",
+2026-11-04T02:20:08.3408172Z     "omegaconf": "2.3.0",
+2026-11-04T02:20:08.3408292Z     "biopython": "1.86",
+2026-11-04T02:20:08.3408405Z     "pytest": "9.2.0",
+2026-11-04T02:20:08.3408513Z     "psutil": "7.2.2",
+2026-11-04T02:20:08.3408622Z     "jax": "0.4.34",
+2026-11-04T02:20:08.3408729Z     "jaxlib": "0.4.34"
+2026-11-04T02:20:08.3408833Z   },
+2026-11-04T02:20:08.3408977Z   "gpu_certification": "BLOCKED: no GPU execution in this workflow"
+2026-11-04T02:20:08.3409154Z }
+2026-11-04T02:20:08.3493756Z ##[group]Run python candidate/benchmarks/runtime/validate.py regressions --out "$RUNTIME_VALIDATION_OUT/regressions"
+2026-11-04T02:20:08.3494200Z [36;1mpython candidate/benchmarks/runtime/validate.py regressions --out "$RUNTIME_VALIDATION_OUT/regressions"[0m
+2026-11-04T02:20:08.3510547Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-04T02:20:08.3510717Z env:
+2026-11-04T02:20:08.3510824Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:20:08.3510948Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:20:08.3511074Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:20:08.3511188Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:20:08.3511302Z   JAX_PLATFORMS: cpu
+2026-11-04T02:20:08.3511418Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:20:08.3511548Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:20:08.3511683Z   OMP_NUM_THREADS: 1
+2026-11-04T02:20:08.3511788Z   MKL_NUM_THREADS: 1
+2026-11-04T02:20:08.3511897Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:20:08.3512015Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:20:08.3512150Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:20:08.3512273Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:20:08.3512435Z   RUNTIME_VALIDATION_OUT: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:20:08.3512779Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:08.3512998Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib/pkgconfig
+2026-11-04T02:20:08.3513214Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:08.3513412Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:08.3513608Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:08.3513806Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib
+2026-11-04T02:20:08.3513975Z ##[endgroup]
+2026-11-04T02:20:48.1646277Z ................................................F.F..................... [ 32%]
+2026-11-04T02:20:48.1646742Z .F.....................F................................................ [ 64%]
+2026-11-04T02:20:48.1646982Z ........................................................................ [ 96%]
+2026-11-04T02:20:48.1647170Z ........                                                                 [100%]
+2026-11-04T02:20:48.1647361Z =================================== FAILURES ===================================
+2026-11-04T02:20:48.1647589Z _____________ RuntimeTest.test_bad_identity_and_uncertain_timeout ______________
+2026-11-04T02:20:48.1647740Z 
+2026-11-04T02:20:48.1647891Z self = <test_runtime_execution.RuntimeTest testMethod=test_bad_identity_and_uncertain_timeout>
+2026-11-04T02:20:48.1648081Z 
+2026-11-04T02:20:48.1648160Z     def test_bad_identity_and_uncertain_timeout(self):
+2026-11-04T02:20:48.1648340Z         with self.assertRaises(WorkerError):
+2026-11-04T02:20:48.1648569Z >           DaemonClient(COMMAND, {**IDENTITY, 'weights': 'different'})
+2026-11-04T02:20:48.1648707Z 
+2026-11-04T02:20:48.1648770Z tests/test_runtime_execution.py:29: 
+2026-11-04T02:20:48.1648942Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+2026-11-04T02:20:48.1649122Z astrolabe/runtime/client.py:76: in __init__
+2026-11-04T02:20:48.1649279Z     hello = self._read(startup_timeout)
+2026-11-04T02:20:48.1649421Z             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-04T02:20:48.1649572Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+2026-11-04T02:20:48.1649691Z 
+2026-11-04T02:20:48.1649743Z     def _read(self, timeout):
+2026-11-04T02:20:48.1649919Z         deadline = None if timeout is None else time.monotonic() + timeout
+2026-11-04T02:20:48.1650112Z         while b'\n' not in self._buffer:
+2026-11-04T02:20:48.1650330Z             remaining = None if deadline is None else max(0, deadline - time.monotonic())
+2026-11-04T02:20:48.1650591Z             ready, _, _ = select.select([self.process.stdout], [], [], remaining)
+2026-11-04T02:20:48.1650779Z             if not ready:
+2026-11-04T02:20:48.1650927Z                 raise TimeoutError('worker response timed out')
+2026-11-04T02:20:48.1651593Z             chunk = os.read(self.process.stdout.fileno(), min(65536, self.limit + 1 - len(self._buffer)))
+2026-11-04T02:20:48.1651821Z             if not chunk:
+2026-11-04T02:20:48.1651953Z >               raise EOFError('worker exited')
+2026-11-04T02:20:48.1652103Z E               EOFError: worker exited
+2026-11-04T02:20:48.1652195Z 
+2026-11-04T02:20:48.1652253Z astrolabe/runtime/client.py:98: EOFError
+2026-11-04T02:20:48.1652441Z ----------------------------- Captured stderr call -----------------------------
+2026-11-04T02:20:48.1652691Z Traceback (most recent call last):
+2026-11-04T02:20:48.1658186Z   File "/home/runner/work/Astrolabe/Astrolabe/candidate/tests/runtime_fixture.py", line 47, in <module>
+2026-11-04T02:20:48.1658513Z     from astrolabe.runtime.server import serve
+2026-11-04T02:20:48.1658689Z ModuleNotFoundError: No module named 'astrolabe'
+2026-11-04T02:20:48.1658898Z ______________ RuntimeTest.test_resident_process_and_request_ids _______________
+2026-11-04T02:20:48.1659051Z 
+2026-11-04T02:20:48.1659194Z self = <test_runtime_execution.RuntimeTest testMethod=test_resident_process_and_request_ids>
+2026-11-04T02:20:48.1659381Z 
+2026-11-04T02:20:48.1659621Z     def test_resident_process_and_request_ids(self):
+2026-11-04T02:20:48.1659801Z >       with DaemonClient(COMMAND, IDENTITY) as client:
+2026-11-04T02:20:48.1659961Z              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-04T02:20:48.1660054Z 
+2026-11-04T02:20:48.1660112Z tests/test_runtime_execution.py:17: 
+2026-11-04T02:20:48.1660279Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+2026-11-04T02:20:48.1660457Z astrolabe/runtime/client.py:76: in __init__
+2026-11-04T02:20:48.1660612Z     hello = self._read(startup_timeout)
+2026-11-04T02:20:48.1660748Z             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-04T02:20:48.1660902Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+2026-11-04T02:20:48.1661020Z 
+2026-11-04T02:20:48.1661122Z self = <astrolabe.runtime.client.DaemonClient object at 0x7f2968cc2710>
+2026-11-04T02:20:48.1661314Z timeout = 60
+2026-11-04T02:20:48.1661377Z 
+2026-11-04T02:20:48.1661428Z     def _read(self, timeout):
+2026-11-04T02:20:48.1661610Z         deadline = None if timeout is None else time.monotonic() + timeout
+2026-11-04T02:20:48.1661799Z         while b'\n' not in self._buffer:
+2026-11-04T02:20:48.1662004Z             remaining = None if deadline is None else max(0, deadline - time.monotonic())
+2026-11-04T02:20:48.1662258Z             ready, _, _ = select.select([self.process.stdout], [], [], remaining)
+2026-11-04T02:20:48.1662444Z             if not ready:
+2026-11-04T02:20:48.1662590Z                 raise TimeoutError('worker response timed out')
+2026-11-04T02:20:48.1662847Z             chunk = os.read(self.process.stdout.fileno(), min(65536, self.limit + 1 - len(self._buffer)))
+2026-11-04T02:20:48.1663074Z             if not chunk:
+2026-11-04T02:20:48.1663205Z >               raise EOFError('worker exited')
+2026-11-04T02:20:48.1663359Z E               EOFError: worker exited
+2026-11-04T02:20:48.1663447Z 
+2026-11-04T02:20:48.1663506Z astrolabe/runtime/client.py:98: EOFError
+2026-11-04T02:20:48.1663695Z ----------------------------- Captured stderr call -----------------------------
+2026-11-04T02:20:48.1663892Z Traceback (most recent call last):
+2026-11-04T02:20:48.1664161Z   File "/home/runner/work/Astrolabe/Astrolabe/candidate/tests/runtime_fixture.py", line 47, in <module>
+2026-11-04T02:20:48.1664425Z     from astrolabe.runtime.server import serve
+2026-11-04T02:20:48.1664595Z ModuleNotFoundError: No module named 'astrolabe'
+2026-11-04T02:20:48.1664805Z ___________ test_parent_exit_interrupts_active_worker_without_replay ___________
+2026-11-04T02:20:48.1664953Z 
+2026-11-04T02:20:48.1665081Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_parent_exit_interrupts_ac0')
+2026-11-04T02:20:48.1665251Z 
+2026-11-04T02:20:48.1665354Z     def test_parent_exit_interrupts_active_worker_without_replay(tmp_path):
+2026-11-04T02:20:48.1665543Z         import json
+2026-11-04T02:20:48.1665759Z         import time
+2026-11-04T02:20:48.1665908Z         events, outcome = tmp_path / 'events', tmp_path / 'outcome'
+2026-11-04T02:20:48.1666168Z         proc = subprocess.run([sys.executable, str(ROOT / 'tests/runtime_parent_fixture.py'),
+2026-11-04T02:20:48.1666592Z                                str(events), str(outcome), str(ROOT / 'tests/runtime_fixture.py')],
+2026-11-04T02:20:48.1666884Z                               env=os.environ.copy(), stdout=subprocess.DEVNULL,
+2026-11-04T02:20:48.1667082Z                               stderr=subprocess.DEVNULL, timeout=15)
+2026-11-04T02:20:48.1667250Z >       assert proc.returncode == 0
+2026-11-04T02:20:48.1667391Z E       AssertionError: assert 1 == 0
+2026-11-04T02:20:48.1667913Z E        +  where 1 = CompletedProcess(args=['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python', '/home/runner/work/Astrolabe/Astrolabe/ca...xit_interrupts_ac0/outcome', '/home/runner/work/Astrolabe/Astrolabe/candidate/tests/runtime_fixture.py'], returncode=1).returncode
+2026-11-04T02:20:48.1668387Z 
+2026-11-04T02:20:48.1668455Z tests/test_runtime_execution.py:497: AssertionError
+2026-11-04T02:20:48.1668684Z _ test_staged_real_process_retains_prepared_memory_and_rejects_reordered_execute _
+2026-11-04T02:20:48.1668939Z 
+2026-11-04T02:20:48.1669045Z monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7f296661bc90>
+2026-11-04T02:20:48.1669319Z tmp_path = PosixPath('/tmp/pytest-of-runner/pytest-0/test_staged_real_process_retai0')
+2026-11-04T02:20:48.1669489Z 
+2026-11-04T02:20:48.1669664Z     @pytest.mark.skipif(not process_namespace_supported(), reason='executor PID API and /proc namespaces disagree')
+2026-11-04T02:20:48.1670036Z     def test_staged_real_process_retains_prepared_memory_and_rejects_reordered_execute(monkeypatch, tmp_path):
+2026-11-04T02:20:48.1670312Z         from astrolabe.runtime.broker_state import State
+2026-11-04T02:20:48.1670491Z         root = Path(__file__).resolve().parents[1]
+2026-11-04T02:20:48.1670706Z         monkeypatch.setenv('ASTROLABE_EXECUTION_ARTIFACT_ROOT', str(tmp_path))
+2026-11-04T02:20:48.1670948Z         identity = {'device': 'cpu', 'code': 'fixture', 'weights': 'none'}
+2026-11-04T02:20:48.1671149Z         state = State('test', 2, 2, limits=limits())
+2026-11-04T02:20:48.1671361Z         command = [sys.executable, str(root / 'tests/runtime_staged_fixture.py')]
+2026-11-04T02:20:48.1671666Z         register = {'identity': identity, 'command': command, 'env': {'RUNTIME_TEST_IDENTITY': json.dumps(identity)},
+2026-11-04T02:20:48.1671997Z                     'limit': 1048576, 'startup_timeout': 5, 'owner_pid': os.getpid(), 'client_epoch': 'client'}
+2026-11-04T02:20:48.1672215Z         try:
+2026-11-04T02:20:48.1672341Z >           handle = state.register(register)['handle']
+2026-11-04T02:20:48.1672502Z                      ^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-04T02:20:48.1672593Z 
+2026-11-04T02:20:48.1672654Z tests/test_runtime_resources.py:324: 
+2026-11-04T02:20:48.1672821Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+2026-11-04T02:20:48.1673007Z astrolabe/runtime/broker_state.py:212: in register
+2026-11-04T02:20:48.1673267Z     client = DaemonClient(self.ledger.guarded_command(device, req['command']), identity, env=launch_env,
+2026-11-04T02:20:48.1673525Z astrolabe/runtime/client.py:76: in __init__
+2026-11-04T02:20:48.1673677Z     hello = self._read(startup_timeout)
+2026-11-04T02:20:48.1673816Z             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+2026-11-04T02:20:48.1673971Z _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+2026-11-04T02:20:48.1674089Z 
+2026-11-04T02:20:48.1674192Z self = <astrolabe.runtime.client.DaemonClient object at 0x7f2966618f50>
+2026-11-04T02:20:48.1674387Z timeout = 4.999936644999991
+2026-11-04T02:20:48.1674464Z 
+2026-11-04T02:20:48.1674517Z     def _read(self, timeout):
+2026-11-04T02:20:48.1674696Z         deadline = None if timeout is None else time.monotonic() + timeout
+2026-11-04T02:20:48.1674890Z         while b'\n' not in self._buffer:
+2026-11-04T02:20:48.1675184Z             remaining = None if deadline is None else max(0, deadline - time.monotonic())
+2026-11-04T02:20:48.1675441Z             ready, _, _ = select.select([self.process.stdout], [], [], remaining)
+2026-11-04T02:20:48.1675633Z             if not ready:
+2026-11-04T02:20:48.1675780Z                 raise TimeoutError('worker response timed out')
+2026-11-04T02:20:48.1676035Z             chunk = os.read(self.process.stdout.fileno(), min(65536, self.limit + 1 - len(self._buffer)))
+2026-11-04T02:20:48.1676260Z             if not chunk:
+2026-11-04T02:20:48.1676390Z >               raise EOFError('worker exited')
+2026-11-04T02:20:48.1676711Z E               EOFError: worker exited
+2026-11-04T02:20:48.1676806Z 
+2026-11-04T02:20:48.1676862Z astrolabe/runtime/client.py:98: EOFError
+2026-11-04T02:20:48.1677053Z ----------------------------- Captured stderr call -----------------------------
+2026-11-04T02:20:48.1677246Z Traceback (most recent call last):
+2026-11-04T02:20:48.1677537Z   File "/home/runner/work/Astrolabe/Astrolabe/candidate/tests/runtime_staged_fixture.py", line 4, in <module>
+2026-11-04T02:20:48.1677811Z     from astrolabe.runtime.server import serve
+2026-11-04T02:20:48.1678095Z ModuleNotFoundError: No module named 'astrolabe'
+2026-11-04T02:20:48.1678278Z =========================== short test summary info ============================
+2026-11-04T02:20:48.1678610Z FAILED tests/test_runtime_execution.py::RuntimeTest::test_bad_identity_and_uncertain_timeout - EOFError: worker exited
+2026-11-04T02:20:48.1679000Z FAILED tests/test_runtime_execution.py::RuntimeTest::test_resident_process_and_request_ids - EOFError: worker exited
+2026-11-04T02:20:48.1679405Z FAILED tests/test_runtime_execution.py::test_parent_exit_interrupts_active_worker_without_replay - AssertionError: assert 1 == 0
+2026-11-04T02:20:48.1680055Z  +  where 1 = CompletedProcess(args=['/opt/hostedtoolcache/Python/3.11.18/x64/bin/python', '/home/runner/work/Astrolabe/Astrolabe/ca...xit_interrupts_ac0/outcome', '/home/runner/work/Astrolabe/Astrolabe/candidate/tests/runtime_fixture.py'], returncode=1).returncode
+2026-11-04T02:20:48.1680719Z FAILED tests/test_runtime_resources.py::test_staged_real_process_retains_prepared_memory_and_rejects_reordered_execute - EOFError: worker exited
+2026-11-04T02:20:48.1681037Z 4 failed, 220 passed in 38.92s
+2026-11-04T02:20:48.1681124Z 
+2026-11-04T02:20:48.1761137Z ##[error]Process completed with exit code 2.
+2026-11-04T02:20:48.1797363Z ##[group]Run python candidate/benchmarks/runtime/validate.py summary \
+2026-11-04T02:20:48.1797681Z [36;1mpython candidate/benchmarks/runtime/validate.py summary \[0m
+2026-11-04T02:20:48.1797972Z [36;1m  --out "$RUNTIME_VALIDATION_OUT" --step-summary "$GITHUB_STEP_SUMMARY"[0m
+2026-11-04T02:20:48.1814051Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-11-04T02:20:48.1814229Z env:
+2026-11-04T02:20:48.1814336Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:20:48.1814462Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:20:48.1814592Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:20:48.1814709Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:20:48.1814833Z   JAX_PLATFORMS: cpu
+2026-11-04T02:20:48.1814953Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:20:48.1815093Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:20:48.1815231Z   OMP_NUM_THREADS: 1
+2026-11-04T02:20:48.1815341Z   MKL_NUM_THREADS: 1
+2026-11-04T02:20:48.1815454Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:20:48.1815693Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:20:48.1815906Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:20:48.1816223Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:20:48.1816590Z   RUNTIME_VALIDATION_OUT: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:20:48.1817012Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:48.1817365Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib/pkgconfig
+2026-11-04T02:20:48.1817661Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:48.1817998Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:48.1818308Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:48.1818579Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib
+2026-11-04T02:20:48.1818878Z ##[endgroup]
+2026-11-04T02:20:48.2282971Z # Astrolabe runtime validation
+2026-11-04T02:20:48.2283209Z 
+2026-11-04T02:20:48.2283339Z Overall CPU validation: **PARTIAL**.
+2026-11-04T02:20:48.2283688Z Candidate: `4358cc32548eb8913a19eb7958904966d54bf030`; frozen baseline: `d66ee714f2e755948534f95d9d125287ce8dbd91`.
+2026-11-04T02:20:48.2283919Z 
+2026-11-04T02:20:48.2283968Z | Gate | Status |
+2026-11-04T02:20:48.2284092Z | --- | --- |
+2026-11-04T02:20:48.2284203Z | preflight | DONE |
+2026-11-04T02:20:48.2284329Z | regressions | PARTIAL |
+2026-11-04T02:20:48.2284456Z | comparison | BLOCKED |
+2026-11-04T02:20:48.2284534Z 
+2026-11-04T02:20:48.2284581Z ## regressions evidence
+2026-11-04T02:20:48.2284657Z 
+2026-11-04T02:20:48.2284701Z ```json
+2026-11-04T02:20:48.2284800Z {
+2026-11-04T02:20:48.2284897Z   "failures": [
+2026-11-04T02:20:48.2285130Z     "tests.test_runtime_execution.RuntimeTest::test_bad_identity_and_uncertain_timeout",
+2026-11-04T02:20:48.2285432Z     "tests.test_runtime_execution.RuntimeTest::test_resident_process_and_request_ids",
+2026-11-04T02:20:48.2285939Z     "tests.test_runtime_execution::test_parent_exit_interrupts_active_worker_without_replay",
+2026-11-04T02:20:48.2286277Z     "tests.test_runtime_resources::test_staged_real_process_retains_prepared_memory_and_rejects_reordered_execute"
+2026-11-04T02:20:48.2286705Z   ],
+2026-11-04T02:20:48.2286807Z   "required_suites": [
+2026-11-04T02:20:48.2286940Z     "tests/test_candidate_batch_policy.py",
+2026-11-04T02:20:48.2287099Z     "tests/test_candidate_batch_runner.py",
+2026-11-04T02:20:48.2287246Z     "tests/test_execution_identity.py",
+2026-11-04T02:20:48.2287389Z     "tests/test_app.py",
+2026-11-04T02:20:48.2287519Z     "tests/test_runtime_execution.py",
+2026-11-04T02:20:48.2287662Z     "tests/test_runtime_contracts.py",
+2026-11-04T02:20:48.2287797Z     "tests/test_runtime_resources.py",
+2026-11-04T02:20:48.2287934Z     "tests/test_runtime_controller.py",
+2026-11-04T02:20:48.2288073Z     "tests/test_runtime_context.py",
+2026-11-04T02:20:48.2288231Z     "tests/test_runtime_process_observations.py",
+2026-11-04T02:20:48.2288401Z     "tests/test_runtime_benchmark_processes.py",
+2026-11-04T02:20:48.2288557Z     "tests/test_runtime_trace_report.py",
+2026-11-04T02:20:48.2288856Z     "tests/test_runtime_structure_parity.py",
+2026-11-04T02:20:48.2289007Z     "tests/test_workflow_benchmark.py",
+2026-11-04T02:20:48.2289157Z     "tests/test_evaluator_lifecycle_contract.py",
+2026-11-04T02:20:48.2289310Z     "tests/test_resource_shutdown.py",
+2026-11-04T02:20:48.2289458Z     "tests/test_mutator_subprocess_protocol.py",
+2026-11-04T02:20:48.2289610Z     "tests/test_stage_transaction.py",
+2026-11-04T02:20:48.2289750Z     "tests/test_run_stage_transition.py",
+2026-11-04T02:20:48.2289915Z     "tests/test_graceful_shutdown_repeat_boundary.py",
+2026-11-04T02:20:48.2290083Z     "tests/test_runtime_validation_harness.py"
+2026-11-04T02:20:48.2290219Z   ],
+2026-11-04T02:20:48.2290313Z   "returncode": 1,
+2026-11-04T02:20:48.2290471Z   "skip_policy": "no skips accepted for these required CPU suites",
+2026-11-04T02:20:48.2290652Z   "skips": [],
+2026-11-04T02:20:48.2290757Z   "status": "PARTIAL",
+2026-11-04T02:20:48.2290867Z   "test_cases": 224
+2026-11-04T02:20:48.2290969Z }
+2026-11-04T02:20:48.2291060Z ```
+2026-11-04T02:20:48.2291118Z 
+2026-11-04T02:20:48.2291166Z ## comparison evidence
+2026-11-04T02:20:48.2291233Z 
+2026-11-04T02:20:48.2291276Z ```json
+2026-11-04T02:20:48.2291366Z {
+2026-11-04T02:20:48.2291458Z   "status": "BLOCKED",
+2026-11-04T02:20:48.2291578Z   "reason": "no readable completed report",
+2026-11-04T02:20:48.2291847Z   "error": "[Errno 2] No such file or directory: '/home/runner/work/_temp/runtime-validation/comparison/report.json'"
+2026-11-04T02:20:48.2292091Z }
+2026-11-04T02:20:48.2292179Z ```
+2026-11-04T02:20:48.2292231Z 
+2026-11-04T02:20:48.2292348Z Real pretrained GPU backend certification: **BLOCKED** in this CPU-only job.
+2026-11-04T02:20:48.2292784Z The uploaded artifact preserves raw logs, configuration, traces, telemetry, test cases and skip reasons. Missing runs and failed work are retained and cannot count as acceleration.
+2026-11-04T02:20:48.2293104Z 
+2026-11-04T02:20:48.2407064Z ##[group]Run actions/upload-artifact@v4
+2026-11-04T02:20:48.2407229Z with:
+2026-11-04T02:20:48.2407377Z   name: runtime-cpu-4358cc32548eb8913a19eb7958904966d54bf030-1
+2026-11-04T02:20:48.2407576Z   path: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:20:48.2407738Z   if-no-files-found: error
+2026-11-04T02:20:48.2407861Z   retention-days: 30
+2026-11-04T02:20:48.2407974Z   compression-level: 6
+2026-11-04T02:20:48.2408089Z   overwrite: false
+2026-11-04T02:20:48.2408202Z   include-hidden-files: false
+2026-11-04T02:20:48.2408327Z env:
+2026-11-04T02:20:48.2408427Z   CUDA_VISIBLE_DEVICES: 
+2026-11-04T02:20:48.2408546Z   NVIDIA_VISIBLE_DEVICES: void
+2026-11-04T02:20:48.2408669Z   HIP_VISIBLE_DEVICES: 
+2026-11-04T02:20:48.2408783Z   ROCR_VISIBLE_DEVICES: 
+2026-11-04T02:20:48.2408900Z   JAX_PLATFORMS: cpu
+2026-11-04T02:20:48.2409013Z   GH_CUDA_PREINITIALIZE: 0
+2026-11-04T02:20:48.2409270Z   XLA_PYTHON_CLIENT_PREALLOCATE: false
+2026-11-04T02:20:48.2409404Z   OMP_NUM_THREADS: 1
+2026-11-04T02:20:48.2409523Z   MKL_NUM_THREADS: 1
+2026-11-04T02:20:48.2409636Z   OPENBLAS_NUM_THREADS: 1
+2026-11-04T02:20:48.2409753Z   NUMEXPR_NUM_THREADS: 1
+2026-11-04T02:20:48.2409869Z   VECLIB_MAXIMUM_THREADS: 1
+2026-11-04T02:20:48.2409990Z   PYTHONUNBUFFERED: 1
+2026-11-04T02:20:48.2410151Z   RUNTIME_VALIDATION_OUT: /home/runner/work/_temp/runtime-validation
+2026-11-04T02:20:48.2410370Z   pythonLocation: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:48.2410591Z   PKG_CONFIG_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib/pkgconfig
+2026-11-04T02:20:48.2410805Z   Python_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:48.2410998Z   Python2_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:48.2411194Z   Python3_ROOT_DIR: /opt/hostedtoolcache/Python/3.11.18/x64
+2026-11-04T02:20:48.2411391Z   LD_LIBRARY_PATH: /opt/hostedtoolcache/Python/3.11.18/x64/lib
+2026-11-04T02:20:48.2411563Z ##[endgroup]
+2026-11-04T02:20:48.3481436Z (node:3149) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+2026-11-04T02:20:48.3481840Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2026-11-04T02:20:48.3541623Z With the provided path, there will be 10 files uploaded
+2026-11-04T02:20:48.3546948Z Artifact name is valid!
+2026-11-04T02:20:48.3547406Z Root directory input is valid!
+2026-11-04T02:20:48.6859106Z Beginning upload of artifact content to blob storage
+2026-11-04T02:20:48.7099683Z (node:3149) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+2026-11-04T02:20:48.9325969Z Uploaded bytes 15176
+2026-11-04T02:20:48.9814168Z Finished uploading artifact content to blob storage!
+2026-11-04T02:20:48.9814669Z SHA256 digest of uploaded artifact zip is f1360bd934e41179eee4c6cbaad0823e8815898f66c150cd56c192a970578749
+2026-11-04T02:20:48.9815842Z Finalizing artifact upload
+2026-11-04T02:20:49.4334035Z Artifact runtime-cpu-4358cc32548eb8913a19eb7958904966d54bf030-1.zip successfully finalized. Artifact ID 13289578654
+2026-11-04T02:20:49.4334853Z Artifact runtime-cpu-4358cc32548eb8913a19eb7958904966d54bf030-1 has been successfully uploaded! Final size is 15176 bytes. Artifact ID is 13289578654
+2026-11-04T02:20:49.4339706Z Artifact download URL: https://github.com/Molaison/Astrolabe/actions/runs/41760013668/artifacts/13289578654
+2026-11-04T02:20:49.4507412Z Post job cleanup.
+2026-11-04T02:20:49.5045453Z [command]/usr/bin/git version
+2026-11-04T02:20:49.5078412Z git version 2.56.0
+2026-11-04T02:20:49.5100616Z Temporarily overriding HOME='/home/runner/work/_temp/2de87f29-aff6-425f-afb8-b8ed3a98db78' before making global git config changes
+2026-11-04T02:20:49.5101281Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-04T02:20:49.5103918Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Astrolabe/Astrolabe/baseline
+2026-11-04T02:20:49.5137955Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T02:20:49.5165891Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T02:20:49.5372508Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T02:20:49.5405562Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T02:20:49.5610711Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T02:20:49.5649161Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T02:20:49.5957547Z Post job cleanup.
+2026-11-04T02:20:49.6522842Z [command]/usr/bin/git version
+2026-11-04T02:20:49.6563064Z git version 2.56.0
+2026-11-04T02:20:49.6597181Z Temporarily overriding HOME='/home/runner/work/_temp/2c88b750-670d-4077-ab6f-c7950c692168' before making global git config changes
+2026-11-04T02:20:49.6617069Z Adding repository directory to the temporary git global config as a safe directory
+2026-11-04T02:20:49.6617602Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/Astrolabe/Astrolabe/candidate
+2026-11-04T02:20:49.6644101Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-11-04T02:20:49.6680272Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-11-04T02:20:49.6987521Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-11-04T02:20:49.7028873Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-11-04T02:20:49.7291094Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-11-04T02:20:49.7332347Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-11-04T02:20:49.7641048Z Cleaning up orphan processes
+2026-11-04T02:20:49.7889366Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@v4, actions/setup-python@v5, actions/upload-artifact@v4. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/
+

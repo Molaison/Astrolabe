@@ -1,0 +1,40 @@
+{
+  "repo": "/workspace/scratch/1a0b1639644d/cloud-20261104/baseline",
+  "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "broker_source_sha256": "56d42ea172252cb0ec79d16921e7c1202dfe41305acfe954207d9bef2a86b9e0",
+  "scope": "Actual broker admission/cleanup, controlled worker and post-response residency observations; no IPC/GPU/model execution",
+  "control": {
+    "delegated_before_waiter": true,
+    "delegated_after_waiter": true,
+    "active_first_reservation_after_waiter": true,
+    "busy_after_waiter": 1,
+    "first_result": {
+      "result": {
+        "ok": true
+      },
+      "lifecycle": {},
+      "runtime": {
+        "queue_seconds": 4.818199977307813e-05,
+        "admitted_seconds": 8.516800016877824e-05
+      }
+    },
+    "pending_after_completion": 0,
+    "busy_after_completion": 0
+  },
+  "waiter_times_out": {
+    "delegated_before_waiter": true,
+    "waiter_error": {
+      "type": "TimeoutError",
+      "message": "worker queue admission timed out before submission"
+    },
+    "delegated_after_waiter": false,
+    "active_first_reservation_after_waiter": true,
+    "busy_after_waiter": 1,
+    "first_error": {
+      "type": "TypeError",
+      "message": "'NoneType' object is not subscriptable"
+    },
+    "pending_after_completion": 0,
+    "busy_after_completion": 0
+  }
+}

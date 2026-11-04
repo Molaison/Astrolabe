@@ -1,0 +1,25 @@
+{
+  "exception": "DispatchReached",
+  "message": "controlled client boundary reached; no scientific worker ran",
+  "kind": "real_control_plane_waits_with_controlled_worker_boundary",
+  "scientific_worker_executed": false,
+  "gpu_executed": false,
+  "repository": "/workspace/scratch/1a0b1639644d/cloud-20261104/baseline",
+  "commit": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "request_timeout_seconds": 1.0,
+  "elapsed_seconds": 1.3013277019999805,
+  "pending_wait_seconds": 0.6003846359999443,
+  "dispatched": true,
+  "dispatches": [
+    {
+      "monotonic": 2661.361848009,
+      "worker_timeout": 0.001,
+      "seconds_after_queued_event": 1.3010844469999938
+    }
+  ],
+  "busy": 0,
+  "waiting": 0,
+  "request_reservation_retained": false,
+  "same_request_id_rejected": true,
+  "pending_after_cleanup": 0
+}

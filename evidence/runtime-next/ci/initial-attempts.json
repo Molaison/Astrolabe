@@ -1,0 +1,31 @@
+{
+  "scope": "actual GitHub-hosted CPU workflow attempts; no GPU execution",
+  "attempts": [
+    {
+      "head": "68888f805488b3bece3a4204fe10b02efd00300e",
+      "run_id": 41759696271,
+      "url": "https://github.com/Molaison/Astrolabe/actions/runs/41759696271",
+      "status": "FAILED_BEFORE_JOB",
+      "annotation": "(Line: 23, Col: 31): Unrecognized named-value: 'runner'. Located at position 1 within expression: runner.temp",
+      "correction_head": "4358cc32548eb8913a19eb7958904966d54bf030"
+    },
+    {
+      "head": "4358cc32548eb8913a19eb7958904966d54bf030",
+      "run_id": 41760013668,
+      "job_id": 126345227198,
+      "url": "https://github.com/Molaison/Astrolabe/actions/runs/41760013668",
+      "status": "FAILED_REGRESSION_GATE",
+      "preflight": "DONE",
+      "passed": 220,
+      "failed": 4,
+      "skipped": 0,
+      "benchmark_trials_executed": 0,
+      "cause": "Fixture child processes could not import the uninstalled checkout (ModuleNotFoundError: astrolabe).",
+      "raw_log": "first-regression-failure.log",
+      "artifact_id": 13289578654,
+      "artifact_sha256": "f1360bd934e41179eee4c6cbaad0823e8815898f66c150cd56c192a970578749",
+      "correction_head": "6620da607e66d569eed802057d77b0fbfa9c37b4"
+    }
+  ],
+  "performance_claim": "None. Neither failed attempt executed the frozen timed workload."
+}
