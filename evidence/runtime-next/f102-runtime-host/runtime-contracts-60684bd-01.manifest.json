@@ -1,0 +1,1338 @@
+{
+  "files": [
+    {
+      "path": "command.json",
+      "bytes": 1429,
+      "sha256": "c6e5eb6eb88308aa15b2d0ba4e88e452aa9895acc377478aed9be8ce9c0a2a2e"
+    },
+    {
+      "path": "junit.xml",
+      "bytes": 43265,
+      "sha256": "910708fde0f3a47c15c73c2e3f28c8f3c5edb4e72d4d76e1231fde097ae0086a"
+    },
+    {
+      "path": "preflight.json",
+      "bytes": 1362,
+      "sha256": "8892d79438c380a9c89d54a5fdc2a7a7df251833d2682e2ed734bdeae63225ca"
+    },
+    {
+      "path": "process-report.json",
+      "bytes": 55090,
+      "sha256": "5e62c50a0a5de7d98b5363d9340f1df96ae4accc0ea054cc099cfacf4d0fd566"
+    },
+    {
+      "path": "provenance.json",
+      "bytes": 846,
+      "sha256": "e7914ad2f10508797c28510f88f0e2a2856f583ecf9614cc8517e7f3ef18ea68"
+    },
+    {
+      "path": "report.json",
+      "bytes": 1368,
+      "sha256": "799b086038da8a8b3e6675b033794aec346799a9f010b050fa7f12dd0eb0eae5"
+    },
+    {
+      "path": "process/runtime.jsonl",
+      "bytes": 222502,
+      "sha256": "6c043c40a6fd1f3c86401d990b795f6578ec7e0ba6d1f4ce32969bfe1c01e8b0"
+    },
+    {
+      "path": "process/stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "process/stdout.log",
+      "bytes": 1053,
+      "sha256": "bfc145da7e1bbbe69b752fe6efbbf5aa1b86903cfa9416919f46bfab15d59a48"
+    },
+    {
+      "path": "process/telemetry.jsonl",
+      "bytes": 142420,
+      "sha256": "89fa457c666e2181446d476e18372cfd81b09a71c6d16a582b7257988d1187b4"
+    },
+    {
+      "path": "pytest-temp/test_pending_and_compute_waits0/trace.jsonl",
+      "bytes": 1844,
+      "sha256": "379194614518a83dd74697da592957be0b33adecf795c02487d13743b99816f3"
+    },
+    {
+      "path": "pytest-temp/test_required_suite_skip_reaso0/junit.xml",
+      "bytes": 173,
+      "sha256": "dd57702e205749f28355f83f5969734c022d11e254278ecf39eb523ad1892dc5"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/events.jsonl",
+      "bytes": 4934,
+      "sha256": "4aeda0df1d861883814976b017643316c625e1e85cfd7ad7076f5e8071bc8c87"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/finish_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/nested_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/producer-ready",
+      "bytes": 8,
+      "sha256": "d1990f97a1f4fe7b8e86da8c03c9dd3f7d536c14aa4a6f9eedab07f34cd961b0"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/producer_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/ready-0",
+      "bytes": 36,
+      "sha256": "edc825db7dec88f83661d1b9102bc22d8d62670980e39c13f18063505a8a5728"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/ready-1",
+      "bytes": 36,
+      "sha256": "d096d17a796ad4da867b409f8eac65af3a54b3b0f84b50e8582055e26ef45c4d"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/ready-2",
+      "bytes": 36,
+      "sha256": "5c495a026691483cd010c7f75f7a56442dd87325c219cdb8944bc43652619fbf"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/ready-3",
+      "bytes": 36,
+      "sha256": "3459059a50ca36dff9a9b6cf01e39d812c09fa2d6b66fcf74dd03b013cecc565"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/ready-4",
+      "bytes": 36,
+      "sha256": "f25d5e5a8d0862f64943e6842c4631101cc69cce0bac722aebbf9f9a543065a8"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/ready-5",
+      "bytes": 36,
+      "sha256": "ee83672201bf1401741418581cb6d4e1acf097148a19b754ae1162de4dad41a5"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/ready-6",
+      "bytes": 36,
+      "sha256": "1c7da49889e87f684fe1757e4b86c833711ca2073bba00e8fd7941193e491f8d"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/ready-7",
+      "bytes": 36,
+      "sha256": "f3eadee59a1e7d6576c70d6101dbb9078cfcc7739a79cbe83905b46ef264c39b"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/result.json",
+      "bytes": 10823,
+      "sha256": "9e1935c45fd545b3667740af6c276cf47e4c22097c84af2bbceb11395e556be7"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/scenario.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/scenario.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/survivor_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_ready_candidates_two_eval0/target_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_entry_lock_wait_consumes_0/trace.jsonl",
+      "bytes": 852,
+      "sha256": "5f6668b1ced6ce693fb6d18839ace2109c8d822f422f24c0648c6a18119deb7d"
+    },
+    {
+      "path": "pytest-temp/test_existing_evidence_is_neve0/already-measured.json",
+      "bytes": 8,
+      "sha256": "0682c5f2076f099c34cfdd15a9e063849ed437a49677e6fcc5b4198c76575be5"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_d1/base.yaml",
+      "bytes": 233,
+      "sha256": "6b5d2a10b969fbf0858ad10d1ec61ac5eed32b9c983f2ddc2d231bf9b49c0d66"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_d1/out/candidate_pool/cand_0002/config.yaml",
+      "bytes": 249,
+      "sha256": "f0bfa688e088a8d2929b08630d44353f51e1f9473cfc000ba42c9787e0daa2f4"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_d1/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 249,
+      "sha256": "95a5fbb6078b5dd8cd57c891c7ea2a166b0dc08ea28da3c33e6fa0dbd667bdb9"
+    },
+    {
+      "path": "pytest-temp/test_lingering_child_invalidat0/child.pid",
+      "bytes": 7,
+      "sha256": "b08c5afebd90858c5057334304aff500264ecf40d108d34240338abbe9349ea3"
+    },
+    {
+      "path": "pytest-temp/test_lingering_child_invalidat0/parent.exit",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/run.yaml",
+      "bytes": 912,
+      "sha256": "49f6a3a6bea66e5b8219cffa809af6104706475a55b238859f23b9f957e68dda"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/false/runtime_smoke/runs.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/false/runtime_smoke/001_run/config.yaml",
+      "bytes": 16686,
+      "sha256": "f463fd60b4ce69b54e55bec9307eea7f673c4b3d6e42e452fd5beaf864cc4c80"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/false/runtime_smoke/001_run/provenance.json",
+      "bytes": 2132,
+      "sha256": "52ffe6ac2e70d27cae45d797c3d6c786a63609e1336a5404daa86c79beab617b"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/false/runtime_smoke/001_run/scores.csv",
+      "bytes": 846,
+      "sha256": "97c7bd2fcdc4a537cc5fb70ddf89d17360dbac55064faeaea9a3d8de210f4b7f"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/false/runtime_smoke/001_run/logs/debug.log",
+      "bytes": 8665,
+      "sha256": "4b9d71d4e479e0902836dec72f794e68d9f2c2a05893ab1f4db925922dd4b549"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/false/runtime_smoke/001_run/logs/info.log",
+      "bytes": 7123,
+      "sha256": "c08e2915c1a0aae8ada91103e388ccb54875f0251c1c44b9180ca3c1cf2f140a"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/true/runtime_smoke/runs.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/true/runtime_smoke/001_run/config.yaml",
+      "bytes": 16684,
+      "sha256": "3b27da9f2b010be0e782e60976b7c9affee5ccfad4b7459829f86eda2959b629"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/true/runtime_smoke/001_run/provenance.json",
+      "bytes": 2131,
+      "sha256": "7e010e7c2f944028d9eae3ab39bafead8ae77ae31f034693cb21e8a4c069ee75"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/true/runtime_smoke/001_run/scores.csv",
+      "bytes": 846,
+      "sha256": "97c7bd2fcdc4a537cc5fb70ddf89d17360dbac55064faeaea9a3d8de210f4b7f"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/true/runtime_smoke/001_run/logs/debug.log",
+      "bytes": 8665,
+      "sha256": "d1fdebf216504c4274cfd1b784308628a19bb51b5aface37e28c1f0fa00140bb"
+    },
+    {
+      "path": "pytest-temp/test_cli_isolated_repeat_match0/true/runtime_smoke/001_run/logs/info.log",
+      "bytes": 7123,
+      "sha256": "477fde5a7de32056dd2a8d73c64c42dbeb92468eef7dbeb6c8675be8c09325eb"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_0/base.yaml",
+      "bytes": 215,
+      "sha256": "2c931244c90e4685079296a291919b747222a1cc0707c5090ec904b1156d72be"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_0/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 231,
+      "sha256": "ca30d12fe7a900ee12f7c14e710d611c515eb0cbb6e5057041372805562378e2"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_0/out/candidate_pool/cand_0001/stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_0/out/candidate_pool/cand_0001/stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_0/out/base__g001__cand_0001/scores.csv",
+      "bytes": 57,
+      "sha256": "92de09435c9f1fef43a2a645d983166511cd088de8304a5013b52284093498cc"
+    },
+    {
+      "path": "pytest-temp/test_live_deadline_preserves_d0/trace.jsonl",
+      "bytes": 2491,
+      "sha256": "1213086de4bcbc131add4a2aabc930fa92009587be2078a44abab13fb228ef88"
+    },
+    {
+      "path": "pytest-temp/test_guardian_retains_owner_af0/astrolabe-gpu-owners-7054/902f9ff64003ae9d78eaff9dd5282ff0ba439fd41721d476197a953f62529c02.lock",
+      "bytes": 88,
+      "sha256": "d16f59abc6885457e53c2470f5031e1003c93d3273775a22d665db8accbaf89a"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/a-ready",
+      "bytes": 13,
+      "sha256": "c6c02378b79fad5a288c4bd9d1cbcf24d548b1a7af79341b406a4f90b31d51ae"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/b-ready",
+      "bytes": 15,
+      "sha256": "88dffce2ec0c778427b554326c86268995439b6248c41447dc28c41041793373"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/events.jsonl",
+      "bytes": 1606,
+      "sha256": "34f5e12f5b8e1b272fb1d530652e489a1233776e77131c1a028125ee57f5de5f"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/finish_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/nested_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/producer_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/result.json",
+      "bytes": 4769,
+      "sha256": "d364e066f8c16d6ffba853d79a6b3793e867e63b251ef8dd75b8674ebae1326d"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/scenario.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/scenario.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/survivor_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_pending_cancel_preserves_0/target_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_device_probe_uses_same_ad0/device-events.jsonl",
+      "bytes": 256,
+      "sha256": "c3ff3c383fd4d0552a0a6b2d7c7e78a837e0a754d3097de9f1155797d03438a9"
+    },
+    {
+      "path": "pytest-temp/test_session_exit_interrupts_a0/probe-started",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_physical_ownership_surviv0/astrolabe-gpu-owners-7054/f14a320f942da85d80ad0fa4a67b3d8ed5bfe9c9090686767bbef044eae710a5.lock",
+      "bytes": 87,
+      "sha256": "38566f9fd5b7f754327ad947d411dd30cc2f06d17d52ce3702e2f2a211354e23"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_output_0/out/candidate_task/001_run/scores.csv",
+      "bytes": 93,
+      "sha256": "728a429c3c53ddc9940f4162e5dd1c3ad3a78db5559fb4565825de8413a88d28"
+    },
+    {
+      "path": "pytest-temp/test_benchmark_preserves_per_r0/workload.yaml",
+      "bytes": 80,
+      "sha256": "a00560aa1c2a383b00cdef2a87efaaf4dd52e1effbfb9cad4f49434bfe78c7bb"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_d0/base.yaml",
+      "bytes": 232,
+      "sha256": "4fe66e84c046abe213072b832f8efae34a91209a35f139f215c2256cf5f996e9"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_d0/out/candidate_pool/cand_0002/config.yaml",
+      "bytes": 248,
+      "sha256": "935df1c02c60aa6e347fc5039edb8d777f31a4251b8535b0371c71adc9b38f54"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_d0/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 248,
+      "sha256": "d5fa13296423a4bb009204f5fd9ed6f6ad50fa8efaf11a05976dacd7d513861c"
+    },
+    {
+      "path": "pytest-temp/test_output_roots_account_job_0/artifacts/input",
+      "bytes": 2,
+      "sha256": "6b51d431df5d7f141cbececcf79edf3dd861c3b4069f0b11661a3eefacbba918"
+    },
+    {
+      "path": "pytest-temp/test_output_roots_account_job_0/outputs/nested/result",
+      "bytes": 7,
+      "sha256": "8bb0cf6eb9b17d0f7d22b456f121257dc1254e1f01665370476383ea776df414"
+    },
+    {
+      "path": "pytest-temp/test_output_roots_account_job_0/cache/existing",
+      "bytes": 10,
+      "sha256": "c775e7b757ede630cd0aa1113bd102661ab38829ca52a6422ab782862f268646"
+    },
+    {
+      "path": "pytest-temp/test_output_roots_account_job_0/cache/new",
+      "bytes": 5,
+      "sha256": "5994471abb01112afcc18159f6cc74b4f511b99806da59b3caf5a9c173cacfc5"
+    },
+    {
+      "path": "pytest-temp/test_unknown_dispatched_outcom0/trace.jsonl",
+      "bytes": 2529,
+      "sha256": "9824afc706d0bab9812959438b34af2a5a40af8da2c21af1a2507f770ff2093f"
+    },
+    {
+      "path": "pytest-temp/test_expiry_retires_waiting_co1/trace.jsonl",
+      "bytes": 2476,
+      "sha256": "33a025087860a80bf9bb9160c8522e74b4f3683bc6c3fb560eaff16825a8f2ed"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_cli_inval0/bad.yaml",
+      "bytes": 13,
+      "sha256": "810630f9d467605fcf65af8e241fba05ee166018b70ea5581b6483a031a0067f"
+    },
+    {
+      "path": "pytest-temp/test_rosetta_reference_cache_t0/ligand.params",
+      "bytes": 9,
+      "sha256": "f56e1ef730fffe931a2aae1570e45325f6c0c3a67030d430623e7b2d07a2b368"
+    },
+    {
+      "path": "pytest-temp/test_rosetta_reference_cache_t0/reference.pdb",
+      "bytes": 6,
+      "sha256": "16367aacb67a4a017c8da8ab95682ccb390863780f7114dda0a0e0c55644c7c4"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_n0/base.yaml",
+      "bytes": 215,
+      "sha256": "d16079ebd84cb93dc187cede575a818900b296a61c3356bb3059f7d8c705796d"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_n0/out/candidate_pool/cand_0002/config.yaml",
+      "bytes": 231,
+      "sha256": "5b45c27e14f5cbb83fd3d3c3a8197cc0f3673756bc086e7b98a497dc70249dc6"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_n0/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 231,
+      "sha256": "aa09b2490efcddfd3f455c5fa5d1f75c7515711d74477d59c578ab34ce0fa642"
+    },
+    {
+      "path": "pytest-temp/test_slow_telemetry_does_not_e0/stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_slow_telemetry_does_not_e0/stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_slow_telemetry_does_not_e0/telemetry.jsonl",
+      "bytes": 135,
+      "sha256": "be61786a40aca559bba216e31bb492ef62a220dd29b3efeef5bb973927222478"
+    },
+    {
+      "path": "pytest-temp/test_resident_and_scratch_budg0/astrolabe-gpu-owners-7054/4805ea4f627927b3b13672af855b49eff568456640f719fa443566f7f5af0441.lock",
+      "bytes": 88,
+      "sha256": "f8031672eaec24b9a38c1c79e41f10b09bb3ca94c26ee5b795e1493d0d25149b"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_main_dry_1/base.yaml",
+      "bytes": 215,
+      "sha256": "3223b65cdff84f8ac77d91375cda31166fc7c4a9e09418cffc2d93d75cf93eec"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_main_dry_1/out/candidate_pool/cand_0002/config.yaml",
+      "bytes": 231,
+      "sha256": "97a3fe985609ca0fbc46c325bf0af00491338438349cebbae1a4ed86b136d944"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_main_dry_1/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 231,
+      "sha256": "5ec187ea6f670f45500651cae3ec9c7e5e58af6c756a1a0b2315a5499ee0eeed"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_n1/base.yaml",
+      "bytes": 215,
+      "sha256": "2ee1759e9f1197eff3bd8b83abc4fe09796272558c5f45affca0335b2535efa4"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_n1/out/candidate_pool/cand_0002/config.yaml",
+      "bytes": 231,
+      "sha256": "d0d0e49ff17c3a957b15a9b3687e681afd0798d154c0c0254a63fe7ef6a5b16a"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_n1/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 231,
+      "sha256": "d40049afbefdfa7bd863fa142741277d52b3d36fd79c52205eacd361b5f7c189"
+    },
+    {
+      "path": "pytest-temp/test_live_deadline_preserves_d1/trace.jsonl",
+      "bytes": 2491,
+      "sha256": "425319266ace3ed824cfa9c79fa271325b1c9a01ba3840a88af4480d37721960"
+    },
+    {
+      "path": "pytest-temp/test_source_identity_covers_un0/astrolabe/new_worker.py",
+      "bytes": 10,
+      "sha256": "3da6c4b355804b265ecef19dfe5945fe2790a8cc38dc9d0547fb1634c94cbbe7"
+    },
+    {
+      "path": "pytest-temp/test_expiration_after_compute_0/trace.jsonl",
+      "bytes": 2445,
+      "sha256": "66d98b47b73c8a81bade09e6ed095ec5a0a4295aaff63fc395d1738836358dc8"
+    },
+    {
+      "path": "pytest-temp/test_parent_exit_interrupts_ac0/events",
+      "bytes": 85,
+      "sha256": "2b3a2481ab1a12105f8fd8bcbcbe5dc043e73a3a8c644c0fcedfba420345cdfa"
+    },
+    {
+      "path": "pytest-temp/test_parent_exit_interrupts_ac0/outcome",
+      "bytes": 14,
+      "sha256": "2b08ccd3890760729f716cdfc34e07de09c83fce12c4f1d7d5b0d4d633fdbe05"
+    },
+    {
+      "path": "pytest-temp/test_run_optimization_loop_pre0/scores.csv",
+      "bytes": 339,
+      "sha256": "9919d4df591e10e5a37bd8c735a5012f390b0d7c8c90f6a7016e2a7a04d201eb"
+    },
+    {
+      "path": "pytest-temp/test_torch_contract_summary_do0/summary.json",
+      "bytes": 92,
+      "sha256": "837d90608b78fc82b4e96804a75037b900553aa3f3475810b8257f1de09a0c9e"
+    },
+    {
+      "path": "pytest-temp/test_torch_contract_summary_do0/summary.md",
+      "bytes": 688,
+      "sha256": "aaa32c6c4b06cb69217020cd42ea896ac58d6481454d1784c394dd4cd26f70c5"
+    },
+    {
+      "path": "pytest-temp/test_torch_contract_summary_do0/regressions/report.json",
+      "bytes": 17,
+      "sha256": "2aee3a305e1ebeb100782ba578b0a3aeb0a7fae2fef3e9e917dd04323bc89076"
+    },
+    {
+      "path": "pytest-temp/test_torch_contract_summary_do0/preflight/report.json",
+      "bytes": 17,
+      "sha256": "2aee3a305e1ebeb100782ba578b0a3aeb0a7fae2fef3e9e917dd04323bc89076"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/events.jsonl",
+      "bytes": 5364,
+      "sha256": "e17bb51af3e12cb094016b87a3b3d2ae2e1adf6216f876148d567ef758bd5947"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/first-owner",
+      "bytes": 7,
+      "sha256": "13e0bc561cdceaa9222488b2ec114f1f11a1e266ce3764bdf39bc7bcd33d3e5f"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/paired-cpu-finished",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/parallel.yaml",
+      "bytes": 916,
+      "sha256": "155e0f218c7a2ddc30980b133c1e703a35e22be0f38735363870d86cbac816f7"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/peer-forward-started",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/trace.jsonl",
+      "bytes": 268223,
+      "sha256": "43060e24359a6e449d2ff3ce0189a5889863a739de0f13559d08b94b1aa99e07"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/runs.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/001_run/config.yaml",
+      "bytes": 16686,
+      "sha256": "2dee5a5c1119a9d62d0ad63310d4e07c6458290086b029546646c20e0fa092b5"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/001_run/provenance.json",
+      "bytes": 2136,
+      "sha256": "b143e5aa4a6d9ae7ddd1d1017df53440330f6638414b534f3339c00bbbfc5676"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/001_run/scores.csv",
+      "bytes": 1275,
+      "sha256": "0119eb69c909283365958a4c659cf487e4b796854fa833468ee19487b273232b"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/001_run/logs/debug.log",
+      "bytes": 26526,
+      "sha256": "c13795709446b3bb622eb9262ef10343c6c4ac724be2f999680922718488802f"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/001_run/logs/info.log",
+      "bytes": 20808,
+      "sha256": "b12d1711c16b09090fcf70e023f1df03d55b3e21c6596c7f1b976e1521c47b80"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/002_run/config.yaml",
+      "bytes": 16686,
+      "sha256": "9a141ae9d9adec2a85e9bf71e17a71dd59ac09a1ad2ee8a168c708d5cd2dae5d"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/002_run/provenance.json",
+      "bytes": 2136,
+      "sha256": "1448b2fd8dae12041490501cc35f4bb6f9f4e624befac3612c181c180b3bfd40"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/002_run/scores.csv",
+      "bytes": 1275,
+      "sha256": "74432dbde7a19d25047eedb5b86935926b25a8190eefefbb4268aa87d24e4ca2"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/002_run/logs/debug.log",
+      "bytes": 26526,
+      "sha256": "470999cdf11e4bdace18bf6f011f4ea7f7da430d659928922f3ca49eb7e91759"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/runtime/parallel_smoke/002_run/logs/info.log",
+      "bytes": 20808,
+      "sha256": "69d0d977f7e11a94d26d2fffdfe2da6b4c3e217c1b12b158d114d33b2f0f0732"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/runs.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/001_run/config.yaml",
+      "bytes": 16684,
+      "sha256": "6f0e25e887dec65e8f388024aa2aeb120f21806d5dc01296be1d59f1833e5172"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/001_run/provenance.json",
+      "bytes": 2135,
+      "sha256": "29c636b610bbd6c07a3cbf9d5f6715f1d7c82fec99d6206d260d96d594cccc34"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/001_run/scores.csv",
+      "bytes": 1275,
+      "sha256": "0119eb69c909283365958a4c659cf487e4b796854fa833468ee19487b273232b"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/001_run/logs/debug.log",
+      "bytes": 27630,
+      "sha256": "e3e2a0d3c8b68bc2109816f9b1a0f012e8c358a2428a851610713f4382efb2a1"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/001_run/logs/info.log",
+      "bytes": 20794,
+      "sha256": "9f241a83215a2b00fc7942ae5df48a43439158929ccf30e11414907bc294f784"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/002_run/config.yaml",
+      "bytes": 16684,
+      "sha256": "a140611384fb90b053ffd720bfdaef877a4a2fb45c5962cebfe9b224e3e22af6"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/002_run/provenance.json",
+      "bytes": 2135,
+      "sha256": "5b60497b946e4d5b9c432050aaeb3a152704aa2ade2809139fcd737bf739b8f8"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/002_run/scores.csv",
+      "bytes": 1275,
+      "sha256": "74432dbde7a19d25047eedb5b86935926b25a8190eefefbb4268aa87d24e4ca2"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/002_run/logs/debug.log",
+      "bytes": 26510,
+      "sha256": "5180659c75e4d8d3844b76ea178e479067fd09fc002256ee72a802d5cb0f3f0c"
+    },
+    {
+      "path": "pytest-temp/test_real_cli_parallel_repeat_0/legacy/parallel_smoke/002_run/logs/info.log",
+      "bytes": 20792,
+      "sha256": "3d67cb9a8f40d14dbfd76f4c538371b5123fc9f45d87ac5e34ba6deb0c66ddda"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_1/base.yaml",
+      "bytes": 215,
+      "sha256": "701608bc745129f612da608eecaecc789f4b7576e13cd54056a0c2e2ff4a5ad9"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_1/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 231,
+      "sha256": "4e7c7b468855ec95a13dc1477e2b5b8d4536384ea20094cc098fb112fe230885"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_1/out/candidate_pool/cand_0001/stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_worker_1/out/candidate_pool/cand_0001/stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_repeated_or_wrong_scienti0/results/duplicate_run/provenance.json",
+      "bytes": 62,
+      "sha256": "f785808a406e1932f7ea8683ed919a24c2b7ba5e427f14caed1fe28f9a45e4d9"
+    },
+    {
+      "path": "pytest-temp/test_repeated_or_wrong_scienti0/results/duplicate_run/scores.csv",
+      "bytes": 21,
+      "sha256": "dab5d4b5fdf68d053e416aaa6b7d2c784d20e85f7dee76f0d9e5e2e915f6fe38"
+    },
+    {
+      "path": "pytest-temp/test_repeated_or_wrong_scienti0/results/one_run/provenance.json",
+      "bytes": 62,
+      "sha256": "f785808a406e1932f7ea8683ed919a24c2b7ba5e427f14caed1fe28f9a45e4d9"
+    },
+    {
+      "path": "pytest-temp/test_repeated_or_wrong_scienti0/results/one_run/scores.csv",
+      "bytes": 21,
+      "sha256": "dab5d4b5fdf68d053e416aaa6b7d2c784d20e85f7dee76f0d9e5e2e915f6fe38"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/events.jsonl",
+      "bytes": 1018,
+      "sha256": "c6a840dd91ed4136d75e4decfd4e6ab4291fcd0a1d5988df8267e98657e716ec"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/finish_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/nested_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/producer_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/result.json",
+      "bytes": 408,
+      "sha256": "6a5c96bb118c18a2f685046464b5e93f3419627bf99147693eb3fc1504cc73b4"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/scenario.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/scenario.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/survivor_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_deterministic_application0/target_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_bad_or_excessive_trace_is0/trace.jsonl",
+      "bytes": 53,
+      "sha256": "0ee6348b095e054e1827029a3a84860ce205d4ae84bbf5b753f47d2e405b1c1c"
+    },
+    {
+      "path": "pytest-temp/test_request_artifacts_survive0/request-sbmmgnex/input",
+      "bytes": 31,
+      "sha256": "cfdb82483f7740078aebe3b010c11ff4aa620e0ac7a3467162d731899352b327"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_output_1/out/candidate_task/001_run/scores.csv",
+      "bytes": 59,
+      "sha256": "77eaad51a0ccb6935b4d5b02ea1ad35ade2df24d7dd10b0419dff76d4bdb36e9"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_output_1/out/candidate_task/002_run/scores.csv",
+      "bytes": 59,
+      "sha256": "86ebfc81c3ed62591dd8396baa026957e0aaf08198543dec2e6f56dc883da418"
+    },
+    {
+      "path": "pytest-temp/test_waiter_cannot_clear_the_r1/trace.jsonl",
+      "bytes": 3132,
+      "sha256": "ca6ce62753558b8fbd935b614f6e299faddde92699c96c8bf19f30cca4fe572e"
+    },
+    {
+      "path": "pytest-temp/test_observed_direct_coordinat0/1.pdb",
+      "bytes": 79,
+      "sha256": "726740321b1667e191cfaca919adc86debe6d7e1eab5b542ca55d404e061f3e9"
+    },
+    {
+      "path": "pytest-temp/test_observed_direct_coordinat0/2.pdb",
+      "bytes": 79,
+      "sha256": "1fd41ea6e91c35c55ddd224d87ef9d54dfa0e621b6865f61475f36a7ff08332f"
+    },
+    {
+      "path": "pytest-temp/test_observed_direct_coordinat0/3.pdb",
+      "bytes": 79,
+      "sha256": "6b6afb38d19404c60b1051709f407ea45812bf1febfdef5f7eddde689a924ea1"
+    },
+    {
+      "path": "pytest-temp/test_observed_direct_coordinat0/4.pdb",
+      "bytes": 79,
+      "sha256": "6c1a808213030a99e41f73d7646aa6bbeb6c3150769d9d7198e3713df0812a30"
+    },
+    {
+      "path": "pytest-temp/test_observed_direct_coordinat0/5.pdb",
+      "bytes": 79,
+      "sha256": "7a3b2630a4bcf649da4a53333c7fdf67d279215fd400233ef5e8e039918a5f74"
+    },
+    {
+      "path": "pytest-temp/test_guarded_launch_registers_0/astrolabe-gpu-owners-7054/c154ce44117242d6397fd9d1e3db2b164dcf059eb639332fb40b9e535f1396b6.lock",
+      "bytes": 89,
+      "sha256": "7843b9abe7f4b1144696a917e721f780c62fdda7b957f5ab5449e7289a86cab8"
+    },
+    {
+      "path": "pytest-temp/test_waiter_cannot_clear_the_r0/trace.jsonl",
+      "bytes": 2127,
+      "sha256": "b47f434b2907af5d757fdf414f6a9e12c5b397c7695fd3f1b3c5d0cc66194f4c"
+    },
+    {
+      "path": "pytest-temp/test_request_resources_include0/arrays.npz",
+      "bytes": 123,
+      "sha256": "8e73e16d08a10ff853f3816d10ba58821e1e9230973a7f320867bd0dde5b30c6"
+    },
+    {
+      "path": "pytest-temp/test_request_resources_include0/input.json",
+      "bytes": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    {
+      "path": "pytest-temp/test_auto_limit_uses_affinity_0/cpu.max",
+      "bytes": 13,
+      "sha256": "55c992fc04d8ecad32bddcadc2e10e5f3d375fdfc339142147b5f9a1b55e3fe9"
+    },
+    {
+      "path": "pytest-temp/test_best_score_row_prefers_ac0/scores.csv",
+      "bytes": 93,
+      "sha256": "728a429c3c53ddc9940f4162e5dd1c3ad3a78db5559fb4565825de8413a88d28"
+    },
+    {
+      "path": "pytest-temp/test_owner_hides_gpu_broker_pr0/probe.jsonl",
+      "bytes": 96,
+      "sha256": "9689f4354cff4a6659b73c8b03f91fb3e52d791e122d34298b9bebae02a2f3f0"
+    },
+    {
+      "path": "pytest-temp/test_trace_and_scientific_rows0/runtime.jsonl",
+      "bytes": 9,
+      "sha256": "90801d4bc35f12b2a50a3a4fac96da0f3961980480459e6226c43803a7c56f74"
+    },
+    {
+      "path": "pytest-temp/test_file_content_and_symlink_0/other.pdb",
+      "bytes": 7,
+      "sha256": "ae448ac86c4e8e4dec645729708ef41873ae79c6dff84eff73360989487f08e5"
+    },
+    {
+      "path": "pytest-temp/test_file_content_and_symlink_0/reference.pdb",
+      "bytes": 7,
+      "sha256": "ae448ac86c4e8e4dec645729708ef41873ae79c6dff84eff73360989487f08e5"
+    },
+    {
+      "path": "pytest-temp/test_external_stop_cleans_obse0/child.pid",
+      "bytes": 7,
+      "sha256": "008d474c94e9117ef22561ac5a9a9424b28d2b08e6fba18ff6c8b8705ba60a5d"
+    },
+    {
+      "path": "pytest-temp/test_allocated_devices_are_iso0/parallel.jsonl",
+      "bytes": 312,
+      "sha256": "0202e74d9537b657c040f21e759f542e2f69a4b7d7543fcc0f9450fe9068d0f7"
+    },
+    {
+      "path": "pytest-temp/test_allocated_devices_are_iso0/probe",
+      "bytes": 96,
+      "sha256": "a6e25a333e418b56563aca5e1f443fefeea644106efb03626cd19f703aa8c4fb"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_l0/base.yaml",
+      "bytes": 215,
+      "sha256": "c60198785f31fd590984703cfc4fa20c7c8bee35a2a8501637e3295094fb060f"
+    },
+    {
+      "path": "pytest-temp/test_expiry_retires_waiting_co0/trace.jsonl",
+      "bytes": 2175,
+      "sha256": "d7b70ae3a04e9e120f05cb7e72050e99cf910799db2b2c3b3b98005c07cfa0be"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_r0/base.yaml",
+      "bytes": 215,
+      "sha256": "86ecef0f8961a7aca65c1e1f518bc45cc32b850da7b1dd5d1794ad5e6ad4639d"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_r1/base.yaml",
+      "bytes": 215,
+      "sha256": "0eccff0ae35fc5730366c74a6b86b38e461c2d74b37845dc614201126c240997"
+    },
+    {
+      "path": "pytest-temp/test_trajectory_preference_dri0/probe-log",
+      "bytes": 384,
+      "sha256": "c5c467aa5e779ebf967279f5c771ef0968c5a456ecb5aa01ee5ee2c9c18d3786"
+    },
+    {
+      "path": "pytest-temp/test_begin_seed_transition_gat0/source_a.pdb",
+      "bytes": 7,
+      "sha256": "b8bb034f9b63bd0254fbc7c157cae746c75853f4643d6cea844dc48ddb57f522"
+    },
+    {
+      "path": "pytest-temp/test_begin_seed_transition_gat0/transition_gate/step_007_default_to_stage_1/source_stage/A_model.pdb",
+      "bytes": 7,
+      "sha256": "b8bb034f9b63bd0254fbc7c157cae746c75853f4643d6cea844dc48ddb57f522"
+    },
+    {
+      "path": "pytest-temp/test_broker_serializes_distinc0/forward.jsonl",
+      "bytes": 312,
+      "sha256": "88ac26333a7cc4405098abd35cef49b0d99f16c94ecc16b045385982e64c8387"
+    },
+    {
+      "path": "pytest-temp/test_process_candidate_batch_u0/base.yaml",
+      "bytes": 215,
+      "sha256": "94dc2d66e2b053a25186d898655381d02130540cc73e7e9be30cabd1c80e6dcd"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_main_dry_0/base.yaml",
+      "bytes": 215,
+      "sha256": "79ed7a08250f3cd98cd2355ec28ba6f40217b2689705b945f90eba81a5889322"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_main_dry_0/out/candidate_pool/cand_0002/config.yaml",
+      "bytes": 231,
+      "sha256": "022fcb69af108fea6712fff3f34e229833de00caa16d5268c5bd9d633fdb2e03"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_main_dry_0/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 231,
+      "sha256": "a2bb7a837e3e14e05b02f1872079880e158d3da6cad2e2715ad2d85fac5811d7"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_cli_comma0/base.yaml",
+      "bytes": 215,
+      "sha256": "aaf212844072abe6c7fb7f3494e5732199612f41c3d9d9d026463e3fb0f2f0d6"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_cli_comma0/out/candidate_pool/cand_0002/config.yaml",
+      "bytes": 231,
+      "sha256": "83ba28b95a966de4196b1bf70f3811711f6d03fdff71ae5102737026b0cb6c3e"
+    },
+    {
+      "path": "pytest-temp/test_candidate_batch_cli_comma0/out/candidate_pool/cand_0001/config.yaml",
+      "bytes": 231,
+      "sha256": "710fac060188ac39997293cdbe6c6d14d8a4db31dae3aa4b1cf7451774d94d10"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/finish_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/nested_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/producer_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/result.json",
+      "bytes": 440,
+      "sha256": "03e8bc62cab6559ba1061e3ea4d580ffc46e5d0c9829bac93876ab3a6e3d43c9"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/scenario.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/scenario.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/survivor_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_control_socket_lane_rejec0/target_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_composite_time_unknown_re0/trace.jsonl",
+      "bytes": 800,
+      "sha256": "3bca8ae9f1660b622799ce2390b9eeea7663fb97b7dc9a0a9724d5795a5aab07"
+    },
+    {
+      "path": "pytest-temp/test_entry_lock_wait_consumes_1/trace.jsonl",
+      "bytes": 2490,
+      "sha256": "865aba97ea7ab4a431f78343921c5546ea3f0ce7f2b1d5c07dfb9eca24687b09"
+    },
+    {
+      "path": "pytest-temp/test_esmfold2_keeps_native_fol0/A_model.cif",
+      "bytes": 18,
+      "sha256": "8384f29a14498da04885b62f76f61dde3fc209619d7656a1b944faf7d1e8f70b"
+    },
+    {
+      "path": "pytest-temp/test_lingering_child_invalidat1/child.pid",
+      "bytes": 7,
+      "sha256": "10c2affc88afca9406f0131c72743cc905fff19bebaad3b296aae99bc0f941cb"
+    },
+    {
+      "path": "pytest-temp/test_lingering_child_invalidat1/parent.exit",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_expired_staged_execute_pr0/trace.jsonl",
+      "bytes": 1955,
+      "sha256": "922e4b9c0a6b6a8fe57044e38c303b6a4eebd257c330eea2a3441115432cf036"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/007_candidate_resident_serial/config.yaml",
+      "bytes": 29301,
+      "sha256": "0e5d97e54ee6c6a5e2910120675b30deca085ffe27e7d40d6f7969f16e1a2f02"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/010_baseline_resident_adaptive/config.yaml",
+      "bytes": 29306,
+      "sha256": "137a7f9162f5b55200a95713ab3cd54286bb3832a012d6b26d1ffb907c96137b"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/004_candidate_resident_serial/config.yaml",
+      "bytes": 29301,
+      "sha256": "dfc88752a998f62391b7e9e4bb4a10be5de8c36b8e4b8e052a9eca70fb522b5f"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/027_baseline_resident_adaptive/config.yaml",
+      "bytes": 29306,
+      "sha256": "065c7f018ed53de5b9774236f5b796509c15c23b511909ef62f98627f8408565"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/014_candidate_resident_adaptive/config.yaml",
+      "bytes": 29308,
+      "sha256": "5044e79abadc48c1bb4dc9d22eb9874d415225119ecac90a229391754d999182"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/006_candidate_resident_adaptive/config.yaml",
+      "bytes": 29308,
+      "sha256": "ff5f1ce3932454f79bdf9ac18a678e79b1f7a38766664823dceec26c56493f37"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/028_candidate_resident_adaptive/config.yaml",
+      "bytes": 29308,
+      "sha256": "b7d1a50bc4730065058bb8498c1461d87c778d33f52f2c62b039b9b1072be739"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/008_baseline_resident_serial/config.yaml",
+      "bytes": 29299,
+      "sha256": "c4670c57a137f629e63ff801bda18e07e07988ad1eb98c26aac7b9c6299988e6"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/011_candidate_direct/config.yaml",
+      "bytes": 29281,
+      "sha256": "3ddb97f46d891c641f84078e1cafb9f531384bb99fdad388d524df12c96dca96"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/015_baseline_direct/config.yaml",
+      "bytes": 29279,
+      "sha256": "0d1342735baad6a23a254a230ea1e3a6866513b460d9eb4c4506d48e20cd5b68"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/013_baseline_resident_adaptive/config.yaml",
+      "bytes": 29306,
+      "sha256": "67e5640a2b99d35ace94f664cb4d37a6fa159fe41405cf5d3bd9fb8e73696683"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/026_candidate_resident_serial/config.yaml",
+      "bytes": 29301,
+      "sha256": "99fa91de2884bb06934eb47f62d72b7f0d9e1917b0122f46e2336cb4cdd5a9de"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/018_candidate_resident_serial/config.yaml",
+      "bytes": 29301,
+      "sha256": "5a678105204541eca955a80c08646d69c19158d006dedf03e7b0de5045b767bf"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/017_baseline_resident_serial/config.yaml",
+      "bytes": 29299,
+      "sha256": "9681230f78e8ca4aafc217cf5a2a47d68319916f99ebfbe4b40213dbbccf8f85"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/019_candidate_direct/config.yaml",
+      "bytes": 29281,
+      "sha256": "4ade06d343a322f2a20bfccd5b0b2d42162e3ea297a058b40756e10f1deb6710"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/021_candidate_resident_serial/config.yaml",
+      "bytes": 29301,
+      "sha256": "911f2acbd3f1b8b9cad3380ff9f1bc4eec976f01648ebe4e5573097d8fcbf5b0"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/020_baseline_direct/config.yaml",
+      "bytes": 29279,
+      "sha256": "7893cb613552a55f5c5edfcf4430e70ae323038015974702321d8ffa4db4a581"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/025_baseline_resident_serial/config.yaml",
+      "bytes": 29299,
+      "sha256": "727ed9dab9752e31b1a1cd926e9225a259b188f331d2d3e12fd7c37c8c78cb6d"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/012_baseline_direct/config.yaml",
+      "bytes": 29279,
+      "sha256": "00f104e88a13d9fcc9546850b1721af62d99942cf82476b384f62c808a404915"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/022_baseline_resident_serial/config.yaml",
+      "bytes": 29299,
+      "sha256": "ed6c863bb56948350a787229550b04e9ca5b38f01ca068c76c89a5418b81a4cc"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/005_baseline_resident_adaptive/config.yaml",
+      "bytes": 29306,
+      "sha256": "fc8ae57b01903a0ad5e6d5e17e41246189c0e98273f424afc3f704770c82e4f2"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/009_candidate_resident_adaptive/config.yaml",
+      "bytes": 29308,
+      "sha256": "799510462525bd660175edffa705a09433568fd498545530f0495ce091e76a31"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/030_candidate_direct/config.yaml",
+      "bytes": 29281,
+      "sha256": "9cc52106e3c4737751c712b4f382b60544f45f22b343d0e8a2aeb2af004b6869"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/016_candidate_direct/config.yaml",
+      "bytes": 29281,
+      "sha256": "ed4befc676f9a7abd86a11bf33594cf8043a6a8041f647fe625f2e220c70aae2"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/023_candidate_resident_adaptive/config.yaml",
+      "bytes": 29308,
+      "sha256": "756613760be4a3d12c66daa56402f42202c6aebefefa96c7f49ccad81db25269"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/029_baseline_direct/config.yaml",
+      "bytes": 29279,
+      "sha256": "b93913e5b1baa0bf9d6ebbb49211ea2b74d500e7734facdd1ba0c57529fe53f1"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/001_baseline_direct/config.yaml",
+      "bytes": 29279,
+      "sha256": "ba68e0f21dbdf3bff0d51690bd2c7460441ccbbc992f027c7ae7a8d1bba55e09"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/024_baseline_resident_adaptive/config.yaml",
+      "bytes": 29306,
+      "sha256": "d3a241ac37ee47134c2cb4a82e54200f39211a41482946730392a15dabaf78c8"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/002_candidate_direct/config.yaml",
+      "bytes": 29281,
+      "sha256": "d831f0c9d78cccc8bd4c5fc66a614cadb654ac3cf67b9b800d50802a30c074bb"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/plan/003_baseline_resident_serial/config.yaml",
+      "bytes": 29299,
+      "sha256": "4e1c0c46fbd053db3f91ded884fec3b4cc6b2c32ecc8270ca15ebd96156b0315"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/baseline/scripts/validation/runtime_benchmark_processes.py",
+      "bytes": 14610,
+      "sha256": "e4089c2021586807db8c3e9499ccd99204aee69ae19f3e2cd2e3c4f574c6356c"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/baseline/scripts/validation/runtime_structure_parity.py",
+      "bytes": 5496,
+      "sha256": "1a5c6a0afb2868cba9bc0b9d794614035c917a577e1c5fbec2a344ee2f397242"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/baseline/scripts/validation/runtime_trace_report.py",
+      "bytes": 9125,
+      "sha256": "add56b60843f3b4b3855203c62d1e7a75631d30025ed9c329988e38041ec89f5"
+    },
+    {
+      "path": "pytest-temp/test_plan_preserves_work_and_a0/baseline/scripts/validation/runtime_workflow_benchmark.py",
+      "bytes": 36794,
+      "sha256": "8873b26f63a0d232bdae672c826fba1d7506fa6e4bbc48a9708dcec91e7b1094"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/active-ready",
+      "bytes": 7,
+      "sha256": "e7b47d72005b3f826b98e88221b2ac78909980070c900e0d940f2a5a0e2db0d7"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/events.jsonl",
+      "bytes": 17253,
+      "sha256": "c62303b4f9f2b09d8ba164d864a5134231f0f2df37b3a09045e7ac65a8b2ded1"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/finish_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/nested-ready",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/nested_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/producer_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/result.json",
+      "bytes": 42427,
+      "sha256": "cc39d6f4616d837cc834a7a4994b7906c6b30520b04422989d920298a00a1801"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/scenario.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/scenario.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/survivor_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_32_socket_business_reques0/target_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/events.jsonl",
+      "bytes": 546,
+      "sha256": "3dc53dc6cfb50fb39f2f0eeb1d1688a89b36e57b743e07da7c4cfa9acc453a91"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/finish_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/nested_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/producer_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/result.json",
+      "bytes": 380,
+      "sha256": "0298fa9c091e5cdc63f080ba070e5cb05396c13dc58bb4eff6aa2bc8ce383e16"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/scenario.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/scenario.stdout",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/survivor_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "pytest-temp/test_real_daemon_fixture_cpu_s0/target_gate",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ],
+  "regular_file_count": 265,
+  "total_regular_bytes": 2155405,
+  "nonregular": [
+    {
+      "path": "pytest-temp/test_file_content_and_symlink_0/alias.pdb",
+      "mode": 41471,
+      "link_target": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/control/runtime-contracts-60684bd-01/pytest-temp/test_file_content_and_symlink_0/other.pdb"
+    }
+  ]
+}
