@@ -1,0 +1,12 @@
+{
+  "all_archived_file_hashes_match": true,
+  "archive": "gpu-identity-review-raw.tar.xz",
+  "archive_bytes": 16268,
+  "archive_sha256": "c480ca6a60b67172a52fc8dd2905c6e577efaae241d74474c8f99fab47409883",
+  "files": 16,
+  "new_test_or_benchmark_run": false,
+  "raw_bytes": 65791,
+  "source_directory": "/workspace/scratch/1a0b1639644d/cloud-20261104/control/f102-gpu-science-review",
+  "source_files_unchanged": true,
+  "status": "PASS"
+}

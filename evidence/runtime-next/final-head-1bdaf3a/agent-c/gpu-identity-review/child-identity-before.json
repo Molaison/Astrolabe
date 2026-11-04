@@ -1,0 +1,15 @@
+{
+  "scope": "Synthetic CPU checker fault injection; no model, GPU, process or benchmark",
+  "commit": "1b7a1bdc32dda273fac6b4e7bebad8a5a9c1f0ca",
+  "positive_control": "PASS",
+  "mutations": {
+    "child_seed": 999,
+    "child_mode": "legacy",
+    "child_head": "foreign-source",
+    "all_request_indices": 0,
+    "all_request_phases": "first"
+  },
+  "result_status": "PASS",
+  "certified_effective_throughput_present": true,
+  "risk": "Aggregate validates controller rows but ignores child identity/request index/phase fields"
+}

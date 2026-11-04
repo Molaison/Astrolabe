@@ -1,0 +1,29 @@
+{
+  "all_invalid_suppressed": true,
+  "commit": "4889f7b7c08828a99b729719f0c668eaaf4d2396",
+  "harness_sha256": "0c789ab58f2e9c044da84e5718a647eb099fda4b306026ef694ea301e6f72aa6",
+  "mutations": {
+    "head": {
+      "effective_throughput_present": false,
+      "status": "INVALID"
+    },
+    "mode": {
+      "effective_throughput_present": false,
+      "status": "INVALID"
+    },
+    "request_indices": {
+      "effective_throughput_present": false,
+      "status": "INVALID"
+    },
+    "request_phases": {
+      "effective_throughput_present": false,
+      "status": "INVALID"
+    },
+    "seed": {
+      "effective_throughput_present": false,
+      "status": "INVALID"
+    }
+  },
+  "positive_control": "PASS",
+  "scope": "Synthetic CPU checker fault injection; no model, GPU, process or benchmark"
+}

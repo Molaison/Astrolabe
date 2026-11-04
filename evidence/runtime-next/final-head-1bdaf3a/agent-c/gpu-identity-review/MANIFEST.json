@@ -1,0 +1,42 @@
+{
+  "RAW_MANIFEST.json": {
+    "bytes": 2162,
+    "sha256": "ceaf6dbca2b03a85c3cc4c1394055936cbcda4f4ed592fd1a3e31d09d3a749a1"
+  },
+  "README.md": {
+    "bytes": 4120,
+    "sha256": "8ff0a4e003cbb15445b991f86d37155af562962b62fe6d0456cfed5bd417038d"
+  },
+  "archive-verification.json": {
+    "bytes": 439,
+    "sha256": "09940a4ecca243796afc80684178cc1fbd9fe25c2e3258af197d5f74ec6d764c"
+  },
+  "child-identity-after-4889f7b.json": {
+    "bytes": 802,
+    "sha256": "b33e7411f66f82ee8ab3b326db5dda5dae254d820348500c0e4407b7f6f08753"
+  },
+  "child-identity-before-separate.json": {
+    "bytes": 783,
+    "sha256": "2943a29350682a24d1315e73d91fb364f2053a8d3e95ce6aa5d0222e1a0819b6"
+  },
+  "child-identity-before.json": {
+    "bytes": 531,
+    "sha256": "1606412043956fced9d2c43c0101cd4b06d27021815316c862519e462d2a2158"
+  },
+  "gpu-identity-review-raw.tar.xz": {
+    "bytes": 16268,
+    "sha256": "c480ca6a60b67172a52fc8dd2905c6e577efaae241d74474c8f99fab47409883"
+  },
+  "probe_child_identity.py": {
+    "bytes": 2627,
+    "sha256": "3f42677f6724bb45517cffb4da734d0d6905b73c7efae32d264cc24b297342c9"
+  },
+  "protocol-review.md": {
+    "bytes": 12100,
+    "sha256": "764b0dff8ebe48e0af13635f16183f5c45ebe99f880cb47d6bbb8f9a34ea48c1"
+  },
+  "review-b-4889f7b.md": {
+    "bytes": 8126,
+    "sha256": "3fbca1365f33c8cf9493ad9248aa29787d176962979a3d2fcb18caa5fc1223eb"
+  }
+}
