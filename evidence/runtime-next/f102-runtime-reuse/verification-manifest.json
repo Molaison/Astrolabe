@@ -1,0 +1,170 @@
+{
+  "files": [
+    {
+      "path": "raw/adapted-deadline-green.log",
+      "bytes": 99,
+      "sha256": "16a1e7fd4d6835c2d69825b400f264e4e3f782e3368a260701edff04030ddc06"
+    },
+    {
+      "path": "raw/adapted-deadline-green.xml",
+      "bytes": 1706,
+      "sha256": "2ccdbceaf634556c96d213ab4bcd198ec0a069c5d242b598b9bfcb4959728249"
+    },
+    {
+      "path": "raw/deadline-with-transition-green.log",
+      "bytes": 99,
+      "sha256": "0a330460635e3be62a002ac7a5b2fe14685e0709be810741be243c91c456813d"
+    },
+    {
+      "path": "raw/deadline-with-transition-green.xml",
+      "bytes": 2035,
+      "sha256": "6a98319b09ef619c2dd0dbf1ce64c0a48f2682c21d5cbf36ac2fdd9f80f61cd6"
+    },
+    {
+      "path": "raw/local-nonsocket-ingress.log",
+      "bytes": 113,
+      "sha256": "ddf4415888f648d479dcdea568708591ed73b3b6a1924edcb45b66e3f85cfa6b"
+    },
+    {
+      "path": "raw/local-nonsocket-ingress.xml",
+      "bytes": 646,
+      "sha256": "73baa841374fc94211f4f8c2132edb520a71db980c171441c97816ea397e9df2"
+    },
+    {
+      "path": "raw/local-nonsocket-regressions.log",
+      "bytes": 113,
+      "sha256": "106d347859cecc2b4853f3fbb501d06815d5692031ad02c30718cda831171c52"
+    },
+    {
+      "path": "raw/local-nonsocket-regressions.xml",
+      "bytes": 4450,
+      "sha256": "d8a1e1890ff8a02002b4532d45bc01997e19f91723254bc25e12e8233f768d3f"
+    },
+    {
+      "path": "raw/waiting-probe-after.json",
+      "bytes": 3035,
+      "sha256": "48592d7b17d66bcb026d7e0a5944ce5888445f9603a51be6341cb161f2e13102"
+    },
+    {
+      "path": "raw/waiting-probe-after.stderr",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "raw/waiting-probe-before.json",
+      "bytes": 3033,
+      "sha256": "bced225c29d9f5201d65f8105440c0693d91d6e1a5097cb686c86490277cd716"
+    },
+    {
+      "path": "raw/waiting-probe-before.stderr",
+      "bytes": 358,
+      "sha256": "29c41a55d5942e74494ad4078e49b067f9e488ba8c158a7d5cb1d978495dca6f"
+    },
+    {
+      "path": "raw/waiting-transition-red.log",
+      "bytes": 2877,
+      "sha256": "0a9d74abd858f2c692a9fb10977d155b87631c5d0411ca3608dc9e82cb2d6e2f"
+    },
+    {
+      "path": "raw/waiting-transition-red.xml",
+      "bytes": 3021,
+      "sha256": "2037e064a45c1ac886e562369aa4a394619e97c629bc74ea84bbccdb088f3162"
+    },
+    {
+      "path": "incident/isolated-probe-commands.json",
+      "bytes": 842,
+      "sha256": "843c1802d588a89e1d31141aea406ad585423176376ceec86078f95680302aaa"
+    },
+    {
+      "path": "incident/isolated-probe-negative.log",
+      "bytes": 720,
+      "sha256": "b7aeb22ace68237a65c9b699ef59e88c1383764fa9a5fbf501e5a52673f80c73"
+    },
+    {
+      "path": "incident/isolated-probe-negative.xml",
+      "bytes": 781,
+      "sha256": "b396e30c1ecd6d9c56c2298fb931c22b8fb865c2a50f8a54a6b03b28017ed12b"
+    },
+    {
+      "path": "incident/isolated-probe-result.json",
+      "bytes": 523,
+      "sha256": "88900570b124591b34a9daba00df3a38ded52a15cc4b04477d20623e2848a5b5"
+    },
+    {
+      "path": "incident/status.txt",
+      "bytes": 623,
+      "sha256": "769ffe223cfc1c946cc7e016f9ab870c11f42eb1512390c147143e41715ddea6"
+    },
+    {
+      "path": "incident/tracked-at-observation.patch",
+      "bytes": 6231,
+      "sha256": "39fd5e1665eccbdac3d63054aa3e5e893bdaded41ea02c6a4e7858dabeffb025"
+    },
+    {
+      "path": "incident/untracked-at-observation.tar.xz",
+      "bytes": 20552,
+      "sha256": "2044e0bad3f125bd7bdad01af857086d841226538dcf6121e7199e75ac6262d5"
+    },
+    {
+      "path": "incident/worktree-observation.json",
+      "bytes": 4901,
+      "sha256": "8183580e4503a9db10ec8c665a0994a96923bfa5fd9a161744aa3096ed00aa65"
+    },
+    {
+      "path": "root-independent/fixed-result.json",
+      "bytes": 422,
+      "sha256": "6807945c702943f9581c76e1a099682c07e38ab18491fab126341c15e754bdf2"
+    },
+    {
+      "path": "root-independent/oldfix.stderr.log",
+      "bytes": 358,
+      "sha256": "29c41a55d5942e74494ad4078e49b067f9e488ba8c158a7d5cb1d978495dca6f"
+    },
+    {
+      "path": "root-independent/oldfix.stdout.json",
+      "bytes": 3053,
+      "sha256": "b8af549ce291db3d420441b26145c9bda6b1bab9dea0467f329b23a62cf5a8ad"
+    },
+    {
+      "path": "root-independent/recovered-fixed.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "root-independent/recovered-fixed.stdout.json",
+      "bytes": 3031,
+      "sha256": "efd07da81dc8f4517ceb3e0e946feb82f4ec3f81313878f665d5a6926cbccc97"
+    },
+    {
+      "path": "root-independent/results.json",
+      "bytes": 1420,
+      "sha256": "f4ee40b3fdfa7ebe32879e47ee82ba2b1b35121f893c6e0546a783f517bfd721"
+    },
+    {
+      "path": "root-independent/validated-9d62.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "root-independent/validated-9d62.stdout.json",
+      "bytes": 3430,
+      "sha256": "5f0720292f45d22ec33b47b29792a5b76a1faa29ccd340b8867b5153ffcdf2d8"
+    },
+    {
+      "path": "science-independent/probe_reused_runtime.py",
+      "bytes": 8411,
+      "sha256": "c5e1346650511230ecf970cf0b5ed31afac299d214241af401ab62f4dc4e1a4d"
+    },
+    {
+      "path": "science-independent/reused-runtime-60684bd.json",
+      "bytes": 1661,
+      "sha256": "e5f2873a2a6242641ca986c32546dd7d3a848cdaee919eaf35709308dc7b07b2"
+    }
+  ],
+  "archive": {
+    "path": "verification-raw.tar.xz",
+    "bytes": 32268,
+    "sha256": "0c539f075e92709bf240f2b8d4a21f55dee252c65cc0047734ed367a778bb5f9"
+  },
+  "scope": "all new raw verification and negative incident files, root/C independent raw; initial compatibility negative remains in initial-negative.tar.xz; no scientific/GPU work"
+}

@@ -1,0 +1,62 @@
+{
+  "validated_base": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "reused_commit": "07d121901dc50eeb1c3a4a13d872648618b8978a",
+  "fixed_commit": "60684bd4fefa6e9b7282176e8b5af7700ef98093",
+  "broker_before_sha256": "69372ee1c22ac06f05a6eb11f75d9f91c32778a07457a493c1a5ee37d28cb27a",
+  "broker_after_sha256": "2e34af2c521102c64be3b467875217f8930f61bd7ad1e9c7f1c1e7c74c69c124",
+  "root_probe_sha256": "6c6e2e2ef459cc49e3207f7e69c2486d49f80e4e4590f2bce1e7418736d7444e",
+  "probe_before": {
+    "error": {
+      "type": "TimeoutError",
+      "message": "request deadline expired before submission"
+    },
+    "waiting": 1,
+    "busy": 0,
+    "dispatches": 0,
+    "elapsed_seconds": 0.2028679260001809
+  },
+  "probe_after": {
+    "error": {
+      "type": "TimeoutError",
+      "message": "request deadline expired before submission"
+    },
+    "waiting": 0,
+    "busy": 0,
+    "dispatches": 0,
+    "elapsed_seconds": 0.20288769000035245
+  },
+  "gates": [
+    {
+      "name": "deadline including two transition boundaries",
+      "passed": 12,
+      "failed": 0,
+      "skipped": 0,
+      "deselected": 0
+    },
+    {
+      "name": "existing non-socket regression subset",
+      "passed": 31,
+      "failed": 0,
+      "skipped": 0,
+      "deselected": 5
+    },
+    {
+      "name": "non-socket recovered ingress subset",
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "deselected": 10
+    }
+  ],
+  "negative_new_test": {
+    "passed": 1,
+    "failed": 1,
+    "skipped": 0,
+    "deselected": 10
+  },
+  "local_scientific_evaluations": 0,
+  "gpu_execution": false,
+  "performance_claim": null,
+  "capable_host_gates": "pending root actual socket/process/isolation/saturation + unchanged complete validate.py regressions",
+  "forbidden_changed_paths": []
+}
