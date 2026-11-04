@@ -310,6 +310,16 @@ class State:
         if timeout is not None and (not isinstance(timeout, (int, float)) or timeout <= 0):
             raise ValueError('invalid timeout')
         start = time.monotonic()
+        deadline = None if timeout is None else start + timeout
+
+        def remaining_timeout():
+            if deadline is None:
+                return None
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise TimeoutError('request admission timed out before submission')
+            return remaining
+
         with self.lock:
             record = self.workers[key]
             if req['epoch'] not in record['clients']:
@@ -347,7 +357,7 @@ class State:
         retained_key = (ident[0], scientific) if staged else None
         outcome = 'not_submitted'
         try:
-            acquired = record['call_lock'].acquire() if timeout is None else record['call_lock'].acquire(timeout=timeout)
+            acquired = record['call_lock'].acquire() if timeout is None else record['call_lock'].acquire(timeout=remaining_timeout())
             if not acquired:
                 raise TimeoutError('worker queue admission timed out before submission')
             existing = record['retained'].get(retained_key) if staged else None
@@ -359,13 +369,12 @@ class State:
                 if actual != expected:
                     raise ValueError(f'invalid staged request transition: {actual} -> {method}')
             resources = self._request_resources(req, metadata) if existing is None else existing['resources']
-            remaining = None if timeout is None else max(0, timeout - (time.monotonic() - start))
             if existing:
                 token = existing['token']
             else:
-                self.ledger.admit_pending(token, resources, timeout=remaining)
+                self.ledger.admit_pending(token, resources, timeout=remaining_timeout())
             pending = True
-            self.ledger.acquire_compute(token, record['device'], timeout=remaining,
+            self.ledger.acquire_compute(token, record['device'], timeout=remaining_timeout(),
                                         cpu=cpu_phase or managed, cpu_work=phase != 'device')
             admitted = time.monotonic()
             with self.lock:
@@ -376,11 +385,11 @@ class State:
             metadata['output_limit_bytes'] = resources['output_bytes']
             record['delegated'] = {'token': token, 'dispatch_id': dispatch_id,
                                    'managed': managed, 'nested': False, 'request': ident,
-                                   'metadata': metadata, 'deadline': None if timeout is None else start + timeout}
+                                   'metadata': metadata, 'deadline': deadline}
             event = 'device_start' if phase == 'device' else 'compute_start'
             self.events.write(event, backend=key, request_id=ident[1], shape_key=shape,
                               cold_start=cold, phase=phase, device=record['device'], **identity_fields)
-            remaining = None if timeout is None else max(.001, timeout - (time.monotonic() - start))
+            remaining = remaining_timeout()
             result = record['client'].call(req['payload'], timeout=remaining, request_id=dispatch_id, runtime=metadata)
             outcome = 'completed'
             # No pending CUDA result may survive a managed subgraph lease.

@@ -48,6 +48,7 @@ REQUIRED_TESTS = (
     "tests/test_candidate_batch_policy.py", "tests/test_candidate_batch_runner.py",
     "tests/test_execution_identity.py", "tests/test_app.py",
     "tests/test_runtime_execution.py", "tests/test_runtime_contracts.py",
+    "tests/test_runtime_broker_deadline.py",
     "tests/test_runtime_resources.py", "tests/test_runtime_controller.py",
     "tests/test_runtime_context.py", "tests/test_runtime_process_observations.py",
     "tests/test_runtime_benchmark_processes.py", "tests/test_runtime_trace_report.py",
