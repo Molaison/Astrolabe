@@ -1,0 +1,14 @@
+{
+  "which": "after",
+  "missing": true,
+  "command": [
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/geometry-venv/bin/python",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/evidence/runtime-next/agent-b/review_a_r1_probe.py",
+    "--repo",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/review-b-a-r1",
+    "--out",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/evidence/runtime-next/agent-b/review-a-r1-after-missing.json",
+    "--missing-spatial"
+  ],
+  "returncode": 0
+}

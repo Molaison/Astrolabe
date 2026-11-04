@@ -1,0 +1,57 @@
+{
+  "archive": "review-a-r1-raw-logs.tar.xz",
+  "sha256": "64e6d0adf54669b169a3d7aad9544ec94f65bdd2ed4f71dbb383162372858f68",
+  "note": "Raw pytest failure output includes original trailing whitespace. Preserve original bytes in this lossless archive rather than editing evidence to satisfy git diff --check.",
+  "files": [
+    {
+      "name": "review-a-r1-after-missing.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "review-a-r1-after-probe-attempt01.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "review-a-r1-after-probe.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "review-a-r1-after-tests.log",
+      "bytes": 99,
+      "sha256": "6ab3188559aeca8633c110f3571916599975dff58b0b25f2abdacb210f013ae6"
+    },
+    {
+      "name": "review-a-r1-after-tests.xml",
+      "bytes": 9749,
+      "sha256": "29d6fbb77504a4a2301ba68ec1c88ba626d5e8fa2134c4f4c25770720b6e4ef0"
+    },
+    {
+      "name": "review-a-r1-before-missing.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "review-a-r1-before-probe-attempt01.log",
+      "bytes": 519,
+      "sha256": "fd7cc789ff9e9054ba0c3974a28cb9822e81a7a5f51586fe61cb2b08167cd3d1"
+    },
+    {
+      "name": "review-a-r1-before-probe.log",
+      "bytes": 519,
+      "sha256": "708a8cdefb2f0652f7e0aaf6a2c9bde9abaf1002ae08078999c8cdbf0748483b"
+    },
+    {
+      "name": "review-a-r1-before-tests.log",
+      "bytes": 2692,
+      "sha256": "a5b03de17aac8aeccc9f5ca82d533bd66a96036ce8f1cfdb64db96d93dce799f"
+    },
+    {
+      "name": "review-a-r1-before-tests.xml",
+      "bytes": 12536,
+      "sha256": "3d2b1037aa53d69deca8f4e2ab156c17a342f7ffc2a53dd7cb2f33d145d195a0"
+    }
+  ]
+}
