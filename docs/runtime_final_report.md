@@ -82,12 +82,12 @@ ESMFold W1 的具体阻塞是：已定位的 2,097,152,000-byte checkpoint 为 i
 
 | ID | 状态 | 当前边界与剩余条件 |
 |---|---|---|
-| R0 | PARTIAL | W0 同机冻结/全量原始证据 DONE；GPU mutator control 已冻结准备，完整 evaluator W1/W2 尚未认证 |
+| R0 | PARTIAL | W0 同机冻结/全量原始证据 DONE；GPU mutator control 协议已冻结、执行身份 freeze 待完成，完整 evaluator W1/W2 尚未认证 |
 | R1 | PARTIAL | 主导 startup 成本与 >20% 可重复 CPU 改善 DONE；resident/direct 差距、长稳态 break-even/auto routing 未完成 |
 | R2 | PARTIAL | identity、整批校验、进程内 replay guard DONE；没有完整有界 asynchronous producer、GPU overlap 或 durable ordered commit |
 | R3 | PARTIAL | ESMFold audited 边界与 CPU contracts DONE；该 evaluator 的真实 GPU 阶段/传输实测 BLOCKED |
 | R4 | DONE | owner map、至少两种独立架构备选、caller-first 接口及选型 ADR；复用已有机制 |
-| R5 | PARTIAL | 真权重 CPU preflight 与严格 GPU control 入口 DONE；真实执行结果待最终证据，完整 evaluator/长期故障认证未完成 |
+| R5 | BLOCKED | full-scope evaluator W1/长期故障与吞吐认证未完成；真权重 CPU preflight/窄 GPU control 入口 DONE，实际 runner 结果待最终证据 |
 | R6 | BLOCKED | 不在缺少 backend 证据时提高同卡并发或 microbatch 档位 |
 | R7 | PARTIAL | 沿用现有身份/cache/reset；没有新增跨 residue dependency cache 的完整 stale-negative/收益认证 |
 | R8 | PARTIAL | admission、三 ingress lanes、prepared ownership 和 failure isolation CPU gate DONE；GPU fairness/多 GPU 尚未认证 |

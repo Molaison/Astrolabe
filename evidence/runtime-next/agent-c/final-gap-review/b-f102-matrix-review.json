@@ -1,0 +1,27 @@
+{
+  "actual_esm_import_test": false,
+  "actual_gpu_run": "NOT_RUN",
+  "all_registry_keys_exact": true,
+  "cpu_native_preflight": "DONE",
+  "duplicate_registry_rows": false,
+  "factory_ownership_exact": true,
+  "generator_sha256": "5b4f51c4a5b0da8381826c7f7347bcbddfb5e615a967b3a08aeae5afbc032600",
+  "performance_certification": {
+    "effective_throughput_improvement_proved": false,
+    "status": "BLOCKED"
+  },
+  "preflight_status": "DONE",
+  "proof_files": 6,
+  "registry_keys": {
+    "evaluator": 14,
+    "mutator": 20
+  },
+  "registry_rows_status": {
+    "BLOCKED": 28,
+    "PARTIAL": 6
+  },
+  "scope": "read-only recorded asset/CPU preflight and static registry inventory; no native imports, forward, benchmark or GPU call",
+  "source_head": "27f8a6d0660867ff11823ab890655eb01125d868",
+  "status": "PASS",
+  "variant_scopes": 63
+}
