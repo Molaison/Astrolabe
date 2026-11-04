@@ -1,0 +1,131 @@
+{
+  "archive": "scientific-positive-root.tar.xz",
+  "archive_sha256": "f07bf8c36b0b0db73502bd1f7cd2ec623d7a9199371cece4e4b6b9c67089f698",
+  "files": [
+    {
+      "path": "scientific-positive-root/baseline/cli.log",
+      "bytes": 15037,
+      "sha256": "27a7d2fca513abc47026c2aa59e7dddec76b0d923f17847d132dcc3cbfb21d4c"
+    },
+    {
+      "path": "scientific-positive-root/baseline/command.json",
+      "bytes": 761,
+      "sha256": "30e78a1e22412bd5d032629c771110e79b7a4c1b57ce8b5100e21de2ca5ffe0d"
+    },
+    {
+      "path": "scientific-positive-root/baseline/results/runtime_cpu_scientific_control/001_run/config.yaml",
+      "bytes": 16828,
+      "sha256": "84a89c6d86fb76a9cbff96500b238873ce25e860978613150ee74c39cd57c113"
+    },
+    {
+      "path": "scientific-positive-root/baseline/results/runtime_cpu_scientific_control/001_run/logs/debug.log",
+      "bytes": 24201,
+      "sha256": "875dde74959b036d6d7bb47231acdaf08b252ffe7fdf54d285c17156723ef0c6"
+    },
+    {
+      "path": "scientific-positive-root/baseline/results/runtime_cpu_scientific_control/001_run/logs/info.log",
+      "bytes": 19377,
+      "sha256": "e4155993132e84a9453b545089b6953c4d28ee0cf8fdbc538c4633ae42ac178f"
+    },
+    {
+      "path": "scientific-positive-root/baseline/results/runtime_cpu_scientific_control/001_run/provenance.json",
+      "bytes": 2078,
+      "sha256": "aae0d8e0ad5c4a0fbf011855135a657a004c8e769d822c6ed4263244c26f50df"
+    },
+    {
+      "path": "scientific-positive-root/baseline/results/runtime_cpu_scientific_control/001_run/scores.csv",
+      "bytes": 1437,
+      "sha256": "ae24138cfada92ded7c0251cd160b42f18b1f8f1070f2725aad36e4744812936"
+    },
+    {
+      "path": "scientific-positive-root/baseline/results/runtime_cpu_scientific_control/runs.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scientific-positive-root/baseline/runtime.jsonl",
+      "bytes": 2843,
+      "sha256": "70e4b8e8e5f44fe6a5db3877bf4dcffd69a858fb87dc8636710094d61cbcc18c"
+    },
+    {
+      "path": "scientific-positive-root/baseline/terminal-scientific-state.json",
+      "bytes": 75133,
+      "sha256": "6ba7db69cd5d094f5bbf5dd7cf396623d8c04a40bca768bee7652dcbcec91223"
+    },
+    {
+      "path": "scientific-positive-root/baseline/validation.json",
+      "bytes": 95010,
+      "sha256": "70cd66128888c3a99be438e3cd43fde368e7a71d1913531a17b859c3a84800d6"
+    },
+    {
+      "path": "scientific-positive-root/candidate/cli.log",
+      "bytes": 15037,
+      "sha256": "a8dfe1efdd30f7a0f29cbfc210977e29678a95750e284ce8793bcd9a24d2a17c"
+    },
+    {
+      "path": "scientific-positive-root/candidate/command.json",
+      "bytes": 759,
+      "sha256": "de5eb91bb9f039c4178089e89739ac81a7de91e42320f599098fd64a04dd2678"
+    },
+    {
+      "path": "scientific-positive-root/candidate/results/runtime_cpu_scientific_control/001_run/config.yaml",
+      "bytes": 16830,
+      "sha256": "b4ed882cc92c4220054e37777a0e8a3ced99656eacb5df41eba3204480e9f366"
+    },
+    {
+      "path": "scientific-positive-root/candidate/results/runtime_cpu_scientific_control/001_run/logs/debug.log",
+      "bytes": 24201,
+      "sha256": "5e2e3fc0483142c29e479fd753dc35b0130ca5ce666de6cc9caffa412cbce85d"
+    },
+    {
+      "path": "scientific-positive-root/candidate/results/runtime_cpu_scientific_control/001_run/logs/info.log",
+      "bytes": 19377,
+      "sha256": "e5118450cac55803e62d61ac85ea232c7582ac3781ce961a94feb110f455f457"
+    },
+    {
+      "path": "scientific-positive-root/candidate/results/runtime_cpu_scientific_control/001_run/provenance.json",
+      "bytes": 2111,
+      "sha256": "e2fdf31d372d56d1026b811d701f610d710db7d8e521a0784f54523d81cbe3b3"
+    },
+    {
+      "path": "scientific-positive-root/candidate/results/runtime_cpu_scientific_control/001_run/scores.csv",
+      "bytes": 1437,
+      "sha256": "ae24138cfada92ded7c0251cd160b42f18b1f8f1070f2725aad36e4744812936"
+    },
+    {
+      "path": "scientific-positive-root/candidate/results/runtime_cpu_scientific_control/runs.lock",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scientific-positive-root/candidate/runtime.jsonl",
+      "bytes": 2845,
+      "sha256": "06050671cefdfd2e7ebf1fde300190eae080952027b78566b6c8b7ad53dcf3ba"
+    },
+    {
+      "path": "scientific-positive-root/candidate/terminal-scientific-state.json",
+      "bytes": 75133,
+      "sha256": "6ba7db69cd5d094f5bbf5dd7cf396623d8c04a40bca768bee7652dcbcec91223"
+    },
+    {
+      "path": "scientific-positive-root/candidate/validation.json",
+      "bytes": 95010,
+      "sha256": "70cd66128888c3a99be438e3cd43fde368e7a71d1913531a17b859c3a84800d6"
+    },
+    {
+      "path": "scientific-positive-root/plan.json",
+      "bytes": 2334,
+      "sha256": "a68deb6480c4d3e5da3f1b818c715daf938c1d647530e470faf21d15ca134cff"
+    },
+    {
+      "path": "scientific-positive-root/report.json",
+      "bytes": 243798,
+      "sha256": "b0872554bac3d6996db96d01a4c614768e96e0e051d8f7da81be5ed8e8553969"
+    },
+    {
+      "path": "scientific-positive-root/workload.yaml",
+      "bytes": 1221,
+      "sha256": "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9"
+    }
+  ]
+}
