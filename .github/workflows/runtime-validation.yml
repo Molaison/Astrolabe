@@ -20,7 +20,6 @@ jobs:
       run:
         shell: bash
     env:
-      RUNTIME_VALIDATION_OUT: ${{ runner.temp }}/runtime-validation
       CUDA_VISIBLE_DEVICES: ''
       NVIDIA_VISIBLE_DEVICES: void
       HIP_VISIBLE_DEVICES: ''
@@ -35,6 +34,10 @@ jobs:
       VECLIB_MAXIMUM_THREADS: '1'
       PYTHONUNBUFFERED: '1'
     steps:
+      - name: Prepare evidence directory
+        run: |
+          echo "RUNTIME_VALIDATION_OUT=$RUNNER_TEMP/runtime-validation" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/runtime-validation"
       - name: Checkout candidate
         uses: actions/checkout@v4
         with:
