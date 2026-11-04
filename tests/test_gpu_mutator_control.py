@@ -169,10 +169,12 @@ def synthetic_run(tmp_path, protocol):
             "cleanup_attempted": False, "observed_tree_empty": True, "remaining_identities": []},
             "measurement": {"seconds": 2., "stop_reason": None, "measurement_envelope_seconds": 2.5,
                             "peak_process_tree_rss_bytes": None, "peak_device_vram_bytes": None}})
-        metadata = {"status": "COMPLETE", "valid_completed_requests": 3, "frozen_sha256": frozen_sha,
+        metadata = {**item, "head": frozen["head"], "status": "COMPLETE", "valid_completed_requests": 3, "frozen_sha256": frozen_sha,
                     "construction_seconds": .5, "device": {"fixture": "synthetic CUDA metadata"},
+                    "close_seconds": .1,
                     "environment": {"fixture": "CPU test only"},
-                    "requests": [{"status": "COMPLETE", "cpu_ready_call_seconds": .2} for _ in range(3)]}
+                    "requests": [{"index": index, "phase": "first" if index == 0 else "steady",
+                                  "status": "COMPLETE", "cpu_ready_call_seconds": .2} for index in range(3)]}
         control.write_json(directory / "trial.json", metadata)
         dump_tree(directory / "rng_before_constructor", synthetic_rng(protocol, 0))
         dump_tree(directory / "rng_after_constructor", synthetic_rng(protocol, 1))
@@ -233,6 +235,30 @@ def test_corrupted_execution_identity_or_timing_rejected(synthetic_run, mutation
     mutation(execution)
     with pytest.raises(ValueError):
         control.aggregate(frozen, execution)
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda d: d.update(seed=999, mode="legacy", head="foreign-source"),
+    lambda d: d.update(id="g99-foreign"),
+    lambda d: d.update(index=True),
+    lambda d: d.update(group=4),
+    lambda d: d.update(frozen_sha256="foreign"),
+    lambda d: [request.update(index=0, phase="first") for request in d["requests"]],
+    lambda d: d["requests"][1].update(index=True),
+    lambda d: d["requests"][1].update(phase="first"),
+    lambda d: d["requests"][1].update(cpu_ready_call_seconds=0),
+    lambda d: d.update(construction_seconds=100),
+])
+def test_foreign_child_or_replayed_request_metadata_blocks_certificate(synthetic_run, mutation):
+    frozen, execution = synthetic_run
+    path = frozen.parent / "trials" / "g00-seed17-resident" / "trial.json"
+    data = json.loads(path.read_text())
+    mutation(data)
+    control.write_json(path, data)
+    report = control.aggregate(frozen, execution)
+    assert report["status"] == "INVALID"
+    assert "effective_design_requests_per_second" not in report["per_mode"]["legacy"]
+    assert "effective_design_requests_per_second" not in report["per_mode"]["resident"]
 
 
 def test_equal_but_invalid_probability_and_rng_continuity_still_fail(synthetic_run, protocol):

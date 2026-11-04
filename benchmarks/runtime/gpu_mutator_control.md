@@ -160,6 +160,11 @@ an improvement to this turn's changes requires a distinct revision comparison.
 Execution records must form the exact frozen ordered prefix, with all index,
 ID, group, seed and mode fields intact; duplicates, extra records, reordering
 and nonpositive/nonfinite trial time are rejected before aggregation.
+Each child's own identity, candidate HEAD and frozen-manifest hash must also
+match its planned controller entry. Request indices must be exactly 0/1/2 with
+first/steady/steady phase labels. Phase times must be positive, finite and fit
+within the observed workflow interval. A complete-looking stale child file or
+duplicated request metadata therefore cannot certify effective throughput.
 
 An independent CPU-only reread of the immutable raw evidence is available:
 

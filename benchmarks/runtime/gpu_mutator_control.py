@@ -307,6 +307,7 @@ def trial(args):
     require_private_allocation(os.environ)
     require_gpu_uuid(args.allocated_gpu_uuid)
     frozen = load_frozen(args.frozen, args.frozen_sha256)
+    require(type(args.index) is int and 0 <= args.index < len(frozen["plan"]), "internal trial index is outside the frozen plan")
     item = frozen["plan"][args.index]
     protocol = frozen["protocol"]
     directory = Path(frozen["output"]) / "trials" / item["id"]
@@ -481,6 +482,17 @@ def aggregate(frozen_path, execution):
         requests = data.get("requests", [])
         row["valid_completed_requests"] = sum(request.get("status") == "COMPLETE" for request in requests)
         report["completed_design_requests"] += row["valid_completed_requests"]
+        row["child_identity_valid"] = (all(type(data.get(key)) is type(value) and data.get(key) == value
+                                           for key, value in item.items()) and data.get("head") == frozen["head"]
+                                       and data.get("frozen_sha256") == report["frozen_sha256"])
+        row["request_order_valid"] = (len(requests) == 3 and all(
+            type(request.get("index")) is int and request["index"] == index and
+            request.get("phase") == ("first" if index == 0 else "steady")
+            for index, request in enumerate(requests)))
+        phase_times = [data.get("construction_seconds"), data.get("close_seconds"),
+                       *(request.get("cpu_ready_call_seconds") for request in requests)]
+        phase_times_valid = (all(type(value) in (int, float) and math.isfinite(value) and value > 0 for value in phase_times)
+                             and sum(phase_times) <= row["wall_seconds"] + 1e-6)
         measurement = row.get("measurement", {})
         envelope = measurement.get("measurement_envelope_seconds")
         measured_ok = (measurement.get("stop_reason") is None and measurement.get("seconds") == row["wall_seconds"]
@@ -492,7 +504,7 @@ def aggregate(frozen_path, execution):
                         and data.get("status") == "COMPLETE" and len(requests) == 3 and row["valid_completed_requests"] == 3
                         and data.get("valid_completed_requests") == 3
                         and measured_ok
-                        and data.get("frozen_sha256") == report["frozen_sha256"])
+                        and row["child_identity_valid"] and row["request_order_valid"] and phase_times_valid)
         complete = complete and row["valid"]
     for group in range(5):
         items = [item for item in frozen["plan"] if item["group"] == group]
