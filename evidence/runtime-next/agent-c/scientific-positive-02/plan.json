@@ -1,0 +1,53 @@
+{
+  "budget": {
+    "expected_evaluations_per_run": 4,
+    "expected_score_rows_per_run": 5,
+    "expected_stage_score_recomputations_per_run": 1,
+    "gpu_allocation": "",
+    "max_output_bytes_per_run": 16777216,
+    "mode": "direct",
+    "mutation_attempts_per_run": 3,
+    "repeats_per_run": 1,
+    "runs": 2,
+    "seed": 17,
+    "steps_per_run": 4,
+    "walltime_per_run_seconds": 45,
+    "warmups": 0
+  },
+  "comparison": "exact proposal/score/decision/stage rows, terminal owner, CPU RNG and scientific output hashes",
+  "executable": "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c/../venv/bin/python",
+  "harness_sha256": "6f52867a3d45e83985fc84b844cfdf7227e61761e615355a63b913d83eb4ed26",
+  "kind": "correctness_only_cli_positive_control",
+  "limitations": [
+    "Dummy is not pretrained inference",
+    "no structures are generated",
+    "snapshot is not resume certification"
+  ],
+  "performance_data": false,
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "reader_sha256": {
+    "runtime_benchmark_processes.py": "e4089c2021586807db8c3e9499ccd99204aee69ae19f3e2cd2e3c4f574c6356c",
+    "runtime_structure_parity.py": "1a5c6a0afb2868cba9bc0b9d794614035c917a577e1c5fbec2a344ee2f397242",
+    "runtime_trace_report.py": "add56b60843f3b4b3855203c62d1e7a75631d30025ed9c329988e38041ec89f5",
+    "runtime_workflow_benchmark.py": "8873b26f63a0d232bdae672c826fba1d7506fa6e4bbc48a9708dcec91e7b1094"
+  },
+  "required_positive_coverage": [
+    "noninitial accepted sequence change",
+    "stage transition after mutation"
+  ],
+  "schema_version": 1,
+  "sources": {
+    "baseline": {
+      "config_tree_sha256": "0e2c6f1d5851f67c47fec4209d0fb9fa4eeba7e19422c9b6748f022a442fe1df",
+      "head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "repository": "/workspace/scratch/1a0b1639644d/cloud-20261104/baseline"
+    },
+    "candidate": {
+      "config_tree_sha256": "0e2c6f1d5851f67c47fec4209d0fb9fa4eeba7e19422c9b6748f022a442fe1df",
+      "head": "db937f9706270cb109e799cda29f52d2872726b5",
+      "repository": "/workspace/scratch/1a0b1639644d/cloud-20261104/scientific-control-current-db937f9"
+    }
+  },
+  "workload": "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c/evidence/runtime-next/agent-c/scientific-positive-02/workload.yaml",
+  "workload_sha256": "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9"
+}

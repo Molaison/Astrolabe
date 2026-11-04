@@ -1,0 +1,81 @@
+{
+  "source_head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "scope": "stdlib ThreadPool experimental candidate scheduler; injected worker replies; no model, no GPU, no broker",
+  "cases": [
+    {
+      "case": "valid_identity_control",
+      "submitted": {
+        "candidate_id": "expected",
+        "generation": 1,
+        "payload": null
+      },
+      "generation_1_selected": {
+        "task": {
+          "candidate_id": "expected",
+          "generation": 1,
+          "payload": null
+        },
+        "status": "completed",
+        "score": 999.0,
+        "payload": {
+          "sequence": "AAAA"
+        },
+        "error": null,
+        "duration_s": 6.748100008735491e-05
+      },
+      "generation_2_selected": null
+    },
+    {
+      "case": "wrong_candidate_same_generation",
+      "submitted": {
+        "candidate_id": "expected",
+        "generation": 1,
+        "payload": null
+      },
+      "generation_1_selected": {
+        "task": {
+          "candidate_id": "unsubmitted",
+          "generation": 1,
+          "payload": null
+        },
+        "status": "completed",
+        "score": 999.0,
+        "payload": {
+          "sequence": "AAAA"
+        },
+        "error": null,
+        "duration_s": 3.986000001532375e-05
+      },
+      "generation_2_selected": null
+    },
+    {
+      "case": "wrong_candidate_and_future_generation",
+      "submitted": {
+        "candidate_id": "expected",
+        "generation": 1,
+        "payload": null
+      },
+      "generation_1_selected": null,
+      "generation_2_selected": {
+        "task": {
+          "candidate_id": "unsubmitted",
+          "generation": 2,
+          "payload": null
+        },
+        "status": "completed",
+        "score": 999.0,
+        "payload": {
+          "sequence": "AAAA"
+        },
+        "error": null,
+        "duration_s": 3.295999999863852e-05
+      }
+    }
+  ],
+  "observed": {
+    "valid_control_selected": true,
+    "foreign_candidate_selected": true,
+    "unsubmitted_generation_selected": true
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "command": [
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c/../venv/bin/python",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c/scripts/validation/runtime_scientific_control.py",
+    "_child",
+    "--repo",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/scientific-control-current-db937f9",
+    "--directory",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c/evidence/runtime-next/agent-c/scientific-positive-01/candidate",
+    "--workload",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c/evidence/runtime-next/agent-c/scientific-positive-01/workload.yaml"
+  ],
+  "cpu_only": true,
+  "cwd": "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c/evidence/runtime-next/agent-c/scientific-positive-01/candidate",
+  "performance_data": false
+}

@@ -1,0 +1,133 @@
+{
+  "archive": "raw-logs.tar.xz",
+  "archive_sha256": "d1dca2ba4def2dc96ade3f5e50c116eef799d12bd29596aa061585a608e2b036",
+  "files": [
+    {
+      "bytes": 99,
+      "path": "baseline-unit-tests.log",
+      "sha256": "e710ca4bf49149ac2b9d5d53c65d5ece38676b6c34424d6ebb774dc078ac19bf"
+    },
+    {
+      "bytes": 99,
+      "path": "duplicate-regression-after.log",
+      "sha256": "c8ff61368649bd39d0d46f6931e60b15a1d4d78b4aa8e66aaedadda51938abfd"
+    },
+    {
+      "bytes": 8436,
+      "path": "duplicate-regression-before.log",
+      "sha256": "6d8bda4f79e766981288c790ae1c6e59c98f27dc7a002f3f45df0374113218a3"
+    },
+    {
+      "bytes": 99,
+      "path": "generation-regression-after.log",
+      "sha256": "9aaba142797209d2a85f7e928dd84f00206642d4f544c0cddb50f50799c6d97f"
+    },
+    {
+      "bytes": 6967,
+      "path": "generation-regression-before.log",
+      "sha256": "3f418187918063c71c051e5f0458e8b9a584a51ef78458a0729130f9945a8f97"
+    },
+    {
+      "bytes": 1328,
+      "path": "pilot-identity-after.stderr.log",
+      "sha256": "2f7bcb12b0edd176358cb97ce827ee7daa88237a9e1acc04a5cf22cca639d96d"
+    },
+    {
+      "bytes": 99,
+      "path": "pilot-regression-after.log",
+      "sha256": "7857613a5c7dc45da798e1d8a40a2916491944710215a2b47f3f714a22a25e79"
+    },
+    {
+      "bytes": 17109,
+      "path": "pilot-regression-before.log",
+      "sha256": "06a6a6fa56042ed207cd99e75e19f751e25b10ab4e410abb39b92ff34ce317b0"
+    },
+    {
+      "bytes": 99,
+      "path": "review-a-00a8b68-tests.log",
+      "sha256": "fda9d85f0e6e65f8a6e72c1606f344172ae5c542ea2d0c670844b902758a24e0"
+    },
+    {
+      "bytes": 99,
+      "path": "review-a-eac3081-tests.log",
+      "sha256": "8b435f4df09057ce27acec63769ed63c1ce52686ab31974359b80d2d7e4245db"
+    },
+    {
+      "bytes": 113,
+      "path": "review-b-a55c285-tests.log",
+      "sha256": "97c4f45b59b6a6a77da58e7c256647714a6f4416d9e712c81e721ef30b473f80"
+    },
+    {
+      "bytes": 0,
+      "path": "review-b-worker-baseline.stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 0,
+      "path": "review-b-worker-candidate.stderr.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "bytes": 15037,
+      "path": "scientific-positive-01/baseline/cli.log",
+      "sha256": "3b97830d58c8cba5396ece3b2bf95a44b00732cf38758983c1772b76114dbd81"
+    },
+    {
+      "bytes": 24201,
+      "path": "scientific-positive-01/baseline/results/runtime_cpu_scientific_control/001_run/logs/debug.log",
+      "sha256": "12a4bf7d892fed82753354e795eb5cb529f5fb377e78f8b5365a384a702e5f03"
+    },
+    {
+      "bytes": 19377,
+      "path": "scientific-positive-01/baseline/results/runtime_cpu_scientific_control/001_run/logs/info.log",
+      "sha256": "965626ef0f9e0a964992f5099a64e8fc0dc45319bcd8523319c74c493010e401"
+    },
+    {
+      "bytes": 15038,
+      "path": "scientific-positive-01/candidate/cli.log",
+      "sha256": "5847a025aa0309713d7845c1de6a0cc6f210c363ad2c744d7a4ffd8c6496b32c"
+    },
+    {
+      "bytes": 24202,
+      "path": "scientific-positive-01/candidate/results/runtime_cpu_scientific_control/001_run/logs/debug.log",
+      "sha256": "cde5e11c961952a41d17e47bc879dcf8e640b47337632d5237a1e0e862aa2caf"
+    },
+    {
+      "bytes": 19378,
+      "path": "scientific-positive-01/candidate/results/runtime_cpu_scientific_control/001_run/logs/info.log",
+      "sha256": "ff5cdda8fbde1defd60cc4ad1a2d1178aa6a3012c28c0fd34d9faec03013dcda"
+    },
+    {
+      "bytes": 15037,
+      "path": "scientific-positive-02/baseline/cli.log",
+      "sha256": "9ae623c8bcf79f82f8aeb0442121cb5047fe24004ab78c8f7a303d4c5a8359e8"
+    },
+    {
+      "bytes": 24201,
+      "path": "scientific-positive-02/baseline/results/runtime_cpu_scientific_control/001_run/logs/debug.log",
+      "sha256": "8222c60f213b6e72efe7b82a5578c1f7ebf0350c8d953aa1e8a3c6354927846e"
+    },
+    {
+      "bytes": 19377,
+      "path": "scientific-positive-02/baseline/results/runtime_cpu_scientific_control/001_run/logs/info.log",
+      "sha256": "44d0ee4850ffd337629ee0fe04112c99d91dbe1c03a218d450ad2bd4b2f6d8f5"
+    },
+    {
+      "bytes": 15037,
+      "path": "scientific-positive-02/candidate/cli.log",
+      "sha256": "15a9c8b9dabd3d229a4085543ed69f5a0fee6c059fb0a96ad194e46cc1285c78"
+    },
+    {
+      "bytes": 24201,
+      "path": "scientific-positive-02/candidate/results/runtime_cpu_scientific_control/001_run/logs/debug.log",
+      "sha256": "91d33a6b462bd2d760bfab42ce113932145f2284b05ac2e05babe8f68d92ca04"
+    },
+    {
+      "bytes": 19377,
+      "path": "scientific-positive-02/candidate/results/runtime_cpu_scientific_control/001_run/logs/info.log",
+      "sha256": "cf1ca1663e24a4c1f6153026fe65858bed7c45b20f145d542aaba18c0da070b2"
+    }
+  ],
+  "raw_logs_edited": false,
+  "schema_version": 1
+}

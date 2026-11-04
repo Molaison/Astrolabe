@@ -1,0 +1,21 @@
+{
+  "source_head": "8c987ed86452d2c1bb467a1d20c2434347b5a95b",
+  "scope": "Event-controlled ThreadPool protocol probe, not a performance/model/GPU benchmark",
+  "current": {
+    "blocking_capacity": null,
+    "first_selected_id": "0",
+    "first_selected_score": 1.0,
+    "first_collection_count": 1,
+    "total_worker_calls": 3,
+    "total_completed": 3
+  },
+  "blocking_submission_prototype": {
+    "blocking_capacity": 1,
+    "first_selected_id": "1",
+    "first_selected_score": 2.0,
+    "first_collection_count": 2,
+    "total_worker_calls": 3,
+    "total_completed": 3
+  },
+  "verdict": "reject naive blocking submission: same budget, changed first selected candidate"
+}
