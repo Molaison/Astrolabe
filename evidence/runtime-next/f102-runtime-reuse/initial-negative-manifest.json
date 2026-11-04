@@ -1,0 +1,21 @@
+{
+  "files": [
+    {
+      "path": "raw/integration-unadapted-red.log",
+      "bytes": 14573,
+      "sha256": "569506a8775b8e21edde24a422597cd710e7385ab0e43acf08554a817dec53fd"
+    },
+    {
+      "path": "raw/integration-unadapted-red.xml",
+      "bytes": 16944,
+      "sha256": "48267d2dc84e5b5bb8dd1b9eaf136ddae2c428faf3d499fd407b3f846a9b4553"
+    },
+    {
+      "path": "raw/worktree-recheck.json",
+      "bytes": 5302,
+      "sha256": "5c54a6b63c8268c8e11ae0cd2df928a265e69c90a18aa082a8e9e4ea0d853946"
+    }
+  ],
+  "archive_sha256": "75fbfad193b72f64ccdb485ad008df9372710b088be3394db91c9ec1333bf433",
+  "note": "Original failure stdout and JUnit bytes are unchanged, including whitespace in pytest traceback source excerpts."
+}

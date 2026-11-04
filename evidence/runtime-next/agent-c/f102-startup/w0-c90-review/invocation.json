@@ -1,0 +1,47 @@
+{
+  "aggregate_same_mode": {
+    "direct": {
+      "aggregate_effective_throughput_change_percent": 4.286909160186458,
+      "baseline_completed_trajectories_per_second": 0.24823943266316362,
+      "candidate_completed_trajectories_per_second": 0.2588812316411957,
+      "five_pair_faster_count": 4,
+      "strict_range_separation": false
+    },
+    "resident_adaptive": {
+      "aggregate_effective_throughput_change_percent": 0.8965842341610353,
+      "baseline_completed_trajectories_per_second": 0.08978387936491924,
+      "candidate_completed_trajectories_per_second": 0.09058886747212327,
+      "five_pair_faster_count": 3,
+      "strict_range_separation": false
+    },
+    "resident_serial": {
+      "aggregate_effective_throughput_change_percent": -0.10716837426660852,
+      "baseline_completed_trajectories_per_second": 0.08461358945629001,
+      "candidate_completed_trajectories_per_second": 0.08452291044806108,
+      "five_pair_faster_count": 3,
+      "strict_range_separation": false
+    }
+  },
+  "arguments": {
+    "artifacts": "control/f102-w0-reuse/w0-reuse-c90-vs9d-01",
+    "out": "control/f102-startup-science-review/w0-c90-review",
+    "prior": [
+      "control/cpu-ci-04"
+    ],
+    "reader": "agent-c/evidence/runtime-next/agent-c/review_r1_ci.py",
+    "repo": "integration-f102"
+  },
+  "conclusion": "No stable additional performance gain if ranges overlap or fewer than five pairs improve; retain broader runtime fixes on correctness evidence only.",
+  "expected_heads_override": {
+    "baseline": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+    "candidate": "c90fadfdb82e2ba81b596b8d1cc93c4a25e783c4"
+  },
+  "in_memory_layout_substitution": {
+    "new": "comparison = root",
+    "old": "comparison = root / \"comparison\""
+  },
+  "new_benchmark_run": false,
+  "reader_logic_otherwise_unchanged": true,
+  "reader_sha256": "eda968172261e7b266278a4616c65d17b8b70582f3e670b41b7249dff45f5a3a",
+  "scope": "all original CSV/provenance/config/runtime/telemetry rows, independent aggregate calculation"
+}

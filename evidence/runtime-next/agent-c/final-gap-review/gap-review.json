@@ -1,0 +1,34 @@
+{
+  "evidence_commits": {
+    "f9_w0_raw_audit": "b846518710ee12c5cabc095fa5afb32e1a92e455",
+    "native_science_and_c90_negative": "666c4988b63b76996b8aad55d4926458b4bef1e8"
+  },
+  "final_integrated_head_certificate": "PENDING_ROOT_FINAL_GATES",
+  "gpu_raw_available_to_reviewer": false,
+  "items": {
+    "R0": "PARTIAL",
+    "R1": "PARTIAL",
+    "R10": "PARTIAL",
+    "R11": "PARTIAL",
+    "R12": "BLOCKED",
+    "R2": "PARTIAL",
+    "R3": "PARTIAL",
+    "R4": "DONE",
+    "R5": "BLOCKED",
+    "R6": "BLOCKED",
+    "R7": "PARTIAL",
+    "R8": "PARTIAL",
+    "R9": "PARTIAL"
+  },
+  "new_confirmed_production_bug_in_this_read_only_gap_review": false,
+  "reviewer": "Agent C",
+  "scope": "Read-only immutable integration ownership source plus f9 startup source and independently audited raw; no new benchmark/native/GPU execution",
+  "sources": {
+    "backend_matrix_snapshot": "27f8a6d0660867ff11823ab890655eb01125d868",
+    "integration_owner_snapshot": "1e5771b8e2d8f00eeb8658b224d00790c0d6e392",
+    "startup_candidate": "f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f",
+    "w0_baseline": "9d62b3eb86cb75a2266af49dc48cb851e69e0341"
+  },
+  "status": "PROVISIONAL_REVIEW_COMPLETE",
+  "status_rule": "The full umbrella scope determines status. Narrow completed gates are stated separately in the accompanying report. R1 explicit cold-start exit gate is DONE; steady-state break-even and automatic routing remain unfinished."
+}

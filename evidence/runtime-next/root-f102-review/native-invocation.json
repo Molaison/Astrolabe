@@ -1,0 +1,12 @@
+{
+  "command": [
+    "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/control/f102-startup-science-review/compare_native_startup.py",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/control/f102-startup-science-review/native-raw/execution/baseline.json",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/control/f102-startup-science-review/native-raw/execution/candidate.json",
+    "--output",
+    "/workspace/scratch/1a0b1639644d/cloud-20261104/control/root-startup-native-review/comparison.json"
+  ],
+  "returncode": 0,
+  "scope": "root independent comparator rerun on actual downloaded native raw; no new native execution"
+}

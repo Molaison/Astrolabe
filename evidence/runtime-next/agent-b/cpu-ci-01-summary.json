@@ -1,0 +1,201 @@
+{
+  "candidate": "6620da607e66d569eed802057d77b0fbfa9c37b4",
+  "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "protocol_sha256": "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5",
+  "status": "DONE",
+  "correctness_certified": true,
+  "full_trial_contract": true,
+  "runs": 30,
+  "counts": {
+    "baseline/direct": {
+      "trajectories": 15,
+      "evaluations": 45,
+      "initial_evaluations": 15,
+      "mutation_attempts": 30,
+      "accepted_mutations": 0,
+      "failed_trials": 0,
+      "confirmed_process_release": 5
+    },
+    "baseline/resident_serial": {
+      "trajectories": 15,
+      "evaluations": 45,
+      "initial_evaluations": 15,
+      "mutation_attempts": 30,
+      "accepted_mutations": 0,
+      "failed_trials": 0,
+      "confirmed_process_release": 5
+    },
+    "baseline/resident_adaptive": {
+      "trajectories": 15,
+      "evaluations": 45,
+      "initial_evaluations": 15,
+      "mutation_attempts": 30,
+      "accepted_mutations": 0,
+      "failed_trials": 0,
+      "confirmed_process_release": 5
+    },
+    "candidate/direct": {
+      "trajectories": 15,
+      "evaluations": 45,
+      "initial_evaluations": 15,
+      "mutation_attempts": 30,
+      "accepted_mutations": 0,
+      "failed_trials": 0,
+      "confirmed_process_release": 5
+    },
+    "candidate/resident_serial": {
+      "trajectories": 15,
+      "evaluations": 45,
+      "initial_evaluations": 15,
+      "mutation_attempts": 30,
+      "accepted_mutations": 0,
+      "failed_trials": 0,
+      "confirmed_process_release": 5
+    },
+    "candidate/resident_adaptive": {
+      "trajectories": 15,
+      "evaluations": 45,
+      "initial_evaluations": 15,
+      "mutation_attempts": 30,
+      "accepted_mutations": 0,
+      "failed_trials": 0,
+      "confirmed_process_release": 5
+    }
+  },
+  "groups": {
+    "baseline/direct": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 1.0451383168392017,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 2.7899768120000203,
+      "range_seconds": [
+        2.783234283000013,
+        3.176729533000014
+      ],
+      "valid": 5
+    },
+    "baseline/resident_adaptive": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.4066651652144141,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 7.37314922500002,
+      "range_seconds": [
+        7.320529179999994,
+        7.45429871500005
+      ],
+      "valid": 5
+    },
+    "baseline/resident_serial": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.40820254529859723,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 7.324808886999989,
+      "range_seconds": [
+        7.283049200999983,
+        7.468726566999976
+      ],
+      "valid": 5
+    },
+    "candidate/direct": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 1.0563085158017365,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 2.8285694690000014,
+      "range_seconds": [
+        2.7955832700000087,
+        2.9146209889999852
+      ],
+      "valid": 5
+    },
+    "candidate/resident_adaptive": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.4092975918056138,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 7.3084918479999885,
+      "range_seconds": [
+        7.278105632000006,
+        7.452973187999987
+      ],
+      "valid": 5
+    },
+    "candidate/resident_serial": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.4113522108286151,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 7.289357521999989,
+      "range_seconds": [
+        7.24007983300001,
+        7.3569597190000025
+      ],
+      "valid": 5
+    }
+  },
+  "same_mode_pairs": [
+    {
+      "all_five_pairs_improved": false,
+      "candidate_faster_pairs": 1,
+      "median_paired_speed_ratio": 0.9911747022650953,
+      "mode": "direct",
+      "paired_speed_ratios": [
+        1.0899288603867354,
+        0.9979945301361071,
+        0.9840152909463544,
+        0.9878273146280209,
+        0.9911747022650953
+      ],
+      "strict_range_separation": false
+    },
+    {
+      "all_five_pairs_improved": false,
+      "candidate_faster_pairs": 3,
+      "median_paired_speed_ratio": 1.0069882473115568,
+      "mode": "resident_serial",
+      "paired_speed_ratios": [
+        0.9991345847722565,
+        1.0069882473115568,
+        0.9948033250880438,
+        1.0153411552858456,
+        1.0224510730741962
+      ],
+      "strict_range_separation": false
+    },
+    {
+      "all_five_pairs_improved": false,
+      "candidate_faster_pairs": 4,
+      "median_paired_speed_ratio": 1.0075881164186948,
+      "mode": "resident_adaptive",
+      "paired_speed_ratios": [
+        1.0016470336493979,
+        1.016605484464062,
+        1.0075881164186948,
+        0.9892896484414446,
+        1.0175956900445275
+      ],
+      "strict_range_separation": false
+    }
+  ],
+  "experiment": {
+    "allocated_gpu_hours": 0,
+    "max_output_bytes": 260000000,
+    "scope": "all trials, failed work and between-trial analysis; bounded observer cleanup may extend a deadline",
+    "stop_reason": null,
+    "wall_seconds": 176.24583476900003,
+    "walltime_budget_seconds": 900.0
+  },
+  "source_archive": "runtime-cpu-6620da6.tar.xz",
+  "original_artifact_id": 13289814454,
+  "original_zip_sha256": "55941388c72772a8ffdbe4d65749416015a79c722bf0c89d88ca3cef7afd8b05",
+  "scope": "actual CPU Dummy/MCMC workflow; not GPU or pretrained certification"
+}

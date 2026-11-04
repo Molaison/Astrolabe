@@ -1,0 +1,27 @@
+{
+  "exception": "DispatchReached",
+  "message": "controlled client boundary reached; no scientific worker ran",
+  "kind": "real_control_plane_waits_with_controlled_worker_boundary",
+  "scientific_worker_executed": false,
+  "gpu_executed": false,
+  "repository": "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-c",
+  "commit": "8c987ed86452d2c1bb467a1d20c2434347b5a95b",
+  "broker_source_sha256": "56d42ea172252cb0ec79d16921e7c1202dfe41305acfe954207d9bef2a86b9e0",
+  "request_timeout_seconds": 1.0,
+  "elapsed_seconds": 1.3011559039996428,
+  "pending_wait_seconds": 0.6002973660001771,
+  "dispatched": true,
+  "dispatches": [
+    {
+      "monotonic": 2875.577645923,
+      "worker_timeout": 0.001,
+      "seconds_after_queued_event": 1.3009675200000856
+    }
+  ],
+  "busy": 0,
+  "waiting": 0,
+  "request_reservation_retained": false,
+  "broker_source_dirty": false,
+  "same_request_id_rejected": true,
+  "pending_after_cleanup": 0
+}

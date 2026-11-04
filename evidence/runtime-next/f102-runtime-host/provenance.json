@@ -1,0 +1,14 @@
+{
+  "head": "60684bd4fefa6e9b7282176e8b5af7700ef98093",
+  "tree": "84990aa58e8c3626f8d7eaabf7eb6cf43d012ee8",
+  "measurement_sha256": {
+    "scripts/validation/runtime_workflow_benchmark.py": "8873b26f63a0d232bdae672c826fba1d7506fa6e4bbc48a9708dcec91e7b1094",
+    "scripts/validation/runtime_benchmark_processes.py": "e4089c2021586807db8c3e9499ccd99204aee69ae19f3e2cd2e3c4f574c6356c",
+    "scripts/validation/runtime_trace_report.py": "add56b60843f3b4b3855203c62d1e7a75631d30025ed9c329988e38041ec89f5",
+    "scripts/validation/runtime_structure_parity.py": "1a5c6a0afb2868cba9bc0b9d794614035c917a577e1c5fbec2a344ee2f397242"
+  },
+  "scope": "Actual CPU process/socket/isolation/saturation contracts; no GPU or fixed scientific benchmark",
+  "walltime_budget_seconds": 300,
+  "output_budget_bytes": 60000000,
+  "ASTROLABE_EXPECT_GUARDRAILS": "1"
+}

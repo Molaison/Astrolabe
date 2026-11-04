@@ -16,6 +16,36 @@ class WorkerError(RuntimeError):
     pass
 
 
+class AdmissionRejected(WorkerError):
+    """The request was rejected before any worker dispatch."""
+    execution_state = 'not_executed'
+    retryable = True
+
+
+class ApplicationError(WorkerError):
+    """The worker explicitly returned an application failure."""
+
+
+class CancellationToken:
+    """One request's wakeable cancellation signal; owned by its call thread."""
+    def __init__(self):
+        self.event = threading.Event()
+        self.reader, self.writer = os.pipe()
+        os.set_blocking(self.writer, False)
+
+    def cancel(self):
+        if not self.event.is_set():
+            self.event.set()
+            os.write(self.writer, b'!')
+
+    def is_set(self):
+        return self.event.is_set()
+
+    def close(self):
+        os.close(self.reader)
+        os.close(self.writer)
+
+
 class OutcomeUnknown(WorkerError):
     """The worker may have executed the request; never automatically replay it."""
 
@@ -43,6 +73,7 @@ class DaemonClient:
 
     def __init__(self, command, identity, *, env=None, max_message_bytes=1048576, startup_timeout=60,
                  resources=None, _direct=False, _pass_fds=(), _on_start=None):
+        startup_deadline = time.monotonic() + startup_timeout
         if max_message_bytes < 256:
             raise ValueError('max_message_bytes must be at least 256')
         self.limit = max_message_bytes
@@ -73,7 +104,7 @@ class DaemonClient:
                 self._groups[initial[0]] = initial[1]
             if _on_start is not None:
                 _on_start(self.process)
-            hello = self._read(startup_timeout)
+            hello = self._read(max(0, startup_deadline - time.monotonic()), _deadline=startup_deadline)
             if (hello.get('type') != 'hello' or hello.get('protocol') != 1 or
                 hello.get('identity') != identity or hello.get('pid') != self.process.pid or
                 (hello.get('load_count') is not None and
@@ -86,11 +117,16 @@ class DaemonClient:
             self.close()
             raise
 
-    def _read(self, timeout):
-        deadline = None if timeout is None else time.monotonic() + timeout
+    def _read(self, timeout, cancel_token=None, _deadline=None):
+        deadline = _deadline if _deadline is not None else (None if timeout is None else time.monotonic() + timeout)
         while b'\n' not in self._buffer:
-            remaining = None if deadline is None else max(0, deadline - time.monotonic())
-            ready, _, _ = select.select([self.process.stdout], [], [], remaining)
+            remaining = None if deadline is None else deadline - time.monotonic()
+            if remaining is not None and remaining <= 0:
+                raise TimeoutError('worker response deadline expired')
+            readers = [self.process.stdout] + ([cancel_token.reader] if cancel_token else [])
+            ready, _, _ = select.select(readers, [], [], remaining)
+            if cancel_token and cancel_token.reader in ready:
+                raise OutcomeUnknown('request cancelled after submission')
             if not ready:
                 raise TimeoutError('worker response timed out')
             chunk = os.read(self.process.stdout.fileno(), min(65536, self.limit + 1 - len(self._buffer)))
@@ -105,13 +141,24 @@ class DaemonClient:
             raise WorkerError('worker message must be an object')
         return obj
 
-    def call(self, payload, *, timeout=None, request_id=None, runtime=None):
+    def call(self, payload, *, timeout=None, request_id=None, runtime=None, cancel_token=None,
+             _on_unknown=None, _deadline=None):
         if not isinstance(payload, dict):
             raise TypeError('payload must be a JSON object')
         if timeout is not None and timeout <= 0:
             raise ValueError('timeout must be positive')
         metadata = request_metadata(runtime)
-        with self._lock:
+        deadline = None if timeout is None else time.monotonic() + timeout
+        if _deadline is not None:
+            deadline = _deadline if deadline is None else min(deadline, _deadline)
+        acquired = self._lock.acquire() if deadline is None else self._lock.acquire(timeout=max(0, deadline - time.monotonic()))
+        if not acquired:
+            raise TimeoutError('worker queue admission timed out before submission')
+        try:
+            if cancel_token and cancel_token.is_set():
+                raise AdmissionRejected('request cancelled before submission')
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimeoutError('worker deadline expired before submission')
             if self._closed:
                 raise WorkerError('worker client is closed')
             self._observe_children()
@@ -124,22 +171,31 @@ class DaemonClient:
                                 runtime=metadata), self.limit)
             self._used.add(rid)
             try:
-                deadline = None if timeout is None else time.monotonic() + timeout
                 view = memoryview(data)
                 while view:
                     remaining = None if deadline is None else max(0, deadline - time.monotonic())
-                    _, ready, _ = select.select([], [self.process.stdin], [], remaining)
+                    if deadline is not None and remaining <= 0:
+                        raise TimeoutError('worker request deadline expired')
+                    readers = [cancel_token.reader] if cancel_token else []
+                    cancelled, ready, _ = select.select(readers, [self.process.stdin], [], remaining)
+                    if cancelled:
+                        raise OutcomeUnknown('request cancelled after submission')
                     if not ready:
                         raise TimeoutError('worker request timed out')
                     view = view[os.write(self.process.stdin.fileno(), view):]
                 remaining = None if deadline is None else max(0, deadline - time.monotonic())
-                result = self._read(remaining)
+                result = self._read(remaining, cancel_token=cancel_token, _deadline=deadline)
                 if result.get('request_id') != rid or result.get('epoch') != self.epoch:
                     raise WorkerError('response identity mismatch')
                 if result.get('type') == 'error':
+                    if not isinstance(result.get('error_type'), str) or not isinstance(result.get('error'), str):
+                        raise WorkerError('invalid worker error')
+                    if (self.hello.get('worker_epoch') is not None and
+                            result.get('worker_epoch') != self.hello['worker_epoch']):
+                        raise WorkerError('worker error epoch mismatch')
                     if result.get('error_type') == 'OutcomeUnknown':
                         raise OutcomeUnknown('worker outcome unknown: ' + str(result.get('error')))
-                    raise WorkerError('worker error: ' + str(result.get('error')))
+                    raise ApplicationError('worker error: ' + str(result.get('error')))
                 if result.get('type') != 'result' or not isinstance(result.get('result'), dict):
                     raise WorkerError('invalid worker result')
                 reported = result.get('runtime') or {}
@@ -153,16 +209,23 @@ class DaemonClient:
                 self.hello['lifecycle'] = self.lifecycle
                 self.last_metrics = dict(reported)
                 return result['result']
+            except ApplicationError:
+                raise
             except WorkerError as exc:
+                if _on_unknown:
+                    _on_unknown()
                 self.close()
                 if isinstance(exc, OutcomeUnknown):
                     raise
-                if str(exc).startswith('worker error:'):
-                    raise
                 raise OutcomeUnknown('invalid response; request was not replayed') from exc
-            except (OSError, EOFError, TimeoutError, ValueError) as exc:
+            except (OSError, EOFError, TimeoutError, ValueError, TypeError, AttributeError) as exc:
+                if _on_unknown:
+                    _on_unknown()
                 self.close()
                 raise OutcomeUnknown('worker outcome unknown; request was not replayed') from exc
+
+        finally:
+            self._lock.release()
 
     def _observe_children(self):
         if not self._namespace_verified:

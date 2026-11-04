@@ -1,0 +1,81 @@
+{
+  "source": "8c987ed86452d2c1bb467a1d20c2434347b5a95b",
+  "scope": "real ThreadPool scheduler; controlled inexpensive workers; no pretrained model or GPU",
+  "valid": {
+    "calls": [
+      [
+        1,
+        "a"
+      ],
+      [
+        1,
+        "b"
+      ]
+    ],
+    "errors": [],
+    "selected": [
+      [
+        1,
+        "b",
+        0.8
+      ]
+    ]
+  },
+  "wrong_generation": {
+    "calls": [],
+    "errors": [
+      "candidate task generation mismatch: submitted generation=1; candidate_id='foreign', task generation=2"
+    ],
+    "selected": []
+  },
+  "duplicate_in_batch": {
+    "calls": [],
+    "errors": [
+      "duplicate candidate task identity: candidate_id='dup', generation=1"
+    ],
+    "selected": []
+  },
+  "duplicate_after_completion": {
+    "calls": [
+      [
+        1,
+        "once"
+      ]
+    ],
+    "errors": [
+      "duplicate candidate task identity: candidate_id='once', generation=1"
+    ],
+    "selected": [
+      [
+        1,
+        "once",
+        0.5
+      ]
+    ]
+  },
+  "id_reused_in_new_generation": {
+    "calls": [
+      [
+        1,
+        "valid"
+      ],
+      [
+        2,
+        "valid"
+      ]
+    ],
+    "errors": [],
+    "selected": [
+      [
+        1,
+        "valid",
+        0.5
+      ],
+      [
+        2,
+        "valid",
+        0.5
+      ]
+    ]
+  }
+}

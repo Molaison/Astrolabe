@@ -1,0 +1,32 @@
+{
+  "scope": "code-contract diagnostic, fake runtime/model/tensors/formatter, no GPU acceleration claim",
+  "checks": [
+    {
+      "argv": [
+        "/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python",
+        "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/evidence/runtime-next/agent-b/lease_boundary_probe.py"
+      ],
+      "exit_code": 0,
+      "expected_exit_code": 0,
+      "host_formatter_inside_lease": true,
+      "unused_output_copied": true,
+      "real_gpu": false,
+      "real_pretrained_model": false,
+      "stderr": ""
+    },
+    {
+      "argv": [
+        "/workspace/scratch/1a0b1639644d/cloud-20261104/venv/bin/python",
+        "/workspace/scratch/1a0b1639644d/cloud-20261104/agent-b/evidence/runtime-next/agent-b/lease_boundary_probe.py",
+        "--require-host-finalization"
+      ],
+      "exit_code": 1,
+      "expected_exit_code": 1,
+      "host_formatter_inside_lease": true,
+      "unused_output_copied": true,
+      "real_gpu": false,
+      "real_pretrained_model": false,
+      "stderr": ""
+    }
+  ]
+}

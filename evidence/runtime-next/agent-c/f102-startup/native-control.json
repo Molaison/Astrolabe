@@ -1,0 +1,36 @@
+{
+  "schema": "astrolabe-startup-native-scientific-control-v1",
+  "scope": "correctness-only PyRosetta first-use and installed registry comparison; not W0 or a performance benchmark",
+  "baseline_commit": "47c6f6dd18fe822a6d28ea6970c756d5dfae7b95",
+  "candidate_commit": "f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f",
+  "fixture_sources": [
+    "tests/test_per_residue_rosetta_scores.py::_try_pose",
+    "tests/test_protein_quality_selectors_pyrosetta.py::_try_pose"
+  ],
+  "sequence": "ACDEFGHIK",
+  "chain_order": ["A", "B", "C"],
+  "chain_translations_angstrom": [[0.0, 0.0, 0.0], [0.0, 6.0, 0.0], [0.0, -6.0, 0.0]],
+  "expected_residue_count": 27,
+  "python_numpy_torch_seed": 17,
+  "native_initialization_options": "-mute all -constant_seed -jran 17",
+  "native_initialization_note": "The existing nine-residue fixture is used in full. Three translated copies add a nonempty multichain registered-loss control. The explicit Rosetta seed freezes this separate control identically on both sources; production options and workloads are not changed.",
+  "registered_losses": {
+    "chain_buried_fraction": {"buried_protomer": "B"},
+    "com_distance": {"buried_protomer": "B"}
+  },
+  "native_metric": "astrolabe.losses.interaction.sasa_calculator (actual PerResidueSasaMetric)",
+  "repeat_loss_calls": 2,
+  "rng_policy": "Seed once before cold-import diagnostic, then once at the actual production set_random_seeds boundary after cold import; no reseeding, restoring, or stubbing during first native use, native init, pose construction, or loss calculation",
+  "comparison": {
+    "registry_all_metadata_and_signatures": "exact",
+    "registry_order": "exact",
+    "all_registered_loss_requirements": "exact",
+    "pyrosetta_loss_classification": "exact",
+    "first_use_python_numpy_torch_rng": "unchanged within each process and exact across sources after production seed",
+    "coordinates_and_outputs": "exact float64 values; preserve any negative result instead of relaxing tolerance",
+    "native_initialization": "not initialized before explicit init, initialized afterwards",
+    "cuda_initialized": false
+  },
+  "budgets": {"max_native_processes": 2, "cpu_seconds_per_process": 45, "wall_seconds_per_process": 85, "threads_per_process": 1},
+  "execution_gate": "Do not run on f102 until root confirms the formal W0 comparison has finished and explicitly releases the native validation slot. No concurrent profiling."
+}

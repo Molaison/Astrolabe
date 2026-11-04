@@ -1,0 +1,2780 @@
+{
+  "cold_spatial_loaded": false,
+  "head": "605bad02f5c71083a95142f03bebc0db24a27d84",
+  "missing_dependency": {
+    "clash": {
+      "cause": "ImportError",
+      "message": "scipy is required for BindCraft-aligned clash/interface-residue losses.",
+      "type": "ImportError"
+    },
+    "hotspot": {
+      "cause": "ImportError",
+      "message": "scipy is required for BindCraft-aligned clash/interface-residue losses.",
+      "type": "ImportError"
+    },
+    "key_residue_plddt": {
+      "cause": "ImportError",
+      "message": "scipy is required for BindCraft-aligned clash/interface-residue losses.",
+      "type": "ImportError"
+    }
+  },
+  "registry": {
+    "ananas_rmsd_norm": {
+      "metadata": {
+        "description": "Normalized AnAnaS symmetry RMSD in [0,1]; higher is better.",
+        "name": "ananas_rmsd_norm",
+        "optional_params": [
+          "point_group",
+          "order",
+          "ananas_path",
+          "timeout_s",
+          "best",
+          "worst",
+          "missing_rmsd"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, point_group='C', order=None, ananas_path=None, timeout_s=30.0, best=0.0, worst=2.0, missing_rmsd=inf)"
+    },
+    "ananas_rmsd_raw": {
+      "metadata": {
+        "description": "AnAnaS symmetry RMSD for a requested Cn/Dn point group.",
+        "name": "ananas_rmsd_raw",
+        "optional_params": [
+          "point_group",
+          "order",
+          "ananas_path",
+          "timeout_s",
+          "missing_rmsd"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, point_group='C', order=None, ananas_path=None, timeout_s=30.0, missing_rmsd=inf)"
+    },
+    "autodock_penalty": {
+      "metadata": {
+        "description": "Fixed penalty when AutoDock predocker recorded a soft docking failure for the current step.",
+        "name": "autodock_penalty",
+        "optional_params": [
+          "penalty_value"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.predocker",
+      "signature": "(eval_result, penalty_value: 'float' = 100.0)"
+    },
+    "best_channel_effective_path_len": {
+      "metadata": {
+        "description": "Effective path length of the best channel_hole scan.",
+        "name": "best_channel_effective_path_len",
+        "optional_params": [
+          "reference_structure_path",
+          "reference_spheres_path",
+          "frame_source",
+          "alignment_chains",
+          "lateral_step",
+          "end_radius",
+          "effective_radius_cutoff",
+          "radius_gate_path_len_threshold",
+          "hole_executable",
+          "hole_radius_file"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.channel_hole",
+      "signature": "(eval_result, *, reference_structure_path=None, reference_spheres_path=None, frame_source: 'str' = 'reference_spheres', alignment_chains: 'str | Sequence[str] | None' = None, lateral_step: 'float' = 2.0, end_radius: 'float' = 5.0, effective_radius_cutoff: 'float' = 4.0, radius_gate_path_len_threshold: 'float' = 40.0, hole_executable: 'str | None' = None, hole_radius_file: 'str | None' = None)"
+    },
+    "best_channel_min_radius": {
+      "metadata": {
+        "description": "Minimum radius of the best channel_hole scan.",
+        "name": "best_channel_min_radius",
+        "optional_params": [
+          "reference_structure_path",
+          "reference_spheres_path",
+          "frame_source",
+          "alignment_chains",
+          "lateral_step",
+          "end_radius",
+          "effective_radius_cutoff",
+          "radius_gate_path_len_threshold",
+          "hole_executable",
+          "hole_radius_file"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.channel_hole",
+      "signature": "(eval_result, *, reference_structure_path=None, reference_spheres_path=None, frame_source: 'str' = 'reference_spheres', alignment_chains: 'str | Sequence[str] | None' = None, lateral_step: 'float' = 2.0, end_radius: 'float' = 5.0, effective_radius_cutoff: 'float' = 4.0, radius_gate_path_len_threshold: 'float' = 40.0, hole_executable: 'str | None' = None, hole_radius_file: 'str | None' = None)"
+    },
+    "bfactor_mean": {
+      "metadata": {
+        "description": "Mean B-factor over all atoms (common pLDDT proxy for structure files)",
+        "name": "bfactor_mean",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "bfactor_mean_norm": {
+      "metadata": {
+        "description": "Mean B-factor normalized to [0,1] assuming 0..100 scale",
+        "name": "bfactor_mean_norm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "bindcraft_binder_loop_pct": {
+      "metadata": {
+        "description": "BindCraft-aligned binder loop% (DSSP; requires mkdssp)",
+        "name": "bindcraft_binder_loop_pct",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "binder_chain",
+          "target_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, binder_chain: 'str', target_chain: 'str')"
+    },
+    "bindcraft_binder_plddt_norm": {
+      "metadata": {
+        "description": "BindCraft-aligned binder pLDDT normalized to [0,1] from B-factors",
+        "name": "bindcraft_binder_plddt_norm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "binder_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, binder_chain: 'str')"
+    },
+    "bindcraft_binder_rmsd": {
+      "metadata": {
+        "description": "BindCraft-aligned binder RMSD (align binder-alone onto trajectory, then unaligned RMSD; requires bindcraft_trajectory_pdb + bindcraft_binder_alone_pdb)",
+        "name": "bindcraft_binder_rmsd",
+        "optional_params": [
+          "bindcraft_binder_alone_chain",
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "bindcraft_trajectory_pdb",
+          "bindcraft_binder_alone_pdb",
+          "binder_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, bindcraft_trajectory_pdb: 'str', bindcraft_binder_alone_pdb: 'str', binder_chain: 'str', bindcraft_binder_alone_chain: 'str' = 'A', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_binder_score": {
+      "metadata": {
+        "description": "BindCraft-style binder chain energy score (TotalEnergyMetric)",
+        "name": "bindcraft_binder_score",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_hotspot_rmsd": {
+      "metadata": {
+        "description": "BindCraft-aligned hotspot RMSD (unaligned PyRosetta RMSDMetric on binder chain; requires bindcraft_trajectory_pdb)",
+        "name": "bindcraft_hotspot_rmsd",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "bindcraft_trajectory_pdb",
+          "binder_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, bindcraft_trajectory_pdb: 'str', binder_chain: 'str', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_interface_aa_count_A": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for A (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_A",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='A')"
+    },
+    "bindcraft_interface_aa_count_C": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for C (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_C",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='C')"
+    },
+    "bindcraft_interface_aa_count_D": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for D (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_D",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='D')"
+    },
+    "bindcraft_interface_aa_count_E": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for E (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_E",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='E')"
+    },
+    "bindcraft_interface_aa_count_F": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for F (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_F",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='F')"
+    },
+    "bindcraft_interface_aa_count_G": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for G (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_G",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='G')"
+    },
+    "bindcraft_interface_aa_count_H": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for H (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_H",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='H')"
+    },
+    "bindcraft_interface_aa_count_I": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for I (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_I",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='I')"
+    },
+    "bindcraft_interface_aa_count_K": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for K (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_K",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='K')"
+    },
+    "bindcraft_interface_aa_count_L": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for L (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_L",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='L')"
+    },
+    "bindcraft_interface_aa_count_M": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for M (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_M",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='M')"
+    },
+    "bindcraft_interface_aa_count_N": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for N (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_N",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='N')"
+    },
+    "bindcraft_interface_aa_count_P": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for P (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_P",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='P')"
+    },
+    "bindcraft_interface_aa_count_Q": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for Q (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_Q",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='Q')"
+    },
+    "bindcraft_interface_aa_count_R": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for R (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_R",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='R')"
+    },
+    "bindcraft_interface_aa_count_S": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for S (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_S",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='S')"
+    },
+    "bindcraft_interface_aa_count_T": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for T (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_T",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='T')"
+    },
+    "bindcraft_interface_aa_count_V": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for V (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_V",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='V')"
+    },
+    "bindcraft_interface_aa_count_W": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for W (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_W",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='W')"
+    },
+    "bindcraft_interface_aa_count_Y": {
+      "metadata": {
+        "description": "BindCraft-aligned interface AA count for Y (hotspot residues)",
+        "name": "bindcraft_interface_aa_count_Y",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', _aa='Y')"
+    },
+    "bindcraft_interface_dG": {
+      "metadata": {
+        "description": "BindCraft-style interface dG (InterfaceAnalyzerMover get_interface_dG)",
+        "name": "bindcraft_interface_dG",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_interface_dSASA": {
+      "metadata": {
+        "description": "BindCraft-style interface dSASA (InterfaceAnalyzerMover get_interface_delta_sasa)",
+        "name": "bindcraft_interface_dSASA",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_interface_delta_unsat_hbonds": {
+      "metadata": {
+        "description": "BindCraft-style buried unsatisfied HBonds (RosettaScripts BuriedUnsatHbonds ddG-style)",
+        "name": "bindcraft_interface_delta_unsat_hbonds",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_interface_hydrophobicity": {
+      "metadata": {
+        "description": "BindCraft-aligned interface hydrophobicity (percent hydrophobic AA among hotspot residues)",
+        "name": "bindcraft_interface_hydrophobicity",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str')"
+    },
+    "bindcraft_interface_interface_hbonds": {
+      "metadata": {
+        "description": "BindCraft-style interface hbonds (InterfaceAnalyzerMover interface_hbonds)",
+        "name": "bindcraft_interface_interface_hbonds",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_interface_loop_pct": {
+      "metadata": {
+        "description": "BindCraft-aligned interface loop% (DSSP; requires mkdssp)",
+        "name": "bindcraft_interface_loop_pct",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "binder_chain",
+          "target_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, binder_chain: 'str', target_chain: 'str')"
+    },
+    "bindcraft_interface_nres": {
+      "metadata": {
+        "description": "BindCraft-aligned interface residue count on binder chain (hotspot-residue definition)",
+        "name": "bindcraft_interface_nres",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str')"
+    },
+    "bindcraft_interface_plddt_norm": {
+      "metadata": {
+        "description": "BindCraft-aligned interface pLDDT normalized to [0,1] (from B-factors)",
+        "name": "bindcraft_interface_plddt_norm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "binder_chain",
+          "target_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, binder_chain: 'str', target_chain: 'str')"
+    },
+    "bindcraft_interface_sc": {
+      "metadata": {
+        "description": "BindCraft-style interface shape complementarity (InterfaceAnalyzerMover sc_value)",
+        "name": "bindcraft_interface_sc",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_ss_plddt_norm": {
+      "metadata": {
+        "description": "BindCraft-aligned non-loop pLDDT normalized to [0,1] (from B-factors)",
+        "name": "bindcraft_ss_plddt_norm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "binder_chain",
+          "target_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, binder_chain: 'str', target_chain: 'str')"
+    },
+    "bindcraft_surface_hydrophobicity": {
+      "metadata": {
+        "description": "BindCraft-style binder surface hydrophobicity fraction (LayerSelector surface residues)",
+        "name": "bindcraft_surface_hydrophobicity",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all')"
+    },
+    "bindcraft_target_rmsd": {
+      "metadata": {
+        "description": "BindCraft-aligned target RMSD (CA-only; requires bindcraft_starting_pdb + bindcraft_starting_target_chains)",
+        "name": "bindcraft_target_rmsd",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "bindcraft_starting_pdb",
+          "bindcraft_starting_target_chains"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, bindcraft_starting_pdb: 'str', bindcraft_starting_target_chains: 'str')"
+    },
+    "binder_bound_unbound_binder_rmsd": {
+      "metadata": {
+        "description": "PXDesignBench-style CA-only RMSD for binder_unbound_structure vs binder chain in predicted complex",
+        "name": "binder_bound_unbound_binder_rmsd",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "binder_unbound_structure",
+          "binder_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, binder_unbound_structure: 'str', binder_chain: 'str')"
+    },
+    "binder_iptm": {
+      "metadata": {
+        "description": "Binder chain interface pTM (Protenix chain_iptm definition: mean of chain_pair_iptm pairs involving binder chain)",
+        "name": "binder_iptm",
+        "optional_params": [
+          "binder_chain"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, binder_chain: str | None = None)"
+    },
+    "binder_pair_tmscore": {
+      "metadata": {
+        "description": "Mean binder-chain TM-score between two predicted oligomers using USalign",
+        "name": "binder_pair_tmscore",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "oligo_a",
+          "oligo_b",
+          "binder_chain"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.structure",
+      "signature": "(eval_result, oligo_a: str, oligo_b: str, binder_chain: str)"
+    },
+    "binder_ptm": {
+      "metadata": {
+        "description": "Binder chain pTM (from per-chain chain_ptm in AF3/Protenix summary_confidence)",
+        "name": "binder_ptm",
+        "optional_params": [
+          "binder_chain"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, binder_chain: str | None = None)"
+    },
+    "binder_rmsd": {
+      "metadata": {
+        "description": "PXDesignBench-style CA-only RMSD for binder_unbound_structure vs binder chain in reference_complex",
+        "name": "binder_rmsd",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "binder_unbound_structure",
+          "reference_complex",
+          "binder_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, binder_unbound_structure: 'str', reference_complex: 'str', binder_chain: 'str')"
+    },
+    "binder_target_min_dist": {
+      "metadata": {
+        "description": "Min heavy-atom distance (\u00c5) between binder chain(s) and target chain(s); target defaults to all non-binder chains in the evaluated oligo.",
+        "name": "binder_target_min_dist",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "atom_mode",
+          "use_ca"
+        ],
+        "params": [
+          "binder_chain",
+          "target_chains",
+          "atom_mode",
+          "use_ca"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.binding_site",
+      "signature": "(eval_result, binder_chain: 'str' = 'A', target_chains=None, atom_mode: 'str | None' = None, use_ca: 'bool | None' = None)"
+    },
+    "binding_site_allowed_min_dist": {
+      "metadata": {
+        "description": "Min atom-atom distance (\u00c5) between binding_site-selected residues and allowed residues on the opposite chain; when one side omits positions, that side expands to the whole chain.",
+        "name": "binding_site_allowed_min_dist",
+        "optional_params": [
+          "atom_mode",
+          "use_ca"
+        ],
+        "params": [
+          "atom_mode",
+          "use_ca"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.binding_site",
+      "signature": "(eval_result, atom_mode: 'str | None' = None, use_ca: 'bool | None' = None)"
+    },
+    "binding_site_framework_min_dist": {
+      "metadata": {
+        "description": "Min atom-atom distance (\u00c5) between the target-side binding site (or full target chain) and binder framework residues.",
+        "name": "binding_site_framework_min_dist",
+        "optional_params": [
+          "atom_mode",
+          "use_ca"
+        ],
+        "params": [
+          "atom_mode",
+          "use_ca"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.binding_site",
+      "signature": "(eval_result, atom_mode: 'str | None' = None, use_ca: 'bool | None' = None)"
+    },
+    "buried_contribution_diff": {
+      "metadata": {
+        "description": "Calculate buried contribution difference for a specific protomer",
+        "name": "buried_contribution_diff",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "buried_protomer"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, buried_protomer: str)"
+    },
+    "buried_fraction_allala": {
+      "metadata": {
+        "description": "Calculate buried fraction using all-alanine reference",
+        "name": "buried_fraction_allala",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "buried_protomer"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, buried_protomer: str)"
+    },
+    "cd47_antibody_like_epitope_score": {
+      "metadata": {
+        "description": "CD47 antibody-like target-epitope score: consensus-contact Jaccard, zeroed when overlap is below the antibody-like floor or the contact set is N-terminal-dominant.",
+        "name": "cd47_antibody_like_epitope_score",
+        "optional_params": [
+          "binder_chain",
+          "target_chain",
+          "contact_method",
+          "sc_cutoff",
+          "ca_cutoff",
+          "min_overlap",
+          "zero_if_nterm_dominant",
+          "nterm_max_resi",
+          "nterm_fraction"
+        ],
+        "params": [
+          "binder_chain",
+          "target_chain",
+          "contact_method",
+          "sc_cutoff",
+          "ca_cutoff",
+          "min_overlap",
+          "zero_if_nterm_dominant",
+          "nterm_max_resi",
+          "nterm_fraction"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, binder_chain: str = 'A', target_chain: str = 'B', contact_method: str = 'sc', sc_cutoff: float = 5.0, ca_cutoff: float = 8.0, min_overlap: int = 6, zero_if_nterm_dominant: bool = True, nterm_max_resi: int = 30, nterm_fraction: float = 0.5)"
+    },
+    "chain_buried_fraction": {
+      "metadata": {
+        "description": "Calculate buried fraction for a specific protomer",
+        "name": "chain_buried_fraction",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "buried_protomer"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, buried_protomer: str)"
+    },
+    "chain_holes_diff": {
+      "metadata": {
+        "description": "Calculate holes difference for a specific protomer",
+        "name": "chain_holes_diff",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "buried_protomer"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, buried_protomer: str)"
+    },
+    "chain_pair_iptm": {
+      "metadata": {
+        "description": "Mean chain-pair iPTM for the selected chain_a/chain_b pairs",
+        "name": "chain_pair_iptm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, chain_a, chain_b)"
+    },
+    "channel_hole": {
+      "metadata": {
+        "description": "Best-of-9 HOLE score using a reference-spheres frame or the current exact-cyclic axis.",
+        "name": "channel_hole",
+        "optional_params": [
+          "reference_structure_path",
+          "reference_spheres_path",
+          "frame_source",
+          "alignment_chains",
+          "lateral_step",
+          "end_radius",
+          "effective_radius_cutoff",
+          "radius_gate_path_len_threshold",
+          "hole_executable",
+          "hole_radius_file"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.channel_hole",
+      "signature": "(eval_result, *, reference_structure_path=None, reference_spheres_path=None, frame_source: 'str' = 'reference_spheres', alignment_chains: 'str | Sequence[str] | None' = None, lateral_step: 'float' = 2.0, end_radius: 'float' = 5.0, effective_radius_cutoff: 'float' = 4.0, radius_gate_path_len_threshold: 'float' = 40.0, hole_executable: 'str | None' = None, hole_radius_file: 'str | None' = None)"
+    },
+    "channel_softplus_radius": {
+      "metadata": {
+        "description": "Smooth negative softplus penalty over all valid HOLE scan minimum radii.",
+        "name": "channel_softplus_radius",
+        "optional_params": [
+          "reference_structure_path",
+          "reference_spheres_path",
+          "frame_source",
+          "alignment_chains",
+          "lateral_step",
+          "end_radius",
+          "effective_radius_cutoff",
+          "radius_gate_path_len_threshold",
+          "target_min_radius",
+          "temperature",
+          "hole_executable",
+          "hole_radius_file"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.channel_hole",
+      "signature": "(eval_result, *, reference_structure_path=None, reference_spheres_path=None, frame_source: 'str' = 'reference_spheres', alignment_chains: 'str | Sequence[str] | None' = None, lateral_step: 'float' = 2.0, end_radius: 'float' = 5.0, effective_radius_cutoff: 'float' = 4.0, radius_gate_path_len_threshold: 'float' = 40.0, target_min_radius: 'float' = 1.2, temperature: 'float' = 0.1, hole_executable: 'str | None' = None, hole_radius_file: 'str | None' = None)"
+    },
+    "circle_dual_cyclic": {
+      "metadata": {
+        "description": "",
+        "name": "circle_dual_cyclic",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "target_radius"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic",
+      "signature": "(eval_result, target_radius, exclude_terminal_residues=5)"
+    },
+    "clash_pairs": {
+      "metadata": {
+        "description": "BindCraft-aligned heavy-atom inter-chain clash count (<=2.4\u00c5)",
+        "name": "clash_pairs",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "clash_pairs_ca": {
+      "metadata": {
+        "description": "BindCraft-aligned C\u03b1 clash count (<=2.5\u00c5)",
+        "name": "clash_pairs_ca",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "com_distance": {
+      "metadata": {
+        "description": "Calculate center of mass distance for a specific protomer",
+        "name": "com_distance",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "buried_protomer"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, buried_protomer: str)"
+    },
+    "complex_rmsd": {
+      "metadata": {
+        "description": "PXDesignBench-style CA-only Kabsch RMSD over all chains (requires reference_complex)",
+        "name": "complex_rmsd",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "reference_complex"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, reference_complex: 'str')"
+    },
+    "contact_molecular_surface": {
+      "metadata": {
+        "description": "Rosetta contact molecular surface between two protomer/chain groups",
+        "name": "contact_molecular_surface",
+        "optional_params": [
+          "protomer_a",
+          "protomer_b",
+          "protomer_a_residues",
+          "protomer_b_residues",
+          "included_protomers",
+          "distance_weight",
+          "use_rosetta_radii"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, protomer_a: Union[str, Sequence[str], NoneType] = None, protomer_b: Union[str, Sequence[str], NoneType] = None, protomer_a_residues: str | None = None, protomer_b_residues: str | None = None, included_protomers: str | None = None, distance_weight: float = 0.5, use_rosetta_radii: bool = True)"
+    },
+    "contact_molecular_surface_norm": {
+      "metadata": {
+        "description": "Normalized Rosetta contact molecular surface score with cms=400 mapped to 0.8",
+        "name": "contact_molecular_surface_norm",
+        "optional_params": [
+          "protomer_a",
+          "protomer_b",
+          "protomer_a_residues",
+          "protomer_b_residues",
+          "included_protomers",
+          "distance_weight",
+          "use_rosetta_radii",
+          "midpoint",
+          "midpoint_value",
+          "lower_scale",
+          "upper_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, protomer_a: Union[str, Sequence[str], NoneType] = None, protomer_b: Union[str, Sequence[str], NoneType] = None, protomer_a_residues: str | None = None, protomer_b_residues: str | None = None, included_protomers: str | None = None, distance_weight: float = 0.5, use_rosetta_radii: bool = True, midpoint: float = 400.0, midpoint_value: float = 0.8, lower_scale: float = 150.0, upper_scale: float = 75.0)"
+    },
+    "cross_contact_lis": {
+      "metadata": {
+        "description": "Mean cross-chain cross contact lis score",
+        "name": "cross_contact_lis",
+        "optional_params": [
+          "_chain_pair_key"
+        ],
+        "params": [
+          "_chain_pair_key"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, _chain_pair_key='chain_pair_contact_lis')"
+    },
+    "cross_iptm": {
+      "metadata": {
+        "description": "Mean cross-chain cross iptm score",
+        "name": "cross_iptm",
+        "optional_params": [
+          "_chain_pair_key"
+        ],
+        "params": [
+          "_chain_pair_key"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, _chain_pair_key='chain_pair_iptm')"
+    },
+    "cross_lis": {
+      "metadata": {
+        "description": "Mean cross-chain cross lis score",
+        "name": "cross_lis",
+        "optional_params": [
+          "_chain_pair_key"
+        ],
+        "params": [
+          "_chain_pair_key"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, _chain_pair_key='chain_pair_lis')"
+    },
+    "cross_pae_min": {
+      "metadata": {
+        "description": "Mean cross-chain cross pae min score",
+        "name": "cross_pae_min",
+        "optional_params": [
+          "_chain_pair_key"
+        ],
+        "params": [
+          "_chain_pair_key"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, _chain_pair_key='chain_pair_pae_min')"
+    },
+    "cyclic_all_bonds_closed": {
+      "metadata": {
+        "description": "Binary direct cyclic closure status; 1 when every configured bond has observed distance <= target_distance + margin.",
+        "name": "cyclic_all_bonds_closed",
+        "optional_params": [
+          "margin"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic_closure",
+      "signature": "(eval_result, margin: 'float' = 0.3)"
+    },
+    "cyclic_all_bonds_within_error": {
+      "metadata": {
+        "description": "Publication closure endpoint: 1 when all configured bonds have endpoint atoms and absolute bond-length error <= margin, independent of encoding scope.",
+        "name": "cyclic_all_bonds_within_error",
+        "optional_params": [
+          "margin"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic_closure",
+      "signature": "(eval_result, margin: 'float' = 0.3)"
+    },
+    "cyclic_closure_distance_score": {
+      "metadata": {
+        "description": "Direct cyclic closure quality in [0,1] from distance excess; 1 means no bond exceeds target distance, 0 means at least one bond exceeds target distance by margin or more.",
+        "name": "cyclic_closure_distance_score",
+        "optional_params": [
+          "margin"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic_closure",
+      "signature": "(eval_result, margin: 'float' = 0.3)"
+    },
+    "cyclic_closure_max_excess": {
+      "metadata": {
+        "description": "Maximum direct distance excess over configured cyclization bonds in Angstrom; lower is better.",
+        "name": "cyclic_closure_max_excess",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic_closure",
+      "signature": "(eval_result)"
+    },
+    "cyclic_closure_norm": {
+      "metadata": {
+        "description": "Normalized cyclic closure quality in [0,1] using Gaussian distance penalty on configured cyclization bonds.",
+        "name": "cyclic_closure_norm",
+        "optional_params": [
+          "sigma",
+          "aggregate"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic_closure",
+      "signature": "(eval_result, sigma: 'float' = 0.2, aggregate: 'str' = 'min')"
+    },
+    "cyclic_edge_cv": {
+      "metadata": {
+        "description": "Coefficient of variation of adjacent protomer-centroid edge lengths.",
+        "name": "cyclic_edge_cv",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic",
+      "signature": "(eval_result)"
+    },
+    "cyclic_max_bond_error": {
+      "metadata": {
+        "description": "Maximum absolute bond-length error in Angstrom across every configured cyclization bond, independent of encoding scope; missing endpoint atoms give infinity.",
+        "name": "cyclic_max_bond_error",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic_closure",
+      "signature": "(eval_result)"
+    },
+    "cyclic_plane_rms_norm": {
+      "metadata": {
+        "description": "Normalized RMS distance of protomer centroids to their best-fit plane.",
+        "name": "cyclic_plane_rms_norm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic",
+      "signature": "(eval_result)"
+    },
+    "cyclic_radius_cv": {
+      "metadata": {
+        "description": "Coefficient of variation of protomer-centroid radii about global COM.",
+        "name": "cyclic_radius_cv",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic",
+      "signature": "(eval_result)"
+    },
+    "cyclic_symmetry_composite": {
+      "metadata": {
+        "description": "Composite cyclic symmetry mismatch from radius, plane, and edge regularity.",
+        "name": "cyclic_symmetry_composite",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic",
+      "signature": "(eval_result)"
+    },
+    "dihedral_pair_contact_count_norm": {
+      "metadata": {
+        "description": "Normalized Dn C2-pair contact count in [0,1]; higher rewards paired-chain contact.",
+        "name": "dihedral_pair_contact_count_norm",
+        "optional_params": [
+          "order",
+          "contact_cutoff",
+          "atom_mode",
+          "target",
+          "reduction"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, order=None, contact_cutoff=5.0, atom_mode='heavy', target=12.0, reduction='mean')"
+    },
+    "dihedral_pair_contact_count_raw": {
+      "metadata": {
+        "description": "Residue-pair contact count across Dn C2-paired protomers on evaluator-predicted structures.",
+        "name": "dihedral_pair_contact_count_raw",
+        "optional_params": [
+          "order",
+          "contact_cutoff",
+          "atom_mode",
+          "reduction"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, order=None, contact_cutoff=5.0, atom_mode='heavy', reduction='mean')"
+    },
+    "dihedral_pair_contact_fraction_norm": {
+      "metadata": {
+        "description": "Normalized Dn C2-pair interface coverage in [0,1]; higher means more paired interfaces are present.",
+        "name": "dihedral_pair_contact_fraction_norm",
+        "optional_params": [
+          "order",
+          "contact_cutoff",
+          "atom_mode",
+          "min_contacts",
+          "target"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, order=None, contact_cutoff=5.0, atom_mode='heavy', min_contacts=1, target=1.0)"
+    },
+    "dihedral_pair_contact_fraction_raw": {
+      "metadata": {
+        "description": "Fraction of Dn C2-paired protomer pairs with at least min_contacts residue contacts.",
+        "name": "dihedral_pair_contact_fraction_raw",
+        "optional_params": [
+          "order",
+          "contact_cutoff",
+          "atom_mode",
+          "min_contacts"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, order=None, contact_cutoff=5.0, atom_mode='heavy', min_contacts=1)"
+    },
+    "dihedral_pair_min_distance_norm": {
+      "metadata": {
+        "description": "Normalized Dn C2-pair atom-distance compactness in [0,1]; higher is closer contact.",
+        "name": "dihedral_pair_min_distance_norm",
+        "optional_params": [
+          "order",
+          "atom_mode",
+          "best",
+          "worst",
+          "reduction"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, order=None, atom_mode='heavy', best=3.5, worst=14.0, reduction='mean')"
+    },
+    "dihedral_pair_min_distance_raw": {
+      "metadata": {
+        "description": "Minimum atom distance across Dn C2-paired protomers on evaluator-predicted structures.",
+        "name": "dihedral_pair_min_distance_raw",
+        "optional_params": [
+          "order",
+          "atom_mode",
+          "reduction"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, order=None, atom_mode='heavy', reduction='mean')"
+    },
+    "dihedral_pair_sep_cv_raw": {
+      "metadata": {
+        "description": "Dn C2-paired COM distance coefficient of variation.",
+        "name": "dihedral_pair_sep_cv_raw",
+        "optional_params": [
+          "order"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, order=None)"
+    },
+    "dihedral_ring_sep_cv_raw": {
+      "metadata": {
+        "description": "Dn adjacent-ring COM distance coefficient of variation.",
+        "name": "dihedral_ring_sep_cv_raw",
+        "optional_params": [
+          "order"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, order=None)"
+    },
+    "dynamic_binding_site_allowed_min_dist": {
+      "metadata": {
+        "description": "Min atom-atom distance (\u00c5) using runtime dynamic_binding_site residues; returns missing_value before a predocker publishes dynamic contacts.",
+        "name": "dynamic_binding_site_allowed_min_dist",
+        "optional_params": [
+          "atom_mode",
+          "use_ca",
+          "missing_value"
+        ],
+        "params": [
+          "atom_mode",
+          "use_ca",
+          "missing_value"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.binding_site",
+      "signature": "(eval_result, atom_mode: 'str | None' = None, use_ca: 'bool | None' = None, missing_value: 'float' = inf)"
+    },
+    "halludesign_af3_ipae": {
+      "metadata": {
+        "description": "HalluDesign AF3 summary-style ipAE aggregation from chain_pair_pae_min (row 0, cols 1..)",
+        "name": "halludesign_af3_ipae",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "halludesign_af3_iptm": {
+      "metadata": {
+        "description": "HalluDesign AF3 summary-style ipTM aggregation from chain_pair_iptm (row 0, cols 1..)",
+        "name": "halludesign_af3_iptm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "halludesign_key_res_plddt": {
+      "metadata": {
+        "description": "HalluDesign-aligned key-region pLDDT (mean protein atom B-factors within cutoff of ligand/binder atoms; duplicates allowed)",
+        "name": "halludesign_key_res_plddt",
+        "optional_params": [
+          "ligand_chains",
+          "cutoff"
+        ],
+        "params": [],
+        "required_params": [
+          "protein_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, protein_chain: 'str', ligand_chains: 'str | None' = None, cutoff: 'float' = 5.0)"
+    },
+    "halludesign_plddt": {
+      "metadata": {
+        "description": "HalluDesign-aligned average B-factor over all atoms (pLDDT proxy)",
+        "name": "halludesign_plddt",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "halludesign_plddt_chain_A": {
+      "metadata": {
+        "description": "HalluDesign-aligned average B-factor over chain A (pLDDT proxy)",
+        "name": "halludesign_plddt_chain_A",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "halludesign_plddt_chain_B": {
+      "metadata": {
+        "description": "HalluDesign-aligned average B-factor over chain B (pLDDT proxy)",
+        "name": "halludesign_plddt_chain_B",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "hotspot_buried_ratio": {
+      "metadata": {
+        "description": "Selected hotspot buried ratio defined as 1 - bound_exposed_sasa / unbound_exposed_sasa",
+        "name": "hotspot_buried_ratio",
+        "optional_params": [
+          "sidechain_only"
+        ],
+        "params": [],
+        "required_params": [
+          "select_expression"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, select_expression, sidechain_only: bool = True)"
+    },
+    "hotspot_dsasa": {
+      "metadata": {
+        "description": "Hotspot delta SASA calculation",
+        "name": "hotspot_dsasa",
+        "optional_params": [
+          "normalize_factor"
+        ],
+        "params": [],
+        "required_params": [
+          "select_expression"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, select_expression, normalize_factor: int = 20)"
+    },
+    "interface_buried_unsatisfied_hbonds": {
+      "metadata": {
+        "description": "Interface-induced buried unsatisfied H-bond count between two protomer/chain groups",
+        "name": "interface_buried_unsatisfied_hbonds",
+        "optional_params": [
+          "protomer_a",
+          "protomer_b",
+          "included_protomers",
+          "separation_distance",
+          "ignore_surface_res"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, protomer_a: Union[str, Sequence[str], NoneType] = None, protomer_b: Union[str, Sequence[str], NoneType] = None, included_protomers: str | None = None, separation_distance: float = 1000.0, ignore_surface_res: bool = False)"
+    },
+    "intra_contact_lis": {
+      "metadata": {
+        "description": "Mean intra-chain intra contact lis score",
+        "name": "intra_contact_lis",
+        "optional_params": [
+          "_chain_pair_key"
+        ],
+        "params": [
+          "_chain_pair_key"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, _chain_pair_key='chain_pair_contact_lis')"
+    },
+    "intra_iptm": {
+      "metadata": {
+        "description": "Mean intra-chain intra iptm score",
+        "name": "intra_iptm",
+        "optional_params": [
+          "_chain_pair_key"
+        ],
+        "params": [
+          "_chain_pair_key"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, _chain_pair_key='chain_pair_iptm')"
+    },
+    "intra_lis": {
+      "metadata": {
+        "description": "Mean intra-chain intra lis score",
+        "name": "intra_lis",
+        "optional_params": [
+          "_chain_pair_key"
+        ],
+        "params": [
+          "_chain_pair_key"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, _chain_pair_key='chain_pair_lis')"
+    },
+    "intra_pae_min": {
+      "metadata": {
+        "description": "Mean intra-chain intra pae min score",
+        "name": "intra_pae_min",
+        "optional_params": [
+          "_chain_pair_key"
+        ],
+        "params": [
+          "_chain_pair_key"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, _chain_pair_key='chain_pair_pae_min')"
+    },
+    "ipae": {
+      "metadata": {
+        "description": "Interfacial predicted aligned error (iPAE) score",
+        "name": "ipae",
+        "optional_params": [
+          "contact_method",
+          "sc_cutoff",
+          "ca_cutoff",
+          "chain_a",
+          "chain_b"
+        ],
+        "params": [
+          "contact_method",
+          "sc_cutoff",
+          "ca_cutoff",
+          "chain_a",
+          "chain_b"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, contact_method: str = 'sc', sc_cutoff: float = 5.0, ca_cutoff: float = 8.0, chain_a: Union[str, Sequence[str], NoneType] = None, chain_b: Union[str, Sequence[str], NoneType] = None)"
+    },
+    "ipae_max": {
+      "metadata": {
+        "description": "Mean contact-pair iPAE using max(PAE[i,j], PAE[j,i]) for each cross-chain contact pair",
+        "name": "ipae_max",
+        "optional_params": [
+          "contact_method",
+          "sc_cutoff",
+          "ca_cutoff",
+          "chain_a",
+          "chain_b"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, contact_method: str = 'sc', sc_cutoff: float = 5.0, ca_cutoff: float = 8.0, chain_a: Union[str, Sequence[str], NoneType] = None, chain_b: Union[str, Sequence[str], NoneType] = None)"
+    },
+    "ipae_mean": {
+      "metadata": {
+        "description": "Mean cross-chain PAE (AB+BA mean) from full PAE matrix",
+        "name": "ipae_mean",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str')"
+    },
+    "ipae_min": {
+      "metadata": {
+        "description": "Mean contact-pair iPAE using min(PAE[i,j], PAE[j,i]) for each cross-chain contact pair",
+        "name": "ipae_min",
+        "optional_params": [
+          "contact_method",
+          "sc_cutoff",
+          "ca_cutoff",
+          "chain_a",
+          "chain_b"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, contact_method: str = 'sc', sc_cutoff: float = 5.0, ca_cutoff: float = 8.0, chain_a: Union[str, Sequence[str], NoneType] = None, chain_b: Union[str, Sequence[str], NoneType] = None)"
+    },
+    "ipae_minimal": {
+      "metadata": {
+        "description": "Minimal contact-pair iPAE over min(PAE[i,j], PAE[j,i]) values",
+        "name": "ipae_minimal",
+        "optional_params": [
+          "contact_method",
+          "sc_cutoff",
+          "ca_cutoff",
+          "chain_a",
+          "chain_b"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, contact_method: str = 'sc', sc_cutoff: float = 5.0, ca_cutoff: float = 8.0, chain_a: Union[str, Sequence[str], NoneType] = None, chain_b: Union[str, Sequence[str], NoneType] = None)"
+    },
+    "ipsae": {
+      "metadata": {
+        "description": "ipSAE (DunbrackLab/IPSAE): equal-weight mean of symmetric per-chain-pair ipSAE values",
+        "name": "ipsae",
+        "optional_params": [
+          "pae_cutoff"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, chain_a, chain_b, pae_cutoff: float = 10.0)"
+    },
+    "iptm": {
+      "metadata": {
+        "description": "Mean interfacial predicted TM score",
+        "name": "iptm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result)"
+    },
+    "ligand_aligned_reference_pocket_box_occupancy": {
+      "metadata": {
+        "description": "Fraction of ligand heavy atoms inside the AutoDock aligned_reference_pocket box computed from the mapped current pocket residues",
+        "name": "ligand_aligned_reference_pocket_box_occupancy",
+        "optional_params": [
+          "reference_structure_chain",
+          "current_structure_chain",
+          "reference_pocket_positions",
+          "reference_pocket_positions_by_chain",
+          "reference_box_padding",
+          "binding_site_padding",
+          "ligand_targets",
+          "allow_length_mismatch",
+          "min_box_size"
+        ],
+        "params": [],
+        "required_params": [
+          "reference_structure_path"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, reference_structure_path: str, reference_structure_chain: Any = None, current_structure_chain: Any = None, reference_pocket_positions: Union[int, str, Sequence[int | str], NoneType] = None, reference_pocket_positions_by_chain: Optional[Mapping[str, Union[int, str, Sequence[int | str]]]] = None, reference_box_padding: float | None = None, binding_site_padding: float | None = None, ligand_targets: Union[str, Sequence[str], NoneType] = None, allow_length_mismatch: bool = False, min_box_size: float = 5.0)"
+    },
+    "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy": {
+      "metadata": {
+        "description": "Fraction of ligand heavy atoms inside the alpha shape built from mapped current target-pocket residue C-beta points; glycine uses C-alpha",
+        "name": "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy",
+        "optional_params": [
+          "reference_structure_chain",
+          "current_structure_chain",
+          "reference_pocket_positions",
+          "reference_pocket_positions_by_chain",
+          "alpha_radius",
+          "alpha_radius_scale",
+          "alpha_min_radius",
+          "alpha_max_radius",
+          "alpha_tolerance",
+          "ligand_targets",
+          "allow_length_mismatch"
+        ],
+        "params": [],
+        "required_params": [
+          "reference_structure_path"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, reference_structure_path: str, reference_structure_chain: Any = None, current_structure_chain: Any = None, reference_pocket_positions: Union[int, str, Sequence[int | str], NoneType] = None, reference_pocket_positions_by_chain: Optional[Mapping[str, Union[int, str, Sequence[int | str]]]] = None, alpha_radius: float | None = None, alpha_radius_scale: float = 1.8, alpha_min_radius: float = 3.0, alpha_max_radius: float = 8.0, alpha_tolerance: float = 1e-08, ligand_targets: Union[str, Sequence[str], NoneType] = None, allow_length_mismatch: bool = False)"
+    },
+    "ligand_aligned_reference_pose_distance": {
+      "metadata": {
+        "description": "Centroid distance between the current ligand and a reference ligand pose after aligning current protein chains to the reference structure",
+        "name": "ligand_aligned_reference_pose_distance",
+        "optional_params": [
+          "reference_structure_chain",
+          "current_structure_chain",
+          "ligand_targets",
+          "min_ca_atoms",
+          "allow_length_mismatch"
+        ],
+        "params": [],
+        "required_params": [
+          "reference_structure_path",
+          "reference_ligand_path"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, reference_structure_path: str, reference_ligand_path: str, reference_structure_chain: Any = None, current_structure_chain: Any = None, ligand_targets: Union[str, Sequence[str], NoneType] = None, min_ca_atoms: int = 20, allow_length_mismatch: bool = False)"
+    },
+    "ligand_buried_unsat_hbonds": {
+      "metadata": {
+        "description": "Buried unsatisfied polar groups in the ligand local environment",
+        "name": "ligand_buried_unsat_hbonds",
+        "optional_params": [
+          "ligand_targets",
+          "neighbor_distance",
+          "saturation_constant"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, ligand_targets: Union[str, Sequence[str], NoneType] = None, neighbor_distance: float = 8.0, saturation_constant: float = 6.0)"
+    },
+    "ligand_delta_sasa_fraction": {
+      "metadata": {
+        "description": "Fraction of ligand SASA buried upon binding",
+        "name": "ligand_delta_sasa_fraction",
+        "optional_params": [
+          "ligand_targets",
+          "epsilon"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, ligand_targets: Union[str, Sequence[str], NoneType] = None, epsilon: float = 0.001)"
+    },
+    "ligand_local_holes": {
+      "metadata": {
+        "description": "Local Holes/packstat penalty in ligand environment",
+        "name": "ligand_local_holes",
+        "optional_params": [
+          "ligand_targets",
+          "neighbor_distance",
+          "saturation_constant"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, ligand_targets: Union[str, Sequence[str], NoneType] = None, neighbor_distance: float = 8.0, saturation_constant: float = 10.0)"
+    },
+    "ligand_pocket_occupancy": {
+      "metadata": {
+        "description": "Fraction of ligand heavy atoms inside the selected pocket residue box",
+        "name": "ligand_pocket_occupancy",
+        "optional_params": [
+          "pocket_residues",
+          "pocket_residues_by_chain",
+          "ligand_targets",
+          "pocket_padding"
+        ],
+        "params": [],
+        "required_params": [
+          "pocket_chain"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, pocket_chain: Union[str, Sequence[str], NoneType], pocket_residues: Union[int, str, Sequence[int | str], Mapping[str, Union[int, str, Sequence[int | str]]], NoneType] = None, pocket_residues_by_chain: Optional[Mapping[str, Union[int, str, Sequence[int | str]]]] = None, ligand_targets: Union[str, Sequence[str], NoneType] = None, pocket_padding: float = 1.0)"
+    },
+    "ligand_protein_hbond": {
+      "metadata": {
+        "description": "Saturated count of ligand\u2013protein hydrogen bonds",
+        "name": "ligand_protein_hbond",
+        "optional_params": [
+          "ligand_targets",
+          "saturation_constant"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, ligand_targets: Union[str, Sequence[str], NoneType] = None, saturation_constant: float = 4.0)"
+    },
+    "ligand_protein_interface_ca90": {
+      "metadata": {
+        "description": "Ligand heavy-atom fraction inside the protein-interface C-alpha PCA percentile box",
+        "name": "ligand_protein_interface_ca90",
+        "optional_params": [
+          "interface_chains",
+          "ligand_targets",
+          "interface_distance",
+          "coverage_percent",
+          "padding",
+          "min_box_size"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, interface_chains: Union[str, Sequence[str], NoneType] = None, ligand_targets: Union[str, Sequence[str], NoneType] = None, interface_distance: float = 8.0, coverage_percent: float = 90.0, padding: float = 1.0, min_box_size: float = 5.0)"
+    },
+    "ligand_protein_interface_cb_alpha_shape_occupancy": {
+      "metadata": {
+        "description": "Fraction of ligand heavy atoms inside the alpha shape built from C-beta or glycine C-alpha points of dynamically computed protein-protein interface residues",
+        "name": "ligand_protein_interface_cb_alpha_shape_occupancy",
+        "optional_params": [
+          "interface_chains",
+          "ligand_targets",
+          "interface_distance",
+          "alpha_radius",
+          "alpha_radius_scale",
+          "alpha_min_radius",
+          "alpha_max_radius",
+          "alpha_tolerance"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, interface_chains: Union[str, Sequence[str], NoneType] = None, ligand_targets: Union[str, Sequence[str], NoneType] = None, interface_distance: float = 8.0, alpha_radius: float | None = None, alpha_radius_scale: float = 1.8, alpha_min_radius: float = 3.0, alpha_max_radius: float = 8.0, alpha_tolerance: float = 1e-08)"
+    },
+    "ligand_protein_interface_occupancy": {
+      "metadata": {
+        "description": "Fraction of ligand heavy atoms inside the AutoDock-style box built from the dynamically computed protein-protein interface residues",
+        "name": "ligand_protein_interface_occupancy",
+        "optional_params": [
+          "interface_chains",
+          "ligand_targets",
+          "interface_distance",
+          "interface_padding",
+          "min_box_size"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, interface_chains: Union[str, Sequence[str], NoneType] = None, ligand_targets: Union[str, Sequence[str], NoneType] = None, interface_distance: float = 8.0, interface_padding: float = 1.0, min_box_size: float = 5.0)"
+    },
+    "ligand_protein_iptm": {
+      "metadata": {
+        "description": "Mean iPTM between ligand and protein chains",
+        "name": "ligand_protein_iptm",
+        "optional_params": [
+          "ligand_targets"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, ligand_targets: Union[str, Sequence[str], NoneType] = None)"
+    },
+    "ligand_shape_complementarity": {
+      "metadata": {
+        "description": "Mean Rosetta shape complementarity between ligand chain(s) and protein chain(s)",
+        "name": "ligand_shape_complementarity",
+        "optional_params": [
+          "ligand_targets"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, ligand_targets: Union[str, Sequence[str], NoneType] = None)"
+    },
+    "longest_secondary_structure_run_fraction": {
+      "metadata": {
+        "description": "Compute longest contiguous DSSP run fraction for protomers",
+        "name": "longest_secondary_structure_run_fraction",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "included_protomers",
+          "sse_type"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.structure",
+      "signature": "(eval_result, included_protomers: str, sse_type: str)"
+    },
+    "min_dssp_fractions": {
+      "metadata": {
+        "description": "Minimum DSSP fractions for helices, beta strands, and other structures",
+        "name": "min_dssp_fractions",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "EHL_fractions"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.structure",
+      "signature": "(eval_result, EHL_fractions)"
+    },
+    "odesign_tmscore": {
+      "metadata": {
+        "description": "ODesign TM-score (shells out to upstream TMscore.cpp; requires reference_structure)",
+        "name": "odesign_tmscore",
+        "optional_params": [
+          "tmscore_cpp",
+          "tmscore_bin"
+        ],
+        "params": [],
+        "required_params": [
+          "reference_structure"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, reference_structure: 'str', tmscore_cpp: 'str | None' = None, tmscore_bin: 'str | None' = None)"
+    },
+    "pae": {
+      "metadata": {
+        "description": "Mean predicted aligned error (PAE) score",
+        "name": "pae",
+        "optional_params": [
+          "normalize_factor"
+        ],
+        "params": [
+          "normalize_factor"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, normalize_factor=20)"
+    },
+    "pae_min": {
+      "metadata": {
+        "description": "Minimum cross-chain PAE between chain_a and chain_b; target-group selectors are reduced per chain pair then averaged",
+        "name": "pae_min",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, chain_a: str, chain_b: str)"
+    },
+    "pde": {
+      "metadata": {
+        "description": "Mean predicted distance error (PDE) score",
+        "name": "pde",
+        "optional_params": [
+          "normalize_factor"
+        ],
+        "params": [
+          "normalize_factor"
+        ],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, normalize_factor=20)"
+    },
+    "peptide_plug_score": {
+      "metadata": {
+        "description": "Combined peptide pore-occlusion and scaffoldability score.",
+        "name": "peptide_plug_score",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "occlusion_target",
+          "grid_spacing",
+          "atom_radius",
+          "pore_radius_percentile",
+          "pore_radius_min",
+          "pore_radius_max",
+          "mouth_fraction",
+          "tangent_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.peptide_plug",
+      "signature": "(eval_result, **kwargs)"
+    },
+    "peptide_pore_occlusion": {
+      "metadata": {
+        "description": "Fraction of the target pore cross-section occupied by peptide heavy atoms.",
+        "name": "peptide_pore_occlusion",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "occlusion_target",
+          "grid_spacing",
+          "atom_radius",
+          "pore_radius_percentile",
+          "pore_radius_min",
+          "pore_radius_max",
+          "mouth_fraction",
+          "tangent_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.peptide_plug",
+      "signature": "(eval_result, **kwargs)"
+    },
+    "peptide_pore_occlusion_score": {
+      "metadata": {
+        "description": "Peptide pore occlusion normalized to a configurable target.",
+        "name": "peptide_pore_occlusion_score",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "occlusion_target",
+          "grid_spacing",
+          "atom_radius",
+          "pore_radius_percentile",
+          "pore_radius_min",
+          "pore_radius_max",
+          "mouth_fraction",
+          "tangent_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.peptide_plug",
+      "signature": "(eval_result, **kwargs)"
+    },
+    "peptide_scaffoldability": {
+      "metadata": {
+        "description": "Same-side, mouth-accessible, outward-terminal peptide scaffoldability score.",
+        "name": "peptide_scaffoldability",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "occlusion_target",
+          "grid_spacing",
+          "atom_radius",
+          "pore_radius_percentile",
+          "pore_radius_min",
+          "pore_radius_max",
+          "mouth_fraction",
+          "tangent_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.peptide_plug",
+      "signature": "(eval_result, **kwargs)"
+    },
+    "peptide_terminal_distance": {
+      "metadata": {
+        "description": "Distance between peptide terminal CA atoms.",
+        "name": "peptide_terminal_distance",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "occlusion_target",
+          "grid_spacing",
+          "atom_radius",
+          "pore_radius_percentile",
+          "pore_radius_min",
+          "pore_radius_max",
+          "mouth_fraction",
+          "tangent_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.peptide_plug",
+      "signature": "(eval_result, **kwargs)"
+    },
+    "peptide_terminal_mouth_score": {
+      "metadata": {
+        "description": "Score for keeping both peptide termini in a target pore-mouth half-space.",
+        "name": "peptide_terminal_mouth_score",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "occlusion_target",
+          "grid_spacing",
+          "atom_radius",
+          "pore_radius_percentile",
+          "pore_radius_min",
+          "pore_radius_max",
+          "mouth_fraction",
+          "tangent_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.peptide_plug",
+      "signature": "(eval_result, **kwargs)"
+    },
+    "peptide_terminal_outward_score": {
+      "metadata": {
+        "description": "Score for peptide terminal tangents pointing toward the shared pore-mouth side.",
+        "name": "peptide_terminal_outward_score",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "occlusion_target",
+          "grid_spacing",
+          "atom_radius",
+          "pore_radius_percentile",
+          "pore_radius_min",
+          "pore_radius_max",
+          "mouth_fraction",
+          "tangent_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.peptide_plug",
+      "signature": "(eval_result, **kwargs)"
+    },
+    "peptide_terminal_same_side": {
+      "metadata": {
+        "description": "Binary score requiring peptide termini to lie on the same side of the pore center.",
+        "name": "peptide_terminal_same_side",
+        "optional_params": [
+          "binder_chain",
+          "target_chains",
+          "occlusion_target",
+          "grid_spacing",
+          "atom_radius",
+          "pore_radius_percentile",
+          "pore_radius_min",
+          "pore_radius_max",
+          "mouth_fraction",
+          "tangent_scale"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.peptide_plug",
+      "signature": "(eval_result, **kwargs)"
+    },
+    "physical_interface_score": {
+      "metadata": {
+        "description": "Minimal physical interface score from InterfaceAnalyzerMover: normalized SC improvement minus normalized dG_separated increase.",
+        "name": "physical_interface_score",
+        "optional_params": [
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b",
+          "baseline_sc",
+          "baseline_dg",
+          "sc_scale",
+          "dg_scale"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, chain_a: 'str', chain_b: 'str', baseline_sc: 'float', baseline_dg: 'float', sc_scale: 'float', dg_scale: 'float', pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all') -> 'dict[str, float]'"
+    },
+    "plddt": {
+      "metadata": {
+        "description": "Mean predicted LDDT score normalized to [0,1]",
+        "name": "plddt",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result)"
+    },
+    "plddt_mean": {
+      "metadata": {
+        "description": "Alias for mean pLDDT (same as plddt_mean_norm in this codebase)",
+        "name": "plddt_mean",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "plddt_mean_norm": {
+      "metadata": {
+        "description": "Alias for mean pLDDT in [0,1] (model-native per-residue pLDDT)",
+        "name": "plddt_mean_norm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result)"
+    },
+    "point_group_orbit_rmsd_ratio": {
+      "metadata": {
+        "description": "Point-group orbit CA RMSD divided by assembly radius for Cn/Dn assemblies.",
+        "name": "point_group_orbit_rmsd_ratio",
+        "optional_params": [
+          "point_group",
+          "order"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, point_group='C', order=None)"
+    },
+    "point_group_orbit_rmsd_raw": {
+      "metadata": {
+        "description": "Point-group orbit CA RMSD in Angstrom after fitting a Cn/Dn ideal operator layout.",
+        "name": "point_group_orbit_rmsd_raw",
+        "optional_params": [
+          "point_group",
+          "order"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, point_group='C', order=None)"
+    },
+    "point_group_rotation_raw": {
+      "metadata": {
+        "description": "Mean protomer orientation residual in degrees against fitted Cn/Dn operators.",
+        "name": "point_group_rotation_raw",
+        "optional_params": [
+          "point_group",
+          "order"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, point_group='C', order=None)"
+    },
+    "point_group_symmetry_norm": {
+      "metadata": {
+        "description": "Combined Cn/Dn point-group quality in [0,1] from orbit RMSD ratio and orientation residual.",
+        "name": "point_group_symmetry_norm",
+        "optional_params": [
+          "point_group",
+          "order",
+          "orbit_best",
+          "orbit_worst",
+          "rotation_best",
+          "rotation_worst",
+          "rotation_weight"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, point_group='C', order=None, orbit_best=0.0, orbit_worst=0.2, rotation_best=0.0, rotation_worst=25.0, rotation_weight=0.5)"
+    },
+    "protomer_rmsd_norm": {
+      "metadata": {
+        "description": "Normalized shared-core protomer agreement in [0,1]; higher is better.",
+        "name": "protomer_rmsd_norm",
+        "optional_params": [
+          "m",
+          "s",
+          "best",
+          "worst"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, m=2.0, s=2.0, best=None, worst=None)"
+    },
+    "protomer_rmsd_raw": {
+      "metadata": {
+        "description": "Mean pairwise CA RMSD across heterooligomer shared-core regions after Kabsch alignment.",
+        "name": "protomer_rmsd_raw",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result)"
+    },
+    "protomer_shape_complementarity": {
+      "metadata": {
+        "description": "Shape complementarity penalty between two protomers",
+        "name": "protomer_shape_complementarity",
+        "optional_params": [
+          "protomer_a",
+          "protomer_b",
+          "included_protomers",
+          "target_sc",
+          "saturation_constant",
+          "return_raw"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.interaction",
+      "signature": "(eval_result, protomer_a: str | None = None, protomer_b: str | None = None, included_protomers: str | None = None)"
+    },
+    "pseudocycle_closure_norm": {
+      "metadata": {
+        "description": "Normalized pseudocycle closure quality in [0,1]; higher is better.",
+        "name": "pseudocycle_closure_norm",
+        "optional_params": [
+          "included_protomer",
+          "rotation_best",
+          "rotation_worst",
+          "rise_best",
+          "rise_worst"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, included_protomer=None, rotation_best=0.0, rotation_worst=20.0, rise_best=0.0, rise_worst=1.0)"
+    },
+    "pseudocycle_closure_raw": {
+      "metadata": {
+        "description": "Paper-style pseudocycle closure score where 0 is best.",
+        "name": "pseudocycle_closure_raw",
+        "optional_params": [
+          "included_protomer",
+          "rotation_best",
+          "rotation_worst",
+          "rise_best",
+          "rise_worst"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, included_protomer=None, rotation_best=0.0, rotation_worst=20.0, rise_best=0.0, rise_worst=1.0)"
+    },
+    "pseudocycle_rise_norm": {
+      "metadata": {
+        "description": "Normalized pseudocycle rise quality in [0,1]; higher is better.",
+        "name": "pseudocycle_rise_norm",
+        "optional_params": [
+          "included_protomer",
+          "best",
+          "worst"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, included_protomer=None, best=0.0, worst=1.0)"
+    },
+    "pseudocycle_rise_raw": {
+      "metadata": {
+        "description": "Absolute screw-axis rise (Angstrom) for pseudocycle closure.",
+        "name": "pseudocycle_rise_raw",
+        "optional_params": [
+          "included_protomer"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, included_protomer=None)"
+    },
+    "pseudocycle_rotation_norm": {
+      "metadata": {
+        "description": "Normalized pseudocycle rotation quality in [0,1]; higher is better.",
+        "name": "pseudocycle_rotation_norm",
+        "optional_params": [
+          "included_protomer",
+          "best",
+          "worst"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, included_protomer=None, best=0.0, worst=20.0)"
+    },
+    "pseudocycle_rotation_raw": {
+      "metadata": {
+        "description": "Absolute deviation (degrees) from ideal 360/N repeat rotation for pseudocycles.",
+        "name": "pseudocycle_rotation_raw",
+        "optional_params": [
+          "included_protomer"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, included_protomer=None)"
+    },
+    "ptm": {
+      "metadata": {
+        "description": "Mean predicted TM score",
+        "name": "ptm",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result)"
+    },
+    "repeat_unit_rmsd_norm": {
+      "metadata": {
+        "description": "Normalized internal repeat quality in [0,1]; higher is better.",
+        "name": "repeat_unit_rmsd_norm",
+        "optional_params": [
+          "included_protomer",
+          "best",
+          "worst"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, included_protomer=None, best=0.0, worst=1.0)"
+    },
+    "repeat_unit_rmsd_raw": {
+      "metadata": {
+        "description": "Mean pairwise CA RMSD between internally repeated units after Kabsch alignment.",
+        "name": "repeat_unit_rmsd_raw",
+        "optional_params": [
+          "included_protomer"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.repeat_symmetry",
+      "signature": "(eval_result, included_protomer=None)"
+    },
+    "rosetta_crystal_metric": {
+      "metadata": {
+        "description": "Read an oligomer-level metric emitted by RosettaCrystalEvaluator",
+        "name": "rosetta_crystal_metric",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "metric"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.rosetta_crystal",
+      "signature": "(eval_result, metric: 'str') -> 'dict[str, float]'"
+    },
+    "sap_score": {
+      "metadata": {
+        "description": "Rosetta SAP score (SapScoreMetric). Set included_protomers to restrict to a subset of protomers; empty/None scores the full complex. Lower is better.",
+        "name": "sap_score",
+        "optional_params": [
+          "included_protomers",
+          "pyrosetta_init"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.design_screening",
+      "signature": "(eval_result, included_protomers: 'str | None' = None, pyrosetta_init: 'str' = '-ignore_unrecognized_res -ignore_zero_occupancy -mute all') -> 'dict[str, float]'"
+    },
+    "scaled_pae_min": {
+      "metadata": {
+        "description": "Per-chain-pair scaled cross-chain PAE min mapped to [0,1]: max(0, 1 - pae_min/cutoff), then averaged",
+        "name": "scaled_pae_min",
+        "optional_params": [
+          "cutoff"
+        ],
+        "params": [],
+        "required_params": [
+          "chain_a",
+          "chain_b"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, chain_a: str, chain_b: str, cutoff: float = 10.0)"
+    },
+    "secondary_structure_fraction": {
+      "metadata": {
+        "description": "Compute DSSP fraction of a specific SSE type (E/H/L) for protomers",
+        "name": "secondary_structure_fraction",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "included_protomers",
+          "sse_type"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.structure",
+      "signature": "(eval_result, included_protomers: str, sse_type: str)"
+    },
+    "separation_std": {
+      "metadata": {
+        "description": "Std of protomer COM radii about global COM.",
+        "name": "separation_std",
+        "optional_params": [],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.cyclic",
+      "signature": "(eval_result)"
+    },
+    "sequence_edge_region_identity": {
+      "metadata": {
+        "description": "",
+        "name": "sequence_edge_region_identity",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "edges",
+          "m_positions",
+          "n_positions"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.sequence",
+      "signature": "(eval_result, edges: 'str', m_positions: 'str', n_positions: 'str')"
+    },
+    "sequence_region_identity": {
+      "metadata": {
+        "description": "",
+        "name": "sequence_region_identity",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "included_protomers",
+          "positions"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.sequence",
+      "signature": "(eval_result, included_protomers: 'str', positions: 'str')"
+    },
+    "sequence_residue_fraction": {
+      "metadata": {
+        "description": "",
+        "name": "sequence_residue_fraction",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "included_protomers",
+          "residues"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.sequence",
+      "signature": "(eval_result, included_protomers: 'str', residues: 'str')"
+    },
+    "single_chain_ca_rog": {
+      "metadata": {
+        "description": "Mean C-alpha radius of gyration of included protein chains",
+        "name": "single_chain_ca_rog",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "included_protomers"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.structure",
+      "signature": "(eval_result, included_protomers: str)"
+    },
+    "single_chain_rog": {
+      "metadata": {
+        "description": "Calculate radius of gyration for included protomers",
+        "name": "single_chain_rog",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "included_protomers"
+        ],
+        "supports_oligomer_specific": false
+      },
+      "module": "astrolabe.losses.structure",
+      "signature": "(eval_result, included_protomers: str)"
+    },
+    "target_hotspot_plddt": {
+      "metadata": {
+        "description": "Mean residue-level pLDDT over an explicitly configured target hotspot window",
+        "name": "target_hotspot_plddt",
+        "optional_params": [],
+        "params": [],
+        "required_params": [
+          "target"
+        ],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.confidence",
+      "signature": "(eval_result, target)"
+    },
+    "tmscore": {
+      "metadata": {
+        "description": "USalign TM-score against template/reference structures",
+        "name": "tmscore",
+        "optional_params": [
+          "template_files",
+          "template_file_alias",
+          "query_chain",
+          "reference_chain"
+        ],
+        "params": [],
+        "required_params": [],
+        "supports_oligomer_specific": true
+      },
+      "module": "astrolabe.losses.structure",
+      "signature": "(eval_result, template_files: Optional[List[str]] = None, template_file_alias: Union[str, List[str], NoneType] = None, query_chain: str | None = None, reference_chain: str | None = None)"
+    }
+  },
+  "registry_count": 169,
+  "repo": "/workspace/scratch/1a0b1639644d/cloud-20261104/review-b-a-r1",
+  "scope": "Real CPU SciPy/PDB mathematical controls, synthetic input coordinates; no pretrained model, GPU or throughput certification.",
+  "versions": {
+    "numpy": "2.3.5",
+    "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+    "torch": "2.7.1+cpu"
+  }
+}

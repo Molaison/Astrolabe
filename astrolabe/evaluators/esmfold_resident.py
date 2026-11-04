@@ -44,7 +44,7 @@ print(json.dumps({'class_file': inspect.getfile(cls), 'roots': roots}))
         discovered = json.loads(subprocess.run([sys.executable, '-c', script], env=child_env, check=True, capture_output=True, text=True).stdout)
         cls_file = Path(discovered['class_file']).resolve(strict=True)
         base = Path(__file__).resolve().parent
-        code = [str(base / p) for p in ('esmfold.py', 'esmfold_resident.py', 'tree_codec.py', 'torch_rng.py', 'worker_identity.py', 'wrappers/esmfold_daemon.py')]
+        code = [str(base / p) for p in ('esmfold.py', 'esmfold_resident.py', 'esmfold_output.py', 'tree_codec.py', 'torch_rng.py', 'worker_identity.py', 'wrappers/esmfold_daemon.py')]
         code.append(str(cls_file.parent))
         code.extend(sorted({str(Path(p).resolve(strict=True)) for p in discovered['roots']}))
         # The ESM trunk may load a separate local hub checkpoint. Pin every

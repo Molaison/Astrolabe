@@ -1,0 +1,9 @@
+{
+  "status": "PARTIAL",
+  "scope": "offline artifact reader development; no benchmark executed",
+  "error": "KeyError: config/env/env.yaml",
+  "cause": "Git archive contains two config symlinks; source manifest hashes their target bytes. Initial reader omitted symlinks.",
+  "resolution": "Resolve archive symlinks within the recorded Git tree, without extracting or following host filesystem links.",
+  "reader_sha256": "f4ce81a38cc55f9fc05d9b2e176edc70a52512667b4d74babf0024dd94b80e78",
+  "raw_artifacts_modified": false
+}

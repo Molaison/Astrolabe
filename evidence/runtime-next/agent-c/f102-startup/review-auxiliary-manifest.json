@@ -1,0 +1,22 @@
+{
+  "execution-preparation.json": {
+    "bytes": 3831,
+    "sha256": "6ac9fe4bb18bbefcae57cca683e56ce47a4487017886a8e6e7c904229a567869"
+  },
+  "native-execution-observations.json": {
+    "bytes": 13853,
+    "sha256": "a39411adaf3fa80e5682cd9568443f28b9c2f22a18a7a9a5a69b343ef34a56a7"
+  },
+  "native-transport.json": {
+    "bytes": 51754,
+    "sha256": "8f5684f0006a46bf741e45b8515ef9ffd790977ff27415455b22731f32de82c8"
+  },
+  "source-audit-working-tree-observation.json": {
+    "bytes": 147443,
+    "sha256": "a2c006c91f0aaebed351b2b890c939043e17a6544b6544c7c366749fdfd4b947"
+  },
+  "staging-observations.json": {
+    "bytes": 19586,
+    "sha256": "ab756a9f1d5055e8a9c1094aa32751c946fe3f5aae48e20626d25b4b439eea3f"
+  }
+}

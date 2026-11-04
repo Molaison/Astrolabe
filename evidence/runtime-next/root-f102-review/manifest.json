@@ -1,0 +1,65 @@
+{
+  "scope": "root independent reruns and observed dependency negative; real scientific/performance inputs remain in referenced full role archives",
+  "files": [
+    {
+      "path": "native-comparison.json",
+      "bytes": 2477,
+      "sha256": "e9e9e1f6962eb139e56d247888ef47383f5b8154ec5f770af3b81b8879f5cdd5"
+    },
+    {
+      "path": "native-invocation.json",
+      "bytes": 715,
+      "sha256": "9fe4a4d8cf7324600da8e6f3fba3ba3cad0e5f24110af961e5d97ecb3f6548ad"
+    },
+    {
+      "path": "w0-startup-root-audit.json",
+      "bytes": 9444,
+      "sha256": "9a47dceb9a5fb68481055d2705ab54a484e01534e8aca19d4ca88155c42cd7cc"
+    },
+    {
+      "path": "w0-startup-freeze.json",
+      "bytes": 2225,
+      "sha256": "31da5b7c592eaada6411728e0408a20d681a61d755c2b50d86187f6cccb3e206"
+    },
+    {
+      "path": "uuid-binding-probe.json",
+      "bytes": 1219,
+      "sha256": "fed1d1e08fc326ce8cec572be7cede627bcd2d129c9ac9a5f3f21555dc28b81e"
+    },
+    {
+      "path": "launcher-metadata-before.json",
+      "bytes": 3663,
+      "sha256": "14c46901c047e4cffb78ede447510aff2da98f80b974f2c494647113efd26130"
+    },
+    {
+      "path": "launcher-metadata-after.json",
+      "bytes": 2864,
+      "sha256": "df35e3a4373530904c74dce199d23567f1efe1658c759d2e68bd5fd2a1798779"
+    },
+    {
+      "path": "core-env-negative.xml",
+      "bytes": 46857,
+      "sha256": "425b166f093f32e68f361444eb2f52f97bc531d126cc7d086af44861b973f200"
+    },
+    {
+      "path": "core-env-negative.json",
+      "bytes": 541,
+      "sha256": "822186b2e0c1ba306fea3c09ad8ca58be13b1f14671258a41f8a3afe09e6f0dd"
+    },
+    {
+      "path": "geometry-env-98-tests.xml",
+      "bytes": 15038,
+      "sha256": "7508989a5d30ecfb4b565af1d623db1f2cd3354b11c3c413cb0491b607d528cc"
+    },
+    {
+      "path": "near-allocation.tar.xz",
+      "bytes": 3868,
+      "sha256": "ee19f98ab22f86502180453ba4d20ee5bc5cfdd5c1b5e0825cd2832fb8a5bbea"
+    },
+    {
+      "path": "near-allocation-manifest.json",
+      "bytes": 719,
+      "sha256": "50010676097661892bdd4f5b7669fd954bba1540d87e506b2f3c1396ee384dd6"
+    }
+  ]
+}

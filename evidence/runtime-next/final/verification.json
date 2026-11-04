@@ -1,0 +1,26 @@
+{
+  "status": "DONE",
+  "source_head": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "source_tree": "bb2cc1ce9b9ad2b17585f581bca86d8dd7d729fc",
+  "runtime_ci_run": 41766956074,
+  "runtime_job": 126367434238,
+  "torch_structural_job": 126367434543,
+  "runtime_tests": 248,
+  "torch_structural_tests": 104,
+  "skipped": 0,
+  "scientific_control": "scientific-control-summary.json",
+  "backend_matrix_tests": "backend-matrix-tests.json",
+  "w0_audit": "w0-root-audit.json",
+  "code_subtrees": {
+    "astrolabe": "9947288055457e2394f8d22558150d02daf6704a",
+    "config": "09e1b5886df74cca4341f48d5d66cee2c280b472",
+    "tests": "99f7942daf3a73b24768396bbc755264f60f36ec",
+    "scripts": "332f1252572f81a4cce4b92812d439106c27e3e3",
+    "benchmarks": "90d464fc95ce52c1d53ce77695673cbc7ab0f63b",
+    ".github": "8e3c9b1d35440b104b55918d8838bdd6cc1c1718"
+  },
+  "evidence_only_branch": "evidence/runtime-final-validation-20261104",
+  "overall_task_status": "PARTIAL",
+  "pretrained_gpu": "BLOCKED",
+  "requested_server_destination": "BLOCKED"
+}

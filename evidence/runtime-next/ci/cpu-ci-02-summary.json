@@ -1,0 +1,177 @@
+{
+  "candidate": "db937f9706270cb109e799cda29f52d2872726b5",
+  "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "run_id": 41762677554,
+  "job_id": 126353753206,
+  "artifact_id": 13290828134,
+  "artifact_sha256": "94c2c4ee039e2c04a7bee191fac1bc446c6b76060b8fe6395105b0aa52ee8c5f",
+  "protocol_sha256": "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5",
+  "status": "DONE",
+  "correctness_certified": true,
+  "runs": 30,
+  "groups": {
+    "baseline/direct": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 1.7961853971732524,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 1.589916334999998,
+      "range_seconds": [
+        1.5127123510000047,
+        1.921597134999999
+      ],
+      "valid": 5
+    },
+    "baseline/resident_adaptive": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.688563273025519,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 4.323533585000007,
+      "range_seconds": [
+        3.9903947140000184,
+        4.808193478999996
+      ],
+      "valid": 5
+    },
+    "baseline/resident_serial": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.680744803277744,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 4.24795184300001,
+      "range_seconds": [
+        4.040757025999994,
+        4.947184419999999
+      ],
+      "valid": 5
+    },
+    "candidate/direct": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 1.8615804658505906,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 1.6331164119999926,
+      "range_seconds": [
+        1.4985338590000197,
+        1.7098824560000025
+      ],
+      "valid": 5
+    },
+    "candidate/resident_adaptive": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.682486305354349,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 4.293100328000008,
+      "range_seconds": [
+        4.137388311000024,
+        4.767733232000012
+      ],
+      "valid": 5
+    },
+    "candidate/resident_serial": {
+      "attempted": 5,
+      "completed_trajectories": 15,
+      "effective_trajectories_per_second": 0.6903770321939873,
+      "evaluation_calls": 45,
+      "failed_or_incomplete": 0,
+      "median_seconds": 4.189718717999995,
+      "range_seconds": [
+        4.062982986000009,
+        4.703577823999993
+      ],
+      "valid": 5
+    }
+  },
+  "same_mode_pairs": [
+    {
+      "all_five_pairs_improved": false,
+      "candidate_faster_pairs": 3,
+      "median_paired_speed_ratio": 1.0253631766621165,
+      "mode": "direct",
+      "paired_speed_ratios": [
+        1.1238182649673294,
+        1.0962254526654065,
+        0.9479329300061533,
+        1.0253631766621165,
+        0.9829885642759181
+      ],
+      "strict_range_separation": false
+    },
+    {
+      "all_five_pairs_improved": false,
+      "candidate_faster_pairs": 3,
+      "median_paired_speed_ratio": 1.0202239200319403,
+      "mode": "resident_serial",
+      "paired_speed_ratios": [
+        0.9893837019672145,
+        1.0671908340633782,
+        1.0272486587317573,
+        0.9644458967233226,
+        1.0202239200319403
+      ],
+      "strict_range_separation": false
+    },
+    {
+      "all_five_pairs_improved": false,
+      "candidate_faster_pairs": 2,
+      "median_paired_speed_ratio": 0.980225025342077,
+      "mode": "resident_adaptive",
+      "paired_speed_ratios": [
+        1.0619985432466579,
+        0.9662447162689698,
+        1.0070888762607084,
+        0.980225025342077,
+        0.9383101992691166
+      ],
+      "strict_range_separation": false
+    }
+  ],
+  "experiment": {
+    "allocated_gpu_hours": 0,
+    "max_output_bytes": 260000000,
+    "scope": "all trials, failed work and between-trial analysis; bounded observer cleanup may extend a deadline",
+    "stop_reason": null,
+    "wall_seconds": 104.56839722,
+    "walltime_budget_seconds": 900.0
+  },
+  "regressions": {
+    "failures": [],
+    "required_suites": [
+      "tests/test_candidate_batch_policy.py",
+      "tests/test_candidate_batch_runner.py",
+      "tests/test_execution_identity.py",
+      "tests/test_app.py",
+      "tests/test_runtime_execution.py",
+      "tests/test_runtime_contracts.py",
+      "tests/test_runtime_broker_deadline.py",
+      "tests/test_runtime_resources.py",
+      "tests/test_runtime_controller.py",
+      "tests/test_runtime_context.py",
+      "tests/test_runtime_process_observations.py",
+      "tests/test_runtime_benchmark_processes.py",
+      "tests/test_runtime_trace_report.py",
+      "tests/test_runtime_structure_parity.py",
+      "tests/test_workflow_benchmark.py",
+      "tests/test_evaluator_lifecycle_contract.py",
+      "tests/test_resource_shutdown.py",
+      "tests/test_mutator_subprocess_protocol.py",
+      "tests/test_stage_transaction.py",
+      "tests/test_run_stage_transition.py",
+      "tests/test_graceful_shutdown_repeat_boundary.py",
+      "tests/test_runtime_validation_harness.py"
+    ],
+    "returncode": 0,
+    "skip_policy": "no skips accepted for these required CPU suites",
+    "skips": [],
+    "status": "DONE",
+    "test_cases": 247
+  },
+  "scope": "actual CPU Dummy/MCMC workflow at recorded source; all mutation attempts rejected; no pretrained/GPU certification"
+}

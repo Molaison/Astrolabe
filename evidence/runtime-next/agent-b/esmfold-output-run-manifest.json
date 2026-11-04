@@ -1,0 +1,29 @@
+{
+  "base_head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "code_state": "working tree changes on base; exact source SHA256 recorded below",
+  "fixed_gate_exit_code": 0,
+  "frozen_harness_sha256": "d3a0c08b52ba260763f6a8fc826654893f6a37f8d8c058dd8e1c6df286d550b5",
+  "gpu": false,
+  "negative_gate_exit_code": 1,
+  "pretrained": false,
+  "prior_comparison": "esmfold-output-comparison-01.json",
+  "prior_source_manifest": "esmfold-output-run-01-manifest.json",
+  "raw_sha256": {
+    "esmfold-output-baseline.json": "a31b07780f1be6a2b4e9c303db93113337b08f255ea6a309a6d68e6adf92912f",
+    "esmfold-output-comparison.json": "e6e523f25f875414412f1c083217c13476ddd7bbe72f5fe8bfc0b082174a3b27",
+    "esmfold-output-regressions.txt": "25726bfc96ecc51a173f99bfa32060803f179af4d1e9e2b218f98dbbaa41dc0b",
+    "esmfold-output-tests.txt": "c16c95b7de1beb34f66263c263fab0add8a7541a71cf910c40949f5e954bcc6a",
+    "esmfold-worker-control.json": "66666479784cd3bb37c8c748f14e906c03364209285df88416aebfc4d4501884",
+    "esmfold-worker-negative.json": "e2afea70dceb49bd339401aac1b9bf577934aeef1f61381bbef8221211b6ab98"
+  },
+  "regression_command": "../venv/bin/python -m pytest -q tests/test_esmfold_output_boundary.py tests/test_tree_codec_torch.py tests/test_evaluator_rng_lifecycle.py -k 'not worker_preserves_constructor_dtype_cudnn_and_native_precision_side_effect'",
+  "source_gate_normalization_fix": "Trailing whitespace normalized identically for pinned source and fixture; initial AST excerpt missed inline comment and was rejected by gate; log retained in esmfold-source-gate-negative.txt.",
+  "source_sha256": {
+    "astrolabe/evaluators/esmfold_output.py": "0e5909e7b3c06bdc00c2693dad585ffbbcea12f3498f69e6515f5638132f839e",
+    "astrolabe/evaluators/esmfold_resident.py": "2b5b91433c01f9b1507f19d9dc0406702ff8ae840da8f0e1e880ddbeb144f30d",
+    "astrolabe/evaluators/wrappers/esmfold_daemon.py": "2a3d0797f2dbd83f2905322ebb7ccf86237d4e00eaae1e95f53754ac6afd9020",
+    "tests/fixtures/esmfold_output_native.json": "bf860b3e94aee877d2d52d68d298792ff49f39d415630077f5835e53870872f5",
+    "tests/fixtures/esmfold_output_native.py": "cad35fb34a3bdae3ab7d6f2f03b525528b5ea4bb416f80a4dd046e7a6a46015d",
+    "tests/test_esmfold_output_boundary.py": "8e35cb5f1878fbded4c48543ad7c8dff9a295575467def36c81c3f26ea834eb0"
+  }
+}

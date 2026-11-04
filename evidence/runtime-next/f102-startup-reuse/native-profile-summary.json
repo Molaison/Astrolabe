@@ -1,0 +1,422 @@
+{
+  "order": [
+    "before",
+    "candidate",
+    "candidate",
+    "before"
+  ],
+  "status": "DIAGNOSTIC_COMPLETE",
+  "cpu_seconds_sum": 44.985457000000004,
+  "wall_seconds_sum": 45.353649778990075,
+  "source_heads": {
+    "before": "47c6f6dd18fe822a6d28ea6970c756d5dfae7b95",
+    "candidate": "f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f"
+  },
+  "phases": {
+    "0": [
+      {
+        "phase": "cold_load_run_module",
+        "variant": "before",
+        "wall_seconds": 10.661999504998676,
+        "cpu_seconds": 5.420378508,
+        "maxrss_kib": 1095304,
+        "pyrosetta_loaded": true,
+        "spatial_loaded": false,
+        "scientific_evaluations": 0
+      },
+      {
+        "phase": "first_requirement_scan",
+        "variant": "before",
+        "wall_seconds": 1.18303517800814,
+        "cpu_seconds": 1.1741641139999999,
+        "maxrss_kib": 1108676,
+        "pyrosetta_loaded": true,
+        "spatial_loaded": false,
+        "scientific_evaluations": 0,
+        "loss_types": [
+          "bindcraft_binder_rmsd",
+          "bindcraft_binder_score",
+          "bindcraft_hotspot_rmsd",
+          "bindcraft_interface_dG",
+          "bindcraft_interface_dSASA",
+          "bindcraft_interface_delta_unsat_hbonds",
+          "bindcraft_interface_interface_hbonds",
+          "bindcraft_interface_sc",
+          "bindcraft_surface_hydrophobicity",
+          "buried_contribution_diff",
+          "buried_fraction_allala",
+          "cd47_antibody_like_epitope_score",
+          "chain_buried_fraction",
+          "chain_holes_diff",
+          "com_distance",
+          "contact_molecular_surface",
+          "contact_molecular_surface_norm",
+          "hotspot_buried_ratio",
+          "hotspot_dsasa",
+          "interface_buried_unsatisfied_hbonds",
+          "ipae",
+          "ipae_max",
+          "ipae_min",
+          "ipae_minimal",
+          "ligand_aligned_reference_pocket_box_occupancy",
+          "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy",
+          "ligand_aligned_reference_pose_distance",
+          "ligand_buried_unsat_hbonds",
+          "ligand_delta_sasa_fraction",
+          "ligand_local_holes",
+          "ligand_pocket_occupancy",
+          "ligand_protein_hbond",
+          "ligand_protein_interface_ca90",
+          "ligand_protein_interface_cb_alpha_shape_occupancy",
+          "ligand_protein_interface_occupancy",
+          "ligand_protein_iptm",
+          "ligand_shape_complementarity",
+          "physical_interface_score",
+          "protomer_shape_complementarity",
+          "sap_score"
+        ]
+      },
+      {
+        "status": "DIAGNOSTIC_COMPLETE",
+        "variant": "before",
+        "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+        "registry_count": 169,
+        "source_sha256": {
+          "astrolabe/losses/interaction.py": "a1b3881bedc8370d56338004bc13cd5707d88750647855b50131bd554d57c0d8",
+          "astrolabe/runtime_requirements.py": "ce388250da3f323b9181fb3f4ce517da54f6d2985373f9e6c4032715204a2c2e"
+        },
+        "scientific_evaluations": 0,
+        "native_initialization": false,
+        "forward_or_sampling": false,
+        "scope": "Cold imports and first source scan only; not an E2E throughput result"
+      }
+    ],
+    "1": [
+      {
+        "phase": "cold_load_run_module",
+        "variant": "candidate",
+        "wall_seconds": 7.717866637991392,
+        "cpu_seconds": 3.60887934,
+        "maxrss_kib": 588556,
+        "pyrosetta_loaded": false,
+        "spatial_loaded": false,
+        "scientific_evaluations": 0
+      },
+      {
+        "phase": "first_requirement_scan",
+        "variant": "candidate",
+        "wall_seconds": 0.061574438004754484,
+        "cpu_seconds": 0.05782692200000028,
+        "maxrss_kib": 601508,
+        "pyrosetta_loaded": false,
+        "spatial_loaded": false,
+        "scientific_evaluations": 0,
+        "loss_types": [
+          "bindcraft_binder_rmsd",
+          "bindcraft_binder_score",
+          "bindcraft_hotspot_rmsd",
+          "bindcraft_interface_dG",
+          "bindcraft_interface_dSASA",
+          "bindcraft_interface_delta_unsat_hbonds",
+          "bindcraft_interface_interface_hbonds",
+          "bindcraft_interface_sc",
+          "bindcraft_surface_hydrophobicity",
+          "buried_contribution_diff",
+          "buried_fraction_allala",
+          "cd47_antibody_like_epitope_score",
+          "chain_buried_fraction",
+          "chain_holes_diff",
+          "com_distance",
+          "contact_molecular_surface",
+          "contact_molecular_surface_norm",
+          "hotspot_buried_ratio",
+          "hotspot_dsasa",
+          "interface_buried_unsatisfied_hbonds",
+          "ipae",
+          "ipae_max",
+          "ipae_min",
+          "ipae_minimal",
+          "ligand_aligned_reference_pocket_box_occupancy",
+          "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy",
+          "ligand_aligned_reference_pose_distance",
+          "ligand_buried_unsat_hbonds",
+          "ligand_delta_sasa_fraction",
+          "ligand_local_holes",
+          "ligand_pocket_occupancy",
+          "ligand_protein_hbond",
+          "ligand_protein_interface_ca90",
+          "ligand_protein_interface_cb_alpha_shape_occupancy",
+          "ligand_protein_interface_occupancy",
+          "ligand_protein_iptm",
+          "ligand_shape_complementarity",
+          "physical_interface_score",
+          "protomer_shape_complementarity",
+          "sap_score"
+        ]
+      },
+      {
+        "status": "DIAGNOSTIC_COMPLETE",
+        "variant": "candidate",
+        "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+        "registry_count": 169,
+        "source_sha256": {
+          "astrolabe/losses/interaction.py": "a78914c2a6b5e410b9f07935ead280f15f9d714488c3655d8cd958a5febb322c",
+          "astrolabe/runtime_requirements.py": "c60dcfa62fcd5ea39246bff5373ebc548bfc106ac9b12d2d242b8da676a6d469"
+        },
+        "scientific_evaluations": 0,
+        "native_initialization": false,
+        "forward_or_sampling": false,
+        "scope": "Cold imports and first source scan only; not an E2E throughput result"
+      }
+    ],
+    "2": [
+      {
+        "phase": "cold_load_run_module",
+        "variant": "candidate",
+        "wall_seconds": 6.584649338008603,
+        "cpu_seconds": 3.538952471,
+        "maxrss_kib": 588120,
+        "pyrosetta_loaded": false,
+        "spatial_loaded": false,
+        "scientific_evaluations": 0
+      },
+      {
+        "phase": "first_requirement_scan",
+        "variant": "candidate",
+        "wall_seconds": 0.06171992501185741,
+        "cpu_seconds": 0.058762568999999765,
+        "maxrss_kib": 600928,
+        "pyrosetta_loaded": false,
+        "spatial_loaded": false,
+        "scientific_evaluations": 0,
+        "loss_types": [
+          "bindcraft_binder_rmsd",
+          "bindcraft_binder_score",
+          "bindcraft_hotspot_rmsd",
+          "bindcraft_interface_dG",
+          "bindcraft_interface_dSASA",
+          "bindcraft_interface_delta_unsat_hbonds",
+          "bindcraft_interface_interface_hbonds",
+          "bindcraft_interface_sc",
+          "bindcraft_surface_hydrophobicity",
+          "buried_contribution_diff",
+          "buried_fraction_allala",
+          "cd47_antibody_like_epitope_score",
+          "chain_buried_fraction",
+          "chain_holes_diff",
+          "com_distance",
+          "contact_molecular_surface",
+          "contact_molecular_surface_norm",
+          "hotspot_buried_ratio",
+          "hotspot_dsasa",
+          "interface_buried_unsatisfied_hbonds",
+          "ipae",
+          "ipae_max",
+          "ipae_min",
+          "ipae_minimal",
+          "ligand_aligned_reference_pocket_box_occupancy",
+          "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy",
+          "ligand_aligned_reference_pose_distance",
+          "ligand_buried_unsat_hbonds",
+          "ligand_delta_sasa_fraction",
+          "ligand_local_holes",
+          "ligand_pocket_occupancy",
+          "ligand_protein_hbond",
+          "ligand_protein_interface_ca90",
+          "ligand_protein_interface_cb_alpha_shape_occupancy",
+          "ligand_protein_interface_occupancy",
+          "ligand_protein_iptm",
+          "ligand_shape_complementarity",
+          "physical_interface_score",
+          "protomer_shape_complementarity",
+          "sap_score"
+        ]
+      },
+      {
+        "status": "DIAGNOSTIC_COMPLETE",
+        "variant": "candidate",
+        "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+        "registry_count": 169,
+        "source_sha256": {
+          "astrolabe/losses/interaction.py": "a78914c2a6b5e410b9f07935ead280f15f9d714488c3655d8cd958a5febb322c",
+          "astrolabe/runtime_requirements.py": "c60dcfa62fcd5ea39246bff5373ebc548bfc106ac9b12d2d242b8da676a6d469"
+        },
+        "scientific_evaluations": 0,
+        "native_initialization": false,
+        "forward_or_sampling": false,
+        "scope": "Cold imports and first source scan only; not an E2E throughput result"
+      }
+    ],
+    "3": [
+      {
+        "phase": "cold_load_run_module",
+        "variant": "before",
+        "wall_seconds": 9.681637508008862,
+        "cpu_seconds": 5.364767872,
+        "maxrss_kib": 1121332,
+        "pyrosetta_loaded": true,
+        "spatial_loaded": false,
+        "scientific_evaluations": 0
+      },
+      {
+        "phase": "first_requirement_scan",
+        "variant": "before",
+        "wall_seconds": 1.1912973379949108,
+        "cpu_seconds": 1.1843291850000002,
+        "maxrss_kib": 1133396,
+        "pyrosetta_loaded": true,
+        "spatial_loaded": false,
+        "scientific_evaluations": 0,
+        "loss_types": [
+          "bindcraft_binder_rmsd",
+          "bindcraft_binder_score",
+          "bindcraft_hotspot_rmsd",
+          "bindcraft_interface_dG",
+          "bindcraft_interface_dSASA",
+          "bindcraft_interface_delta_unsat_hbonds",
+          "bindcraft_interface_interface_hbonds",
+          "bindcraft_interface_sc",
+          "bindcraft_surface_hydrophobicity",
+          "buried_contribution_diff",
+          "buried_fraction_allala",
+          "cd47_antibody_like_epitope_score",
+          "chain_buried_fraction",
+          "chain_holes_diff",
+          "com_distance",
+          "contact_molecular_surface",
+          "contact_molecular_surface_norm",
+          "hotspot_buried_ratio",
+          "hotspot_dsasa",
+          "interface_buried_unsatisfied_hbonds",
+          "ipae",
+          "ipae_max",
+          "ipae_min",
+          "ipae_minimal",
+          "ligand_aligned_reference_pocket_box_occupancy",
+          "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy",
+          "ligand_aligned_reference_pose_distance",
+          "ligand_buried_unsat_hbonds",
+          "ligand_delta_sasa_fraction",
+          "ligand_local_holes",
+          "ligand_pocket_occupancy",
+          "ligand_protein_hbond",
+          "ligand_protein_interface_ca90",
+          "ligand_protein_interface_cb_alpha_shape_occupancy",
+          "ligand_protein_interface_occupancy",
+          "ligand_protein_iptm",
+          "ligand_shape_complementarity",
+          "physical_interface_score",
+          "protomer_shape_complementarity",
+          "sap_score"
+        ]
+      },
+      {
+        "status": "DIAGNOSTIC_COMPLETE",
+        "variant": "before",
+        "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+        "registry_count": 169,
+        "source_sha256": {
+          "astrolabe/losses/interaction.py": "a1b3881bedc8370d56338004bc13cd5707d88750647855b50131bd554d57c0d8",
+          "astrolabe/runtime_requirements.py": "ce388250da3f323b9181fb3f4ce517da54f6d2985373f9e6c4032715204a2c2e"
+        },
+        "scientific_evaluations": 0,
+        "native_initialization": false,
+        "forward_or_sampling": false,
+        "scope": "Cold imports and first source scan only; not an E2E throughput result"
+      }
+    ]
+  },
+  "selected_importtime": {
+    "0": [
+      {
+        "module": "astrolabe.runtime_requirements",
+        "self_seconds": 0.017136,
+        "cumulative_seconds": 0.02648
+      },
+      {
+        "module": "torch",
+        "self_seconds": 0.426606,
+        "cumulative_seconds": 3.948494
+      },
+      {
+        "module": "pyrosetta.rosetta",
+        "self_seconds": 3.054814,
+        "cumulative_seconds": 3.054814
+      },
+      {
+        "module": "pyrosetta",
+        "self_seconds": 0.006924,
+        "cumulative_seconds": 3.216977
+      },
+      {
+        "module": "astrolabe.losses",
+        "self_seconds": 0.104539,
+        "cumulative_seconds": 7.901937
+      }
+    ],
+    "1": [
+      {
+        "module": "astrolabe.runtime_requirements",
+        "self_seconds": 0.010171,
+        "cumulative_seconds": 0.013575
+      },
+      {
+        "module": "torch",
+        "self_seconds": 0.465473,
+        "cumulative_seconds": 3.902538
+      },
+      {
+        "module": "astrolabe.losses",
+        "self_seconds": 0.110645,
+        "cumulative_seconds": 4.763977
+      }
+    ],
+    "2": [
+      {
+        "module": "astrolabe.runtime_requirements",
+        "self_seconds": 0.005675,
+        "cumulative_seconds": 0.008914
+      },
+      {
+        "module": "torch",
+        "self_seconds": 0.356099,
+        "cumulative_seconds": 3.501803
+      },
+      {
+        "module": "astrolabe.losses",
+        "self_seconds": 0.107056,
+        "cumulative_seconds": 4.221796
+      }
+    ],
+    "3": [
+      {
+        "module": "astrolabe.runtime_requirements",
+        "self_seconds": 0.011495,
+        "cumulative_seconds": 0.016191
+      },
+      {
+        "module": "torch",
+        "self_seconds": 0.364946,
+        "cumulative_seconds": 3.557706
+      },
+      {
+        "module": "pyrosetta.rosetta",
+        "self_seconds": 2.829178,
+        "cumulative_seconds": 2.829178
+      },
+      {
+        "module": "pyrosetta",
+        "self_seconds": 0.009128,
+        "cumulative_seconds": 3.008356
+      },
+      {
+        "module": "astrolabe.losses",
+        "self_seconds": 0.099229,
+        "cumulative_seconds": 7.279459
+      }
+    ]
+  },
+  "scientific_evaluations": 0,
+  "e2e_throughput_claim": false,
+  "scope": "4 cold native SIF imports and first cached-source-scan; no initialization or model work"
+}

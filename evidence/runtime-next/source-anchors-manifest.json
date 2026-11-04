@@ -1,0 +1,14 @@
+{
+  "bundle": "evidence/runtime-next/source-anchors.bundle",
+  "sha256": "dff04ac93aa156714e3d683c9a86fc0b7112488861507024f9cb3972bcb582d9",
+  "bytes": 860946,
+  "prerequisite": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "refs": {
+    "refs/astrolabe-runtime-20261104/agent-a": "49f339c1556c06e7d1ff27ceb9e198ba3fa56c03",
+    "refs/astrolabe-runtime-20261104/agent-b": "a98b427dc821f892c03e2113e5dfca72972fb145",
+    "refs/astrolabe-runtime-20261104/agent-c": "fc6eec8f16c3f4f4f6f749f37c14c9356cbb0717",
+    "refs/astrolabe-runtime-20261104/integrated-source": "b2ec56555d93c7dd69413f012e8b94655ba26cc7"
+  },
+  "verification": "The bundle contains these 4 refs:\n49f339c1556c06e7d1ff27ceb9e198ba3fa56c03 refs/astrolabe-runtime-20261104/agent-a\na98b427dc821f892c03e2113e5dfca72972fb145 refs/astrolabe-runtime-20261104/agent-b\nfc6eec8f16c3f4f4f6f749f37c14c9356cbb0717 refs/astrolabe-runtime-20261104/agent-c\nb2ec56555d93c7dd69413f012e8b94655ba26cc7 refs/astrolabe-runtime-20261104/integrated-source\nThe bundle requires this ref:\nd66ee714f2e755948534f95d9d125287ce8dbd91 \nThe bundle uses this hash algorithm: sha1\nevidence/runtime-next/source-anchors.bundle is okay\n",
+  "purpose": "Preserve exact original local owner/review commits referenced by probes. Import into namespaced refs, not worktree branches."
+}

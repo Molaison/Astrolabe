@@ -1,0 +1,26 @@
+{
+  "archive_bytes": 3868,
+  "archive_sha256": "ee19f98ab22f86502180453ba4d20ee5bc5cfdd5c1b5e0825cd2832fb8a5bbea",
+  "files": [
+    {
+      "path": "SUMMARY.md",
+      "bytes": 2246,
+      "sha256": "a44196e3c620e72de8e3b09198ec768051c84d59aa7514983c939f2e546faab3"
+    },
+    {
+      "path": "boron.json",
+      "bytes": 2494,
+      "sha256": "68c9a6a6aeeab084d27f12a6bd1d3c6cc4ec218d3566440b42c2dbd9a26d0662"
+    },
+    {
+      "path": "commands.json",
+      "bytes": 2377,
+      "sha256": "4177d1f9e3881dd4e6715da0b5c99b9f084c0e5eaed15df48d0bd839d68bdfe6"
+    },
+    {
+      "path": "own_jobs.json",
+      "bytes": 1615,
+      "sha256": "d62f5fbb67217ff1c7b31b9b39abe9c95a5a1ccb993632d4465d956edd3352cf"
+    }
+  ]
+}

@@ -1,0 +1,158 @@
+name: Runtime CPU validation
+
+on:
+  push:
+    branches: [feat/runtime-validated-pipeline-20261104]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: runtime-validation-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  runtime-cpu:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    defaults:
+      run:
+        shell: bash
+    env:
+      CUDA_VISIBLE_DEVICES: ''
+      NVIDIA_VISIBLE_DEVICES: void
+      HIP_VISIBLE_DEVICES: ''
+      ROCR_VISIBLE_DEVICES: ''
+      JAX_PLATFORMS: cpu
+      GH_CUDA_PREINITIALIZE: '0'
+      XLA_PYTHON_CLIENT_PREALLOCATE: 'false'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+      VECLIB_MAXIMUM_THREADS: '1'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - name: Prepare evidence directory
+        run: |
+          echo "RUNTIME_VALIDATION_OUT=$RUNNER_TEMP/runtime-validation" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/runtime-validation"
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          submodules: false
+          persist-credentials: false
+      - name: Checkout immutable runtime baseline
+        uses: actions/checkout@v4
+        with:
+          ref: d66ee714f2e755948534f95d9d125287ce8dbd91
+          path: baseline
+          submodules: false
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: candidate/benchmarks/runtime/requirements-cpu.txt
+      - name: Install pinned CPU dependencies
+        run: |
+          mkdir -p "$RUNTIME_VALIDATION_OUT/environment"
+          python -m pip install -r candidate/benchmarks/runtime/requirements-cpu.txt 2>&1 | tee "$RUNTIME_VALIDATION_OUT/environment/install.log"
+          python -m pip freeze --all > "$RUNTIME_VALIDATION_OUT/environment/pip-freeze.txt"
+      - name: Require Linux namespace and UNIX sockets
+        run: python candidate/benchmarks/runtime/validate.py preflight --out "$RUNTIME_VALIDATION_OUT/preflight"
+      - name: Required pilot and runtime regression gates
+        run: python candidate/benchmarks/runtime/validate.py regressions --out "$RUNTIME_VALIDATION_OUT/regressions"
+      - name: Thirty interleaved fixed-workload CPU trials
+        run: |
+          python candidate/benchmarks/runtime/validate.py compare \
+            --baseline "$GITHUB_WORKSPACE/baseline" \
+            --out "$RUNTIME_VALIDATION_OUT/comparison"
+      - name: Publish explicit completion and blocking evidence
+        if: always()
+        run: |
+          python candidate/benchmarks/runtime/validate.py summary \
+            --out "$RUNTIME_VALIDATION_OUT" --step-summary "$GITHUB_STEP_SUMMARY"
+      - name: Preserve raw validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-cpu-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/runtime-validation
+          if-no-files-found: error
+          retention-days: 30
+
+  runtime-torch-cpu:
+    name: CPU Torch and structural contracts
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: bash
+    env:
+      CUDA_VISIBLE_DEVICES: ''
+      NVIDIA_VISIBLE_DEVICES: void
+      HIP_VISIBLE_DEVICES: ''
+      ROCR_VISIBLE_DEVICES: ''
+      JAX_PLATFORMS: cpu
+      GH_CUDA_PREINITIALIZE: '0'
+      XLA_PYTHON_CLIENT_PREALLOCATE: 'false'
+      OMP_NUM_THREADS: '1'
+      MKL_NUM_THREADS: '1'
+      OPENBLAS_NUM_THREADS: '1'
+      NUMEXPR_NUM_THREADS: '1'
+      VECLIB_MAXIMUM_THREADS: '1'
+      PYTHONUNBUFFERED: '1'
+    steps:
+      - name: Prepare CPU Torch evidence directory
+        run: |
+          echo "RUNTIME_TORCH_OUT=$RUNNER_TEMP/runtime-torch-validation" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/runtime-torch-validation"
+      - name: Checkout candidate
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: candidate
+          submodules: false
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: candidate/benchmarks/runtime/requirements-cpu.txt
+      - name: Install isolated CPU Torch contract dependencies
+        run: |
+          mkdir -p "$RUNTIME_TORCH_OUT/environment"
+          python -m pip install -r candidate/benchmarks/runtime/requirements-cpu.txt 2>&1 | tee "$RUNTIME_TORCH_OUT/environment/install-cpu.log"
+          python -m pip install --index-url https://download.pytorch.org/whl/cpu torch==2.7.1+cpu 2>&1 | tee "$RUNTIME_TORCH_OUT/environment/install-torch.log"
+          python -m pip install -r candidate/benchmarks/runtime/requirements-geometry.txt 2>&1 | tee "$RUNTIME_TORCH_OUT/environment/install-geometry.log"
+          python -m pip freeze --all > "$RUNTIME_TORCH_OUT/environment/pip-freeze.txt"
+          python -m pip check 2>&1 | tee "$RUNTIME_TORCH_OUT/environment/pip-check.log"
+          python - <<'PY' | tee "$RUNTIME_TORCH_OUT/environment/torch.json"
+          import json
+          import torch
+          print(json.dumps({"version": torch.__version__, "cuda_build": torch.version.cuda}))
+          assert torch.__version__ == "2.7.1+cpu" and torch.version.cuda is None
+          PY
+      - name: Require Linux namespace and UNIX sockets
+        run: python candidate/benchmarks/runtime/validate.py preflight --out "$RUNTIME_TORCH_OUT/preflight"
+      - name: Required CPU Torch process, lifecycle and structural loss gates
+        run: |
+          python candidate/benchmarks/runtime/validate.py regressions --torch-contracts \
+            --out "$RUNTIME_TORCH_OUT/regressions"
+      - name: Publish CPU Torch contract evidence
+        if: always()
+        run: |
+          python candidate/benchmarks/runtime/validate.py summary --torch-contracts \
+            --out "$RUNTIME_TORCH_OUT" --step-summary "$GITHUB_STEP_SUMMARY"
+      - name: Preserve raw CPU Torch contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: runtime-torch-cpu-${{ github.sha }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/runtime-torch-validation
+          if-no-files-found: error
+          retention-days: 30

@@ -1,0 +1,126 @@
+{
+  "scope": "Synthetic scheduler metadata only; subprocesses forbidden; no allocation, container or GPU operation",
+  "cases": [
+    {
+      "case": "numeric_global_id_five_inherited_zero",
+      "accepted": true,
+      "value": [
+        "/usr/bin/nvidia-smi",
+        "-i",
+        "5",
+        "--query-gpu=index,uuid,name,driver_version,pci.bus_id,memory.total,memory.used",
+        "--format=csv,noheader,nounits"
+      ],
+      "expected_accept": true,
+      "pass": true
+    },
+    {
+      "case": "supported_complete_uuid_roundtrip",
+      "accepted": false,
+      "error": "ValueError: GPU token must be one explicit decimal global ID or complete GPU UUID; no ranges/lists/MIG guessing",
+      "expected_accept": true,
+      "pass": false
+    },
+    {
+      "case": "explicit_utc_standard_format",
+      "accepted": false,
+      "error": "ValueError: Launcher did not fix both timezone and timestamp format: {'SLURM_TIME_FORMAT': 'relative', 'TZ': 'UTC', 'APPTAINER_TMPDIR': '/new-task/private/tmp', 'APPTAINER_CACHEDIR': '/new-task/private/cache', 'PYTHONDONTWRITEBYTECODE': '1'}",
+      "expected_accept": true,
+      "pass": false
+    },
+    {
+      "case": "valid_terminal_accounting",
+      "accepted": true,
+      "value": {
+        "job_id": "123456",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "actual_start": "2026-11-04T10:00:00",
+        "actual_end": "2026-11-04T10:04:00",
+        "actual_elapsed_seconds": 240,
+        "allocated_tres": {
+          "cpu": "4",
+          "mem": "32G",
+          "node": "1",
+          "gres/gpu": "1",
+          "gres/gpu:g4090": "1"
+        },
+        "actual_gpu_hours": 0.06666666666666667,
+        "within_gpu_budget": true
+      },
+      "expected_accept": true,
+      "pass": true
+    },
+    {
+      "case": "invalid_start_end_dates",
+      "accepted": true,
+      "value": {
+        "job_id": "123456",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "actual_start": "not-a-date",
+        "actual_end": "also-not-a-date",
+        "actual_elapsed_seconds": 240,
+        "allocated_tres": {
+          "cpu": "4",
+          "mem": "32G",
+          "node": "1",
+          "gres/gpu": "1",
+          "gres/gpu:g4090": "1"
+        },
+        "actual_gpu_hours": 0.06666666666666667,
+        "within_gpu_budget": true
+      },
+      "expected_accept": false,
+      "pass": false
+    },
+    {
+      "case": "end_before_start",
+      "accepted": true,
+      "value": {
+        "job_id": "123456",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "actual_start": "2026-11-04T10:00:00",
+        "actual_end": "2026-11-04T09:59:00",
+        "actual_elapsed_seconds": 240,
+        "allocated_tres": {
+          "cpu": "4",
+          "mem": "32G",
+          "node": "1",
+          "gres/gpu": "1",
+          "gres/gpu:g4090": "1"
+        },
+        "actual_gpu_hours": 0.06666666666666667,
+        "within_gpu_budget": true
+      },
+      "expected_accept": false,
+      "pass": false
+    },
+    {
+      "case": "contradictory_typed_gpu_count",
+      "accepted": true,
+      "value": {
+        "job_id": "123456",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "actual_start": "2026-11-04T10:00:00",
+        "actual_end": "2026-11-04T10:04:00",
+        "actual_elapsed_seconds": 240,
+        "allocated_tres": {
+          "cpu": "4",
+          "mem": "32G",
+          "node": "1",
+          "gres/gpu": "1",
+          "gres/gpu:g4090": "2"
+        },
+        "actual_gpu_hours": 0.06666666666666667,
+        "within_gpu_budget": true
+      },
+      "expected_accept": false,
+      "pass": false
+    }
+  ],
+  "passed": 2,
+  "total": 7
+}

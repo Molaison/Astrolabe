@@ -1,0 +1,11 @@
+{
+  "path": "source-anchors-continuation.bundle",
+  "bytes": 154336,
+  "sha256": "0b4f6ce02b2e09072d5ea199b67ab813206da107c09a98de018f97b8962e12f5",
+  "prerequisite": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "refs": {
+    "refs/astrolabe-runtime-20261104/original-startup-f9": "f9ce87b9f5cf37710f0a52ebe503595e5d7fdd7f",
+    "refs/astrolabe-runtime-20261104/original-launcher-959": "959226413c02ff85989f002b9fb9a4100849269a"
+  },
+  "purpose": "Original source commits for W0/native science and GPU harness/launcher before-after probes; mapped API commits preserve the same trees."
+}

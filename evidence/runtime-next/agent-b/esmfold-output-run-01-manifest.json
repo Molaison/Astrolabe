@@ -1,0 +1,26 @@
+{
+  "base_head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "code_state": "working tree changes on base; exact source SHA256 recorded below",
+  "fixed_gate_exit_code": 0,
+  "frozen_harness_sha256": "d3a0c08b52ba260763f6a8fc826654893f6a37f8d8c058dd8e1c6df286d550b5",
+  "gpu": false,
+  "negative_gate_exit_code": 1,
+  "pretrained": false,
+  "raw_sha256": {
+    "esmfold-output-baseline.json": "a31b07780f1be6a2b4e9c303db93113337b08f255ea6a309a6d68e6adf92912f",
+    "esmfold-output-comparison.json": "8615a1b553f16a72e7c07addde32447ecd0a3b9ecb1e5bceff605f8a45c77cc4",
+    "esmfold-output-regressions.txt": "7416ec3c523915fc97a4e4b0accbfeefd83eda15d9bcfb16dfc34fc490428f03",
+    "esmfold-output-tests.txt": "c16c95b7de1beb34f66263c263fab0add8a7541a71cf910c40949f5e954bcc6a",
+    "esmfold-worker-control.json": "66666479784cd3bb37c8c748f14e906c03364209285df88416aebfc4d4501884",
+    "esmfold-worker-negative.json": "e2afea70dceb49bd339401aac1b9bf577934aeef1f61381bbef8221211b6ab98"
+  },
+  "regression_command": "../venv/bin/python -m pytest -q tests/test_esmfold_output_boundary.py tests/test_tree_codec_torch.py tests/test_evaluator_rng_lifecycle.py -k 'not worker_preserves_constructor_dtype_cudnn_and_native_precision_side_effect'",
+  "source_sha256": {
+    "astrolabe/evaluators/esmfold_output.py": "923559bd397920e05b24277bd132a4b2e0025e67464660c369287f074ac8f0bf",
+    "astrolabe/evaluators/esmfold_resident.py": "2b5b91433c01f9b1507f19d9dc0406702ff8ae840da8f0e1e880ddbeb144f30d",
+    "astrolabe/evaluators/wrappers/esmfold_daemon.py": "2a3d0797f2dbd83f2905322ebb7ccf86237d4e00eaae1e95f53754ac6afd9020",
+    "tests/fixtures/esmfold_output_native.json": "f15d58490691fa3a5cea6b2c9c7809ea079e60d642e24f865d15c877155d07a4",
+    "tests/fixtures/esmfold_output_native.py": "c73327c4f3c1a7a87822d325da1b932527d8e58f42acbd3fd5a9257ca4b38763",
+    "tests/test_esmfold_output_boundary.py": "8e35cb5f1878fbded4c48543ad7c8dff9a295575467def36c81c3f26ea834eb0"
+  }
+}

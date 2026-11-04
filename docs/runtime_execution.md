@@ -43,6 +43,45 @@ a load or residency certificate.
 
 ## Failure and containment
 
+Broker ingress uses separate bounded Unix-socket lanes for business work,
+short control operations, and nested device admission. Business and nested
+capacity follow `execution.resources.pending_items`; short control capacity
+is eight concurrent connections. Nested admission cannot consume the short
+control lane needed for cancellation, metrics, and detach. These bounds include
+accepted sockets reading a frame. The accept loop never waits for a free
+handler, and each frame has an absolute read deadline. Only one nested RPC
+per managed parent is accepted at a time.
+
+An explicit `AdmissionRejected` response means `execution_state:
+not_executed` and `retryable: true`. The client has no hidden queue: one
+`BrokerClient` admits one call at a time and rejects additional concurrent
+calls. Retryability permits the caller to make a new decision; the runtime
+never automatically replays scientific work. A lost connection after
+submission remains `OutcomeUnknown`, even when overload is suspected.
+
+The dispatch owner alone can clear its delegated state and release its
+reservations. Resource admission, worker-lock admission and worker transport
+waits share the request's absolute deadline; an earlier caller deadline takes
+precedence. Cleanup and final ownership bookkeeping may still delay returning
+after expiry, so this is not a hard bound on the method's total wall time.
+A known application error is distinct from uncertain execution. An uncertain
+CPU result fences its worker, while an independent healthy CPU worker remains
+usable. Uncertain GPU work continues to fence its physical device until the
+existing cleanup/ownership protocol permits release.
+
+When an execute/finalize request expires or is cancelled before submission,
+the preceding successful prepare/execute still owns its retained reservation.
+No scientific work is automatically repeated. Confirmed cleanup releases its
+ownership; uncertain cleanup retains reservations and artifacts. These broader
+control-plane contracts require real socket/process saturation validation;
+unit and CPU fixture checks are not pretrained GPU backend certification.
+
+`BrokerClient.cancel(request_id)` uses the control lane without taking the
+call lock. Its acknowledgement reports a cancellation request, not confirmed
+resource release. A queued cancellation cannot stop another active owner.
+After submission, the original dispatch owner stops and observes its worker
+before releasing resources; a cancelled scientific outcome is not retried.
+
 Client/worker epochs, transport request IDs and scientific identities fence
 duplicate, out-of-order and late responses. Outcome-unknown errors are preserved
 end-to-end and never trigger an automatic scientific retry. The native owner

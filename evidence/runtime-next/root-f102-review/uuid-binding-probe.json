@@ -1,0 +1,27 @@
+{
+  "status": "PASS",
+  "scope": "pure launcher binding/argv probe; no Slurm, container, CUDA initialization or GPU query executed",
+  "finding": "Before fix retained ambiguous inherited ordinal; after fix binds verified scheduler-assigned UUID before CUDA initializes. This is a configuration-path regression proof, not an observed wrong-device run.",
+  "records": [
+    {
+      "revision": "196b3fd0d9a9b49ce7c9a134ca29d6a1047a8ba0",
+      "scheduler_global_gpu": "5",
+      "inherited_cuda_ordinal": "0",
+      "resolved_assigned_uuid": "GPU-01234567-89ab-cdef-0123-456789abcdef",
+      "container_cuda_visible_devices": "0",
+      "container_nvidia_visible_devices": "GPU-01234567-89ab-cdef-0123-456789abcdef",
+      "gpu_queries_executed": 0,
+      "container_started": false
+    },
+    {
+      "revision": "3b7cf43",
+      "scheduler_global_gpu": "5",
+      "inherited_cuda_ordinal": "0",
+      "resolved_assigned_uuid": "GPU-01234567-89ab-cdef-0123-456789abcdef",
+      "container_cuda_visible_devices": "GPU-01234567-89ab-cdef-0123-456789abcdef",
+      "container_nvidia_visible_devices": "GPU-01234567-89ab-cdef-0123-456789abcdef",
+      "gpu_queries_executed": 0,
+      "container_started": false
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "repository": "Molaison/gh-esm2",
+  "ref": "43c67d952da30d2471f609848931d20ec8c98532",
+  "path": "esm2/esmfold/v1/misc.py",
+  "blob_sha": "76b8e74cd73d44f68ea197fd15d5e2d38cbf8284",
+  "url": "https://github.com/Molaison/gh-esm2/blob/43c67d952da30d2471f609848931d20ec8c98532/esm2/esmfold/v1/misc.py",
+  "evidence": "exact pinned upstream read via authenticated GitHub connector; no model loaded"
+}

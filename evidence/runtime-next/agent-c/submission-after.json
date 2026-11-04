@@ -1,0 +1,122 @@
+{
+  "source_head": "8c987ed86452d2c1bb467a1d20c2434347b5a95b",
+  "scope": "Actual experimental ThreadPool scheduler; controlled inexpensive workers; no model, GPU or broker",
+  "cases": [
+    {
+      "case": "valid_control",
+      "worker_calls": 2,
+      "identity_call_counts": [
+        {
+          "candidate_id": "a",
+          "generation": 1,
+          "count": 1
+        },
+        {
+          "candidate_id": "b",
+          "generation": 1,
+          "count": 1
+        }
+      ],
+      "errors": [],
+      "collections": [
+        {
+          "completed": 2,
+          "failed": 0,
+          "selected": {
+            "candidate_id": "b",
+            "generation": 1,
+            "score": 0.75
+          }
+        }
+      ]
+    },
+    {
+      "case": "mixed_generation_batch",
+      "worker_calls": 0,
+      "identity_call_counts": [],
+      "errors": [
+        "candidate task generation mismatch: submitted generation=1; candidate_id='wrong_generation', task generation=2"
+      ],
+      "collections": []
+    },
+    {
+      "case": "duplicate_within_batch",
+      "worker_calls": 0,
+      "identity_call_counts": [],
+      "errors": [
+        "duplicate candidate task identity: candidate_id='duplicate', generation=1"
+      ],
+      "collections": []
+    },
+    {
+      "case": "replay_after_collection",
+      "worker_calls": 1,
+      "identity_call_counts": [
+        {
+          "candidate_id": "replayed",
+          "generation": 1,
+          "count": 1
+        }
+      ],
+      "errors": [
+        "duplicate candidate task identity: candidate_id='replayed', generation=1"
+      ],
+      "collections": [
+        {
+          "completed": 1,
+          "failed": 0,
+          "selected": {
+            "candidate_id": "replayed",
+            "generation": 1,
+            "score": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "case": "same_id_different_generation_control",
+      "worker_calls": 2,
+      "identity_call_counts": [
+        {
+          "candidate_id": "allowed",
+          "generation": 1,
+          "count": 1
+        },
+        {
+          "candidate_id": "allowed",
+          "generation": 2,
+          "count": 1
+        }
+      ],
+      "errors": [],
+      "collections": [
+        {
+          "completed": 1,
+          "failed": 0,
+          "selected": {
+            "candidate_id": "allowed",
+            "generation": 1,
+            "score": 0.25
+          }
+        },
+        {
+          "completed": 1,
+          "failed": 0,
+          "selected": {
+            "candidate_id": "allowed",
+            "generation": 2,
+            "score": 0.75
+          }
+        }
+      ]
+    }
+  ],
+  "queue_bound_probe": {
+    "configured_max_in_flight": 1,
+    "submitted_and_unfinished": 8,
+    "running": 1,
+    "waiting": 7,
+    "final_worker_calls": 8,
+    "final_selected_score": 7.0
+  }
+}

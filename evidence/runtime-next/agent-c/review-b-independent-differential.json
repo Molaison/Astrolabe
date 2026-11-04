@@ -1,0 +1,520 @@
+{
+  "head": "a55c28553917742ed451aa016ce7dc62cdfea95c",
+  "scope": "Independent real torch CPU/native-source output differential; synthetic outputs, no pretrained inference/GPU/broker",
+  "torch": "2.7.1+cpu",
+  "numpy": "2.3.5",
+  "fixture_sha256": "cad35fb34a3bdae3ab7d6f2f03b525528b5ea4bb416f80a4dd046e7a6a46015d",
+  "cases": [
+    {
+      "batch": 1,
+      "residues": 2,
+      "dtype": "torch.float16",
+      "padding": false,
+      "pdb_sha256": [
+        "be3207d007c4cfdc6dcf034c27dfde5052bf0570098c89400befbeaab18966d8"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 2,
+      "dtype": "torch.float16",
+      "padding": true,
+      "pdb_sha256": [
+        "0c41c28cccd76f8aed2ae5de7f8cb0197c11323470ba66abedaf3b4f9d73e3b4"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 2,
+      "dtype": "torch.float32",
+      "padding": false,
+      "pdb_sha256": [
+        "5b36db6224037289ffe4e33a9649b20713aba78dd0969a60e06c04b99c6f3396"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 2,
+      "dtype": "torch.float32",
+      "padding": true,
+      "pdb_sha256": [
+        "0308ae2d78ce81908c7cc6f4bc5a2190da5ca1ff79812df71c502cacd44fb8fc"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 2,
+      "dtype": "torch.float64",
+      "padding": false,
+      "pdb_sha256": [
+        "96a7294f709627f6f91ec7a27662d876bbd5e6a4a528e9a191d993b59ec36f2e"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 2,
+      "dtype": "torch.float64",
+      "padding": true,
+      "pdb_sha256": [
+        "24c7753b4e27d1b2606fd1bdbd0cc3c085eb3eba8f09f9bd9ebf871bdb530708"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 7,
+      "dtype": "torch.float16",
+      "padding": false,
+      "pdb_sha256": [
+        "77abdbdb6868c433f4358dd36b0aeda00d76f10795ced2ab7c9c687941acc41e"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 7,
+      "dtype": "torch.float16",
+      "padding": true,
+      "pdb_sha256": [
+        "16bce6d26d694d58c234d930ad21d956f49e2e52f2123e60983862bd5afc4b61"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 7,
+      "dtype": "torch.float32",
+      "padding": false,
+      "pdb_sha256": [
+        "139c57e0fcbe932e6b30fa22d62031adb290a49f252600959c253674e4b69b92"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 7,
+      "dtype": "torch.float32",
+      "padding": true,
+      "pdb_sha256": [
+        "89807e02254b8cd634374d784b03050e544f3fa8adda9f8ddc610d26586c1455"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 7,
+      "dtype": "torch.float64",
+      "padding": false,
+      "pdb_sha256": [
+        "75471ee5302453ed6340eb94db68dd7f9bf82d5648fccf5e5406e91c1bb5a782"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 7,
+      "dtype": "torch.float64",
+      "padding": true,
+      "pdb_sha256": [
+        "0b9e550938beac2f735e3820105ba4334371d92045c96eb584ca2a0163d17146"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 31,
+      "dtype": "torch.float16",
+      "padding": false,
+      "pdb_sha256": [
+        "0cdbc35c08894cdeae1c31aa31b9f5fddd834940b343bc66a2f612e19b694fb8"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 31,
+      "dtype": "torch.float16",
+      "padding": true,
+      "pdb_sha256": [
+        "9f8b8672aaec5be1b1743f02dda5e63222f4322f2a49346b9a674cfddcbe3b94"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 31,
+      "dtype": "torch.float32",
+      "padding": false,
+      "pdb_sha256": [
+        "83f8765e03fe5d6a6fba13c960342cc04f4b6348c70850cdc509866cb8213fc2"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 31,
+      "dtype": "torch.float32",
+      "padding": true,
+      "pdb_sha256": [
+        "70a70f8cdcd0dec63ac4ff9d3545df149014366bbfb8835dcacdc5e0bdcded92"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 31,
+      "dtype": "torch.float64",
+      "padding": false,
+      "pdb_sha256": [
+        "446b2181e5e86e2f83fe650cd084f43b14d938463ecc64bc40c6d4064f02acf0"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 1,
+      "residues": 31,
+      "dtype": "torch.float64",
+      "padding": true,
+      "pdb_sha256": [
+        "d9caa14ed070753f02f6f12dee97197a3050786c9807c8802d19e0b4c21a1e47"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 2,
+      "dtype": "torch.float16",
+      "padding": false,
+      "pdb_sha256": [
+        "0592baf845074008bb6f620ab1f46ca3e5f38634927ef0d91be1aba5cd5f96bf",
+        "3b3c16a1889f1d6d6108c0b676e711d2aac05bbba102ea66f36df0b1e9d3bb1b",
+        "f296d55b5556cdee74569d2a312a50dfd2bcdbb723dfecefc41ef14b294ef396"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 2,
+      "dtype": "torch.float16",
+      "padding": true,
+      "pdb_sha256": [
+        "3b23d7018fba81ff5a9330d18c4a04284e66225961a7cadec11634b299eb7fe1",
+        "b988aa86aa04dbb2350d56123ad0a738dcf639b8215bfee6787cb86a2da63ec6",
+        "b419a52b1e0c38cc97973ad01f251e80c0d839aa07a328fed392738a175d90f6"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 2,
+      "dtype": "torch.float32",
+      "padding": false,
+      "pdb_sha256": [
+        "dc474d11f40589b73960a9354271f7e93c672047e9cc45d6fd5d0079c00d9f9f",
+        "734ca8c04853d2ec65679d08bc012f2c463785b08791740f5fd59cc8aef07e1a",
+        "32149fabe7fe6522e5de45d467bdfd83a85ddde4e28dd8e300288de61cd4e10a"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 2,
+      "dtype": "torch.float32",
+      "padding": true,
+      "pdb_sha256": [
+        "9fa6e95c39384ee446b03dd2a9787b12342f585375f518b4ed8b3ec92f198aa1",
+        "bef468b6d3344869dfa907ded213f40a2174ec97c82cc5768337eae5e5cd8735",
+        "99129f31bfd54940bd13f2005ef8b36c55f9cf66dc596fa562be36afabd18d68"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 2,
+      "dtype": "torch.float64",
+      "padding": false,
+      "pdb_sha256": [
+        "4e081e22c020f5c45d38a95333df1515a60bff5c1c9193d0be050ed25bcbc029",
+        "ce15251474d0aefff3e1742db05247bd0615ff955bd75fb20c30e0cb562435be",
+        "f5dac20f2b2caf775f54ad187bb0fe0f3d0802394064e21bf92c6a066a45dd44"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 2,
+      "dtype": "torch.float64",
+      "padding": true,
+      "pdb_sha256": [
+        "25edc8d79864f36e2f657d03ebf3a55a24cea3a3896d21a2acdeab73084ecfda",
+        "18acb41f223045e8683814ca54fc7b9bdbf5bffe91d08bb0b17f287d06256946",
+        "c2a07176a315b688bf36a68d087c082b850ea5d4bdae718b0e85ccb23cc238c9"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 7,
+      "dtype": "torch.float16",
+      "padding": false,
+      "pdb_sha256": [
+        "4fd08c25cfb120b9210ff971e4d5a1bf245a1a025e4ef859b43f42f237c8f763",
+        "eb6f736bf91675a8c37b260bb8869ad8e6cd31b06c479d3e0f3f179e5ca71e14",
+        "990812042680414ab1ebb5e0c2797abfe563539385d90a883ae37e141073c7b0"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 7,
+      "dtype": "torch.float16",
+      "padding": true,
+      "pdb_sha256": [
+        "283b884964df3e78728199cb6af6dc9e9fd35bcddbeda4e8214191b25a8093d0",
+        "1952362a3168fa53fd09fee9d76169d902ee91bcb499f0eaaa2ab2f3e64cbdc4",
+        "79ecc83d1fef405751f453cc19c0ae77cf91f006a3eb83c62e4e2c8be90686f6"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 7,
+      "dtype": "torch.float32",
+      "padding": false,
+      "pdb_sha256": [
+        "95b70327252422ad070edd3285f8f6b3393fdd11ddf9b45e3cd0870c1bf13cad",
+        "0b10333c0fc3bed1998e25c5d9075e4012fa685b08bd57f9e81ae089e087e6c8",
+        "7babc0bfff0692d7fba43776a5cdbcf6d107c30a72ae363c05abfe2ee8c9f4fd"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 7,
+      "dtype": "torch.float32",
+      "padding": true,
+      "pdb_sha256": [
+        "69431599d2e0ad66780af5ef94e17d5a80d11f8591b7543eba42b3ee31c32fa6",
+        "9574838c0c4b3036fffcc7dbf8573f823fb43b7d98147749303b4343d6edeacf",
+        "acfae4c5ec9fad29eccde37941ac69bbd054cb296d56a770b13469b1314286e7"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 7,
+      "dtype": "torch.float64",
+      "padding": false,
+      "pdb_sha256": [
+        "2e30e892320a06f7507d9dc981cdf5d2fb82b200189efe23660362061b1b6cd9",
+        "929f6c2bd50459565552ad20e220a3ad5536234b781451f58a54fcb2407a00f8",
+        "377cf414b55f170d2b70020e9ba82ba877caed0e03e28959a075833f17981a3f"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 7,
+      "dtype": "torch.float64",
+      "padding": true,
+      "pdb_sha256": [
+        "e2566d481de3c6d1f0fe05c4bca38fc9f8c63482270560990f0ec956e44d8a5f",
+        "a2f2400be31471ee1789e2c41c86b72664c006965fab3ac410f6b3f4f26eb9dc",
+        "9c23782e053a6f9afc75fdcb9d58ae2dbfa4a1192efbddaf60766ab062d208b9"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 31,
+      "dtype": "torch.float16",
+      "padding": false,
+      "pdb_sha256": [
+        "f851d3456b00de40b914d2600ea423020f4d165d43dbac2262e1df1d2b581752",
+        "0ad2c67a45ab222018aa76fc4137466d40ca4cd81a2a80129b95b19904c13549",
+        "311929ba06239d75979510d98215078d19c81d0de29183f795cd0980a79cd7cb"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 31,
+      "dtype": "torch.float16",
+      "padding": true,
+      "pdb_sha256": [
+        "3139144fb6e323cdeb477c2c5cc76c26533e4c7302efa0d67e1c15fccc333847",
+        "e9aeb8a8994b14c5998b43e00a059047957db01f73b207978a839293a52822d5",
+        "89e04bddb6f8f11c1bd2ad5161d5cafaf84ddb47add021b87fa56e669f5e9a03"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 31,
+      "dtype": "torch.float32",
+      "padding": false,
+      "pdb_sha256": [
+        "23fac01ab3327c916ada76e7839717f3e14df1aa3274f1d12c229f87c087a77c",
+        "d5123a34c35d72a292907962eb762c9357fc212d0ed82d9291ec9cb8b3c29ee8",
+        "607ebf7023bf2e7b352c731c2bbd692757bb49fea5c79a921f77c02fba36e235"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 31,
+      "dtype": "torch.float32",
+      "padding": true,
+      "pdb_sha256": [
+        "bdc9fc83206aa83e7c39f441a85d6412b5300be32a5f6700c8efe53179f2d555",
+        "57fa52fd8fbf8a60b58b5d0358146671af87388809478d3597f6bc19130230c7",
+        "5a2266787fc448dad9ce2669ba943327c9edd3c3f58598c9625873f16743b040"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 31,
+      "dtype": "torch.float64",
+      "padding": false,
+      "pdb_sha256": [
+        "cd0772b2f03fc38e37fe667b0483198f0f69f90eb5cb605f64884e563507cabf",
+        "86ac7ef0fa2e770b3465e7d0b91fd79b61c3c8f845521e4477a16bbb4adc0ee1",
+        "f375bf64b43a9fcbd9a161de730596d3fbf7598c17f67cc75b37e3f3c17efce1"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    },
+    {
+      "batch": 3,
+      "residues": 31,
+      "dtype": "torch.float64",
+      "padding": true,
+      "pdb_sha256": [
+        "f8bf6bf6d6d2a038b7e8af10b5f3acab0736c8d1617e7b4382f0be9285879bab",
+        "aca0217337770d0d5053559ca09c2508b76c80f98edd327a266cb2172a5ea990",
+        "ec7f24614e8b9a41c16c812a06f5e1825f627a6873137bb0ca3fdd75bfffc524"
+      ],
+      "pdb_exact": true,
+      "score_bits_exact": true,
+      "input_unchanged": true,
+      "rng_exact": true
+    }
+  ],
+  "unknown_dependency_controls_rejected": [
+    "changed_numpy_binding",
+    "changed_residue_table",
+    "changed_formatter_dependency",
+    "custom_wrapper"
+  ],
+  "error_count": 0
+}

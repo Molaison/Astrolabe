@@ -1,0 +1,4 @@
+# Only the isolated CPU Torch/structural contract job uses these dependencies.
+# The W0 benchmark environment remains requirements-cpu.txt alone.
+pandas==2.2.3
+rdkit==2025.9.6

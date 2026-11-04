@@ -23,6 +23,22 @@ def _extract_selector_vars(expr: Optional[str]) -> set[str]:
     return {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
 
 
+def _source_segment(lines: list[bytes], node: ast.FunctionDef) -> str:
+    """Read AST UTF-8 byte offsets from source split once on CR/LF.
+
+    bytes.splitlines preserves the parser's line boundaries (unlike str's,
+    which also splits form feeds and other Unicode separators).
+    """
+    first, last = node.lineno - 1, node.end_lineno - 1
+    if first == last:
+        return lines[first][node.col_offset:node.end_col_offset].decode("utf-8")
+    return b"".join([
+        lines[first][node.col_offset:],
+        *lines[first + 1:last],
+        lines[last][:node.end_col_offset],
+    ]).decode("utf-8")
+
+
 @lru_cache(maxsize=1)
 def _pyrosetta_loss_types_from_source() -> set[str]:
     """
@@ -42,6 +58,7 @@ def _pyrosetta_loss_types_from_source() -> set[str]:
         if "pyrosetta" not in src and ".rosetta." not in src:
             continue
         tree = ast.parse(src, filename=str(path))
+        lines = src.encode("utf-8").splitlines(keepends=True)
         for node in tree.body:
             if not isinstance(node, ast.FunctionDef):
                 continue
@@ -59,7 +76,7 @@ def _pyrosetta_loss_types_from_source() -> set[str]:
                         v = _ast_literal(kw.value)
                         if isinstance(v, str) and v.strip():
                             loss_name = v.strip()
-                node_src = ast.get_source_segment(src, node) or ""
+                node_src = _source_segment(lines, node)
                 arg_names = [a.arg for a in list(node.args.args) + list(node.args.kwonlyargs)]
                 uses_pyrosetta = (
                     path.name == "interaction.py"

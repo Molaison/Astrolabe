@@ -1,0 +1,99 @@
+{
+  "scope": "Synthetic scheduler metadata only; subprocesses forbidden; no allocation, container or GPU operation",
+  "cases": [
+    {
+      "case": "numeric_global_id_five_inherited_zero",
+      "accepted": true,
+      "value": [
+        "/usr/bin/nvidia-smi",
+        "-i",
+        "5",
+        "--query-gpu=index,uuid,name,driver_version,pci.bus_id,memory.total,memory.used",
+        "--format=csv,noheader,nounits"
+      ],
+      "expected_accept": true,
+      "pass": true
+    },
+    {
+      "case": "supported_complete_uuid_roundtrip",
+      "accepted": true,
+      "value": {
+        "binding": {
+          "job_id": "123456",
+          "step_id": "0",
+          "global_gpu_id": "GPU-12345678-1234-1234-1234-123456789abc",
+          "inherited_cuda_visible_devices": "GPU-12345678-1234-1234-1234-123456789abc"
+        },
+        "query_argv": [
+          "/usr/bin/nvidia-smi",
+          "-i",
+          "GPU-12345678-1234-1234-1234-123456789abc",
+          "--query-gpu=index,uuid,name,driver_version,pci.bus_id,memory.total,memory.used",
+          "--format=csv,noheader,nounits"
+        ]
+      },
+      "expected_accept": true,
+      "pass": true
+    },
+    {
+      "case": "explicit_utc_standard_format",
+      "accepted": true,
+      "value": {
+        "TZ": "UTC",
+        "SLURM_TIME_FORMAT": "standard"
+      },
+      "expected_accept": true,
+      "pass": true
+    },
+    {
+      "case": "valid_terminal_accounting",
+      "accepted": true,
+      "value": {
+        "job_id": "123456",
+        "state": "COMPLETED",
+        "exit_code": "0:0",
+        "actual_start": "2026-11-04T10:00:00",
+        "actual_end": "2026-11-04T10:04:00",
+        "actual_start_unix": 1793786400,
+        "actual_end_unix": 1793786640,
+        "actual_wall_seconds": 240,
+        "actual_elapsed_seconds": 240,
+        "allocated_tres": {
+          "cpu": "4",
+          "mem": "32G",
+          "node": "1",
+          "gres/gpu": "1",
+          "gres/gpu:g4090": "1"
+        },
+        "actual_gpu_hours": 0.06666666666666667,
+        "allocation_wall_gpu_hours": 0.06666666666666667,
+        "within_gpu_budget": true
+      },
+      "expected_accept": true,
+      "pass": true
+    },
+    {
+      "case": "invalid_start_end_dates",
+      "accepted": false,
+      "error": "ValueError: scheduler timestamp is not a complete standard UTC date",
+      "expected_accept": false,
+      "pass": true
+    },
+    {
+      "case": "end_before_start",
+      "accepted": false,
+      "error": "ValueError: accounted allocation end precedes its start",
+      "expected_accept": false,
+      "pass": true
+    },
+    {
+      "case": "contradictory_typed_gpu_count",
+      "accepted": false,
+      "error": "ValueError: accounted GPU count/type is absent, contradictory or not one g4090",
+      "expected_accept": false,
+      "pass": true
+    }
+  ],
+  "passed": 7,
+  "total": 7
+}

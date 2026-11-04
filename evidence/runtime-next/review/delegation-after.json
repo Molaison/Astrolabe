@@ -1,0 +1,46 @@
+{
+  "repo": "/workspace/scratch/1a0b1639644d/cloud-20261104/repo",
+  "head": "4213c0c0b2cc54e819478e812f0aa4de4871df28",
+  "broker_source_sha256": "aec1b381c6aa281859e0eb8cd6029abb7a40c9d9bcc79fbf36f34e98aaff6080",
+  "scope": "Actual broker admission/cleanup, controlled worker and post-response residency observations; no IPC/GPU/model execution",
+  "control": {
+    "delegated_before_waiter": true,
+    "delegated_after_waiter": true,
+    "active_first_reservation_after_waiter": true,
+    "busy_after_waiter": 1,
+    "first_result": {
+      "result": {
+        "ok": true
+      },
+      "lifecycle": {},
+      "runtime": {
+        "queue_seconds": 4.540800000540912e-05,
+        "admitted_seconds": 0.00012148300038461457
+      }
+    },
+    "pending_after_completion": 0,
+    "busy_after_completion": 0
+  },
+  "waiter_times_out": {
+    "delegated_before_waiter": true,
+    "waiter_error": {
+      "type": "TimeoutError",
+      "message": "worker queue admission timed out before submission"
+    },
+    "delegated_after_waiter": true,
+    "active_first_reservation_after_waiter": true,
+    "busy_after_waiter": 1,
+    "first_result": {
+      "result": {
+        "ok": true
+      },
+      "lifecycle": {},
+      "runtime": {
+        "queue_seconds": 3.753600003619795e-05,
+        "admitted_seconds": 0.030312905999835493
+      }
+    },
+    "pending_after_completion": 0,
+    "busy_after_completion": 0
+  }
+}

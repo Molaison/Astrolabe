@@ -2,36 +2,30 @@ import itertools
 import logging
 import math
 import pathlib
+import threading
 from collections import defaultdict
 from functools import lru_cache
-from typing import Any, Iterable, Mapping, Sequence
+from typing import TYPE_CHECKING, Any, Iterable, Mapping, Sequence
 
 import numpy as np
 from Bio.PDB import MMCIFParser, PDBParser
 
 _PYROSETTA_IMPORT_ERROR = None
-try:
-    import pyrosetta  # type: ignore
-    from pyrosetta.rosetta.core.scoring import hbonds as rosetta_hbonds  # type: ignore
-    from pyrosetta.rosetta.core.simple_metrics.per_residue_metrics import (  # type: ignore
-        PerResidueSasaMetric,
-    )
-    from pyrosetta.rosetta.protocols.simple_filters import (  # type: ignore
-        ContactMolecularSurfaceFilter,
-        HolesFilter,
-        ShapeComplementarityFilter,
-    )
-    from pyrosetta.rosetta.protocols.simple_moves import MutateResidue  # type: ignore
-except Exception as exc:  # pragma: no cover - optional/proprietary dependency
-    pyrosetta = None  # type: ignore
-    rosetta_hbonds = None  # type: ignore
-    PerResidueSasaMetric = None  # type: ignore
-    ContactMolecularSurfaceFilter = None  # type: ignore
-    HolesFilter = None  # type: ignore
-    ShapeComplementarityFilter = None  # type: ignore
-    MutateResidue = None  # type: ignore
-    _PYROSETTA_IMPORT_ERROR = exc
-from scipy.spatial import Delaunay, QhullError, cKDTree
+_PYROSETTA_IMPORT_ATTEMPTED = False
+_PYROSETTA_IMPORT_LOCK = threading.Lock()
+# Keep these module globals available for existing callers and monkeypatches.
+pyrosetta = None
+rosetta_hbonds = None
+PerResidueSasaMetric = None
+ContactMolecularSurfaceFilter = None
+HolesFilter = None
+ShapeComplementarityFilter = None
+MutateResidue = None
+
+# Loss discovery also imports this module for sequence-only runs. Geometry
+# dependencies are loaded by the functions that use them.
+if TYPE_CHECKING:
+    from scipy.spatial import Delaunay
 
 from astrolabe.core.chain_resolution import (
     chain_ids_for_oligo,
@@ -74,6 +68,40 @@ CD47_ANTIBODY_CONSENSUS_RESIDUES = (
 
 
 def _require_pyrosetta():
+    global _PYROSETTA_IMPORT_ATTEMPTED, _PYROSETTA_IMPORT_ERROR
+
+    if pyrosetta is None and not _PYROSETTA_IMPORT_ATTEMPTED:
+        with _PYROSETTA_IMPORT_LOCK:
+            if pyrosetta is None and not _PYROSETTA_IMPORT_ATTEMPTED:
+                try:
+                    import pyrosetta as module  # type: ignore
+                    from pyrosetta.rosetta.core.scoring import hbonds  # type: ignore
+                    from pyrosetta.rosetta.core.simple_metrics.per_residue_metrics import (  # type: ignore
+                        PerResidueSasaMetric as sasa_metric,
+                    )
+                    from pyrosetta.rosetta.protocols.simple_filters import (  # type: ignore
+                        ContactMolecularSurfaceFilter as contact_filter,
+                        HolesFilter as holes_filter,
+                        ShapeComplementarityFilter as shape_filter,
+                    )
+                    from pyrosetta.rosetta.protocols.simple_moves import (  # type: ignore
+                        MutateResidue as mutate_residue,
+                    )
+                except Exception as exc:  # optional/proprietary dependency
+                    _PYROSETTA_IMPORT_ERROR = exc
+                else:
+                    # Publish only the complete import set, under the load lock.
+                    globals().update(
+                        pyrosetta=module,
+                        rosetta_hbonds=hbonds,
+                        PerResidueSasaMetric=sasa_metric,
+                        ContactMolecularSurfaceFilter=contact_filter,
+                        HolesFilter=holes_filter,
+                        ShapeComplementarityFilter=shape_filter,
+                        MutateResidue=mutate_residue,
+                    )
+                _PYROSETTA_IMPORT_ATTEMPTED = True
+
     if pyrosetta is None:
         raise ImportError(
             "PyRosetta is required for these losses/selectors but is not available. "
@@ -115,6 +143,8 @@ def _ca_contact_pairs(
     *,
     cutoff: float = 8.0,
 ) -> list[tuple[int, int]]:
+    from scipy.spatial import cKDTree
+
     xyz = np.asarray(parsed.get("xyz"), dtype=float)
     mask = np.asarray(parsed.get("mask"), dtype=bool)
     if xyz.ndim != 3 or xyz.shape[1] <= 1 or mask.shape[:2] != xyz.shape[:2]:
@@ -160,6 +190,8 @@ def _sc_contact_pairs(
     *,
     cutoff: float = 5.0,
 ) -> list[tuple[int, int]]:
+    from scipy.spatial import cKDTree
+
     xyz = np.asarray(parsed.get("xyz"), dtype=float)
     mask = np.asarray(parsed.get("mask"), dtype=bool)
     if xyz.ndim != 3 or mask.shape[:2] != xyz.shape[:2]:
@@ -876,6 +908,8 @@ def _interface_residues_from_structure_model(
     interface_distance: float,
     context: str,
 ) -> list[Any]:
+    from scipy.spatial import cKDTree
+
     residues_by_chain: dict[str, list[Any]] = {}
     ca_by_chain: dict[str, np.ndarray] = {}
     for chain_id in chain_ids:
@@ -1455,7 +1489,9 @@ def _alpha_shape_kept_simplex_indices(
     alpha_radius_scale: float = 1.8,
     alpha_min_radius: float = 3.0,
     alpha_max_radius: float = 8.0,
-) -> tuple[Delaunay, set[int], float]:
+) -> "tuple[Delaunay, set[int], float]":
+    from scipy.spatial import Delaunay, QhullError
+
     pts = _require_alpha_shape_points(
         points,
         "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy pocket",
@@ -1756,6 +1792,8 @@ def _saturating_fraction(value: float, midpoint: float) -> float:
 
 
 def _build_ligand_environment_pose(pose, ligand_chain: str, neighbor_distance: float):
+    from scipy.spatial import cKDTree
+
     ligand_residues = _residue_indices_for_chains(pose, [ligand_chain])
     if not ligand_residues:
         return None
@@ -1885,6 +1923,7 @@ def _chain_relative_residue_indices(pose, chain: str, residues: str) -> list[int
 
 
 def _chain_region_selector(pose, chain: str, residues: str | None = None):
+    _require_pyrosetta()
     selector_ns = pyrosetta.rosetta.core.select.residue_selector
     if residues is None or str(residues).strip() == "":
         return selector_ns.ChainSelector(chain)
@@ -1899,6 +1938,7 @@ def _chain_group_region_selector(
     chains: Sequence[str],
     residues: str | None = None,
 ):
+    _require_pyrosetta()
     chain_ids = [str(chain) for chain in chains]
     if len(chain_ids) == 1:
         return _chain_region_selector(pose, chain_ids[0], residues)
@@ -2114,6 +2154,8 @@ def ipae_max(
 
 
 def find_interface_residues_by_ca(model_path, cutoff=8.0):
+    from scipy.spatial import cKDTree
+
     parsed_str = parse_mmcif(model_path)
     coords = parsed_str["xyz"][:, 1]
     chains = [chain for chain, _ in parsed_str["pdb_idx"]]
@@ -2717,6 +2759,7 @@ def _normalized_hotspot_selector_values(
 
 
 def _per_residue_sasa_calculator(sidechain_only: bool):
+    _require_pyrosetta()
     if sidechain_only:
         from pyrosetta.rosetta.core.scoring.sasa import per_res_sc_sasa
 
@@ -2910,6 +2953,7 @@ def chain_holes_diff(eval_result, buried_protomer: str):
 
 
 def calculate_holes_diff(complex_poses=None, buried_chain=None, structure_files=None):
+    _require_pyrosetta()
     result = {}
     holes_filter = HolesFilter()
 
@@ -3821,6 +3865,7 @@ def _load_pose_cached(
     _mtime: float | None,
     extra_residue_params: tuple[tuple[str, float | None], ...],
 ):
+    _require_pyrosetta()
     try:
         allow_mmcif_pdb_fallback = bool(global_config.allow_mmcif_pdb_fallback)
     except RuntimeError:
@@ -3958,6 +4003,7 @@ def calculate_buried_fraction_allala(
 
 @lru_cache(maxsize=4)
 def mutate_pose_to_all_ala(pose):
+    _require_pyrosetta()
     print("get_allala_pose called")
     new_pose = pose.clone()
     for i in range(1, new_pose.size() + 1):
@@ -4119,6 +4165,8 @@ def calculate_com_line_distance(eval_result, buried_protomer):
 
 
 def get_hotspot_interaction_number(eval_result, protomer):
+    from scipy.spatial import cKDTree
+
     # -------------
     # temporary obj
     hotspot = protomer.hotspots

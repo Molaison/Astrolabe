@@ -1,0 +1,334 @@
+{
+  "head": "d57d2ef3c5bcf442228eb71f4f960819faac76b5",
+  "evidence_kind": "actual CPU ThreadPoolExecutor scheduler; synthetic worker results; no model or GPU",
+  "cases": [
+    {
+      "received": [
+        "alien",
+        7
+      ],
+      "fail_policy": "record-and-continue",
+      "method": "collect",
+      "collections": [
+        {
+          "selected": null,
+          "results": [
+            {
+              "id": "submitted",
+              "generation": 7,
+              "status": "failed",
+              "score": null,
+              "payload": null,
+              "error": "candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='alien', generation=7"
+            }
+          ]
+        }
+      ],
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "alien",
+        7
+      ],
+      "fail_policy": "record-and-continue",
+      "method": "drain",
+      "collections": [
+        {
+          "selected": null,
+          "results": [
+            {
+              "id": "submitted",
+              "generation": 7,
+              "status": "failed",
+              "score": null,
+              "payload": null,
+              "error": "candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='alien', generation=7"
+            }
+          ]
+        }
+      ],
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "alien",
+        7
+      ],
+      "fail_policy": "fail-fast",
+      "method": "collect",
+      "error": "Candidate submitted failed: candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='alien', generation=7",
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "alien",
+        7
+      ],
+      "fail_policy": "fail-fast",
+      "method": "drain",
+      "error": "Candidate submitted failed: candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='alien', generation=7",
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "submitted",
+        8
+      ],
+      "fail_policy": "record-and-continue",
+      "method": "collect",
+      "collections": [
+        {
+          "selected": null,
+          "results": [
+            {
+              "id": "submitted",
+              "generation": 7,
+              "status": "failed",
+              "score": null,
+              "payload": null,
+              "error": "candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='submitted', generation=8"
+            }
+          ]
+        }
+      ],
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "submitted",
+        8
+      ],
+      "fail_policy": "record-and-continue",
+      "method": "drain",
+      "collections": [
+        {
+          "selected": null,
+          "results": [
+            {
+              "id": "submitted",
+              "generation": 7,
+              "status": "failed",
+              "score": null,
+              "payload": null,
+              "error": "candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='submitted', generation=8"
+            }
+          ]
+        }
+      ],
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "submitted",
+        8
+      ],
+      "fail_policy": "fail-fast",
+      "method": "collect",
+      "error": "Candidate submitted failed: candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='submitted', generation=8",
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "submitted",
+        8
+      ],
+      "fail_policy": "fail-fast",
+      "method": "drain",
+      "error": "Candidate submitted failed: candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='submitted', generation=8",
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "submitted",
+        6
+      ],
+      "fail_policy": "record-and-continue",
+      "method": "collect",
+      "collections": [
+        {
+          "selected": null,
+          "results": [
+            {
+              "id": "submitted",
+              "generation": 7,
+              "status": "failed",
+              "score": null,
+              "payload": null,
+              "error": "candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='submitted', generation=6"
+            }
+          ]
+        }
+      ],
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "submitted",
+        6
+      ],
+      "fail_policy": "record-and-continue",
+      "method": "drain",
+      "collections": [
+        {
+          "selected": null,
+          "results": [
+            {
+              "id": "submitted",
+              "generation": 7,
+              "status": "failed",
+              "score": null,
+              "payload": null,
+              "error": "candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='submitted', generation=6"
+            }
+          ]
+        }
+      ],
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "submitted",
+        6
+      ],
+      "fail_policy": "fail-fast",
+      "method": "collect",
+      "error": "Candidate submitted failed: candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='submitted', generation=6",
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "submitted",
+        6
+      ],
+      "fail_policy": "fail-fast",
+      "method": "drain",
+      "error": "Candidate submitted failed: candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='submitted', generation=6",
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "alien",
+        8
+      ],
+      "fail_policy": "record-and-continue",
+      "method": "collect",
+      "collections": [
+        {
+          "selected": null,
+          "results": [
+            {
+              "id": "submitted",
+              "generation": 7,
+              "status": "failed",
+              "score": null,
+              "payload": null,
+              "error": "candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='alien', generation=8"
+            }
+          ]
+        }
+      ],
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "alien",
+        8
+      ],
+      "fail_policy": "record-and-continue",
+      "method": "drain",
+      "collections": [
+        {
+          "selected": null,
+          "results": [
+            {
+              "id": "submitted",
+              "generation": 7,
+              "status": "failed",
+              "score": null,
+              "payload": null,
+              "error": "candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='alien', generation=8"
+            }
+          ]
+        }
+      ],
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "alien",
+        8
+      ],
+      "fail_policy": "fail-fast",
+      "method": "collect",
+      "error": "Candidate submitted failed: candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='alien', generation=8",
+      "ready_after": [],
+      "gate_pass": true
+    },
+    {
+      "received": [
+        "alien",
+        8
+      ],
+      "fail_policy": "fail-fast",
+      "method": "drain",
+      "error": "Candidate submitted failed: candidate result identity mismatch: submitted candidate_id='submitted', generation=7; received candidate_id='alien', generation=8",
+      "ready_after": [],
+      "gate_pass": true
+    }
+  ],
+  "normal": [
+    {
+      "scalar": false,
+      "selected": {
+        "id": "legitimate",
+        "generation": 7,
+        "status": "completed",
+        "score": 0.296270417375853,
+        "payload": {
+          "sequence": "CCCC",
+          "scientific_result": [
+            0.125,
+            0.25
+          ]
+        },
+        "error": null
+      },
+      "rng_state_exact": true,
+      "score_exact": true,
+      "input_unchanged": true,
+      "return_object_and_payload_preserved": true
+    },
+    {
+      "scalar": true,
+      "selected": {
+        "id": "legitimate",
+        "generation": 7,
+        "status": "completed",
+        "score": 0.296270417375853,
+        "payload": null,
+        "error": null
+      },
+      "rng_state_exact": true,
+      "score_exact": true,
+      "input_unchanged": true,
+      "return_object_and_payload_preserved": true
+    }
+  ],
+  "all_fault_gates_pass": true,
+  "normal_gates_pass": true
+}

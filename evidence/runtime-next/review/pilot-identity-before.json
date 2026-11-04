@@ -1,0 +1,16 @@
+{
+  "control": {
+    "generation1": "expected",
+    "generation2": null
+  },
+  "foreign": {
+    "generation1": "other",
+    "generation2": null
+  },
+  "future": {
+    "generation1": null,
+    "generation2": "other"
+  },
+  "source_head": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "scope": "Independent root execution of actual CandidatePoolScheduler with injected worker replies; no GPU or models"
+}

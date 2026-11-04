@@ -1,0 +1,73 @@
+{
+  "recorded_at_utc": "2026-11-04T02:20:06.588257+00:00",
+  "baseline_head": "d57d2ef3c5bcf442228eb71f4f960819faac76b5",
+  "commits": {
+    "generation_validation": "754976e0443a84e3bcafe8f30bd8017dc6844a76",
+    "duplicate_identity": "8c987ed86452d2c1bb467a1d20c2434347b5a95b"
+  },
+  "source_sha256": {
+    "astrolabe/experimental/candidate_batch_policy.py": "6df45114d42fb4309f726ad3ff60808fb0ef0b8062f154735bbab9ccf82a1836",
+    "tests/test_candidate_batch_policy.py": "e88f9821545a6861430a0bd98b53f2d0508e4e320a4900daea9687a515ff2f05"
+  },
+  "probe_sha256": {
+    "probe_submission_boundaries.py": "640ddad227cd5fc91f93faf69bb4b632f243a61eff6f06c2455b3e68a9e7f241",
+    "probe_blocking_backpressure.py": "30fc09d502a6ac07420bdb7b7c8d25a4464b88f35690c69785d9ef9dec8a3582"
+  },
+  "generation_regression": {
+    "before": {
+      "failed": 5,
+      "passed": 1
+    },
+    "after_full_targeted_suite": {
+      "passed": 51,
+      "failed": 0
+    }
+  },
+  "duplicate_regression": {
+    "before": {
+      "failed": 5,
+      "passed": 1
+    },
+    "after_full_targeted_suite": {
+      "passed": 57,
+      "failed": 0
+    }
+  },
+  "unchanged_controls": [
+    "valid_control",
+    "same_id_different_generation_control"
+  ],
+  "backpressure": {
+    "status": "PARTIAL; fixed queue bound not implemented",
+    "observed": {
+      "configured_max_in_flight": 1,
+      "submitted_and_unfinished": 8,
+      "running": 1,
+      "waiting": 7,
+      "final_worker_calls": 8,
+      "final_selected_score": 7.0
+    },
+    "rejected_prototype": {
+      "source_head": "8c987ed86452d2c1bb467a1d20c2434347b5a95b",
+      "scope": "Event-controlled ThreadPool protocol probe, not a performance/model/GPU benchmark",
+      "current": {
+        "blocking_capacity": null,
+        "first_selected_id": "0",
+        "first_selected_score": 1.0,
+        "first_collection_count": 1,
+        "total_worker_calls": 3,
+        "total_completed": 3
+      },
+      "blocking_submission_prototype": {
+        "blocking_capacity": 1,
+        "first_selected_id": "1",
+        "first_selected_score": 2.0,
+        "first_collection_count": 2,
+        "total_worker_calls": 3,
+        "total_completed": 3
+      },
+      "verdict": "reject naive blocking submission: same budget, changed first selected candidate"
+    }
+  },
+  "performance_claim": null
+}

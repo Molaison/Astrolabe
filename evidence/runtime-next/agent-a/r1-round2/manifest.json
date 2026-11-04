@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "scope": "bounded read-only R1 round2 follow-up; zero new scientific evaluations",
+  "archive": "r1-round2-raw.tar.xz",
+  "archive_bytes": 76308,
+  "archive_sha256": "54ccef7afc3428f6cf69254351cafda3f8cf6e24fb8ca35f1c73ac331516fc24",
+  "files": [
+    {
+      "path": "REPORT.md",
+      "archive_path": "raw/REPORT.md",
+      "bytes": 5063,
+      "sha256": "4e01ad052130f0a3237a2fc0566aecb0ea490641fc99987563800ba29af75c22"
+    },
+    {
+      "path": "budget.json",
+      "archive_path": "raw/budget.json",
+      "bytes": 1034,
+      "sha256": "9927d43643a2299f4bdb3aa46b46c25fe5e9b285b39307d95aed8f228fcbbca9"
+    },
+    {
+      "path": "cold-01.importtime.log",
+      "archive_path": "raw/cold-01.importtime.log",
+      "bytes": 7329,
+      "sha256": "d6cac849f5693b8b2d4f4808800d80ca2fac2af3558de7443301d5d023f78e69"
+    },
+    {
+      "path": "cold-01.stdout.json",
+      "archive_path": "raw/cold-01.stdout.json",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "cold-02.importtime.log",
+      "archive_path": "raw/cold-02.importtime.log",
+      "bytes": 45467,
+      "sha256": "a84e333e1255df905aeb801ad21ca111084f8e03ad03a81f06a721f42e57a2a2"
+    },
+    {
+      "path": "cold-02.stdout.json",
+      "archive_path": "raw/cold-02.stdout.json",
+      "bytes": 634,
+      "sha256": "dae7414be482ea1add6029c601f5f0ca4eb242743dfb0accf085485eb0a6ec14"
+    },
+    {
+      "path": "cold-03.callers.json",
+      "archive_path": "raw/cold-03.callers.json",
+      "bytes": 48136,
+      "sha256": "34e214fdd1da32b241d704c026ebfa6a88906459c505cab0cd0d6c9d858cb935"
+    },
+    {
+      "path": "cold-03.stderr.log",
+      "archive_path": "raw/cold-03.stderr.log",
+      "bytes": 83,
+      "sha256": "f2dea8f0d6c927057a7b88b92e6e61d836e11d427eeb35bc93182db59023a97d"
+    },
+    {
+      "path": "findings.json",
+      "archive_path": "raw/findings.json",
+      "bytes": 2183,
+      "sha256": "0a950930c86460fa6c249fe12480cd38b8cfbd025eccfc8e860095728a9e826c"
+    },
+    {
+      "path": "import-summary.json",
+      "archive_path": "raw/import-summary.json",
+      "bytes": 7265,
+      "sha256": "8e1a61b5a19df3f15ea659b8f8da261e46a23858fcd459617752b102a21ce86e"
+    },
+    {
+      "path": "install-report.json",
+      "archive_path": "raw/install-report.json",
+      "bytes": 277119,
+      "sha256": "049d54479e0d1171c6055ea76bde87b31a1318c5d300f5a8e96bedd4fc7bdd7d"
+    },
+    {
+      "path": "install.log",
+      "archive_path": "raw/install.log",
+      "bytes": 6204,
+      "sha256": "a4054373857f8649a6be4a0a5b92b6b7ce02bf1121160dcb8cf38f4c752f2f24"
+    },
+    {
+      "path": "pip-freeze.txt",
+      "archive_path": "raw/pip-freeze.txt",
+      "bytes": 358,
+      "sha256": "85916accd14c3f7f529d10f39a7838898bdc7e1cce2c32e409ccb9b9f342e2c2"
+    },
+    {
+      "path": "plan.json",
+      "archive_path": "raw/plan.json",
+      "bytes": 784,
+      "sha256": "effb73027359a92fea45b1a28f5be848018fbf2c8aace9b0a73242703e2efb3e"
+    },
+    {
+      "path": "probe_cold_import.py",
+      "archive_path": "raw/probe_cold_import.py",
+      "bytes": 879,
+      "sha256": "6b74a6e5f50f3dad7c39034c9d388d045f80279850e011064de39c03a20d96ea"
+    },
+    {
+      "path": "probe_import_callers.py",
+      "archive_path": "raw/probe_import_callers.py",
+      "bytes": 1310,
+      "sha256": "002b6d08acc1669a16e305ce7a3dcea7031fdd9fd5025bd1608d47db3919ee29"
+    },
+    {
+      "path": "r1-ci-decomposition.json",
+      "archive_path": "raw/r1-ci-decomposition.json",
+      "bytes": 18152,
+      "sha256": "5259bdcc01b3d2e9bcfab81dc4b7341301b869f538cf238fe2100efec466e271"
+    }
+  ]
+}

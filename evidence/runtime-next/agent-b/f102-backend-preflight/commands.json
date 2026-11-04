@@ -1,0 +1,832 @@
+[
+  {
+    "id": "01",
+    "command": "from pathlib import Path\nimport json,subprocess\nbase=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\ndata={}\nfor rel in ('backends','test-env','runtime','docs','evidence'):\n p=base/rel\n if not p.exists(): data[rel]={'exists':False};continue\n entries=sorted(p.iterdir())\n data[rel]={'count':len(entries),'entries':[{'name':x.name,'dir':x.is_dir(),'symlink':str(x.resolve()) if x.is_symlink() else None,'bytes':x.stat().st_size if x.is_file() else None} for x in entries[:24]]}\nr=base/'repo'\ndata['repo']={}\nfor name,cmd in [('head',['git','-C',str(r),'rev-parse','HEAD']),('status',['git','-C',str(r),'status','--short'])]:\n q=subprocess.run(cmd,text=True,capture_output=True,timeout=3);data['repo'][name]={'rc':q.returncode,'stdout':q.stdout[:700],'stderr':q.stderr[:200]}\nprint(json.dumps(data))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "93429747-c37b-493d-80a0-bc7d0e559eb7",
+    "result": {
+      "processId": "8e99e4a8-f33e-42f4-84ea-855a3d694d10",
+      "status": "exited",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 13, in <module>\n  File \"/usr/lib64/python3.6/subprocess.py\", line 423, in run\n    with Popen(*popenargs, **kwargs) as process:\nTypeError: __init__() got an unexpected keyword argument 'text'\n",
+      "exitCode": 1,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "02",
+    "command": "from pathlib import Path\nimport json,subprocess\nbase=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\ndata={}\nfor rel in ('backends','test-env','runtime','docs','evidence'):\n p=base/rel\n if not p.exists(): data[rel]={'exists':False};continue\n entries=sorted(p.iterdir())\n data[rel]={'count':len(entries),'entries':[{'name':x.name,'dir':x.is_dir(),'symlink':str(x.resolve()) if x.is_symlink() else None,'bytes':x.stat().st_size if x.is_file() else None} for x in entries[:24]]}\nr=base/'repo'\ndata['repo']={}\nfor name,cmd in [('head',['git','-C',str(r),'rev-parse','HEAD']),('status',['git','-C',str(r),'status','--short'])]:\n q=subprocess.run(cmd,universal_newlines=True,capture_output=True,timeout=3);data['repo'][name]={'rc':q.returncode,'stdout':q.stdout[:700],'stderr':q.stderr[:200]}\nprint(json.dumps(data))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "4550640c-99f1-4839-90aa-c9d23da2ff3e",
+    "result": {
+      "processId": "d7f41511-6fdf-4577-99f2-5c5c56e76903",
+      "status": "exited",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 13, in <module>\n  File \"/usr/lib64/python3.6/subprocess.py\", line 423, in run\n    with Popen(*popenargs, **kwargs) as process:\nTypeError: __init__() got an unexpected keyword argument 'capture_output'\n",
+      "exitCode": 1,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "03",
+    "command": "from pathlib import Path\nimport json,subprocess\nbase=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\ndata={}\nfor rel in ('backends','test-env','runtime','docs','evidence'):\n p=base/rel\n if not p.exists(): data[rel]={'exists':False};continue\n entries=sorted(p.iterdir())\n data[rel]={'count':len(entries),'entries':[{'name':x.name,'dir':x.is_dir(),'symlink':str(x.resolve()) if x.is_symlink() else None,'bytes':x.stat().st_size if x.is_file() else None} for x in entries[:24]]}\nr=base/'repo'\ndata['repo']={}\nfor name,cmd in [('head',['git','-C',str(r),'rev-parse','HEAD']),('status',['git','-C',str(r),'status','--short'])]:\n q=subprocess.run(cmd,universal_newlines=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=3);data['repo'][name]={'rc':q.returncode,'stdout':q.stdout[:700],'stderr':q.stderr[:200]}\nprint(json.dumps(data))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "44c4ae15-ed0f-4b96-a772-2b4a33006f64",
+    "result": {
+      "processId": "fb58fefd-0707-434c-a71b-80312b8aa389",
+      "status": "exited",
+      "stdout": "{\"backends\": {\"count\": 29, \"entries\": [{\"name\": \".git\", \"dir\": false, \"symlink\": null, \"bytes\": 108}, {\"name\": \".gitattributes\", \"dir\": false, \"symlink\": null, \"bytes\": 413}, {\"name\": \".github\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \".gitignore\", \"dir\": false, \"symlink\": null, \"bytes\": 1455}, {\"name\": \".gitmodules\", \"dir\": false, \"symlink\": null, \"bytes\": 3732}, {\"name\": \".pytest_cache\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"CITATION.cff\", \"dir\": false, \"symlink\": null, \"bytes\": 610}, {\"name\": \"LICENSE\", \"dir\": false, \"symlink\": null, \"bytes\": 10173}, {\"name\": \"MANIFEST.in\", \"dir\": false, \"symlink\": null, \"bytes\": 1478}, {\"name\": \"README.md\", \"dir\": false, \"symlink\": null, \"bytes\": 7596}, {\"name\": \"THIRD_PARTY_LICENSES.md\", \"dir\": false, \"symlink\": null, \"bytes\": 4509}, {\"name\": \"astrolabe\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"config\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"container\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"data\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"docs\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"examples\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"justfile\", \"dir\": false, \"symlink\": null, \"bytes\": 6741}, {\"name\": \"needed_softwares.md\", \"dir\": false, \"symlink\": null, \"bytes\": 2482}, {\"name\": \"patches\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"pyproject.toml\", \"dir\": false, \"symlink\": null, \"bytes\": 87}, {\"name\": \"pytest.ini\", \"dir\": false, \"symlink\": null, \"bytes\": 78}, {\"name\": \"resources\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"run.py\", \"dir\": false, \"symlink\": null, \"bytes\": 116128}]}, \"test-env\": {\"count\": 5, \"entries\": [{\"name\": \"bin\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"include\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"lib\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"lib64\", \"dir\": true, \"symlink\": \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-env/lib\", \"bytes\": null}, {\"name\": \"pyvenv.cfg\", \"dir\": false, \"symlink\": null, \"bytes\": 345}]}, \"runtime\": {\"count\": 30, \"entries\": [{\"name\": \".git\", \"dir\": false, \"symlink\": null, \"bytes\": 107}, {\"name\": \".gitattributes\", \"dir\": false, \"symlink\": null, \"bytes\": 413}, {\"name\": \".github\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \".gitignore\", \"dir\": false, \"symlink\": null, \"bytes\": 1455}, {\"name\": \".gitmodules\", \"dir\": false, \"symlink\": null, \"bytes\": 3732}, {\"name\": \".pytest_cache\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"CITATION.cff\", \"dir\": false, \"symlink\": null, \"bytes\": 610}, {\"name\": \"LICENSE\", \"dir\": false, \"symlink\": null, \"bytes\": 10173}, {\"name\": \"MANIFEST.in\", \"dir\": false, \"symlink\": null, \"bytes\": 1478}, {\"name\": \"README.md\", \"dir\": false, \"symlink\": null, \"bytes\": 7596}, {\"name\": \"THIRD_PARTY_LICENSES.md\", \"dir\": false, \"symlink\": null, \"bytes\": 4509}, {\"name\": \"__pycache__\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"astrolabe\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"config\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"container\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"data\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"docs\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"examples\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"justfile\", \"dir\": false, \"symlink\": null, \"bytes\": 6741}, {\"name\": \"needed_softwares.md\", \"dir\": false, \"symlink\": null, \"bytes\": 2482}, {\"name\": \"patches\", \"dir\": true, \"symlink\": null, \"bytes\": null}, {\"name\": \"pyproject.toml\", \"dir\": false, \"symlink\": null, \"bytes\": 87}, {\"name\": \"pytest.ini\", \"dir\": false, \"symlink\": null, \"bytes\": 78}, {\"name\": \"resources\", \"dir\": true, \"symlink\": null, \"bytes\": null}]}, \"docs\": {\"count\": 18, \"entries\": [{\"name\": \"A_BACKEND_FACTORY.diff\", \"dir\": false, \"symlink\": null, \"bytes\": 1985}, {\"name\": \"A_SCORE_INTEGRATION.md\", \"dir\": false, \"symlink\": null, \"bytes\": 2133}, {\"name\": \"A_STATUS.md\", \"dir\": false, \"symlink\": null",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": true,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "04",
+    "command": "from pathlib import Path\nimport json,subprocess\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nd={x:sorted(p.name for p in (b/x).iterdir() if not p.name.startswith('.')) for x in ('docs','evidence','test-env')}\nfor x in ('repo','backends','runtime'):\n d[x]={}\n for name,cmd in [('head',['git','-C',str(b/x),'rev-parse','HEAD']),('status',['git','-C',str(b/x),'status','--short'])]:\n  q=subprocess.run(cmd,universal_newlines=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=3);d[x][name]=q.stdout[:500]\nprint(json.dumps(d))\n",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "4f60405b-f9cb-44ab-824c-a225da9dc573",
+    "result": {
+      "processId": "513bde56-cea2-4d2d-97d7-7e143babb7e1",
+      "status": "exited",
+      "stdout": "{\"docs\": [\"A_BACKEND_FACTORY.diff\", \"A_SCORE_INTEGRATION.md\", \"A_STATUS.md\", \"BASELINE_FINDINGS.md\", \"B_INTEGRATION.md\", \"B_REVIEW_FINDINGS.md\", \"B_RUNTIME_READY.md\", \"C_CROSS_REVIEW.md\", \"C_INTEGRATION.md\", \"C_PROVENANCE_REVIEW.md\", \"C_RUN_METADATA.diff\", \"C_RUN_PATCH.diff\", \"EXECUTION_API.md\", \"EXECUTION_BROKER_API.md\", \"LEAD_CODEC_BUDGET.md\", \"LEAD_DIGEST_CACHE.md\", \"SCORE_IDENTITY_FIELD.md\", \"TEST_ENV.md\"], \"evidence\": [\"C-final-canary\", \"C-final-position-cli.log\", \"C-final-position-output\", \"C-final-position-raw\", \"C-integration-cli-output\", \"C-integration-cli-raw\", \"C-integration-final-cli.log\", \"C-integration-final-head-after.txt\", \"C-integration-final-head-before.txt\", \"C-integration-final-output\", \"C-integration-final-raw\", \"C-integration-head-after.txt\", \"C-integration-head-before.txt\", \"C-integration-metadata-cli.json\", \"C-integration-parallel-cli.log\", \"C-integration-position-cli.yaml\", \"C-metadata-behavior-final.json\", \"C-mol1-mapping\", \"C-mol1-mapping-result.json\", \"C-patched-merge-cli.json\", \"C-position-fixed-output\", \"C-position-fixed-raw\", \"C-position-fixed.log\", \"C-position-parallel.log\", \"C-position-serial-output\", \"C-position-serial-raw\", \"C-position-serial.log\", \"C-provenance-counterexample.txt\", \"C-run-metadata-patched.py\", \"C-utils-key.patch\", \"C-utils-metadata.patch\", \"a_runtime\", \"af3_prepare_canary-rerun.log\", \"af3_prepare_canary.json\", \"af3_prepare_canary.log\", \"af3_prepare_canary.py\", \"backend-integration-wave2.log\", \"backend-resident-lifecycle.log\", \"backend-wave3.log\", \"baseline-cpu-tests.log\", \"baseline-image-tests.log\", \"baseline-score-isolated.log\", \"baseline-tests.log\", \"broker-integration.log\", \"codec-budget-final.log\", \"codec-budget-real-regression.log\", \"codec-budget.log\", \"digest-cache-tests.log\", \"gpu-allocation-iron.log\", \"gpu-allocation-oxygen.log\", \"gpu-allocation-preflight.log\", \"identity-cli-integration.log\", \"identity-provenance-integration.log\", \"integration-score-regression.log\", \"integration-wave1-rerun.log\", \"integration-wave1.log\", \"legacy-base\", \"legacy_mcmc_rng_probe.py\", \"legacy_rng_probe.py\", \"mcmc-rng-baseline.txt\", \"mcmc-rng-current.txt\", \"mcmc-rng-final.txt\", \"mol1-protenix-policy-integration.log\", \"mol1-protenix-policy-rerun.log\", \"mpnn-integration.log\", \"mpnn-rng-final.txt\", \"push-wave1.log\", \"push-wave2.log\", \"pytest-C-acceptance-final\", \"pytest-C-canary-final\", \"pytest-C-canary-final-2\", \"pytest-C-final-4\", \"pytest-C-final-canary\", \"pytest-C-full\", \"pytest-C-metadata-key\", \"pytest-canonical-score\", \"pytest-final-cli-shutdown\", \"pytest-metadata-1\", \"pytest-metadata-2\", \"pytest-metadata-3\", \"pytest-multicontext-1\", \"pytest-multicontext-2\", \"pytest-multicontext-3\", \"pytest-multicontext-4\", \"pytest-multicontext-member\", \"pytest-multicontext-member-2\", \"pytest-multicontext-yaml\", \"pytest-policy-common\", \"pytest-policy-e2e\", \"pytest-policy-initial\", \"pytest-policy-real\", \"pytest-provenance-adapted\", \"pytest-provenance-final\", \"pytest-provenance-init\", \"pytest-provenance-strict\", \"pytest-resource-shutdown\", \"pytest-resource-shutdown-2\", \"pytest-score-final\", \"pytest-score-final-2\", \"pytest-score-lifecycle\", \"pytest-score-lifecycle-2\", \"pytest-score-lifecycle-3\", \"pytest-score-lifecycle-4\", \"pytest-score-regression\", \"real-feature-protocol.log\", \"rng-baseline.txt\", \"rng-current.txt\", \"run-shutdown-patched.py\", \"score-utils-index.py\", \"test-env-install-clean.log\", \"test-env-install.log\", \"tmp\", \"typed-score-C-cli.log\", \"typed-score-C-final-cli.log\", \"typed-score-C-final-output\", \"typed-score-C-final-raw\", \"typed-score-C-output\", \"typed-score-C-raw\", \"typed-score-cli.log\", \"typed-score-output\", \"typed-score-raw\", \"typed_score_cli.yaml\"], \"test-env\": [\"bin\", \"include\", \"lib\", \"lib64\", \"pyvenv.cfg\"], \"repo\": {\"head\": \"f4b0118140fdd020faf273c3688f05fc4bf666fa\\n\", \"status\": \"\"}, \"backends\": {\"head\": \"95fa92526e492faeb2e9019d51cf4aa9c79e1751\\n\", \"status\": \"\"}, \"runtime\": {\"head\": \"db12aa38084104e123ec9754f9f469fff8ea1994\\n\", \"status\": \"\"}}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "05",
+    "command": "from pathlib import Path\nimport subprocess,json\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\ncmd=['rg','--files','-g','*esmfold*','-g','*backend*','-g','*resident*','-g','*gpu*','-g','*pretrain*','docs','evidence','backends/config','repo/config']\nr=subprocess.run(cmd,cwd=str(b),universal_newlines=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=5)\nlines=r.stdout.splitlines();print(json.dumps({'rc':r.returncode,'count':len(lines),'first':lines[:45],'stderr':r.stderr[:200]}))\n",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "16af72ac-bf4a-4d86-a7ea-b951bf087c64",
+    "result": {
+      "processId": "cc8d05de-9040-493f-819a-05c4ae291acb",
+      "status": "exited",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"<string>\", line 5, in <module>\n  File \"/usr/lib64/python3.6/subprocess.py\", line 423, in run\n    with Popen(*popenargs, **kwargs) as process:\n  File \"/usr/lib64/python3.6/subprocess.py\", line 729, in __init__\n    restore_signals, start_new_session)\n  File \"/usr/lib64/python3.6/subprocess.py\", line 1364, in _execute_child\n    raise child_exception_type(errno_num, err_msg, err_filename)\nFileNotFoundError: [Errno 2] No such file or directory: 'rg': 'rg'\n",
+      "exitCode": 1,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "06",
+    "command": "from pathlib import Path\nimport json\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nd={'prior_cloud_dirs':[p.name for p in b.iterdir() if p.name.startswith('cloud-20261103')]}\nfor rel in ('repo/config/env','repo/resources','repo/data','backends/resources'):\n p=b/rel; d[rel]=[{'name':x.name,'dir':x.is_dir(),'link':str(x.resolve()) if x.is_symlink() else None} for x in sorted(p.iterdir())[:20]] if p.exists() else None\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "f7ff4e42-1ae5-4e59-95b7-dfd87fa4042a",
+    "result": {
+      "processId": "f3e9b144-c696-42bd-aec2-288a31218982",
+      "status": "exited",
+      "stdout": "{\"prior_cloud_dirs\": [\"cloud-20261103-opt\", \"cloud-20261103-snapshot02.tar.gz\", \"cloud-20261103-direct\", \"cloud-20261103-snapshot01.tar.gz\", \"cloud-20261103-test\", \"cloud-20261103-review\", \"cloud-20261103-evidence\", \"cloud-20261103-delivery\", \"cloud-20261103-snapshot03.tar.gz\", \"cloud-20261103-fix\"], \"repo/config/env\": [{\"name\": \"env.yaml\", \"dir\": false, \"link\": \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env.yaml\"}, {\"name\": \"env_container.yaml\", \"dir\": false, \"link\": \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env_container.yaml\"}], \"repo/resources\": [{\"name\": \"ligand_hbond_filter.py\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_cyclic.json\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_cyclic.tar.gz\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_interventions.json\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_interventions.tar.gz\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_nucleic.json\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_nucleic.tar.gz\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_protein.json\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_protein.tar.gz\", \"dir\": false, \"link\": null}, {\"name\": \"paper_sources.json\", \"dir\": false, \"link\": null}], \"repo/data\": [{\"name\": \"framework_fastas\", \"dir\": true, \"link\": null}, {\"name\": \"framework_homologies\", \"dir\": true, \"link\": null}], \"backends/resources\": [{\"name\": \"ligand_hbond_filter.py\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_cyclic.json\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_cyclic.tar.gz\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_interventions.json\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_interventions.tar.gz\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_nucleic.json\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_nucleic.tar.gz\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_protein.json\", \"dir\": false, \"link\": null}, {\"name\": \"paper_inputs_protein.tar.gz\", \"dir\": false, \"link\": null}, {\"name\": \"paper_sources.json\", \"dir\": false, \"link\": null}]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "07",
+    "command": "from pathlib import Path\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nfor rel in ('docs/TEST_ENV.md','docs/B_RUNTIME_READY.md'):\n p=b/rel\n print(str(p));print(p.read_text()[:1700])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "cd210f82-cce9-44fb-b3a0-500baa3714f8",
+    "result": {
+      "processId": "cec0faa9-489d-4c61-8c08-615b8eba88de",
+      "status": "exited",
+      "stdout": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/docs/TEST_ENV.md\nShared test interpreter is ready: /xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-env/bin/python\nTask-local venv inherits existing Python 3.11/numpy/OmegaConf; pytest was installed into this venv only. Use PYTHONNOUSERSITE=1 PYTHONDONTWRITEBYTECODE=1 CUDA_VISIBLE_DEVICES= and PYTHONPATH pointing to your own worktree. Do not install GPU frameworks or overwrite shared dependencies. Lead owns this venv and baseline/e2e validation.\nA/B protocol: read EXECUTION_API.md. B preserve exact backend behavior; any unimplemented adapter remains explicitly legacy and cannot claim full split/daemon certification. Do not count declaration as implemented coverage. GPU jobs reserved for lead. f102 Slurm node is DOWN+DRAIN even though nvidia-smi sees free GPU; do not bypass allocation or touch Slurm config.\n\nFor tests requiring torch/biotite/AF3 imports, use the existing SIF without GPU access:\n../test-container \"$PWD\" -m pytest -q -p no:cacheprovider <tests>\nThis maps ONLY the task workspace, uses the real existing image dependencies, and keeps CUDA hidden/JAX on CPU. Source is current worktree via PYTHONPATH; pytest is from task venv. It does not certify source compatibility or GPU behavior of the old model image; record versions. No container rebuild/large downloads required.\n\nUse TMPDIR=/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp and APPTAINER_TMPDIR=/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/tmp/apptainer for all new tests. Host /tmp became full during SIF extraction. Never remove unrelated /tmp directories. Lead cleaned only its own failed preflight image root.\n\n/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/docs/B_RUNTIME_READY.md\nA transport stable original commits 8b4090e and 7d6c6b7 can be cherry-picked into B for real transport tests. Do not edit runtime owner files. Main already integrated these and will only apply backend-owned commits. A working on broker, sameclient API. TEST_ENV.md includes complete image dependencies, task scratch and tests.\n\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "08",
+    "command": "from pathlib import Path\nimport json,re,os\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nd={}\nfor rel in ('repo/config','backends/config'):\n paths=[]\n for root,dirs,files in os.walk(str(b/rel)):\n  for name in files:\n   if re.search('esmfold|pretrain|backend|runtime|env',name,re.I): paths.append(str(Path(root)/name))\n d[rel]=paths[:35]\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "717ef149-8075-4720-ad37-2a22f6257eaa",
+    "result": {
+      "processId": "cfed0957-efb3-4596-b701-c945d4c3ca3c",
+      "status": "exited",
+      "stdout": "{\"repo/config\": [\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env_container.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/third_party_envs.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env/env_container.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env/env.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/dual_target_esmfold2.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/evaluate_esmfold2.yaml\"], \"backends/config\": [\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/backends/config/env_container.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/backends/config/env.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/backends/config/third_party_envs.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/backends/config/env/env_container.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/backends/config/env/env.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/backends/config/paper/dual_target_esmfold2.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/backends/config/paper/evaluate_esmfold2.yaml\"]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "09",
+    "command": "from pathlib import Path\nimport re,json\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\np=b/'repo/config/env/env.yaml'\nprint(json.dumps({'path':str(p),'exists':p.exists(),'symlink':p.is_symlink(),'resolved':str(p.resolve())}))\nif p.exists():\n lines=p.read_text().splitlines()\n hits=[(i+1,line) for i,line in enumerate(lines) if re.search('esmfold|checkpoint|model_dir|python|data_dir|weights|bin/',line,re.I)]\n print(json.dumps(hits[:30]))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "a4cec986-0ba7-4aa1-80f9-fe33d0ca34e5",
+    "result": {
+      "processId": "ad38ae88-002a-47e0-9722-5831940279dd",
+      "status": "exited",
+      "stdout": "{\"path\": \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env/env.yaml\", \"exists\": true, \"symlink\": true, \"resolved\": \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env.yaml\"}\n[[23, \"  # OpenDDE root directory containing checkpoint/, common/, and optionally search_database/.\"], [25, \"  # SurfDesign trained experiment containing .hydra/config.yaml and checkpoints/.\"], [27, \"  # SurfPro checkpoint directory containing checkpoint_best.pt.\"], [51, \"obabel_path: ${oc.env:GH_OBABEL,/usr/bin/obabel}\"], [54, \"# Python interpreters for subprocess-only tools (keep dependency stacks isolated).\"], [59, \"    python_bin: null\"], [62, \"    python_bin: null\"], [64, \"    python_bin: null\"], [66, \"    python_bin: ${oc.env:GH_RF3_PYTHON,null}\"], [68, \"    python_bin: null\"], [70, \"    python_bin: null\"], [72, \"    python_bin: null\"], [74, \"    python_bin: ${oc.env:GH_OPENDDE_PYTHON,null}\"], [77, \"    python_bin: ${oc.env:GH_SURFDESIGN_PYTHON,null}\"], [80, \"    python_bin: ${oc.env:GH_SURFPRO_PYTHON,null}\"], [84, \"  esmfold2:\"], [85, \"    python_bin: ${oc.env:GH_ESMFOLD2_PYTHON,null}\"], [86, \"    esm_repo_path: ${oc.env:GH_ESMFOLD2_ESM_REPO,./vendor/biohub_esm}\"], [87, \"    transformers_repo_path: ${oc.env:GH_ESMFOLD2_TRANSFORMERS_REPO,./vendor/biohub_transformers}\"], [88, \"  esmfold:\"], [89, \"    python_bin: null\"], [91, \"    python_bin: ${oc.env:GH_RAPIDOCK_PYTHON,null}\"], [94, \"    python_bin: ${oc.env:GH_MEEKO_PYTHON,null}\"], [95, \"    pythonpath: ${oc.env:GH_MEEKO_PYTHONPATH,null}\"], [97, \"    python_bin: ${oc.env:GH_DPLM_PYTHON,null}\"], [100, \"    python_bin: ${oc.env:GH_NAMPNN_PYTHON,null}\"], [105, \"    python_bin: null\"], [123, \"  checkpoint: ${oc.env:GH_RHOFOLD_CHECKPOINT,???}\"]]\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "10",
+    "command": "from pathlib import Path\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nfor rel,limit in [('repo/config/env.yaml',52),('test-container',70)]:\n p=b/rel;print(str(p))\n if p.exists(): print('\\n'.join(p.read_text().splitlines()[:limit]))\n else: print('MISSING')",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "9357447c-56d7-40af-8864-98add85744fc",
+    "result": {
+      "processId": "8037ca94-53de-4bb2-8fee-0e7d6f32b299",
+      "status": "exited",
+      "stdout": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/env.yaml\n# @package _global_\n\n# This file is intentionally portable (publishable).\n#\n# Configure host-specific paths by either:\n# 1) exporting environment variables (recommended), OR\n# 2) writing a local overlay like `config/env/env_local.yaml` (gitignored) and\n#    overriding via Hydra (see `docs/third_party_envs.md`).\n#\n# Run a task-aware readiness check:\n#   gh env doctor --strict --task <task>\n\nweight_path:\n  ligandmpnn: ${oc.env:GH_WEIGHT_LIGANDMPNN,???}\n  rapidock: ${oc.env:GH_WEIGHT_RAPIDOCK,???}\n  alphafold3: ${oc.env:GH_WEIGHT_AF3,???}\n  alphafold: ${oc.env:GH_WEIGHT_AF2,???}\n  rf3: ${oc.env:GH_WEIGHT_RF3,???}\n  rfd3: ${oc.env:GH_WEIGHT_RFD3,???}\n  protenix: ${oc.env:GH_WEIGHT_PROTENIX,???}\n  protenix_constraint: ${oc.env:GH_WEIGHT_PROTENIX_CONSTRAINT,???}\n  boltz: ${oc.env:GH_WEIGHT_BOLTZ,???}\n  # OpenDDE root directory containing checkpoint/, common/, and optionally search_database/.\n  opendde: ${oc.env:OPENDDE_ROOT_DIR,???}\n  # SurfDesign trained experiment containing .hydra/config.yaml and checkpoints/.\n  surfdesign: ${oc.env:GH_WEIGHT_SURFDESIGN,???}\n  # SurfPro checkpoint directory containing checkpoint_best.pt.\n  surfpro: ${oc.env:GH_WEIGHT_SURFPRO,???}\nprotenix:\n  ccd_components_file: ${oc.env:GH_PROTENIX_CCD,???}\n  ccd_components_rdkit_mol_file: ${oc.env:GH_PROTENIX_CCD_RDKIT,???}\nrf3:\n  repo_path: ${oc.env:GH_RF3_REPO,???}\n  ckpt_path: ${weight_path.rf3}\nrfd3:\n  repo_path: ${rf3.repo_path}\n  ckpt_path: ${weight_path.rfd3}\n\nhmmer:\n  dir: ${oc.env:GH_HMMER_DIR,/usr/bin}\n  jackhmmer: ${hmmer.dir}/jackhmmer\n  nhmmer: ${hmmer.dir}/nhmmer\n  hmmalign: ${hmmer.dir}/hmmalign\n  hmmsearch: ${hmmer.dir}/hmmsearch\n  hmmbuild: ${hmmer.dir}/hmmbuild\n\ndssp_path: ${oc.env:GH_DSSP,./vendor/mkdssp}\nusalign_path: ${oc.env:GH_USALIGN,./vendor/usalign/USalign}\nananas_path: ${oc.env:GH_ANANAS,???}\n\nobabel_path: ${oc.env:GH_OBABEL,/usr/bin/obabel}\nmolfile_to_params: ${oc.env:GH_MOLFILE_TO_PARAMS,???}\n/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-container\n#!/usr/bin/env bash\nset -euo pipefail\nROOT=/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\nTREE=${1:?worktree required}; shift\ncase \"$TREE\" in \"$ROOT\"/*) ;; *) echo 'outside task workspace' >&2; exit 2;; esac\nPREFIX=/xcf26/zpzeng/.gh_container/envs/_gh_apptainer\nexport PATH=\"$PREFIX/bin:$PATH\" LD_LIBRARY_PATH=\"$PREFIX/lib:${LD_LIBRARY_PATH-}\"\nexec \"$PREFIX/bin/apptainer\" exec --cleanenv --bind \"$ROOT:$ROOT\" --pwd \"$TREE\" \\\n --env CUDA_VISIBLE_DEVICES= --env JAX_PLATFORMS=cpu --env PYTHONNOUSERSITE=1 \\\n --env PYTHONDONTWRITEBYTECODE=1 --env OMP_NUM_THREADS=1 \\\n --env \"PYTHONPATH=$TREE:$ROOT/test-env/lib/python3.11/site-packages\" \\\n /xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif \\\n python \"$@\"\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "11",
+    "command": "from pathlib import Path\nimport json\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nd={}\nfor rel in ('cloud-20261103-evidence','cloud-20261103-delivery','cloud-20261103-opt','cloud-20261103-test'):\n p=b/rel\n d[rel]=[x.name for x in sorted(p.iterdir()) if not x.name.startswith('.')][:60] if p.exists() else None\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "274778cb-84d3-4e89-841e-fe913f6ea746",
+    "result": {
+      "processId": "a1f22c61-ff16-43a6-9be4-97aab19503f0",
+      "status": "exited",
+      "stdout": "{\"cloud-20261103-evidence\": [\"baseline-runtime.log\", \"cpu-attempt01-and-overlap.tar.gz\", \"cpu-attempt02.tar.xz\", \"cpu-plan-01\", \"cpu-three-mode-01\", \"cpu-three-mode-01-command.log\", \"cpu-three-mode-02\", \"cpu-three-mode-02-command.log\", \"snapshot01-backends.log\", \"snapshot02-integration.log\", \"snapshot03-integration.log\", \"snapshot04-integration.log\", \"snapshot04-pytest\", \"snapshot05-pytest\", \"snapshot05-validation.log\", \"snapshot06-lifecycle.log\", \"snapshot06-pytest\"], \"cloud-20261103-delivery\": [\"Astrolabe-runtime-code-review.patch\", \"Astrolabe-runtime-d66ee714.bundle\", \"README.md\", \"bundle-verification.txt\", \"delivery-manifest.json\", \"remote-bundle-verification.txt\", \"remote-delivery-verification.json\"], \"cloud-20261103-opt\": [\"CITATION.cff\", \"LICENSE\", \"MANIFEST.in\", \"README.md\", \"THIRD_PARTY_LICENSES.md\", \"astrolabe\", \"config\", \"container\", \"data\", \"docs\", \"evidence\", \"examples\", \"justfile\", \"needed_softwares.md\", \"patches\", \"pyproject.toml\", \"pytest.ini\", \"resources\", \"run.py\", \"scripts\", \"setup.py\", \"tests\", \"third_party_licenses\", \"vendor\"], \"cloud-20261103-test\": [\"CITATION.cff\", \"LICENSE\", \"MANIFEST.in\", \"README.md\", \"THIRD_PARTY_LICENSES.md\", \"astrolabe\", \"config\", \"container\", \"data\", \"docs\", \"evidence\", \"examples\", \"justfile\", \"needed_softwares.md\", \"patches\", \"pyproject.toml\", \"pytest.ini\", \"resources\", \"run.py\", \"scripts\", \"setup.py\", \"tests\", \"third_party_licenses\", \"vendor\"]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "12",
+    "command": "from pathlib import Path\nimport re\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nfor rel in ('docs/B_INTEGRATION.md','docs/BASELINE_FINDINGS.md','repo/config/env_container.yaml'):\n p=b/rel;print(str(p))\n if p.exists():\n  lines=p.read_text().splitlines()\n  out=[str(i+1)+':'+x for i,x in enumerate(lines) if re.search('esmfold|pretrain|checkpoint|weights|sif|image|/xcf|python|GPU',x,re.I)]\n  print('\\n'.join(out[:25]))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "31838b61-9b84-4a5f-9ba1-0c7913e2a65e",
+    "result": {
+      "processId": "78979dd3-5a2c-4377-8823-3a09ceb9bc32",
+      "status": "exited",
+      "stdout": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/docs/B_INTEGRATION.md\n5:AF3 explicitly opts in with evaluator `execution: daemon`. No hardware descriptor is required. Device discovery uses `runtime.admission.run_probe` when available, inheriting the allocation; in broker mode an absent admission module fails closed. The worker independently verifies its actual JAX device, source and checkpoint contents, interpreter identity and model semantics. Identity includes attention implementation, samples, recycles, embeddings and static configuration; source/checkpoint entries are ordered content hashes rather than absolute paths. Device probing and model loading must both be covered by A's GPU admission. A probe initialization is not a GPU inference or a performance measurement.\n7:Owner `prepare_features` uses actual AF3 featurisation, filters with upstream `remove_invalidly_typed_feats`, retains the complete original batch and folding input for owner-side `extract_structures`, and transmits only model-facing numeric arrays. Versioned JSON/NPZ uses `allow_pickle=False`. Results use the same codec. Each request passes an explicit private `request_dir`; the shared broker mode uses `ASTROLABE_EXECUTION_ARTIFACT_ROOT` and immutable, identity-derived spec names shared by trajectory owners. A matching identity with a different startup spec fails closed. `BROKER_SHARED_ROOT` and `BROKER_ADMITTED_PROBE` are advertised. Without broker, a client owns a private worker/session. The adapter does not itself implement cross-user GPU admission.\n9:ESMFold2 explicitly opts in with `execution: daemon`, an integer `seed`, `local_files_only: true`, the ESM and transformers source checkouts and `GH_ESMFOLD2_MODEL_SNAPSHOT` plus `GH_ESMFOLD2_ESMC_SNAPSHOT` local directories. The device is discovered from the inherited allocation unless explicitly configured. The production handler uses the existing builder/model loading code once and keeps them resident for `builder.fold`; this is **resident-atomic**, not a CPU/GPU split. The declared identity covers fixed scientific options, source/checkpoint contents, interpreter, package versions and device. Each request is isolated and structure outputs survive its private workspace. GPU/model equivalence is not yet certified.\n11:AF3 opt-in `feature_cache: true` is a one-entry owner CPU feature cache keyed on input chains/order, MSA/templates, topology, seed, options, CCD and source contents. No model outputs or recycle states are reused. AF3 declared daemon constraints and ESMFold2 unsupported cyclic/bonded topology are checked on execution paths. This is not a complete per-variant constraint implementation.\n13:Protenix optional requested/effective model identity no longer requires `model_name` in legacy config. `forward_prepared` now performs the actual length-dependent `update_model_configs` and `predict`; `finalize_prediction` preserves the owner `atom_array` and executes the original dumper. This is **in-process staging**, not a Protenix daemon or a claim of version coverage. At the pinned Astrolabe revision, `vendor/protenix` is gitlink 2475421477ab414b571149ad4a875c390ff8a35d and is empty in this worktree; correct resident implementation needs that exact API, safe tensor/config serialization, per-request dump handling and RNG parity. Upstream `runner/inference.py` confirms per-input `update_inference_configs` followed by `update_model_configs`, `predict`, then `DataDumper.dump`; version or checkpoint must never be silently redirected. AF2, ESMFold1, OpenDDE, Chai, Boltz1 and Mol-1 have not received new daemon implementations in this increment.\n15:Validation using the provided CPU SIF with task-local TMPDIR/APPTAINER_TMPDIR: 33 tests passed (AF3/ESMFold2 JSONL handlers with mock model sessions, request isolation/failure recovery, codec, identity and broker artifact checks; real AF3 feature codec; existing ESMFold2 and Protenix regressions; Protenix staged mock runner). Separately, after the final legacy identity fix, 12 focused Protenix/stage tests passed and after the Protenix staging",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": true,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "13",
+    "command": "from pathlib import Path\np=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")/'repo/config/env_container.yaml'\nprint(p.read_text()[:3900])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "04d9f1b7-8ce9-480b-85f9-b7b33cb221b4",
+    "result": {
+      "processId": "711d2bbb-a185-4b20-aed4-52521fc41d96",
+      "status": "exited",
+      "stdout": "# @package _global_\n\nweight_path:\n  ligandmpnn: ${oc.env:GH_WEIGHT_LIGANDMPNN,/models/ligandmpnn}\n  rapidock: ${oc.env:GH_WEIGHT_RAPIDOCK,null}\n  alphafold3: ${oc.env:GH_WEIGHT_AF3,/models/alphafold3}\n  alphafold: ${oc.env:GH_WEIGHT_AF2,/models/alphafold2}\n  rf3: ${oc.env:GH_WEIGHT_RF3,/models/rf3/model.pt}\n  rfd3: ${oc.env:GH_WEIGHT_RFD3,/models/rfd3/model.pt}\n  protenix: ${oc.env:GH_WEIGHT_PROTENIX,/models/protenix/release_model/protenix-v2.pt}\n  protenix_constraint: ${oc.env:GH_WEIGHT_PROTENIX_CONSTRAINT,/models/protenix/release_model/protenix_base_constraint_v0.5.0.pt}\n  boltz: ${oc.env:GH_WEIGHT_BOLTZ,/models/boltz}\n  opendde: ${oc.env:OPENDDE_ROOT_DIR,/models/opendde}\n  surfdesign: ${oc.env:GH_WEIGHT_SURFDESIGN,/models/surfdesign}\n  surfpro: ${oc.env:GH_WEIGHT_SURFPRO,/models/surfpro}\n\nprotenix:\n  ccd_components_file: ${oc.env:GH_PROTENIX_CCD,/models/protenix/release_data/components.v20240608.cif}\n  ccd_components_rdkit_mol_file: ${oc.env:GH_PROTENIX_CCD_RDKIT,/models/protenix/release_data/components.v20240608.cif.rdkit_mol.pkl}\nrf3:\n  repo_path: ${oc.env:GH_RF3_REPO,/ext/foundry}\n  ckpt_path: ${weight_path.rf3}\nrfd3:\n  repo_path: ${rf3.repo_path}\n  ckpt_path: ${weight_path.rfd3}\n\nhmmer:\n  dir: ${oc.env:GH_HMMER_DIR,null}\n  jackhmmer: ${oc.env:GH_JACKHMMER,null}\n  nhmmer: ${oc.env:GH_NHMMER,null}\n  hmmalign: ${oc.env:GH_HMMALIGN,null}\n  hmmsearch: ${oc.env:GH_HMMSEARCH,null}\n  hmmbuild: ${oc.env:GH_HMMBUILD,null}\n\ndssp_path: ${oc.env:GH_DSSP,/usr/bin/dssp}\nusalign_path: ${oc.env:GH_USALIGN,vendor/usalign/USalign}\nananas_path: ${oc.env:GH_ANANAS,/usr/local/bin/AnAnaS}\n\nobabel_path: ${oc.env:GH_OBABEL,/usr/local/bin/obabel}\nmolfile_to_params: ${oc.env:GH_MOLFILE_TO_PARAMS,/rosetta/molfile_to_params.py}\n\nsubprocess_envs:\n  rf3:\n    python_bin: ${oc.env:GH_RF3_PYTHON,/ext/foundry/.venv/bin/python}\n  opendde:\n    python_bin: ${oc.env:GH_OPENDDE_PYTHON,/opt/opendde/bin/python}\n    repo_path: ${oc.env:GH_OPENDDE_REPO,/workspace/vendor/opendde}\n  surfdesign:\n    python_bin: ${oc.env:GH_SURFDESIGN_PYTHON,/envs/surfdesign/bin/python}\n    repo_path: ${oc.env:GH_SURFDESIGN_REPO,/ext/surfdesign}\n  surfpro:\n    python_bin: ${oc.env:GH_SURFPRO_PYTHON,/envs/surfpro/bin/python}\n    repo_path: ${oc.env:GH_SURFPRO_REPO,/ext/surfpro}\n    msms_bin: ${oc.env:GH_SURFPRO_MSMS,/tools/surfpro/msms/msms}\n    pdb_to_xyzrn_bin: ${oc.env:GH_SURFPRO_PDB_TO_XYZRN,/tools/surfpro/pdb_to_xyzrn/pdb_to_xyzrn}\n  esmfold2:\n    python_bin: ${oc.env:GH_ESMFOLD2_PYTHON,/opt/esmfold2/bin/python}\n    esm_repo_path: ${oc.env:GH_ESMFOLD2_ESM_REPO,/workspace/vendor/biohub_esm}\n    transformers_repo_path: ${oc.env:GH_ESMFOLD2_TRANSFORMERS_REPO,/workspace/vendor/biohub_transformers}\n  rapidock:\n    python_bin: ${oc.env:GH_RAPIDOCK_PYTHON,null}\n    repo_path: ${oc.env:GH_RAPIDOCK_REPO,null}\n  meeko:\n    python_bin: ${oc.env:GH_MEEKO_PYTHON,/alphafold3_venv/bin/python}\n    pythonpath: ${oc.env:GH_MEEKO_PYTHONPATH,null}\n  dplm:\n    python_bin: ${oc.env:GH_DPLM_PYTHON,/usr/bin/python3}\n    repo_path: ${oc.env:GH_DPLM_REPO,/ext/dplm}\n  nampnn:\n    python_bin: ${oc.env:GH_NAMPNN_PYTHON,/usr/bin/python3}\n    repo_path: ${oc.env:GH_NAMPNN_REPO,/ext/na_mpnn}\n  haddock3:\n    haddock3_bin: ${oc.env:GH_HADDOCK3_BIN,/usr/bin/haddock3}\n  rpxdock:\n    python_bin: ${oc.env:GH_RPXDOCK_PYTHON,null}\n    repo_path: ${oc.env:GH_RPXDOCK_REPO,null}\n    willutil_repo_path: ${oc.env:GH_WILLUTIL_REPO,null}\n\nautodock:\n  autodock_gpu_path: ${oc.env:GH_AUTODOCK_GPU,null}\n  autogrid4_path: ${oc.env:GH_AUTOGRID4,null}\n  vina_path: ${oc.env:GH_VINA,/usr/bin/vina}\n  mk_prepare_receptor: ${oc.env:GH_MK_PREPARE_RECEPTOR,/alphafold3_venv/bin/mk_prepare_receptor.py}\n  mk_prepare_ligand: ${oc.env:GH_MK_PREPARE_LIGAND,/alphafold3_venv/bin/mk_prepare_ligand.py}\n\ncarbondesign:\n  repo_path: ${oc.env:GH_CARBONDESIGN_REPO,/ext/carbondesign}\n  model_ckpt: ${carbondesign.repo_path}/params/carbondesign_default.ckpt\n \n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "14",
+    "command": "from pathlib import Path\nimport json,os\nkeys=['GH_WEIGHT_AF3','GH_WEIGHT_AF2','GH_WEIGHT_LIGANDMPNN','GH_WEIGHT_PROTENIX','GH_WEIGHT_BOLTZ','GH_ESMFOLD_PYTHON','GH_ESMFOLD2_PYTHON','GH_ESMFOLD2_MODEL_SNAPSHOT','GH_ESMFOLD2_ESMC_SNAPSHOT','TORCH_HOME','HF_HOME','GH_CONTAINER_IMAGE','CONDA_PREFIX']\nd={'selected_env':{k:os.environ.get(k) for k in keys}}\nfor s in ['/xcf26/zpzeng/.gh_container','/xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif','/xcf26/zpzeng/.gh_container/envs/_gh_apptainer/bin/apptainer']:\n p=Path(s);d[s]={'exists':p.exists(),'bytes':p.stat().st_size if p.is_file() else None}\n if p.is_dir():d[s]['entries']=[x.name for x in sorted(p.iterdir())[:30]]\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "3986f6a8-c42f-4a10-b875-33700b3cbdac",
+    "result": {
+      "processId": "3f4874e5-d5b1-4d15-a012-754b1c8eef9f",
+      "status": "exited",
+      "stdout": "{\"selected_env\": {\"GH_WEIGHT_AF3\": null, \"GH_WEIGHT_AF2\": null, \"GH_WEIGHT_LIGANDMPNN\": null, \"GH_WEIGHT_PROTENIX\": null, \"GH_WEIGHT_BOLTZ\": null, \"GH_ESMFOLD_PYTHON\": null, \"GH_ESMFOLD2_PYTHON\": null, \"GH_ESMFOLD2_MODEL_SNAPSHOT\": null, \"GH_ESMFOLD2_ESMC_SNAPSHOT\": null, \"TORCH_HOME\": null, \"HF_HOME\": null, \"GH_CONTAINER_IMAGE\": null, \"CONDA_PREFIX\": null}, \"/xcf26/zpzeng/.gh_container\": {\"exists\": true, \"bytes\": null, \"entries\": [\".bin\", \".locks\", \"assets\", \"cache\", \"envs\", \"images\", \"pkgs\", \"sites\", \"tools\"]}, \"/xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif\": {\"exists\": true, \"bytes\": 6418354176}, \"/xcf26/zpzeng/.gh_container/envs/_gh_apptainer/bin/apptainer\": {\"exists\": true, \"bytes\": 85441960}}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "15",
+    "command": "from pathlib import Path\nimport json\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nd={}\nfor rel in ('repo/container','cloud-20261103-opt/config/env','cloud-20261103-opt/evidence'):\n p=b/rel;d[rel]=[x.name for x in sorted(p.iterdir())[:30]] if p.exists() else None\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "653d9ff9-47a7-43a7-ab25-e52c990da2c2",
+    "result": {
+      "processId": "789bd928-4843-45fc-94bc-2f32c837918e",
+      "status": "exited",
+      "stdout": "{\"repo/container\": [\"Astrolabe.af3.def\", \"Astrolabe.def\", \"README.md\", \"conda-linux-64.lock\", \"requirements.runtime.in\", \"requirements.runtime.lock\", \"rosetta-tools.manifest.tsv\", \"third_party_setup.md\"], \"cloud-20261103-opt/config/env\": [\"env.yaml\", \"env_container.yaml\"], \"cloud-20261103-opt/evidence\": [\"runtime-20261103\"]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "16",
+    "command": "from pathlib import Path\nimport json\nr=Path('/xcf26/zpzeng/.gh_container')\nd={}\nfor rel in ('assets','cache','envs','images','sites'):\n p=r/rel;d[rel]=[{'name':x.name,'dir':x.is_dir(),'link':str(x.resolve()) if x.is_symlink() else None} for x in sorted(p.iterdir())[:35]] if p.exists() else None\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "bc712dcf-d186-4f24-9cbe-90f0bb986836",
+    "result": {
+      "processId": "832bc479-c145-46c9-8eae-af1d69b5d3f9",
+      "status": "exited",
+      "stdout": "{\"assets\": [{\"name\": \"Protenix\", \"dir\": true, \"link\": null}, {\"name\": \"boltz_cache\", \"dir\": true, \"link\": null}, {\"name\": \"esmfold_v1\", \"dir\": true, \"link\": null}, {\"name\": \"software-manifest.json\", \"dir\": false, \"link\": null}, {\"name\": \"software-manifest.json.lock\", \"dir\": false, \"link\": null}], \"cache\": [{\"name\": \"asset-validation\", \"dir\": true, \"link\": null}, {\"name\": \"fakeroot-build\", \"dir\": true, \"link\": null}, {\"name\": \"huggingface\", \"dir\": true, \"link\": null}, {\"name\": \"runtime\", \"dir\": true, \"link\": null}], \"envs\": [{\"name\": \"_gh_apptainer\", \"dir\": true, \"link\": null}], \"images\": [{\"name\": \"GuidedHallucination_af3_licensed_a13_20260722.sif\", \"dir\": false, \"link\": null}, {\"name\": \"GuidedHallucination_af3_licensed_a13_20260722.sif.build.json\", \"dir\": false, \"link\": null}, {\"name\": \"GuidedHallucination_af3_licensed_a13_20260722.sif.sha256\", \"dir\": false, \"link\": null}, {\"name\": \"foundry_0.2.0_slim_f176bafd42cf.sif\", \"dir\": false, \"link\": null}, {\"name\": \"foundry_0.2.0_slim_f176bafd42cf.sif.provenance.json\", \"dir\": false, \"link\": null}], \"sites\": [{\"name\": \"current_repo_container_release_20260915.json\", \"dir\": false, \"link\": null}]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "17",
+    "command": "from pathlib import Path\nimport re\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\np=b/'repo/container/README.md'\nlines=p.read_text().splitlines()\nfor i,line in enumerate(lines):\n if re.search('esmfold|torch.hub|/models|\\.gh_container|weights|checkpoint',line,re.I): print(str(i+1)+':'+line)\n",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "ab7cfdcf-a427-4386-adf7-8d0551e38484",
+    "result": {
+      "processId": "db900c0b-29a1-4b28-b736-a600393bd2c2",
+      "status": "exited",
+      "stdout": "4:needs neither a container nor model weights. The container isolates CUDA/Python\n5:dependencies; large model weights stay on the host and are mounted at runtime.\n33:  --af3-weights /absolute/path/to/alphafold3/parameters \\\n39:does not select PyRosetta or download unrelated model weights. The image recipe\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "18",
+    "command": "from pathlib import Path\nimport json\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")/'cloud-20261103-opt/evidence/runtime-20261103'\nprint(json.dumps([x.name for x in sorted(b.iterdir())]))\n",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "d988babc-c904-4108-94ba-efa25dc3ea85",
+    "result": {
+      "processId": "41a1541b-c262-4874-8c70-b10fffd97422",
+      "status": "exited",
+      "stdout": "[\"baseline-runtime.log\", \"cpu-benchmark-02-command.json\", \"cpu-benchmark-command.json\", \"cpu-evidence-summary.json\", \"cpu-three-mode-01\", \"cpu-three-mode-01-command.log\", \"cpu-three-mode-02\", \"cpu-three-mode-02-command.log\", \"cpu-validation-environment.json\", \"final-source-manifest.json\", \"first-evidence-transfer.json\", \"implementation-inventory.json\", \"initial-status.txt\", \"overlap-cpu\", \"preserved-commits.txt\", \"second-evidence-transfer.json\", \"snapshot01-backends.log\", \"snapshot01-command.json\", \"snapshot02-command.json\", \"snapshot02-integration.log\", \"snapshot03-command.json\", \"snapshot03-integration.log\", \"snapshot04-command.json\", \"snapshot04-integration.log\", \"snapshot05-command.json\", \"snapshot05-validation.log\", \"snapshot06-command.json\", \"snapshot06-lifecycle.log\", \"source-snapshot-01.json\", \"source-snapshot-02.json\", \"source-snapshot-03.json\", \"source-snapshot-04.json\", \"source-snapshot-05.json\", \"source-snapshot-06.json\", \"summarize_cpu_evidence.py\"]\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "19",
+    "command": "from pathlib import Path\nimport json\nr=Path('/xcf26/zpzeng/.gh_container/assets/esmfold_v1')\nd={}\nfor p in [r]+[x for x in r.iterdir() if x.is_dir()]:\n d[str(p)]=[{'name':x.name,'dir':x.is_dir(),'bytes':x.stat().st_size if x.is_file() else None,'link':str(x.resolve()) if x.is_symlink() else None} for x in sorted(p.iterdir())[:25]]\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "a8a13425-02ff-4f12-a512-77ea92a512a7",
+    "result": {
+      "processId": "6a5f0999-a06d-4712-86e3-ee94fcf80710",
+      "status": "exited",
+      "stdout": "{\"/xcf26/zpzeng/.gh_container/assets/esmfold_v1\": [{\"name\": \"esmfold_3B_v1.pt\", \"dir\": false, \"bytes\": 2097152000, \"link\": null}]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "20",
+    "command": "from pathlib import Path\nimport json\nr=Path('/xcf26/zpzeng/.gh_container')\nfor rel in ('assets/software-manifest.json','sites/current_repo_container_release_20260915.json','images/GuidedHallucination_af3_licensed_a13_20260722.sif.build.json'):\n p=r/rel;d=json.loads(p.read_text());print(rel, type(d).__name__, list(d)[:30] if isinstance(d,dict) else len(d))\np=r/'images/GuidedHallucination_af3_licensed_a13_20260722.sif.sha256'\nprint(p.name,p.read_text()[:256])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "30fdbdb5-24d9-4dd1-9fc2-6006995ff283",
+    "result": {
+      "processId": "bfb7c68b-b8c6-441e-933c-83daed5e1ad8",
+      "status": "exited",
+      "stdout": "assets/software-manifest.json dict ['accepted_licenses', 'container', 'installed', 'last_selection', 'schema_version', 'scope', 'selected', 'software']\nsites/current_repo_container_release_20260915.json dict ['apptainer_bin', 'binds', 'container_python', 'container_repo_root', 'docker_bin', 'docker_image', 'env_defaults', 'env_prepends', 'profile', 'runner', 'runner_backend', 'schema_version', 'sif', 'use_nv']\nimages/GuidedHallucination_af3_licensed_a13_20260722.sif.build.json dict ['build_contract', 'build_features', 'build_fingerprint', 'mtime_ns', 'path', 'sha256', 'size']\nGuidedHallucination_af3_licensed_a13_20260722.sif.sha256 242aae3bb97c5c7ea374dab5d7462e04863d9d48ba2ee00cc57e6c0a57a538e3  GuidedHallucination_af3_licensed_a13_20260722.sif\n\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "21",
+    "command": "from pathlib import Path\nimport json\np=Path('/xcf26/zpzeng/.gh_container/assets/software-manifest.json')\nd=json.loads(p.read_text())\ndef walk(x,path):\n if isinstance(x,dict):\n  for k,v in x.items():\n   if 'esmfold' in str(k).lower():print(json.dumps({'path':path+[k],'value':v})[:3000])\n   elif isinstance(v,(dict,list)):walk(v,path+[k])\n elif isinstance(x,list):\n  for i,v in enumerate(x):walk(v,path+[i])\nwalk(d,[])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "31ab3e47-547b-4fbb-8b40-16ad3a29b6fd",
+    "result": {
+      "processId": "776909ed-e7f5-4bb6-8d28-bc12b65a779e",
+      "status": "exited",
+      "stdout": "",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "22",
+    "command": "from pathlib import Path\nimport json\nr=Path('/xcf26/zpzeng/.gh_container')\nd=json.loads((r/'assets/software-manifest.json').read_text())\nout={}\nfor k in ('container','installed','selected','software'):\n v=d.get(k);out[k]=list(v.keys()) if isinstance(v,dict) else v\nprint(json.dumps(out)[:3900])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "eb17a718-c713-4967-8a9c-be77acaed0de",
+    "result": {
+      "processId": "6e0aa264-63ed-4d3c-b9dd-3e30777795be",
+      "status": "exited",
+      "stdout": "{\"container\": [\"build_features\", \"build_metadata\", \"doctor_passed\", \"import_smoke_passed\", \"path\", \"sha256\", \"size\"], \"installed\": [\"alphafold2\", \"alphafold3\", \"boltz\", \"ligandmpnn\", \"protenix\", \"pyrosetta\"], \"selected\": [\"alphafold3\", \"alphafold2\", \"ligandmpnn\", \"protenix\", \"boltz\", \"pyrosetta\"], \"software\": [\"alphafold2\", \"alphafold3\", \"boltz\", \"ligandmpnn\", \"protenix\", \"pyrosetta\"]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "23",
+    "command": "from pathlib import Path\nimport json,zipfile\np=Path('/xcf26/zpzeng/.gh_container/assets/esmfold_v1/esmfold_3B_v1.pt')\nwith p.open('rb') as f:\n head=f.read(16);f.seek(-128,2);tail=f.read(128)\nd={'path':str(p),'bytes':p.stat().st_size,'head_hex':head.hex(),'tail_has_zip_eocd':b'PK\\x05\\x06' in tail,'zipfile_is_zipfile':zipfile.is_zipfile(str(p))}\ntry:\n with zipfile.ZipFile(str(p)) as z:d.update(zip_members=len(z.infolist()),sample_names=z.namelist()[:6])\nexcept Exception as exc:d['zip_error']=type(exc).__name__+': '+str(exc)\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "63a88d08-a5e9-4c32-9de3-12c016e6da99",
+    "result": {
+      "processId": "e7b3c34a-5173-4e87-b991-6d0a0737b253",
+      "status": "exited",
+      "stdout": "{\"path\": \"/xcf26/zpzeng/.gh_container/assets/esmfold_v1/esmfold_3B_v1.pt\", \"bytes\": 2097152000, \"head_hex\": \"504b0304000008080000000000000000\", \"tail_has_zip_eocd\": false, \"zipfile_is_zipfile\": false, \"zip_error\": \"BadZipFile: File is not a zip file\"}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "24",
+    "command": "from pathlib import Path\nimport json\np=Path('/xcf26/zpzeng/.gh_container/sites/current_repo_container_release_20260915.json')\nd=json.loads(p.read_text())\nprint(json.dumps({k:d.get(k) for k in ['runner_backend','apptainer_bin','container_python','container_repo_root','sif','binds','env_defaults','env_prepends','use_nv']})[:3900])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "3bd365ff-1040-441c-9426-68f113f590ba",
+    "result": {
+      "processId": "325adfb3-e8f5-460b-8427-436e15015ce6",
+      "status": "exited",
+      "stdout": "{\"runner_backend\": \"apptainer\", \"apptainer_bin\": \"/xcfhome/zpzeng/.gh_container/envs/_gh_apptainer/bin/apptainer\", \"container_python\": \"python\", \"container_repo_root\": \"/opt/GuidedHallucination\", \"sif\": \"/xcfhome/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif\", \"binds\": [\"/xcfhome/zpzeng/.gh_container/cache/runtime:/cache/gh-runtime\", \"/xcfhome/pubdata/folding/alphafold3/models:/models/alphafold3\", \"/pubhome/folding/alphafold:/models/alphafold2\", \"/xcfhome/zpzeng/gitrepo/ligandmpnn/model_params:/models/ligandmpnn\", \"/xcfhome/zpzeng/.gh_container/assets/Protenix:/models/protenix\", \"/xcfhome/zpzeng/.gh_container/assets/boltz_cache:/models/boltz\"], \"env_defaults\": {\"CUDA_DEVICE_ORDER\": \"PCI_BUS_ID\", \"GH_CUDA_PREINITIALIZE\": \"1\", \"GH_PROTENIX_CCD\": \"/models/protenix/release_data/components.v20240608.cif\", \"GH_PROTENIX_CCD_RDKIT\": \"/models/protenix/release_data/components.v20240608.cif.rdkit_mol.pkl\", \"GH_WEIGHT_AF2\": \"/models/alphafold2\", \"GH_WEIGHT_AF3\": \"/models/alphafold3\", \"GH_WEIGHT_BOLTZ\": \"/models/boltz\", \"GH_WEIGHT_LIGANDMPNN\": \"/models/ligandmpnn\", \"GH_WEIGHT_PROTENIX\": \"/models/protenix/release_model/protenix-v2.pt\", \"GH_WEIGHT_PROTENIX_CONSTRAINT\": \"/models/protenix/release_model/protenix_base_constraint_v0.5.0.pt\", \"HOME\": \"/cache/gh-runtime/home\", \"MPLCONFIGDIR\": \"/cache/gh-runtime/matplotlib\", \"NUMBA_CACHE_DIR\": \"/cache/gh-runtime/numba\", \"NVIDIA_VISIBLE_DEVICES\": \"all\", \"PROTENIX_ROOT_DIR\": \"/cache/gh-runtime/protenix\", \"TORCH_EXTENSIONS_DIR\": \"/cache/gh-runtime/torch-extensions\", \"XDG_CACHE_HOME\": \"/cache/gh-runtime/xdg\"}, \"env_prepends\": [], \"use_nv\": true}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "25",
+    "command": "from pathlib import Path\nimport json\nr=Path('/xcf26/zpzeng/.gh_container')\nd={}\nfor rel in ('assets/Protenix','assets/boltz_cache','cache/asset-validation','cache/huggingface','cache/runtime'):\n p=r/rel;d[rel]=[{'name':x.name,'dir':x.is_dir(),'bytes':x.stat().st_size if x.is_file() else None} for x in sorted(p.iterdir())[:20]] if p.exists() else None\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "e29ac410-7069-437d-8777-f32526e8b76c",
+    "result": {
+      "processId": "156e0e99-bc4e-4cae-857f-44036f38ee99",
+      "status": "exited",
+      "stdout": "{\"assets/Protenix\": [{\"name\": \"common\", \"dir\": true, \"bytes\": null}, {\"name\": \"release_data\", \"dir\": true, \"bytes\": null}, {\"name\": \"release_model\", \"dir\": true, \"bytes\": null}], \"assets/boltz_cache\": [{\"name\": \"boltz1_conf.ckpt\", \"dir\": false, \"bytes\": 3595352714}, {\"name\": \"boltz1_conf.ckpt.lock\", \"dir\": false, \"bytes\": 0}, {\"name\": \"boltz1_conf.ckpt.sha256\", \"dir\": false, \"bytes\": 149}, {\"name\": \"ccd.pkl\", \"dir\": false, \"bytes\": 345859128}, {\"name\": \"ccd.pkl.lock\", \"dir\": false, \"bytes\": 0}, {\"name\": \"ccd.pkl.sha256\", \"dir\": false, \"bytes\": 148}], \"cache/asset-validation\": [{\"name\": \"26040b46ba4c000e61b28cc65bb98986c68cf2e362908dbfec641bdb3c347163.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"3e6e8c7431453c44aa4d2e81fbc7e85c2a271a5f243c46727295f7b863ef5f49.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"4cfef37ba3bc848c72d8c32ebc0278be84002ae7cf4f630504f470268731c6ee.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"60c42f3a68d16ced22eb05af60c6a3050f6555e838db79aef3ab89e8e6fdf8e0.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"64bfb17d0c5167ad0ce5793c889df6de8382e125e75e4f040c7ac21e846af819.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"6efa0fabf98b4cb3108722be1ad5433796eb39d37ce5ddb9521ece4709fb9619.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"75c5bab1bf1d552cb39581cdf3074a34a47540eaf8ba16624bb12df9950d08c3.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"9e6a23c6e59417818e6d56f0a0782c4c40cdd0971758b1dc7162ca05b7fb8c68.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"a08bbb2cac10a60dbee5b4630851403352c0d0676c34a3edfb0ef0046cb871fa.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"b3259a32a4d881f38fa3427d640407704354a767ee114a72ae750db44fb2aee4.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"dccf0201798ecebedf94114e8c6700c7ab8288a2e20494a5e2ea12cadbde2758.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"e75cd9c3cecc4ad97faa46684627a9281c03b868718ddeefb508d93d46831917.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"ea43b7c13ad81ff92de21ad8ce1f6d18576b7fe7e83f204a4c3d3bd3ab803b65.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"f15b2b1664bcfe8cbf8eeb11c9caec7999f64ad658c50fcc3f8917b0b0279a78.sha256\", \"dir\": false, \"bytes\": 148}, {\"name\": \"f5beeccbad8559322a349a388c01c23cc7474a70d84c587672fe3a6c0d8022fb.sha256\", \"dir\": false, \"bytes\": 148}], \"cache/huggingface\": [], \"cache/runtime\": [{\"name\": \"home\", \"dir\": true, \"bytes\": null}, {\"name\": \"matplotlib\", \"dir\": true, \"bytes\": null}, {\"name\": \"numba\", \"dir\": true, \"bytes\": null}, {\"name\": \"protenix\", \"dir\": true, \"bytes\": null}, {\"name\": \"smoke\", \"dir\": true, \"bytes\": null}, {\"name\": \"torch-extensions\", \"dir\": true, \"bytes\": null}, {\"name\": \"xdg\", \"dir\": true, \"bytes\": null}]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "26",
+    "command": "from pathlib import Path\nimport json\nr=Path('/xcf26/zpzeng/.gh_container')\nd=json.loads((r/'assets/software-manifest.json').read_text())\nfor k in ('alphafold3','alphafold2','ligandmpnn','protenix','boltz'):\n print(k,json.dumps(d['software'][k])[:650])\nprint('container',json.dumps({k:v for k,v in d['container'].items() if k!='build_metadata'})[:700])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "15de6f75-43b0-4305-bbac-8b1554ef697c",
+    "result": {
+      "processId": "139b3b2c-52cb-49ae-98ff-dcff1aae24a1",
+      "status": "exited",
+      "stdout": "alphafold3 {\"asset_policy\": \"restricted\", \"asset_source\": \"Google DeepMind AF3 model-parameter access request; supply an existing models directory\", \"asset_urls\": [\"https://github.com/google-deepmind/alphafold3\"], \"host_envs\": [], \"license_id\": \"af3-terms\", \"ready\": true, \"requires\": [], \"resources\": [{\"path\": \"/xcfhome/pubdata/folding/alphafold3/models\", \"ready\": true}], \"revision\": null, \"submodules\": [\"vendor/alphafold3\"]}\nalphafold2 {\"asset_policy\": \"public\", \"asset_source\": \"Google DeepMind alphafold_params_2022-12-06.tar\", \"asset_urls\": [\"https://storage.googleapis.com/alphafold/alphafold_params_2022-12-06.tar\"], \"host_envs\": [], \"license_id\": null, \"ready\": true, \"requires\": [], \"resources\": [{\"path\": \"/pubhome/folding/alphafold/params/params_model_1.npz\", \"ready\": true, \"sha256\": \"f95e453e6a290ddf317ba1c9698d53fa110cf007ea979b0eae43e6ad38b4e364\", \"size\": 373069562}, {\"path\": \"/pubhome/folding/alphafold/params/params_model_1_ptm.npz\", \"ready\": true, \"sha256\": \"5e564f79af5bcd54ccef6e2a6bb0ff01015d01650ebc41d4575e35f0de9ecc84\", \"size\": 373103340}, {\"path\": \"/pubhome/fol\nligandmpnn {\"asset_policy\": \"public\", \"asset_source\": \"Institute for Protein Design LigandMPNN checkpoint archive\", \"asset_urls\": [\"https://files.ipd.uw.edu/pub/ligandmpnn/\"], \"host_envs\": [], \"license_id\": null, \"ready\": true, \"requires\": [], \"resources\": [{\"path\": \"/xcfhome/zpzeng/gitrepo/ligandmpnn/model_params/global_label_membrane_mpnn_v_48_020.pt\", \"ready\": true, \"sha256\": \"89ef0abddbfb956c4c7c02dcba6523c0b5152733055f7509292365eaecc38b21\", \"size\": 6751499}, {\"path\": \"/xcfhome/zpzeng/gitrepo/ligandmpnn/model_params/ligandmpnn_v_32_020_25.pt\", \"ready\": true, \"sha256\": \"42caaa5cdb380867d2b31c30de4ab53ea89171279b3a0732ddf94bc4d3cb6981\", \"size\": 105419\nprotenix {\"asset_policy\": \"public-upstream-currently-broken\", \"asset_source\": \"ByteDance Protenix dependency_url.py; the v2 endpoint currently returns HTTP 403\", \"asset_urls\": [\"https://protenix.tos-cn-beijing.volces.com/checkpoint/protenix-v2.pt\", \"https://protenix.tos-cn-beijing.volces.com/checkpoint/protenix_base_constraint_v0.5.0.pt\", \"https://af3-dev.tos-cn-beijing.volces.com/release_data/components.v20240608.cif\", \"https://af3-dev.tos-cn-beijing.volces.com/release_data/components.v20240608.cif.rdkit_mol.pkl\"], \"host_envs\": [], \"license_id\": null, \"ready\": true, \"requires\": [], \"resources\": [{\"path\": \"/xcfhome/zpzeng/.gh_container/assets/Protenix\nboltz {\"asset_policy\": \"public\", \"asset_source\": \"URLs owned by hallucination.evaluator.wrappers.boltz\", \"asset_urls\": [\"https://huggingface.co/boltz-community/boltz-1\"], \"host_envs\": [], \"license_id\": null, \"ready\": true, \"requires\": [], \"resources\": [{\"path\": \"/xcfhome/zpzeng/.gh_container/assets/boltz_cache/ccd.pkl\", \"ready\": true, \"sha256\": \"2d3b2f03a3c5665944adba51e33263511e51b21c9cd05d902f9c4b7c1e58d2f4\", \"size\": 345859128}, {\"path\": \"/xcfhome/zpzeng/.gh_container/assets/boltz_cache/boltz1_conf.ckpt\", \"ready\": true, \"sha256\": \"fea245d912c570ec117b2277c2719f312a6fc109c07b6f6ef741690ee775c2f5\", \"size\": 3595352714}], \"revision\": \"7c1d83b779e4c65\ncontainer {\"build_features\": [\"ananas\", \"pyrosetta\", \"rosetta\"], \"doctor_passed\": true, \"import_smoke_passed\": true, \"path\": \"/xcfhome/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif\", \"sha256\": \"242aae3bb97c5c7ea374dab5d7462e04863d9d48ba2ee00cc57e6c0a57a538e3\", \"size\": 6418354176}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "27",
+    "command": "from pathlib import Path\nimport json\npaths=['/xcfhome/pubdata/folding/alphafold3/models','/pubhome/folding/alphafold','/xcfhome/zpzeng/gitrepo/ligandmpnn/model_params','/xcf26/zpzeng/.gh_container/assets/Protenix/release_model','/xcf26/zpzeng/.gh_container/assets/Protenix/release_data']\nout={}\nfor x in paths:\n p=Path(x);out[x]={'exists':p.exists(),'resolved':str(p.resolve())}\n if p.is_dir():out[x]['files']=[{'name':v.name,'bytes':v.stat().st_size if v.is_file() else None,'dir':v.is_dir()} for v in sorted(p.iterdir())[:12]]\nprint(json.dumps(out))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "56f129e4-6d91-48db-9e62-86164a9368cc",
+    "result": {
+      "processId": "fc86bad9-9c81-4043-a829-08da2721147f",
+      "status": "exited",
+      "stdout": "{\"/xcfhome/pubdata/folding/alphafold3/models\": {\"exists\": true, \"resolved\": \"/xcfhome/pubdata/folding/alphafold3/models\", \"files\": [{\"name\": \"af3.bin\", \"bytes\": 1146811260, \"dir\": false}]}, \"/pubhome/folding/alphafold\": {\"exists\": true, \"resolved\": \"/pubhome/folding/alphafold\", \"files\": [{\"name\": \"T1050.fasta\", \"bytes\": 829, \"dir\": false}, {\"name\": \"bfd\", \"bytes\": null, \"dir\": true}, {\"name\": \"brc1.fasta\", \"bytes\": 922, \"dir\": false}, {\"name\": \"insulin.fasta\", \"bytes\": 148, \"dir\": false}, {\"name\": \"mgnify\", \"bytes\": null, \"dir\": true}, {\"name\": \"nohup.out\", \"bytes\": 0, \"dir\": false}, {\"name\": \"old_params\", \"bytes\": null, \"dir\": true}, {\"name\": \"params\", \"bytes\": null, \"dir\": true}, {\"name\": \"pdb70\", \"bytes\": null, \"dir\": true}, {\"name\": \"pdb_mmcif\", \"bytes\": null, \"dir\": true}, {\"name\": \"pdb_mmcif.tar\", \"bytes\": 257431982080, \"dir\": false}, {\"name\": \"pdb_seqres\", \"bytes\": null, \"dir\": true}]}, \"/xcfhome/zpzeng/gitrepo/ligandmpnn/model_params\": {\"exists\": true, \"resolved\": \"/xcf26/zpzeng/gitrepo/ligandmpnn/model_params\", \"files\": [{\"name\": \"global_label_membrane_mpnn_v_48_020.pt\", \"bytes\": 6751499, \"dir\": false}, {\"name\": \"global_label_membrane_mpnn_v_48_020.pt.sha256\", \"bytes\": 146, \"dir\": false}, {\"name\": \"ligandmpnn_sc_v_32_002_16.pt\", \"bytes\": 14359379, \"dir\": false}, {\"name\": \"ligandmpnn_v_32_005_25.pt\", \"bytes\": 10541943, \"dir\": false}, {\"name\": \"ligandmpnn_v_32_010_25.pt\", \"bytes\": 10541943, \"dir\": false}, {\"name\": \"ligandmpnn_v_32_020_25.pt\", \"bytes\": 10541943, \"dir\": false}, {\"name\": \"ligandmpnn_v_32_020_25.pt.sha256\", \"bytes\": 147, \"dir\": false}, {\"name\": \"ligandmpnn_v_32_030_25.pt\", \"bytes\": 10541943, \"dir\": false}, {\"name\": \"per_residue_label_membrane_mpnn_v_48_020.pt\", \"bytes\": 6751499, \"dir\": false}, {\"name\": \"per_residue_label_membrane_mpnn_v_48_020.pt.sha256\", \"bytes\": 146, \"dir\": false}, {\"name\": \"proteinmpnn_v_48_002.pt\", \"bytes\": 6681301, \"dir\": false}, {\"name\": \"proteinmpnn_v_48_010.pt\", \"bytes\": 6681301, \"dir\": false}]}, \"/xcf26/zpzeng/.gh_container/assets/Protenix/release_model\": {\"exists\": true, \"resolved\": \"/xcf26/zpzeng/.gh_container/assets/Protenix/release_model\", \"files\": [{\"name\": \"protenix-v2.pt\", \"bytes\": 1859785497, \"dir\": false}, {\"name\": \"protenix-v2.pt.sha256\", \"bytes\": 149, \"dir\": false}, {\"name\": \"protenix_base_constraint_v0.5.0.pt\", \"bytes\": 1475206741, \"dir\": false}, {\"name\": \"protenix_base_constraint_v0.5.0.pt.sha256\", \"bytes\": 149, \"dir\": false}, {\"name\": \"protenix_base_default_v0.5.0.pt\", \"bytes\": 1474265486, \"dir\": false}, {\"name\": \"protenix_base_default_v1.0.0.pt\", \"bytes\": 1475950125, \"dir\": false}]}, \"/xcf26/zpzeng/.gh_container/assets/Protenix/release_data\": {\"exists\": true, \"resolved\": \"/xcf26/zpzeng/.gh_container/assets/Protenix/release_data\", \"files\": [{\"name\": \"components.v20240608.cif\", \"bytes\": 427767290, \"dir\": false}, {\"name\": \"components.v20240608.cif.rdkit_mol.pkl\", \"bytes\": 125903802, \"dir\": false}, {\"name\": \"components.v20240608.cif.rdkit_mol.pkl.sha256\", \"bytes\": 148, \"dir\": false}, {\"name\": \"components.v20240608.cif.sha256\", \"bytes\": 148, \"dir\": false}]}}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "28",
+    "command": "from pathlib import Path\nimport json\nr=Path('/xcf26/zpzeng/.gh_container')\nd={}\nfor s in ('cache/runtime/home/.cache/torch/hub/checkpoints','cache/runtime/xdg/torch/hub/checkpoints','cache/runtime/home/.cache/huggingface/hub','cache/runtime/xdg/huggingface/hub'):\n p=r/s;d[s]={'exists':p.exists()}\n if p.is_dir():d[s]['files']=[{'name':x.name,'bytes':x.stat().st_size if x.is_file() else None} for x in sorted(p.iterdir())[:12]]\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "076bafd1-7144-409e-9698-561c92642e62",
+    "result": {
+      "processId": "ed58abf4-5fd2-4361-9899-33460ac813e6",
+      "status": "exited",
+      "stdout": "{\"cache/runtime/home/.cache/torch/hub/checkpoints\": {\"exists\": false}, \"cache/runtime/xdg/torch/hub/checkpoints\": {\"exists\": true, \"files\": [{\"name\": \"esm2_t36_3B_UR50D-contact-regression.pt\", \"bytes\": 6759}, {\"name\": \"esm2_t36_3B_UR50D.pt\", \"bytes\": 5678116398}]}, \"cache/runtime/home/.cache/huggingface/hub\": {\"exists\": false}, \"cache/runtime/xdg/huggingface/hub\": {\"exists\": false}}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "29",
+    "command": "from pathlib import Path\nimport json\nd=json.loads(Path('/xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif.build.json').read_text())\nc=d['build_contract']\nprint(json.dumps({'build_contract_keys':list(c.keys()) if isinstance(c,dict) else c,'build_fingerprint':d.get('build_fingerprint')}))\nif isinstance(c,dict):\n for k,v in c.items():\n  if any(t in k.lower() for t in ('source','revision','submodule','python','feature','repo','commit')):print(k,json.dumps(v)[:2500])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "c0181865-c99b-4e58-a6cb-34812027c922",
+    "result": {
+      "processId": "fec9398b-817d-4aad-968c-9dd68e70b995",
+      "status": "exited",
+      "stdout": "{\"build_contract_keys\": [\"accepted_licenses\", \"apptainer_binary\", \"apptainer_version\", \"build_features\", \"builder\", \"context_sha256\", \"definition_sha256\", \"docker_base_image\", \"docker_base_source\", \"docker_builder\", \"docker_network\", \"external_inputs\", \"fakeroot_sha256\", \"schema_version\"], \"build_fingerprint\": \"00d3ebe5fbfa50161de657ad30d5525990f5bc3709c1b9e7f8525c5b003fe348\"}\nbuild_features [\"ananas\", \"pyrosetta\", \"rosetta\"]\ndocker_base_source \"docker\"\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "30",
+    "command": "from pathlib import Path\nimport json,zipfile\nbase=Path('/xcf26/zpzeng/.gh_container')\nps=[base/'assets/boltz_cache/boltz1_conf.ckpt',base/'assets/Protenix/release_model/protenix-v2.pt',base/'assets/Protenix/release_model/protenix_base_constraint_v0.5.0.pt',base/'cache/runtime/xdg/torch/hub/checkpoints/esm2_t36_3B_UR50D.pt',Path('/xcfhome/zpzeng/gitrepo/ligandmpnn/model_params/proteinmpnn_v_48_020.pt')]\nout=[]\nfor p in ps:\n d={'path':str(p),'exists':p.exists()}\n if p.exists():\n  d.update(bytes=p.stat().st_size,zipfile_is_zipfile=zipfile.is_zipfile(str(p)))\n  if d['zipfile_is_zipfile']:\n   with zipfile.ZipFile(str(p)) as z:d['members']=len(z.infolist())\n  q=Path(str(p)+'.sha256')\n  if q.exists():d['recorded_sha256']=q.read_text().strip()\n out.append(d)\nprint(json.dumps(out))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "ee837cd9-24e1-4c2d-9146-6a49cb2fef16",
+    "result": {
+      "processId": "6be63667-f3d9-4275-b6e8-257e480bdc41",
+      "status": "exited",
+      "stdout": "[{\"path\": \"/xcf26/zpzeng/.gh_container/assets/boltz_cache/boltz1_conf.ckpt\", \"exists\": true, \"bytes\": 3595352714, \"zipfile_is_zipfile\": true, \"members\": 15192, \"recorded_sha256\": \"v2 fea245d912c570ec117b2277c2719f312a6fc109c07b6f6ef741690ee775c2f5 3595352714 1767691869000000000 1789526026000000000 1190746028 144115743401745846\"}, {\"path\": \"/xcf26/zpzeng/.gh_container/assets/Protenix/release_model/protenix-v2.pt\", \"exists\": true, \"bytes\": 1859785497, \"zipfile_is_zipfile\": true, \"members\": 4180, \"recorded_sha256\": \"v2 8f931f9774a396b67033d0e58628e1834f4a1448165e04254b40a780b0c0d599 1859785497 1777378054000000000 1789526026000000000 1190746028 144115787240614917\"}, {\"path\": \"/xcf26/zpzeng/.gh_container/assets/Protenix/release_model/protenix_base_constraint_v0.5.0.pt\", \"exists\": true, \"bytes\": 1475206741, \"zipfile_is_zipfile\": true, \"members\": 4113, \"recorded_sha256\": \"v2 5358025b20b2212853ad75579be04387859557915f398a1d60f6a1a9a0c8c887 1475206741 1767776376000000000 1789526026000000000 1190746028 144115743770824929\"}, {\"path\": \"/xcf26/zpzeng/.gh_container/cache/runtime/xdg/torch/hub/checkpoints/esm2_t36_3B_UR50D.pt\", \"exists\": true, \"bytes\": 5678116398, \"zipfile_is_zipfile\": true, \"members\": 75}, {\"path\": \"/xcfhome/zpzeng/gitrepo/ligandmpnn/model_params/proteinmpnn_v_48_020.pt\", \"exists\": true, \"bytes\": 6681301, \"zipfile_is_zipfile\": true, \"members\": 120, \"recorded_sha256\": \"v2 c9cb4a671d79604111231f8dbfc7c590e06f1197453b7a6854ac6661a642f5bd 6681301 1727748009000000000 1727748009000000000 1190746028 144115319290568344\"}]\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "31",
+    "command": [
+      "apptainer",
+      "inspect",
+      "--json",
+      "GuidedHallucination_af3_licensed_a13_20260722.sif"
+    ],
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "87cf3173-58e1-4f8a-a458-e44a6d4bb0b6",
+    "result": {
+      "processId": "9a894cc2-6c56-4f1f-9c04-958c08edec8d",
+      "status": "exited",
+      "stdout": "{\n\t\"data\": {\n\t\t\"attributes\": {\n\t\t\t\"labels\": {\n\t\t\t\t\"Description\": \"GuidedHallucination + AlphaFold3 base (mount weights/tools at runtime)\",\n\t\t\t\t\"GH.BuildFeatures\": \"ananas,pyrosetta,rosetta\",\n\t\t\t\t\"Name\": \"GuidedHallucination\",\n\t\t\t\t\"maintainer\": \"NVIDIA CORPORATION \\u003ccudatools@nvidia.com\\u003e\",\n\t\t\t\t\"org.label-schema.build-arch\": \"amd64\",\n\t\t\t\t\"org.label-schema.build-date\": \"Wednesday_22_July_2026_23:30:2_HKT\",\n\t\t\t\t\"org.label-schema.schema-version\": \"1.0\",\n\t\t\t\t\"org.label-schema.usage.apptainer.version\": \"1.5.2\",\n\t\t\t\t\"org.label-schema.usage.singularity.deffile.bootstrap\": \"docker\",\n\t\t\t\t\"org.label-schema.usage.singularity.deffile.from\": \"nvidia/cuda@sha256:6b3201183858bad08441837f5a5efc2c75290135cc25fcc87d9ff763190cfd09\",\n\t\t\t\t\"org.opencontainers.image.base.digest\": \"sha256:6b3201183858bad08441837f5a5efc2c75290135cc25fcc87d9ff763190cfd09\",\n\t\t\t\t\"org.opencontainers.image.base.name\": \"docker.io/nvidia/cuda@sha256:6b3201183858bad08441837f5a5efc2c75290135cc25fcc87d9ff763190cfd09\",\n\t\t\t\t\"org.opencontainers.image.ref.name\": \"ubuntu\",\n\t\t\t\t\"org.opencontainers.image.version\": \"24.04\"\n\t\t\t}\n\t\t}\n\t},\n\t\"type\": \"container\"\n}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "32",
+    "command": "from pathlib import Path\nimport json,hashlib\np=Path('/xcfhome/zpzeng/gitrepo/ligandmpnn/model_params/proteinmpnn_v_48_020.pt')\nd=json.loads(Path('/xcf26/zpzeng/.gh_container/assets/software-manifest.json').read_text())\nprint(json.dumps({'actual_path':str(p.resolve()),'actual_bytes':p.stat().st_size,'actual_sha256':hashlib.sha256(p.read_bytes()).hexdigest(),'recorded_ligandmpnn_revision':d['software']['ligandmpnn'].get('revision'),'recorded_boltz_revision':d['software']['boltz'].get('revision'),'recorded_protenix_revision':d['software']['protenix'].get('revision')}))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "45d7358b-4be5-4063-9221-b6c2ddb073fb",
+    "result": {
+      "processId": "4ddcef7f-fb21-4ca3-9eaa-396d3825a436",
+      "status": "exited",
+      "stdout": "{\"actual_path\": \"/xcf26/zpzeng/gitrepo/ligandmpnn/model_params/proteinmpnn_v_48_020.pt\", \"actual_bytes\": 6681301, \"actual_sha256\": \"c9cb4a671d79604111231f8dbfc7c590e06f1197453b7a6854ac6661a642f5bd\", \"recorded_ligandmpnn_revision\": null, \"recorded_boltz_revision\": \"7c1d83b779e4c65ecc37dfdf0c6b2788076f31e1\", \"recorded_protenix_revision\": null}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "33",
+    "command": "from pathlib import Path\nimport os,json,re\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nd={}\nfor rel in ('repo/examples','repo/config/paper','cloud-20261103-opt/benchmarks','cloud-20261103-fix/benchmarks'):\n p=b/rel;files=[]\n if p.exists():\n  for root,dirs,names in os.walk(str(p)):\n   for name in names:\n    if re.search('esmfold|runtime|benchmark|evaluate|proteinmpnn|ligandmpnn',name,re.I): files.append(str(Path(root)/name))\n d[rel]=files[:18]\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "e5be97fd-27c7-48a4-9ef5-6f4fb64e72cc",
+    "result": {
+      "processId": "a3314485-cd1a-4ccd-aeef-142a21688726",
+      "status": "exited",
+      "stdout": "{\"repo/examples\": [\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/benchmark_antibody_v1__scfv_4d5.overlay.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/hcar1/hcar1.benchmark_binder_v1_4.overlay.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/hcar1/submit_constraint_compliance_benchmark_slurm.sh\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/hcar1/run_constraint_compliance_benchmark.py\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/hcar1/hcar1_constraint_compliance_benchmark.overlay.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/peptide_antibody/analysis_peptide_antibody_benchmark.py\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/benchmarks/af3_inference_benchmark.py\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/paper/baselines/03_rfdiffusion_proteinmpnn.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/paper/baselines/adapters/run_rfdiffusion_proteinmpnn_msd.py\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/examples/overlays/test.benchmark_binder_v1_4.overlay.yaml\"], \"repo/config/paper\": [\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/evaluate_af3.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/dual_target_esmfold2.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/evaluate_af2.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/evaluate_esmfold2.yaml\", \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/evaluate_protenix2.yaml\"], \"cloud-20261103-opt/benchmarks\": [], \"cloud-20261103-fix/benchmarks\": []}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "34",
+    "command": "from pathlib import Path\nimport json,subprocess\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nout={}\nfor rel in ('cloud-20261103-fix','cloud-20261103-opt'):\n p=b/rel\n args=['git','-C',str(p),'diff','--numstat','--','astrolabe/evaluators','tests']\n r=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=3)\n out[rel]=r.stdout\nprint(json.dumps(out))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "99e53734-02c7-4be5-a945-865b66a61a13",
+    "result": {
+      "processId": "2ab6f5ac-6bd3-4cbd-94fc-8a2f909607d6",
+      "status": "exited",
+      "stdout": "{\"cloud-20261103-fix\": \"3\\t0\\tastrolabe/evaluators/wrappers/esmfold_daemon.py\\n4\\t0\\ttests/test_runtime_contracts.py\\n18\\t0\\ttests/test_runtime_trace_report.py\\n26\\t0\\ttests/test_workflow_benchmark.py\\n\", \"cloud-20261103-opt\": \"3\\t0\\tastrolabe/evaluators/wrappers/esmfold_daemon.py\\n4\\t0\\ttests/test_runtime_contracts.py\\n18\\t0\\ttests/test_runtime_trace_report.py\\n26\\t0\\ttests/test_workflow_benchmark.py\\n\"}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "35",
+    "command": "from pathlib import Path\nimport subprocess,json\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nfor rel in ('cloud-20261103-fix','cloud-20261103-opt'):\n p=b/rel\n r=subprocess.run(['git','-C',str(p),'diff','HEAD','--','astrolabe/evaluators/wrappers/esmfold_daemon.py'],stdout=subprocess.PIPE,stderr=subprocess.PIPE,universal_newlines=True,timeout=3)\n print(rel);print(r.stdout)",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "59534051-a650-4be8-ac19-081a5d5e92ee",
+    "result": {
+      "processId": "157c922a-c558-4e27-a2c7-db82d1aa24fc",
+      "status": "exited",
+      "stdout": "cloud-20261103-fix\ndiff --git a/astrolabe/evaluators/wrappers/esmfold_daemon.py b/astrolabe/evaluators/wrappers/esmfold_daemon.py\nindex 5265a54..c5d2304 100644\n--- a/astrolabe/evaluators/wrappers/esmfold_daemon.py\n+++ b/astrolabe/evaluators/wrappers/esmfold_daemon.py\n@@ -44,6 +44,9 @@ def main():\n             pdbs = model.output_to_pdb(output)\n             selected = {k: output[k] for k in ('chain_index', 'plddt', 'mean_plddt', 'ptm', 'predicted_aligned_error')}\n             result = {'output': cpu_tree(selected), 'pdbs': pdbs, 'rng': capture(spec['device']['name'])}\n+            # Device outputs belong to this lease, including unselected model\n+            # intermediates. Only the copied CPU result crosses its boundary.\n+            del output, selected\n             lease.update_lifecycle(**lifecycle())\n         dump_tree(request / 'output', result)\n         return {'request': request.name}\n\ncloud-20261103-opt\ndiff --git a/astrolabe/evaluators/wrappers/esmfold_daemon.py b/astrolabe/evaluators/wrappers/esmfold_daemon.py\nindex 5265a54..c5d2304 100644\n--- a/astrolabe/evaluators/wrappers/esmfold_daemon.py\n+++ b/astrolabe/evaluators/wrappers/esmfold_daemon.py\n@@ -44,6 +44,9 @@ def main():\n             pdbs = model.output_to_pdb(output)\n             selected = {k: output[k] for k in ('chain_index', 'plddt', 'mean_plddt', 'ptm', 'predicted_aligned_error')}\n             result = {'output': cpu_tree(selected), 'pdbs': pdbs, 'rng': capture(spec['device']['name'])}\n+            # Device outputs belong to this lease, including unselected model\n+            # intermediates. Only the copied CPU result crosses its boundary.\n+            del output, selected\n             lease.update_lifecycle(**lifecycle())\n         dump_tree(request / 'output', result)\n         return {'request': request.name}\n\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "36",
+    "command": "from pathlib import Path\nimport json,hashlib\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\np=b/'cloud-20261103-fix/tests/test_esmfold1_lease_lifetime.py'\ns=p.read_text();print(json.dumps({'path':str(p),'bytes':len(s.encode()),'sha256':hashlib.sha256(s.encode()).hexdigest(),'lines':len(s.splitlines())}))\nprint('\\n'.join(s.splitlines()[:80]))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "765252c8-1b9c-4934-8f71-e747c6fb9c22",
+    "result": {
+      "processId": "dcc25118-9753-43ba-9801-ae0771648e74",
+      "status": "exited",
+      "stdout": "{\"path\": \"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261103-fix/tests/test_esmfold1_lease_lifetime.py\", \"bytes\": 2743, \"sha256\": \"950ca5d561b0e6ffe10f50ddf726cd4892569d1eac7bea05854e6626215f1900\", \"lines\": 62}\n\"\"\"Verify the real handler's output lifetime without a model or CUDA device.\"\"\"\nimport ast\nimport contextlib\nimport importlib.util\nfrom pathlib import Path\nimport sys\nimport types\nimport weakref\n\n\ndef test_raw_model_outputs_die_before_device_lease_is_returned(monkeypatch, tmp_path):\n    root = Path(__file__).resolve().parents[1]\n    path = root / \"astrolabe/evaluators/wrappers/esmfold_daemon.py\"\n    tree = ast.parse(path.read_text())\n    handle = next(node for node in ast.walk(tree)\n                  if isinstance(node, ast.FunctionDef) and node.name == \"handle\")\n    references, observed = {}, {}\n\n    class Tensor:\n        def __init__(self, device=\"device\"):\n            self.device = device\n        def detach(self):\n            return self\n        def cpu(self):\n            return Tensor(\"cpu\")\n\n    torch = types.SimpleNamespace(Tensor=Tensor, no_grad=contextlib.nullcontext)\n    monkeypatch.setitem(sys.modules, \"torch\", torch)\n    spec = importlib.util.spec_from_file_location(\n        \"lease_lifetime_lifecycle\", root / \"astrolabe/evaluators/lifecycle.py\")\n    lifecycle = importlib.util.module_from_spec(spec)\n    spec.loader.exec_module(lifecycle)\n\n    class Model:\n        def infer(self, sequences):\n            result = {key: Tensor() for key in (\n                \"chain_index\", \"plddt\", \"mean_plddt\", \"ptm\",\n                \"predicted_aligned_error\", \"unselected_scratch\")}\n            references.update({key: weakref.ref(value) for key, value in result.items()})\n            return result\n        def output_to_pdb(self, output):\n            return [\"PDB text\"]\n\n    @contextlib.contextmanager\n    def operation(*args, **kwargs):\n        yield types.SimpleNamespace(update_lifecycle=lambda **fields: None)\n        observed[\"live_at_release\"] = sum(ref() is not None for ref in references.values())\n\n    def dump_tree(path, result):\n        observed[\"live_at_encode\"] = sum(ref() is not None for ref in references.values())\n        observed[\"cpu_devices\"] = [value.device for value in result[\"output\"].values()]\n        assert result[\"pdbs\"] == [\"PDB text\"] and result[\"rng\"] is None\n\n    namespace = dict(\n        request_directory=Path, load_tree=lambda _: {\"sequences\": [\"AAA\"], \"rng\": None},\n        contextlib=contextlib, sys=sys, torch=torch, operation=operation, actual={},\n        spec={\"device\": {\"name\": \"cpu\"}}, restore=lambda *args: None, model=Model(),\n        cpu_tree=lifecycle.cpu_tree, capture=lambda _: None, lifecycle=lambda: {},\n        dump_tree=dump_tree)\n    exec(compile(ast.Module(body=[handle], type_ignores=[]), str(path), \"exec\"), namespace)\n    namespace[\"handle\"]({\"request_dir\": str(tmp_path)})\n    assert observed == {\"live_at_release\": 0, \"live_at_encode\": 0, \"cpu_devices\": [\"cpu\"] * 5}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "37",
+    "command": "from pathlib import Path\nb=Path(\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation\")\nfor rel in ('repo/config/paper/evaluate_af3.yaml','repo/config/paper/evaluate_af2.yaml'):\n p=b/rel;print(str(p));print(p.read_text()[:1700])",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "6bfe08cb-77af-4689-a3db-cf7b1ac50c82",
+    "result": {
+      "processId": "88708e09-ec96-4d9d-90d7-f0c628525353",
+      "status": "exited",
+      "stdout": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/evaluate_af3.yaml\n# @package _global_\ndefaults:\n- /base\n- _self_\ntask_name: evaluate_af3\nout_dir: null\nrepeats: 1\nsteps: 1\nseed: 1\nseqs:\n  A: ???\n  B: ???\nhomologies: {}\nmutator:\n  selector_expression: null\n  mutator_terms:\n    MCMC:\n      _type: MCMC\nevaluator:\n  evaluator_terms:\n    Alphafold3:\n      _type: Alphafold3\n  alphafold3:\n    num_seeds: 1\n    num_samples: 5\n    num_recycles: 10\nstages:\n  default:\n    oligo:\n    - AB\n    evaluator: Alphafold3\n    mutators:\n    - MCMC\n    mutation_num: 100%\n    weighted_score_expression: plddt\n    acceptance_threshold: null\n    early_stopping: null\npaper_protocol:\n  source:\n  - MainPaper 116-117,150,171\n  - SI 29-32,40,46\n  representative: fixed_sequence_evaluation\n  notes:\n  - One initialized state and no sequence proposals; input sequence must be literal, with no random-length segments.\n  - For apo/holo 5x5 ensembles, use --num-runs 5 for each state and empty MSAs/templates. All native sample outputs\n    remain under raw_model_results.\n  - AF3 binary evaluation target MSAs/templates come from the frozen target inputs; do not replace with empty contexts.\n\n/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/repo/config/paper/evaluate_af2.yaml\n# @package _global_\ndefaults:\n- /base\n- _self_\ntask_name: evaluate_af2\nout_dir: null\nrepeats: 1\nsteps: 1\nseed: 1\nseqs:\n  A: ???\n  B: ???\nhomologies: {}\nmutator:\n  selector_expression: null\n  mutator_terms:\n    MCMC:\n      _type: MCMC\nevaluator:\n  evaluator_terms:\n    Alphafold2:\n      _type: Alphafold2\nstages:\n  default:\n    oligo:\n    - AB\n    evaluator: Alphafold2\n    mutators:\n    - MCMC\n    mutation_num: 100%\n    weighted_score_expression: plddt\n    acceptance_threshold: null\n    early_stopping: null\npaper_protocol:\n  source:\n  - MainPaper 116-117,150,171\n  - SI 29-32,40,46\n  representative: fixed_sequence_evaluation\n  notes:\n  - One initialized state and no sequence proposals; input sequence must be literal, with no random-length segments.\n  - For apo/holo 5x5 ensembles, use --num-runs 5 for each state and empty MSAs/templates. All native sample outputs\n    remain under raw_model_results.\n  - AF3 binary evaluation target MSAs/templates come from the frozen target inputs; do not replace with empty contexts.\n\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "38",
+    "command": [
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-container",
+      "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/backends",
+      "-c",
+      "import sys,json,importlib.metadata as m\nfrom pathlib import Path\nout={'python':sys.version,'executable':sys.executable,'versions':{}}\nfor name in ['torch','jax','jaxlib','fair-esm','openfold','boltz','protenix','alphafold3','numpy']:\n try:out['versions'][name]=m.version(name)\n except m.PackageNotFoundError:out['versions'][name]=None\nout['source_candidates']={str(p):p.exists() for p in [Path('/opt/GuidedHallucination/vendor/esm2/esm/esmfold/v1/misc.py'),Path('/opt/GuidedHallucination/vendor/alphafold3/src/alphafold3/model/model.py'),Path('/opt/GuidedHallucination/vendor/protenix/runner/inference.py')]}\nprint(json.dumps(out))"
+    ],
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "c9684fc7-e268-496e-84ad-f2ddf8117e7f",
+    "result": {
+      "processId": "8b91f48b-0b94-49be-9a80-be4004751bf7",
+      "status": "exited",
+      "stdout": "{\"python\": \"3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]\", \"executable\": \"/alphafold3_venv/bin/python\", \"versions\": {\"torch\": \"2.7.1\", \"jax\": \"0.4.34\", \"jaxlib\": \"0.4.34\", \"fair-esm\": null, \"openfold\": null, \"boltz\": \"2.2.1\", \"protenix\": \"2.0.0\", \"alphafold3\": \"3.0.1\", \"numpy\": \"1.26.4\"}, \"source_candidates\": {\"/opt/GuidedHallucination/vendor/esm2/esm/esmfold/v1/misc.py\": false, \"/opt/GuidedHallucination/vendor/alphafold3/src/alphafold3/model/model.py\": true, \"/opt/GuidedHallucination/vendor/protenix/runner/inference.py\": true}}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "39",
+    "command": "from pathlib import Path\nimport json,subprocess,hashlib\np=Path('/xcf26/zpzeng/gitrepo/ligandmpnn')\nd={'path':str(p),'files':[x.name for x in sorted(p.iterdir()) if not x.name.startswith('.')][:25]}\nfor key,cmd in [('head',['git','-C',str(p),'rev-parse','HEAD']),('status',['git','-C',str(p),'status','--short'])]:\n q=subprocess.run(cmd,universal_newlines=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=3);d[key]=q.stdout[:1000]\nfor name in ('model_utils.py','data_utils.py','protein_mpnn_utils.py'):\n q=p/name\n if q.is_file():d[name]={'bytes':q.stat().st_size,'sha256':hashlib.sha256(q.read_bytes()).hexdigest()}\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "e664bfb0-0092-4391-9065-f70820cec4eb",
+    "result": {
+      "processId": "5e6e83cb-7c81-4e10-95be-6e1cb0352933",
+      "status": "exited",
+      "stdout": "",
+      "stderr": "Traceback (most recent call last):\n  File \"/usr/lib64/python3.6/subprocess.py\", line 425, in run\n    stdout, stderr = process.communicate(input, timeout=timeout)\n  File \"/usr/lib64/python3.6/subprocess.py\", line 863, in communicate\n    stdout, stderr = self._communicate(input, endtime, timeout)\n  File \"/usr/lib64/python3.6/subprocess.py\", line 1535, in _communicate\n    self._check_timeout(endtime, orig_timeout)\n  File \"/usr/lib64/python3.6/subprocess.py\", line 891, in _check_timeout\n    raise TimeoutExpired(self.args, orig_timeout)\nsubprocess.TimeoutExpired: Command '['git', '-C', '/xcf26/zpzeng/gitrepo/ligandmpnn', 'status', '--short']' timed out after 3 seconds\n\nDuring handling of the above exception, another exception occurred:\n\nTraceback (most recent call last):\n  File \"<string>\", line 6, in <module>\n  File \"/usr/lib64/python3.6/subprocess.py\", line 430, in run\n    stderr=stderr)\nsubprocess.TimeoutExpired: Command '['git', '-C', '/xcf26/zpzeng/gitrepo/ligandmpnn', 'status', '--short']' timed out after 3 seconds\n",
+      "exitCode": 1,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "40",
+    "command": "from pathlib import Path\nimport json,subprocess,hashlib,os\np=Path('/xcf26/zpzeng/gitrepo/ligandmpnn')\nd={'path':str(p),'files':[x.name for x in sorted(p.iterdir()) if not x.name.startswith('.')][:28]}\nq=subprocess.run(['git','-C',str(p),'rev-parse','HEAD'],universal_newlines=True,stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=3);d['head']=q.stdout\nfor name in ('model_utils.py','data_utils.py','protein_mpnn_utils.py','run.py'):\n q=p/name\n if q.is_file():d[name]={'bytes':q.stat().st_size,'sha256':hashlib.sha256(q.read_bytes()).hexdigest()}\nd['existing_pdbs']=[]\nfor rel in ('inputs','examples','pdbs'):\n q=p/rel\n if q.is_dir():\n  for root,dirs,files in os.walk(str(q)):\n   for name in files:\n    if name.endswith('.pdb'):d['existing_pdbs'].append(str(Path(root)/name))\nd['existing_pdbs']=d['existing_pdbs'][:12]\nprint(json.dumps(d))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "d5a6ae4c-051c-417c-bab1-e9ab06d864d9",
+    "result": {
+      "processId": "ea32996d-22b6-4db8-864b-1032b0e3e234",
+      "status": "exited",
+      "stdout": "{\"path\": \"/xcf26/zpzeng/gitrepo/ligandmpnn\", \"files\": [\"LICENSE\", \"README.md\", \"__pycache__\", \"data_utils.py\", \"get_model_params.sh\", \"inputs\", \"lenp73s_bb.sh\", \"model_params\", \"model_utils.py\", \"openfold\", \"output_pattern\", \"outputs\", \"outputs_pattern\", \"processed\", \"requirements.txt\", \"run.py\", \"run_examples.sh\", \"sc_examples.sh\", \"sc_utils.py\", \"score.py\", \"scripts\", \"training\"], \"head\": \"26ec57ac976ade5379920dbd43c7f97a91cf82de\\n\", \"model_utils.py\": {\"bytes\": 65727, \"sha256\": \"5ad8f6992f83cdd1c97103e19c80833afff2bff201662a23bcb06eae669f0f95\"}, \"data_utils.py\": {\"bytes\": 23352, \"sha256\": \"a39c4674977786f9fa697f962d4e91ec79989ede30a79ad389d698291d0484c8\"}, \"run.py\": {\"bytes\": 38831, \"sha256\": \"10c588aeb8eb7280289b317bbbc78caab98760c15cf19a4c09517dd8eeeb1bd1\"}, \"existing_pdbs\": [\"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/1BC8.pdb\", \"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/2GFB.pdb\", \"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/4GYT.pdb\", \"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/9TP_step_62.pdb\"]}\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  },
+  {
+    "id": "41",
+    "command": "from pathlib import Path\nimport json,hashlib,collections\nroot=Path('/xcf26/zpzeng/gitrepo/ligandmpnn/inputs')\nout=[]\nfor p in sorted(root.glob('*.pdb')):\n raw=p.read_bytes();lines=raw.decode('ascii','replace').splitlines()\n residues=collections.defaultdict(set);atoms=collections.Counter()\n for line in lines:\n  if line.startswith('ATOM  '):\n   residues[line[21]].add((line[22:27],line[17:20]));atoms[line[21]]+=1\n out.append({'path':str(p),'bytes':len(raw),'sha256':hashlib.sha256(raw).hexdigest(),'chains':{k:{'residues':len(v),'atoms':atoms[k]} for k,v in residues.items()},'header':lines[:2]})\nprint(json.dumps(out))",
+    "device_id": "c429fd25-7aa7-492f-8ff2-d8fa86218e56",
+    "instance_id": "f102-current",
+    "timeout_ms": 10000,
+    "output_bytes_cap": 4096,
+    "yield_time_ms": 5000,
+    "execution": "accepted",
+    "request_id": "f0eb685a-4319-4631-b0ca-5a38f1969ea7",
+    "result": {
+      "processId": "2c5d63d3-5a6b-466b-afce-ecdfd7f439d2",
+      "status": "exited",
+      "stdout": "[{\"path\": \"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/1BC8.pdb\", \"bytes\": 143992, \"sha256\": \"a60b91a89800528659121d39df976bc724343aa1ba4496ab773fd2099dd3fd91\", \"chains\": {\"A\": {\"residues\": 10, \"atoms\": 204}, \"B\": {\"residues\": 10, \"atoms\": 200}, \"C\": {\"residues\": 93, \"atoms\": 790}}, \"header\": [\"HEADER    TRANSCRIPTION/DNA                       05-MAY-98   1BC8              \", \"TITLE     STRUCTURES OF SAP-1 BOUND TO DNA SEQUENCES FROM THE E74 AND           \"]}, {\"path\": \"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/2GFB.pdb\", \"bytes\": 2291818, \"sha256\": \"5ed0c62ee7d41f67866bfbbce7390ca9e08f0da2a427c47237e8bfc50854c3d3\", \"chains\": {\"A\": {\"residues\": 214, \"atoms\": 1650}, \"B\": {\"residues\": 219, \"atoms\": 1642}, \"C\": {\"residues\": 214, \"atoms\": 1650}, \"D\": {\"residues\": 219, \"atoms\": 1642}, \"E\": {\"residues\": 214, \"atoms\": 1650}, \"F\": {\"residues\": 219, \"atoms\": 1642}, \"G\": {\"residues\": 214, \"atoms\": 1650}, \"H\": {\"residues\": 219, \"atoms\": 1642}, \"I\": {\"residues\": 214, \"atoms\": 1650}, \"J\": {\"residues\": 219, \"atoms\": 1642}, \"K\": {\"residues\": 214, \"atoms\": 1650}, \"L\": {\"residues\": 219, \"atoms\": 1642}, \"M\": {\"residues\": 214, \"atoms\": 1650}, \"N\": {\"residues\": 219, \"atoms\": 1642}, \"O\": {\"residues\": 214, \"atoms\": 1650}, \"P\": {\"residues\": 219, \"atoms\": 1642}}, \"header\": [\"HEADER    IMMUNOGLOBULIN                          07-JUL-94   2GFB              \", \"TITLE     CRYSTAL STRUCTURE OF A CATALYTIC FAB HAVING ESTERASE-LIKE             \"]}, {\"path\": \"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/4GYT.pdb\", \"bytes\": 531114, \"sha256\": \"c05c06773ae8c00d2d033f7f7a103c4048981d79418c6c1a2579b15da455b2b7\", \"chains\": {\"A\": {\"residues\": 177, \"atoms\": 1436}, \"B\": {\"residues\": 177, \"atoms\": 1428}}, \"header\": [\"HEADER    STRUCTURAL GENOMICS, UNKNOWN FUNCTION   05-SEP-12   4GYT              \", \"TITLE     CRYSTAL STRUCTURE OF LPG0076 PROTEIN FROM LEGIONELLA PNEUMOPHILA      \"]}, {\"path\": \"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/9TP_step_62.pdb\", \"bytes\": 118351, \"sha256\": \"5e052e1182021be959e71019abdb8a98e64d8b6358b5b9696f98c2419d88f992\", \"chains\": {\"A\": {\"residues\": 85, \"atoms\": 698}, \"B\": {\"residues\": 87, \"atoms\": 714}}, \"header\": [\"ATOM      1  N   SER A   1      26.775   5.967  -2.555  1.00 78.17           N  \", \"ATOM      2  CA  SER A   1      26.936   4.589  -3.024  1.00 84.62           C  \"]}]\n",
+      "stderr": "",
+      "exitCode": 0,
+      "outputTruncated": false,
+      "outputBytesCap": 4096
+    }
+  }
+]

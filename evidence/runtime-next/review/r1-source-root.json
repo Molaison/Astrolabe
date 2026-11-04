@@ -1,0 +1,30 @@
+{
+  "before": "cf62f856cf4dfde861a7b0d2589aa843ea53f79e",
+  "after": "605bad02f5c71083a95142f03bebc0db24a27d84",
+  "modules": {
+    "astrolabe/losses/interaction.py": {
+      "equivalent_after_exact_import_changes_reversed": true,
+      "source_sha256": {
+        "before": "46250773fd226a9d6d376689d4a2c2929cd3f20c1337479db46e50b1bd9c5195",
+        "after": "a1b3881bedc8370d56338004bc13cd5707d88750647855b50131bd554d57c0d8"
+      },
+      "normalized_ast_sha256": "74b51b09ec4f877d991d943a50b35af54683a626bfaab29bac3eec0e286e5fbe"
+    },
+    "astrolabe/losses/repeat_symmetry.py": {
+      "equivalent_after_exact_import_changes_reversed": true,
+      "source_sha256": {
+        "before": "0c8f0c69b673c5037ba3d4866270faa43a2ae1f79be509098657813bc601508d",
+        "after": "0f72ec4747e0b6db84d7b88d8416f7717e3451478fba4537e2531b6856f9f593"
+      },
+      "normalized_ast_sha256": "f7b58a9563f28bbe4b72f37dc371d919c2b9c1734d915652d43f59411a4d174b"
+    },
+    "astrolabe/losses/design_screening.py": {
+      "equivalent_after_exact_import_changes_reversed": true,
+      "source_sha256": {
+        "before": "b2cc468af11ef96f0b87226fed0978561f7c5beedf09225760525906afc214dd",
+        "after": "a2baf08a576c92b94903f49e949c51818777bd38c830fd52ef146349fa566693"
+      },
+      "normalized_ast_sha256": "5d0f4dd0411f0f44f31062b5548b4a409bf8b18847cbe27e66e328f744b33292"
+    }
+  }
+}

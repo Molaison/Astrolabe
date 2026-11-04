@@ -1,0 +1,18 @@
+{
+  "python": "3.12.14",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.39",
+  "torch": "2.7.1+cpu",
+  "torch_cuda_build": null,
+  "requested_destination": "/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104",
+  "destination_exists": false,
+  "xcf26_root_exists": false,
+  "nvidia_device_exists": false,
+  "pretrained_checkpoint_configured": false,
+  "gpu_allocation_authorized": false,
+  "gpu_hours_used": 0,
+  "actual_workspace": "/workspace/scratch/1a0b1639644d/cloud-20261104",
+  "destination_status": "BLOCKED",
+  "gpu_pretrained_status": "BLOCKED",
+  "remote_executor_observation": "previous approved read-only native probe reported disconnected; no upload was attempted",
+  "scope": "availability observation; no shared GPU probed or allocated"
+}

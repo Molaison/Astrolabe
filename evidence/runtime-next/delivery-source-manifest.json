@@ -1,0 +1,39 @@
+{
+  "status": "DONE",
+  "tested_code_head": "71c7592e27d02b2772d984d9b1f5ed9fea47fd6c",
+  "snapshot_head": "5ad8742f61149bd79d4031e92d0c5eea11f1d237",
+  "identical_git_subtrees": {
+    "astrolabe": {
+      "tested": "9947288055457e2394f8d22558150d02daf6704a",
+      "current": "9947288055457e2394f8d22558150d02daf6704a"
+    },
+    "config": {
+      "tested": "09e1b5886df74cca4341f48d5d66cee2c280b472",
+      "current": "09e1b5886df74cca4341f48d5d66cee2c280b472"
+    },
+    "tests": {
+      "tested": "99f7942daf3a73b24768396bbc755264f60f36ec",
+      "current": "99f7942daf3a73b24768396bbc755264f60f36ec"
+    },
+    "scripts": {
+      "tested": "332f1252572f81a4cce4b92812d439106c27e3e3",
+      "current": "332f1252572f81a4cce4b92812d439106c27e3e3"
+    },
+    "benchmarks": {
+      "tested": "90d464fc95ce52c1d53ce77695673cbc7ab0f63b",
+      "current": "90d464fc95ce52c1d53ce77695673cbc7ab0f63b"
+    },
+    ".github": {
+      "tested": "8e3c9b1d35440b104b55918d8838bdd6cc1c1718",
+      "current": "8e3c9b1d35440b104b55918d8838bdd6cc1c1718"
+    }
+  },
+  "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "working_tree_footnote": "Evidence and docs are being integrated; pre-existing untracked resource files are intentionally retained. Final PR head receives the same actual CI gates.",
+  "published_tree_mapping": {
+    "b2ec56555d93c7dd69413f012e8b94655ba26cc7": "71c7592e27d02b2772d984d9b1f5ed9fea47fd6c"
+  },
+  "full_tree_at_science_control": "fb102d8a2480275e68f07de181a058eef21b8f17",
+  "source_anchors": "source-anchors.bundle",
+  "independent_r1_raw_review": "agent-c/review-r1-ci-02/report.json"
+}

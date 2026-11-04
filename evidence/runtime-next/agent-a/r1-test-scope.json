@@ -1,0 +1,106 @@
+{
+  "r1-geometry-green": {
+    "suites": {
+      "tests.test_loss_import_lifecycle": {
+        "cases": 1,
+        "passed": 1,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_design_screening_geometry": {
+        "cases": 4,
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_interaction_ipae": {
+        "cases": 3,
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_repeat_symmetry": {
+        "cases": 15,
+        "passed": 15,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_ligand_reference_pose_distance": {
+        "cases": 16,
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_sequence_losses": {
+        "cases": 25,
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_loss_registry_chain_pair_losses": {
+        "cases": 3,
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    "total": 67
+  },
+  "r1-geometry-baseline": {
+    "suites": {
+      "tests.test_loss_import_lifecycle": {
+        "cases": 1,
+        "passed": 0,
+        "failed": 1,
+        "skipped": 0
+      },
+      "tests.test_design_screening_geometry": {
+        "cases": 4,
+        "passed": 4,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_interaction_ipae": {
+        "cases": 3,
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_repeat_symmetry": {
+        "cases": 15,
+        "passed": 15,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_ligand_reference_pose_distance": {
+        "cases": 16,
+        "passed": 16,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_sequence_losses": {
+        "cases": 25,
+        "passed": 25,
+        "failed": 0,
+        "skipped": 0
+      },
+      "tests.test_loss_registry_chain_pair_losses": {
+        "cases": 3,
+        "passed": 3,
+        "failed": 0,
+        "skipped": 0
+      }
+    },
+    "total": 67
+  },
+  "scope_reconciliation": {
+    "A_seven_suites": 67,
+    "root_five_suites_reported": 39,
+    "additional_sequence_losses": 25,
+    "additional_registry_chain_pair_losses": 3,
+    "arithmetic": "39 + 25 + 3 = 67",
+    "root_raw_log": "repo/evidence/runtime-next/review/spatial-root.log",
+    "same_run": false,
+    "note": "Root39 is an independent run; A67 exact suite counts derive from the attached JUnit, not an aggregate across runs."
+  }
+}

@@ -1,0 +1,21 @@
+[
+  {
+    "command": [
+      "/workspace/scratch/1a0b1639644d/cloud-20261104/repo/../venv/bin/python",
+      "evidence/runtime-next/agent-b/esmfold_worker_negative_control.py",
+      "--baseline"
+    ],
+    "exit_code": 1,
+    "stdout": "{\"baseline\": true, \"gate_pass\": false, \"error\": \"unused device output retained past lease\", \"gpu\": false, \"pretrained\": false}\n",
+    "stderr": ""
+  },
+  {
+    "command": [
+      "/workspace/scratch/1a0b1639644d/cloud-20261104/repo/../venv/bin/python",
+      "evidence/runtime-next/agent-b/esmfold_worker_negative_control.py"
+    ],
+    "exit_code": 0,
+    "stdout": "{\"baseline\": false, \"gate_pass\": true, \"gpu\": false, \"pretrained\": false}\n",
+    "stderr": ""
+  }
+]

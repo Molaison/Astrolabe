@@ -1,0 +1,66 @@
+{
+  "af_unix_error": {
+    "errno": 1,
+    "message": "[Errno 1] Operation not permitted",
+    "type": "PermissionError"
+  },
+  "blocking_reasons": [
+    "python_3_11",
+    "matching_process_namespace",
+    "af_unix"
+  ],
+  "checks": {
+    "af_unix": false,
+    "bounded_cpu_threads": true,
+    "cpu_framework_policy": true,
+    "linux": true,
+    "matching_process_namespace": false,
+    "no_gpu_allocation": true,
+    "not_inside_broker": true,
+    "python_3_11": false,
+    "required_cpu_dependencies": true
+  },
+  "cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8
+  ],
+  "gpu_certification": "BLOCKED: no GPU execution in this workflow",
+  "gpu_visibility": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "HIP_VISIBLE_DEVICES": "",
+    "NVIDIA_VISIBLE_DEVICES": "void",
+    "ROCR_VISIBLE_DEVICES": ""
+  },
+  "load_average": [
+    0.2333984375,
+    0.13330078125,
+    0.09912109375
+  ],
+  "packages": {
+    "biopython": "1.86",
+    "hydra-core": "1.3.2",
+    "jax": "0.4.34",
+    "jaxlib": "0.4.34",
+    "numpy": "2.3.5",
+    "omegaconf": "2.3.0",
+    "psutil": "7.2.2",
+    "pytest": "9.2.0",
+    "scipy": "1.17.0"
+  },
+  "python": "3.12.14 (main, Aug 25 2026, 14:00:49) [Clang 22.1.3 ]",
+  "status": "BLOCKED",
+  "thread_environment": {
+    "MKL_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "OMP_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1"
+  }
+}

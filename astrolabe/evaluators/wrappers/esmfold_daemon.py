@@ -17,6 +17,7 @@ def main():
     from astrolabe.runtime.server import serve
     from astrolabe.runtime.admission import operation
     from astrolabe.evaluators.lifecycle import cpu_tree
+    from astrolabe.evaluators.esmfold_output import SCORE_FIELDS, resolve_pdb_boundary
     import torch
     actual = identity(sys.executable, spec['code_paths'], spec['weight_paths'], spec['device'], spec['settings'])
     if os.environ.get('CUDA_VISIBLE_DEVICES') != spec['device']['visible']:
@@ -34,6 +35,7 @@ def main():
         torch.hub.download_url_to_file = no_download
         evaluator = ESMFoldEvaluator(model_name=spec['settings']['model_name'], device=spec['device']['name'])
         model = evaluator._ensure_model()
+        pdb_boundary = resolve_pdb_boundary(model)
         dump_tree(boot / 'ready', capture(spec['device']['name']))
     def handle(payload):
         request = request_directory(payload['request_dir'])
@@ -41,17 +43,31 @@ def main():
         with contextlib.redirect_stdout(sys.stderr), torch.no_grad(), operation(actual, phase='device') as lease:
             restore(batch['rng'], spec['device']['name'])
             output = model.infer(batch['sequences'])
-            pdbs = model.output_to_pdb(output)
-            selected = {k: output[k] for k in ('chain_index', 'plddt', 'mean_plddt', 'ptm', 'predicted_aligned_error')}
-            result = {'output': cpu_tree(selected), 'pdbs': pdbs, 'rng': capture(spec['device']['name'])}
+            # Unknown/custom helpers keep the native composite path. Missing
+            # chain_index also keeps the original native error ordering.
+            split_pdb = pdb_boundary is not None and 'chain_index' in output
+            if split_pdb:
+                host = pdb_boundary.prepare_output(output)
+                selected = {key: host[key] for key in SCORE_FIELDS}
+            else:
+                pdbs = model.output_to_pdb(output)
+                selected = cpu_tree({key: output[key] for key in SCORE_FIELDS})
+            result = {'output': selected, 'rng': capture(spec['device']['name'])}
+            # Drop device output references before yielding the device lease;
+            # CPU formatting must not retain the unused pair/structure tensors.
+            del output
             lease.update_lifecycle(**lifecycle())
+        if split_pdb:
+            pdbs = pdb_boundary.finalize_pdb(host)
+        result['pdbs'] = pdbs
         dump_tree(request / 'output', result)
         return {'request': request.name}
     from astrolabe.evaluators.lifecycle import model_lifecycle
     def lifecycle():
         return model_lifecycle(model, load_count=evaluator._weight_load_count, loaded=evaluator._model is not None,
                                device=spec['device'], components={'checkpoint_deserializations': file_loads.count,
-                               'checkpoint_read_failures': file_loads.failures, 'model_initializations': evaluator._weight_load_count})
+                               'checkpoint_read_failures': file_loads.failures, 'model_initializations': evaluator._weight_load_count,
+                               'pdb_finalization': 'audited_host' if pdb_boundary is not None else 'native_composite'})
     serve(handle, actual, load_count=evaluator._weight_load_count, lifecycle=lifecycle,
           capabilities={'managed_device': True, 'managed_methods': ['infer']})
 

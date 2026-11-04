@@ -1,0 +1,45 @@
+# Correctness-only positive control. This is a separate protocol from frozen W0.
+# It uses the existing sequence objective to start away from an optimum, so a
+# real accepted mutation triggers a real stage transition without model weights.
+task_name: runtime_cpu_scientific_control
+out_dir: null
+raw_model_results_dir: null
+repeats: 1
+seed: 17
+steps: 4
+ananas_path: null
+enable_pyrosetta: false
+use_metropolis_acceptance: false
+seqs: {A: AAAA}
+execution:
+  enabled: false
+  max_active: 1
+  max_resident_models: 1
+  max_resident_per_device: 1
+mutator:
+  MCMC: {mutation_method: random, select_positions: random}
+  mutator_terms:
+    MCMC: {_type: MCMC}
+evaluator:
+  evaluator_terms:
+    Dummy: {_type: dummy, write_structure: false}
+loss:
+  loss_terms:
+    alanine_fraction:
+      _type: sequence_residue_fraction
+      included_protomers: A
+      residues: A
+stages:
+  default:
+    oligo: [A]
+    evaluator: Dummy
+    mutation_num: 1
+    mutators: [MCMC]
+    mutator_weights: [1.0]
+    weighted_score_expression: -alanine_fraction
+    acceptance_gate: null
+    acceptance_threshold: null
+    early_stopping: null
+  accepted_mutation:
+    _entrance: alanine_fraction < 1.0
+    weighted_score_expression: -alanine_fraction

@@ -1,0 +1,26 @@
+[
+  {
+    "id": 41766961493,
+    "name": "Software interface and distribution",
+    "head_sha": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/Molaison/Astrolabe/actions/runs/41766961493"
+  },
+  {
+    "id": 41766956068,
+    "name": "Software interface and distribution",
+    "head_sha": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/Molaison/Astrolabe/actions/runs/41766956068"
+  },
+  {
+    "id": 41766956074,
+    "name": "Runtime CPU validation",
+    "head_sha": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+    "status": "completed",
+    "conclusion": "success",
+    "html_url": "https://github.com/Molaison/Astrolabe/actions/runs/41766956074"
+  }
+]

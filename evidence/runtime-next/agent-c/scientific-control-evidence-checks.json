@@ -1,0 +1,31 @@
+{
+  "expected_backend_calls": [
+    5,
+    4
+  ],
+  "first_harness_copy_matches_frozen_hash": true,
+  "first_status": "PARTIAL",
+  "frozen_source_identity_same": true,
+  "kind": "scientific_positive_control_artifact_integrity",
+  "no_raw_log_bytes_lost": true,
+  "performance_data": false,
+  "round_to_round_exact": {
+    "baseline": {
+      "rows": true,
+      "scientific_output_sha256": true,
+      "terminal_state": true
+    },
+    "candidate": {
+      "rows": true,
+      "scientific_output_sha256": true,
+      "terminal_state": true
+    }
+  },
+  "second_harness_matches_frozen_hash": true,
+  "second_status": "DONE",
+  "seed_steps_repeats_same": true,
+  "workload_sha256": [
+    "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9",
+    "ddbd295188ed22241736750bed4fa613c553dbf29b5423de0f9454b7c90cbde9"
+  ]
+}

@@ -154,6 +154,7 @@ class CandidatePoolScheduler:
         self.logger = logger if logger is not None else logging.getLogger(__name__)
         self._executor = ThreadPoolExecutor(max_workers=config.worker_count)
         self._pending: dict[Future[CandidateResult], CandidateTask] = {}
+        self._submitted_identities: set[tuple[int, str]] = set()
         self._ready: list[CandidateResult] = []
         self._collection_index = 0
         self._window_started = time.monotonic()
@@ -161,13 +162,33 @@ class CandidatePoolScheduler:
         self._closed = False
 
     def submit_generation(self, generation: int, tasks: Iterable[CandidateTask]) -> None:
+        """Validate a finite generation plan before starting any worker."""
         if self._closed:
             raise RuntimeError("CandidatePoolScheduler is closed")
-        submitted = 0
         generation_int = int(generation)
-        for task in tasks:
+        batch = tuple(tasks)
+        batch_identities: set[tuple[int, str]] = set()
+        for task in batch:
+            if task.generation != generation_int:
+                raise ValueError(
+                    "candidate task generation mismatch: "
+                    f"submitted generation={generation_int!r}; "
+                    f"candidate_id={task.candidate_id!r}, "
+                    f"task generation={task.generation!r}"
+                )
+            identity = (generation_int, task.candidate_id)
+            if identity in batch_identities or identity in self._submitted_identities:
+                raise ValueError(
+                    "duplicate candidate task identity: "
+                    f"candidate_id={task.candidate_id!r}, generation={generation_int!r}"
+                )
+            batch_identities.add(identity)
+        submitted = 0
+        for task in batch:
             future = self._executor.submit(self._run_task, task)
             self._pending[future] = task
+            # Keep completed/failed identities too; resubmission must not replay work.
+            self._submitted_identities.add((generation_int, task.candidate_id))
             submitted += 1
         if submitted:
             started = time.monotonic()
@@ -279,6 +300,17 @@ class CandidatePoolScheduler:
                 raw = self.worker(task)
                 duration = time.monotonic() - started
                 if isinstance(raw, CandidateResult):
+                    if (
+                        raw.task.candidate_id != task.candidate_id
+                        or raw.task.generation != task.generation
+                    ):
+                        raise ValueError(
+                            "candidate result identity mismatch: "
+                            f"submitted candidate_id={task.candidate_id!r}, "
+                            f"generation={task.generation!r}; "
+                            f"received candidate_id={raw.task.candidate_id!r}, "
+                            f"generation={raw.task.generation!r}"
+                        )
                     result = raw
                 else:
                     result = CandidateResult(

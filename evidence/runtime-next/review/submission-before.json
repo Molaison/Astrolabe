@@ -1,0 +1,114 @@
+{
+  "source": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+  "scope": "real ThreadPool scheduler; controlled inexpensive workers; no pretrained model or GPU",
+  "valid": {
+    "calls": [
+      [
+        1,
+        "a"
+      ],
+      [
+        1,
+        "b"
+      ]
+    ],
+    "errors": [],
+    "selected": [
+      [
+        1,
+        "b",
+        0.8
+      ]
+    ]
+  },
+  "wrong_generation": {
+    "calls": [
+      [
+        1,
+        "valid"
+      ],
+      [
+        2,
+        "foreign"
+      ]
+    ],
+    "errors": [],
+    "selected": [
+      [
+        2,
+        "foreign",
+        0.5
+      ]
+    ]
+  },
+  "duplicate_in_batch": {
+    "calls": [
+      [
+        1,
+        "dup"
+      ],
+      [
+        1,
+        "dup"
+      ]
+    ],
+    "errors": [],
+    "selected": [
+      [
+        1,
+        "dup",
+        0.5
+      ]
+    ]
+  },
+  "duplicate_after_completion": {
+    "calls": [
+      [
+        1,
+        "once"
+      ],
+      [
+        1,
+        "once"
+      ]
+    ],
+    "errors": [],
+    "selected": [
+      [
+        1,
+        "once",
+        0.5
+      ],
+      [
+        1,
+        "once",
+        0.5
+      ]
+    ]
+  },
+  "id_reused_in_new_generation": {
+    "calls": [
+      [
+        1,
+        "valid"
+      ],
+      [
+        2,
+        "valid"
+      ]
+    ],
+    "errors": [],
+    "selected": [
+      [
+        1,
+        "valid",
+        0.5
+      ],
+      [
+        2,
+        "valid",
+        0.5
+      ]
+    ]
+  }
+}

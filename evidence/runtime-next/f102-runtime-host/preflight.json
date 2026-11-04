@@ -1,0 +1,69 @@
+{
+  "status": "DONE",
+  "checks": {
+    "linux": true,
+    "python_3_11": true,
+    "matching_process_namespace": true,
+    "no_gpu_allocation": true,
+    "cpu_framework_policy": true,
+    "bounded_cpu_threads": true,
+    "not_inside_broker": true,
+    "af_unix": true,
+    "required_cpu_dependencies": true
+  },
+  "blocking_reasons": [],
+  "af_unix_error": null,
+  "python": "3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]",
+  "cpu_affinity": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19
+  ],
+  "load_average": [
+    1.39404296875,
+    1.8310546875,
+    2.56689453125
+  ],
+  "gpu_visibility": {
+    "CUDA_VISIBLE_DEVICES": "",
+    "NVIDIA_VISIBLE_DEVICES": "void",
+    "HIP_VISIBLE_DEVICES": "",
+    "ROCR_VISIBLE_DEVICES": ""
+  },
+  "thread_environment": {
+    "OMP_NUM_THREADS": "1",
+    "MKL_NUM_THREADS": "1",
+    "OPENBLAS_NUM_THREADS": "1",
+    "NUMEXPR_NUM_THREADS": "1",
+    "VECLIB_MAXIMUM_THREADS": "1"
+  },
+  "packages": {
+    "numpy": "1.26.4",
+    "scipy": "1.17.0",
+    "hydra-core": "1.3.2",
+    "omegaconf": "2.3.0",
+    "biopython": "1.86",
+    "pytest": "9.2.0",
+    "psutil": "7.2.2",
+    "jax": "0.4.34",
+    "jaxlib": "0.4.34"
+  },
+  "gpu_certification": "BLOCKED: no GPU execution in this workflow"
+}

@@ -1,0 +1,16 @@
+{
+  "exception": "DispatchReached",
+  "message": "controlled boundary, no worker/model execution",
+  "elapsed_seconds": 0.12051756000028035,
+  "request_timeout_seconds": 0.03,
+  "dispatches": [
+    {
+      "remaining": 0.02989305900018735,
+      "seconds_after_call_entry": 0.12048195700026554
+    }
+  ],
+  "pending_after_completion": 0,
+  "head": "00a8b688db3a1e876d014212a614273c14ef29b2",
+  "broker_source_sha256": "aec1b381c6aa281859e0eb8cd6029abb7a40c9d9bcc79fbf36f34e98aaff6080",
+  "scope": "Actual State entry lock wait, controlled worker boundary; no IPC/GPU/model execution"
+}

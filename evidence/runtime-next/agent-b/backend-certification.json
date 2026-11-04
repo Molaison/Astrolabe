@@ -1,0 +1,2983 @@
+{
+  "counts": {
+    "evaluator": {
+      "factories": 13,
+      "registry_keys": 14
+    },
+    "mutator": {
+      "factories": 17,
+      "registry_keys": 20
+    }
+  },
+  "generator_sha256": "a3c337bc407d5f8a15edfcbbf7fafae3d170ddc9e77b57a2b606545d9e79c8ad",
+  "head": "a55c28553917742ed451aa016ce7dc62cdfea95c",
+  "interpretation": "This command validates inventory and evidence provenance only. It never upgrades a registered key, alias, CPU fixture, or source pin into pretrained/GPU certification.",
+  "records": [
+    {
+      "available_tests": [
+        "tests/test_af2_resident.py",
+        "tests/test_af2_broker_resident.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU prepare_only/process_features; audited fixed-parameter predict and D2H in worker",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "model_id",
+        "suffix",
+        "data_dir/checkpoint",
+        "recycles",
+        "msa_clusters",
+        "seed",
+        "initial_guess"
+      ],
+      "declared_key": "alphafold2",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_alphafold2_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "alphafold2",
+      "keys": [
+        "alphafold2"
+      ],
+      "kind": "evaluator",
+      "note": "Each model ID, suffix, source and checkpoint pairing is a separate certification.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_id": 3,
+            "suffix": "multimer_v3"
+          },
+          "execution_manifest": null,
+          "variant": "default model_3_multimer_v3"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "suffix": "ptm"
+          },
+          "execution_manifest": null,
+          "variant": "configured ptm model"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "other explicit model_id/suffix pairing"
+        }
+      ],
+      "source_line": 214,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/alphafold2": "c77e5d2a8961d1a353632c462914ff0a32a950f6"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/alphafold2"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_backend_stages_cpu.py",
+        "tests/test_af3_feature_codec_real.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "owner CPU features; worker continuous JAX forward and D2H; owner CPU extraction/scoring",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "model_dir",
+        "num_recycles",
+        "num_samples",
+        "rng_seeds",
+        "flash_attention_implementation",
+        "CCD/MSA/templates/topology"
+      ],
+      "declared_key": "alphafold3",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_alphafold3_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "alphafold3",
+      "keys": [
+        "alphafold3"
+      ],
+      "kind": "evaluator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "native AF3 configured model_dir"
+        }
+      ],
+      "source_line": 160,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/alphafold3": "4b154d922759c918dd4b5a4d5a779853100fd20e"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/alphafold3"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_boltz1_resident.py",
+        "tests/test_boltz_wrapper.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU YAML/MSA preparation; Lightning predict/dataloader/transfer/writer remains composite",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "boltz1_conf.ckpt or explicit Boltz1 checkpoint",
+        "recycling_steps",
+        "sampling_steps",
+        "diffusion_samples",
+        "MSA inputs",
+        "precision=32 in current runner",
+        "Lightning environment"
+      ],
+      "declared_key": "boltz",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_boltz_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "boltz",
+      "keys": [
+        "boltz"
+      ],
+      "kind": "evaluator",
+      "note": "No Boltz2 registry or loader exists here; an arbitrary checkpoint is not Boltz2 support.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "Boltz1 / Boltz1.load_from_checkpoint"
+        }
+      ],
+      "source_line": 356,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/boltz": "cb04aeccdd480fd4db707f0bbafde538397fa2ac"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/boltz"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_chai1_resident.py",
+        "tests/test_evaluator_lifecycle_contract.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU feature context; ESM and folding subgraphs separately admitted; native finalization still partly composite",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "six component checkpoints",
+        "optional ESM2/conformer assets",
+        "component_residency",
+        "use_esm_embeddings",
+        "num_trunk_recycles",
+        "num_diffn_timesteps",
+        "seed"
+      ],
+      "declared_key": "chai1",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_chai1_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "chai1",
+      "keys": [
+        "chai1"
+      ],
+      "kind": "evaluator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "component_residency": "cpu"
+          },
+          "execution_manifest": null,
+          "variant": "default component CPU offload"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "component_residency": "device"
+          },
+          "execution_manifest": null,
+          "variant": "explicit component device residency"
+        }
+      ],
+      "source_line": 339,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/chai_lab": "c544fb183e865c4950909444db860a9d50604f66"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/chai_lab"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_workflow_benchmark.py"
+      ],
+      "blockers": [
+        "No current full backend certification is run by this inventory tool"
+      ],
+      "boundary": "CPU owner; no inference weights or GPU",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "complete Dummy config",
+        "actual PyRosetta env if write_structure=true"
+      ],
+      "declared_key": "dummy",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_dummy_evaluator",
+      "historical_evidence": {
+        "certified_scope": "recorded fixture only",
+        "complete": true,
+        "completed_trajectories": 27,
+        "coordinate_parity": {
+          "certified": null,
+          "reason": "workflow emitted no structure artifacts; model coordinate parity not measured"
+        },
+        "fixture": "scripts/validation/fixtures/runtime_cpu.yaml",
+        "kind": "historical_actual_cpu_workflow",
+        "limitation": "Recorded Dummy/no-structure + CPU MCMC only; resident modes slower; not this HEAD rerun or learned-model/GPU evidence",
+        "path": "evidence/runtime-20261103/cpu-three-mode-02/report.json",
+        "scientific_scores_decisions_certified": true,
+        "sha256": "57a45fe94dc06bd5f3c55948899bc364305d8b2a0f4aaf7a0dfc23d99a5bfecf",
+        "status": "DONE"
+      },
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "dummy",
+      "keys": [
+        "dummy"
+      ],
+      "kind": "evaluator",
+      "note": "Historical real CPU Dummy/MCMC workflow evidence applies only to its recorded no-structure fixture.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "PARTIAL"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "NOT_APPLICABLE"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "NOT_RUN_IN_THIS_GENERATION",
+        "PDB/coordinate/score parity under a prespecified tolerance": "NOT_RUN_IN_THIS_GENERATION",
+        "RNG/proposal/acceptance/stage decision parity": "NOT_RUN_IN_THIS_GENERATION",
+        "failure injection and observed process/VRAM recovery": "NOT_RUN_IN_THIS_GENERATION",
+        "input/config cache invalidation": "NOT_RUN_IN_THIS_GENERATION",
+        "repeated fixed-workload effective throughput": "NOT_RUN_IN_THIS_GENERATION",
+        "single pretrained request": "NOT_RUN_IN_THIS_GENERATION",
+        "two continuous requests and observed load count": "NOT_RUN_IN_THIS_GENERATION"
+      },
+      "recorded_w0_ci_evidence": {
+        "accepted_mutations": 0,
+        "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+        "candidate": "6620da607e66d569eed802057d77b0fbfa9c37b4",
+        "completed_trajectories": 90,
+        "initial_evaluations": 90,
+        "kind": "actual_cpu_process_workflow",
+        "limitation": "Exact W0 Dummy/no-structure + CPU MCMC at the recorded revisions only; all mutation attempts rejected; initial evaluations are not accepted scientific progress; no pretrained/GPU or other CPU backend upgrade",
+        "mutation_attempts": 180,
+        "protocol_sha256": "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5",
+        "runs": 30,
+        "sha256": "3c82812c296fb619f9f703fa5bef7cb0ec184ec2077e0fcd59a9d1fce8b6e392",
+        "status": "DONE",
+        "summary": "evidence/runtime-next/agent-b/cpu-ci-01-summary.json"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "PARTIAL",
+          "configuration_subset": {
+            "write_structure": false
+          },
+          "execution_manifest": null,
+          "variant": "deterministic CPU without structures"
+        },
+        {
+          "certification_status": "PARTIAL",
+          "configuration_subset": {
+            "write_structure": true
+          },
+          "execution_manifest": null,
+          "variant": "optional PyRosetta structure output"
+        }
+      ],
+      "source_line": 593,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "PARTIAL",
+      "target": "cpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "actual_cpu_process_evidence": {
+        "head": "db937f9706270cb109e799cda29f52d2872726b5",
+        "job_id": 126353753501,
+        "kind": "real_cpu_processes_with_fake_model_and_synthetic_local_checkpoint",
+        "limitation": "65 CPU tests including real resident process reuse and constructor precision/RNG; fake ESM model/weights and synthetic native outputs; no pretrained/GPU or throughput certification",
+        "required_suites": [
+          "tests/test_esmfold_output_boundary.py",
+          "tests/test_tree_codec_torch.py",
+          "tests/test_evaluator_rng_lifecycle.py",
+          "tests/test_esmfold1_resident.py"
+        ],
+        "run_id": 41762677554,
+        "sha256": "9cb00700a385ef781ade98cdc08d9881d873fa35419f9ee58be67cf0b79496fa",
+        "skips": [],
+        "status": "DONE",
+        "summary": "evidence/runtime-next/agent-b/torch-ci-01-summary.json",
+        "test_cases": 65,
+        "torch": {
+          "cuda_build": null,
+          "version": "2.7.1+cpu"
+        }
+      },
+      "available_tests": [
+        "tests/test_esmfold_output_boundary.py",
+        "tests/test_esmfold1_resident.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "audited native atom14->37 and required D2H/RNG under lease; host PDB formatting; unknown helper composite fallback",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "model_name/checkpoint",
+        "ESM trunk hub dependencies",
+        "device",
+        "torch numerical settings",
+        "ordered chain sequences"
+      ],
+      "declared_key": "esmfold",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_esmfold_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "esmfold",
+      "keys": [
+        "esmfold"
+      ],
+      "kind": "evaluator",
+      "local_output_evidence": {
+        "gpu": false,
+        "kind": "synthetic_torch_cpu_with_source_extracted_native_helpers",
+        "limitation": "Output-only numeric/RNG/handler contract; no actual model, GPU transfer or effective throughput certification",
+        "manifest": "evidence/runtime-next/agent-b/esmfold-output-run-manifest.json",
+        "pretrained": false,
+        "report": "evidence/runtime-next/agent-b/esmfold-output-report.md",
+        "result": "63 passed, 1 process test deliberately deselected",
+        "source_matches_checkout": true,
+        "status": "DONE"
+      },
+      "note": "Current W1 real checkpoint/model installation is not configured or run. CPU native-output differential is synthetic, not pretrained ESMFold1.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "esmfold_3B_v1"
+          },
+          "execution_manifest": null,
+          "variant": "ESMFold1 default"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "explicit local ESMFold1 .pt"
+        }
+      ],
+      "source_line": 302,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/esm2": "43c67d952da30d2471f609848931d20ec8c98532",
+        "vendor/openfold_esm2": "8396098268a5675b0ff776ec274f15d380a4ccf5"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/esm2",
+        "vendor/openfold_esm2"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_esmfold2_biohub_wrapper.py",
+        "tests/test_esmfold2_resident_settings.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU request preparation; native builder.fold and materialization remain composite",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "model_name and folding snapshot",
+        "nested ESMC snapshot",
+        "esmc_precision",
+        "num_loops",
+        "num_sampling_steps",
+        "num_diffusion_samples",
+        "seed",
+        "lm_dropout",
+        "msa_max_depth",
+        "msa_column_mask_rate",
+        "chunk_size"
+      ],
+      "declared_key": "esmfold2",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_esmfold2_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "esmfold2",
+      "keys": [
+        "esmfold2"
+      ],
+      "kind": "evaluator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "biohub/ESMFold2"
+          },
+          "execution_manifest": null,
+          "variant": "Biohub default"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "configured Biohub snapshot/model name"
+        }
+      ],
+      "source_line": 319,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/biohub_esm": "ba4d7124864eed323a93bf3cfefcd958f573b75a",
+        "vendor/biohub_transformers": "ef32577f55da19a4989cd7b22e004dc43a4998cb"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/biohub_esm",
+        "vendor/biohub_transformers"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_mol1_resident.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "independent Mol-1 adapter; protein input owner preparation and native composite resident worker",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "actual mol/ source",
+        "checkpoint",
+        "CCD/cluster/obsolete assets",
+        "seeds",
+        "sample/recycle/precision config"
+      ],
+      "declared_key": "mol-1",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_mol1_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "mol-1",
+      "keys": [
+        "mol-1",
+        "mol1"
+      ],
+      "kind": "evaluator",
+      "note": "Two aliases of one factory. Neither Protenix compatibility nor a constraint variant is inferred.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "mol-1-base"
+          },
+          "execution_manifest": null,
+          "variant": "default"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "explicit Mol-1 checkpoint/source"
+        }
+      ],
+      "source_line": 397,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_mol1_resident.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "independent Mol-1 adapter; protein input owner preparation and native composite resident worker",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "actual mol/ source",
+        "checkpoint",
+        "CCD/cluster/obsolete assets",
+        "seeds",
+        "sample/recycle/precision config"
+      ],
+      "declared_key": "mol1",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_mol1_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "mol1",
+      "keys": [
+        "mol-1",
+        "mol1"
+      ],
+      "kind": "evaluator",
+      "note": "Two aliases of one factory. Neither Protenix compatibility nor a constraint variant is inferred.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "mol-1-base"
+          },
+          "execution_manifest": null,
+          "variant": "default"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "explicit Mol-1 checkpoint/source"
+        }
+      ],
+      "source_line": 397,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_opendde_resident.py",
+        "tests/test_opendde_wrapper.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU preprocessing; native loop/dataloader/model/output/cleanup stays in one composite lease",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "model_name",
+        "load_checkpoint_path",
+        "CCD/templates",
+        "num_cycles",
+        "num_steps",
+        "num_samples",
+        "dtype",
+        "seed",
+        "foldcp_mode=single and one allocated device"
+      ],
+      "declared_key": "opendde",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_opendde_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "opendde",
+      "keys": [
+        "opendde"
+      ],
+      "kind": "evaluator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "opendde_v1"
+          },
+          "execution_manifest": null,
+          "variant": "default"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "explicit native model/checkpoint"
+        }
+      ],
+      "source_line": 375,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/opendde": "266ce4c49d492ad1077866000d83704999985f46"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/opendde"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_protenix_resident.py",
+        "tests/test_protenix_wrapper_covalent_bonds.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU features/dumper; resident predict with original RNG/config handling and D2H",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "requested/effective model_name",
+        "identity_policy",
+        "use_constraints",
+        "checkpoint/source/env pairing",
+        "seeds/samples/recycles",
+        "dtype",
+        "dynamic skip_amp",
+        "mc_dropout"
+      ],
+      "declared_key": "protenix",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_protenix_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "protenix",
+      "keys": [
+        "protenix"
+      ],
+      "kind": "evaluator",
+      "note": "Constraint compat switching must be recorded as effective v0.5 constraint, never as requested v2 certification.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "protenix_base_default_v0.5.0"
+          },
+          "execution_manifest": null,
+          "variant": "protenix_base_default_v0.5.0"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "protenix_base_constraint_v0.5.0"
+          },
+          "execution_manifest": null,
+          "variant": "protenix_base_constraint_v0.5.0"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "protenix_base_default_v1.0.0"
+          },
+          "execution_manifest": null,
+          "variant": "protenix_base_default_v1.0.0"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "protenix-v2"
+          },
+          "execution_manifest": null,
+          "variant": "protenix-v2"
+        }
+      ],
+      "source_line": 412,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/protenix": "2475421477ab414b571149ad4a875c390ff8a35d"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/protenix"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_rf3_resident.py",
+        "tests/test_rf3_evaluator.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "resident engine; native run pipeline remains composite; exact-config cache and post-init RNG replay",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "repo_path",
+        "ckpt_path",
+        "Python environment",
+        "effective config including seed"
+      ],
+      "declared_key": "rf3",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_rf3_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "rf3",
+      "keys": [
+        "rf3"
+      ],
+      "kind": "evaluator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "Foundry configured RF3 checkpoint"
+        }
+      ],
+      "source_line": 195,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_rhofold_resident.py",
+        "tests/test_rhofold_evaluator_compat.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU tokens; native model/RNA-FM plus sigmoid/softmax and D2H; CPU PDB/NPZ; relaxation separately admitted",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "checkpoint",
+        "RNA-FM dependencies",
+        "seed",
+        "relax_steps",
+        "openmm_platform/properties and physical binding"
+      ],
+      "declared_key": "rhofold",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_rhofold_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "rhofold",
+      "keys": [
+        "rhofold"
+      ],
+      "kind": "evaluator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "relax_steps": 0
+          },
+          "execution_manifest": null,
+          "variant": "unrelaxed"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "relax_steps": "configured > 0"
+          },
+          "execution_manifest": null,
+          "variant": "explicit OpenMM relaxation"
+        }
+      ],
+      "source_line": 550,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "vendor/rhofold": "6bdfbda720184409eb682ce08c05d258162ddc48"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/rhofold"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_rosetta_crystal_evaluator_contract.py"
+      ],
+      "blockers": [
+        "No current full backend certification is run by this inventory tool"
+      ],
+      "boundary": "CPU process environment; reference pose/score cache invalidated by content/config",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "PyRosetta environment",
+        "residue params",
+        "reference structure content",
+        "scoring/repack/minimize/replicates/seed/mapping"
+      ],
+      "declared_key": "rosetta_crystal",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_rosetta_crystal_evaluator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "rosetta_crystal",
+      "keys": [
+        "rosetta_crystal"
+      ],
+      "kind": "evaluator",
+      "note": "Fake pose/reference tests do not certify an actual PyRosetta workload.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "PARTIAL"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "NOT_APPLICABLE"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "NOT_RUN_IN_THIS_GENERATION",
+        "PDB/coordinate/score parity under a prespecified tolerance": "NOT_RUN_IN_THIS_GENERATION",
+        "RNG/proposal/acceptance/stage decision parity": "NOT_RUN_IN_THIS_GENERATION",
+        "failure injection and observed process/VRAM recovery": "NOT_RUN_IN_THIS_GENERATION",
+        "input/config cache invalidation": "NOT_RUN_IN_THIS_GENERATION",
+        "repeated fixed-workload effective throughput": "NOT_RUN_IN_THIS_GENERATION",
+        "single pretrained request": "NOT_RUN_IN_THIS_GENERATION",
+        "two continuous requests and observed load count": "NOT_RUN_IN_THIS_GENERATION"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "PARTIAL",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "configured PyRosetta CPU scoring"
+        }
+      ],
+      "source_line": 619,
+      "source_path": "astrolabe/evaluators/utils.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "793c12b74391c4bff54a954f1eae569c924b1ad8c3501ecdb568224bb5400ec9",
+      "status": "PARTIAL",
+      "target": "cpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_mutator_additional_lifecycle.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "resident main model; dataset/embedding transforms may use GPU, so loader/embedding/model stays composite",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "external repo",
+        "model_ckpt",
+        "model_config",
+        "model_features",
+        "LM embedding weights",
+        "batch_size",
+        "temperature",
+        "max_seq_len"
+      ],
+      "declared_key": "carbondesign",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_carbondesign_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "carbondesign",
+      "keys": [
+        "carbondesign"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "configured CarbonDesign/embedding checkpoints"
+        }
+      ],
+      "source_line": 453,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_dplm_lifecycle.py",
+        "tests/test_dplm_runner_response_cache.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "resident child after real ready; native tokenize/diffusion/decode remains composite; finite response-pool semantics unchanged",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "model_name/local snapshot",
+        "external Python/ByProt",
+        "sampling_strategy",
+        "max_iter",
+        "num_samples",
+        "temperature",
+        "response-pool consumption"
+      ],
+      "declared_key": "dplm",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_dplm_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "dplm",
+      "keys": [
+        "dplm"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "airkingbd/dplm_150m"
+          },
+          "execution_manifest": null,
+          "variant": "default"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "explicit DPLM snapshot"
+        }
+      ],
+      "source_line": 496,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "vendor/dplm": "560b299739d537000641b081b962dc573cccb786"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/dplm"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_real_dynamicmpnn_adapter.py",
+        "tests/test_dynamic_mpnn_mutator.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "private bridge; native joint inference composite; only explicit factory may report observed model/load_count",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "external source/checkpoint",
+        "exact callback/CLI API",
+        "environment",
+        "temperature",
+        "num_samples",
+        "probability semantics"
+      ],
+      "declared_key": "dynamicmpnn",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_dynamicmpnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "dynamicmpnn",
+      "keys": [
+        "dynamicmpnn"
+      ],
+      "kind": "mutator",
+      "note": "Arbitrary callback/CLI route has unknown residency; do not substitute a newer native API or infer pretrained loading.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "explicit backend_factory lifecycle"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "configured backend_callable"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "configured command_template"
+        }
+      ],
+      "source_line": 410,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_mutator_resident_runtime.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "owner tokenize/mask; private resident logits/softmax; CPU probability publication",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "650M local checkpoint",
+        "alphabet",
+        "masked positions",
+        "position_selector/proposal settings",
+        "RNG"
+      ],
+      "declared_key": "esm2",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_esm2_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "esm2",
+      "keys": [
+        "esm2"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "esm2_t33_650M_UR50D"
+        }
+      ],
+      "source_line": 475,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "vendor/esm2": "43c67d952da30d2471f609848931d20ec8c98532"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/esm2"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_esm3_mutator.py",
+        "tests/test_mutator_resident_runtime.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "owner DTO; worker native SDK prompt/encode/logits; private model",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "model_name/snapshot",
+        "SDK/source version",
+        "masked prompt",
+        "temperature",
+        "RNG"
+      ],
+      "declared_key": "esm3",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_esm3_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "esm3",
+      "keys": [
+        "esm3"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_name": "esm3-open"
+          },
+          "execution_manifest": null,
+          "variant": "default"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "explicit local SDK model snapshot"
+        }
+      ],
+      "source_line": 482,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "vendor/esm3": "c79d15480b0111e5a89b69a6aca144c29684dfa5"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/esm3"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_mutator_resident_runtime.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU coordinates/masks; native encoder and entire incremental autoregressive decoder remain atomic",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "142M local checkpoint",
+        "backbone coordinates",
+        "fixed masks",
+        "joint decoder RNG"
+      ],
+      "declared_key": "esmif",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_esmif_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "esmif",
+      "keys": [
+        "esmif"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "esm_if1_gvp4_t16_142M_UR50"
+        }
+      ],
+      "source_line": 468,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "vendor/esm2": "43c67d952da30d2471f609848931d20ec8c98532"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/esm2"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_multistate_proteinmpnn.py",
+        "tests/test_mpnn_sync_policy.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "same native model/decode; owner preserves far-apart ordering and reference-conditioned proposals",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "exact checkpoint for selected model_type",
+        "seed and constructor RNG",
+        "temperature, masks, ties, atom context, batch/sample counts",
+        "synchronization_policy and proposal_policy",
+        "reference/layout/chain conditioning"
+      ],
+      "declared_key": "far_apart_tied_multitarget_ligandmpnn",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_multistate_proteinmpnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "far_apart_tied_multitarget_ligandmpnn",
+      "keys": [
+        "multistateproteinmpnn",
+        "multistate_proteinmpnn",
+        "faraparttiedmultitargetligandmpnn",
+        "far_apart_tied_multitarget_ligandmpnn"
+      ],
+      "kind": "mutator",
+      "note": "All four aliases select the same ProteinMPNN factory; the LigandMPNN-named aliases do not introduce a ligand checkpoint family.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "context_layout": "far_apart",
+            "coupling": "legacy_order_conditioned_marginals",
+            "model_type": "protein_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "ProteinMPNN legacy far-apart multistate"
+        }
+      ],
+      "source_line": 390,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_multistate_proteinmpnn.py",
+        "tests/test_mpnn_sync_policy.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "same native model/decode; owner preserves far-apart ordering and reference-conditioned proposals",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "exact checkpoint for selected model_type",
+        "seed and constructor RNG",
+        "temperature, masks, ties, atom context, batch/sample counts",
+        "synchronization_policy and proposal_policy",
+        "reference/layout/chain conditioning"
+      ],
+      "declared_key": "FarApartTiedMultitargetLigandMPNN",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_multistate_proteinmpnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "faraparttiedmultitargetligandmpnn",
+      "keys": [
+        "multistateproteinmpnn",
+        "multistate_proteinmpnn",
+        "faraparttiedmultitargetligandmpnn",
+        "far_apart_tied_multitarget_ligandmpnn"
+      ],
+      "kind": "mutator",
+      "note": "All four aliases select the same ProteinMPNN factory; the LigandMPNN-named aliases do not introduce a ligand checkpoint family.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "context_layout": "far_apart",
+            "coupling": "legacy_order_conditioned_marginals",
+            "model_type": "protein_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "ProteinMPNN legacy far-apart multistate"
+        }
+      ],
+      "source_line": 390,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_mutator_resident_runtime.py",
+        "tests/test_mpnn_sync_policy.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "same private MPNN runner; owner retains grouped probability and candidate selection semantics",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "exact checkpoint for selected model_type",
+        "seed and constructor RNG",
+        "temperature, masks, ties, atom context, batch/sample counts",
+        "synchronization_policy and proposal_policy",
+        "groups/shared fixed segments"
+      ],
+      "declared_key": "grouped_ligandmpnn",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_grouped_ligandmpnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "grouped_ligandmpnn",
+      "keys": [
+        "grouped_ligandmpnn"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "ligand_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "ligand_mpnn"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "protein_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "protein_mpnn"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "soluble_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "soluble_mpnn"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "per_residue_label_membrane_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "per_residue_label_membrane_mpnn"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "global_label_membrane_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "global_label_membrane_mpnn"
+        }
+      ],
+      "source_line": 329,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_mutator_resident_runtime.py",
+        "tests/test_ligandmpnn_device_binding.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "bounded CPU PDB parse cache; native featurize/sample/score device graph; CPU result finalization",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "exact checkpoint for selected model_type",
+        "seed and constructor RNG",
+        "temperature, masks, ties, atom context, batch/sample counts",
+        "synchronization_policy and proposal_policy"
+      ],
+      "declared_key": "ligandmpnn",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_ligandmpnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "ligandmpnn",
+      "keys": [
+        "ligandmpnn"
+      ],
+      "kind": "mutator",
+      "note": "All five model_type values require their own pretrained checkpoint/config evidence; ligand native_tie is rejected.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "ligand_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "ligand_mpnn"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "protein_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "protein_mpnn"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "soluble_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "soluble_mpnn"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "per_residue_label_membrane_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "per_residue_label_membrane_mpnn"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "global_label_membrane_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "global_label_membrane_mpnn"
+        }
+      ],
+      "source_line": 306,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_workflow_benchmark.py"
+      ],
+      "blockers": [
+        "No current full backend certification is run by this inventory tool"
+      ],
+      "boundary": "CPU trajectory owner; one trajectory retains causal serial MCMC decisions",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "MCMC mutation_method",
+        "select_positions",
+        "trajectory RNG",
+        "mutation count",
+        "acceptance/stage protocol"
+      ],
+      "declared_key": "mcmc",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_mcmc_mutator",
+      "historical_evidence": {
+        "certified_scope": "recorded fixture only",
+        "complete": true,
+        "completed_trajectories": 27,
+        "coordinate_parity": {
+          "certified": null,
+          "reason": "workflow emitted no structure artifacts; model coordinate parity not measured"
+        },
+        "fixture": "scripts/validation/fixtures/runtime_cpu.yaml",
+        "kind": "historical_actual_cpu_workflow",
+        "limitation": "Recorded Dummy/no-structure + CPU MCMC only; resident modes slower; not this HEAD rerun or learned-model/GPU evidence",
+        "path": "evidence/runtime-20261103/cpu-three-mode-02/report.json",
+        "scientific_scores_decisions_certified": true,
+        "sha256": "57a45fe94dc06bd5f3c55948899bc364305d8b2a0f4aaf7a0dfc23d99a5bfecf",
+        "status": "DONE"
+      },
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "mcmc",
+      "keys": [
+        "mcmc"
+      ],
+      "kind": "mutator",
+      "note": "Historical real CPU Dummy/MCMC workload validated; no GPU or learned mutator.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "PARTIAL"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "NOT_APPLICABLE"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "NOT_RUN_IN_THIS_GENERATION",
+        "PDB/coordinate/score parity under a prespecified tolerance": "NOT_RUN_IN_THIS_GENERATION",
+        "RNG/proposal/acceptance/stage decision parity": "NOT_RUN_IN_THIS_GENERATION",
+        "failure injection and observed process/VRAM recovery": "NOT_RUN_IN_THIS_GENERATION",
+        "input/config cache invalidation": "NOT_RUN_IN_THIS_GENERATION",
+        "repeated fixed-workload effective throughput": "NOT_RUN_IN_THIS_GENERATION",
+        "single pretrained request": "NOT_RUN_IN_THIS_GENERATION",
+        "two continuous requests and observed load count": "NOT_RUN_IN_THIS_GENERATION"
+      },
+      "recorded_w0_ci_evidence": {
+        "accepted_mutations": 0,
+        "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+        "candidate": "6620da607e66d569eed802057d77b0fbfa9c37b4",
+        "completed_trajectories": 90,
+        "initial_evaluations": 90,
+        "kind": "actual_cpu_process_workflow",
+        "limitation": "Exact W0 Dummy/no-structure + CPU MCMC at the recorded revisions only; all mutation attempts rejected; initial evaluations are not accepted scientific progress; no pretrained/GPU or other CPU backend upgrade",
+        "mutation_attempts": 180,
+        "protocol_sha256": "f2636de19cdb90c2707a24969da016c398ba13b71c70fc4cde7e2fa00e7855e5",
+        "runs": 30,
+        "sha256": "3c82812c296fb619f9f703fa5bef7cb0ec184ec2077e0fcd59a9d1fce8b6e392",
+        "status": "DONE",
+        "summary": "evidence/runtime-next/agent-b/cpu-ci-01-summary.json"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "PARTIAL",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "configured RandomSubstitutionMutator"
+        }
+      ],
+      "source_line": 254,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "PARTIAL",
+      "target": "cpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [],
+      "blockers": [
+        "No current full backend certification is run by this inventory tool"
+      ],
+      "boundary": "CPU mutation implementation; no model weights/GPU",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "motif policy",
+        "fixed positions",
+        "trajectory RNG and acceptance"
+      ],
+      "declared_key": "motifbreaker",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_motifbreaker_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "motifbreaker",
+      "keys": [
+        "motifbreaker"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "PARTIAL"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "NOT_APPLICABLE"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "NOT_RUN_IN_THIS_GENERATION",
+        "PDB/coordinate/score parity under a prespecified tolerance": "NOT_RUN_IN_THIS_GENERATION",
+        "RNG/proposal/acceptance/stage decision parity": "NOT_RUN_IN_THIS_GENERATION",
+        "failure injection and observed process/VRAM recovery": "NOT_RUN_IN_THIS_GENERATION",
+        "input/config cache invalidation": "NOT_RUN_IN_THIS_GENERATION",
+        "repeated fixed-workload effective throughput": "NOT_RUN_IN_THIS_GENERATION",
+        "single pretrained request": "NOT_RUN_IN_THIS_GENERATION",
+        "two continuous requests and observed load count": "NOT_RUN_IN_THIS_GENERATION"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "PARTIAL",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "configured MotifBreakerMutator"
+        }
+      ],
+      "source_line": 489,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "PARTIAL",
+      "target": "cpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_multistate_proteinmpnn.py",
+        "tests/test_mpnn_sync_policy.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "same native model/decode; owner preserves far-apart ordering and reference-conditioned proposals",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "exact checkpoint for selected model_type",
+        "seed and constructor RNG",
+        "temperature, masks, ties, atom context, batch/sample counts",
+        "synchronization_policy and proposal_policy",
+        "reference/layout/chain conditioning"
+      ],
+      "declared_key": "multistate_proteinmpnn",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_multistate_proteinmpnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "multistate_proteinmpnn",
+      "keys": [
+        "multistateproteinmpnn",
+        "multistate_proteinmpnn",
+        "faraparttiedmultitargetligandmpnn",
+        "far_apart_tied_multitarget_ligandmpnn"
+      ],
+      "kind": "mutator",
+      "note": "All four aliases select the same ProteinMPNN factory; the LigandMPNN-named aliases do not introduce a ligand checkpoint family.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "context_layout": "far_apart",
+            "coupling": "legacy_order_conditioned_marginals",
+            "model_type": "protein_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "ProteinMPNN legacy far-apart multistate"
+        }
+      ],
+      "source_line": 390,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_multistate_proteinmpnn.py",
+        "tests/test_mpnn_sync_policy.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "same native model/decode; owner preserves far-apart ordering and reference-conditioned proposals",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "exact checkpoint for selected model_type",
+        "seed and constructor RNG",
+        "temperature, masks, ties, atom context, batch/sample counts",
+        "synchronization_policy and proposal_policy",
+        "reference/layout/chain conditioning"
+      ],
+      "declared_key": "MultistateProteinMPNN",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_multistate_proteinmpnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "multistateproteinmpnn",
+      "keys": [
+        "multistateproteinmpnn",
+        "multistate_proteinmpnn",
+        "faraparttiedmultitargetligandmpnn",
+        "far_apart_tied_multitarget_ligandmpnn"
+      ],
+      "kind": "mutator",
+      "note": "All four aliases select the same ProteinMPNN factory; the LigandMPNN-named aliases do not introduce a ligand checkpoint family.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "context_layout": "far_apart",
+            "coupling": "legacy_order_conditioned_marginals",
+            "model_type": "protein_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "ProteinMPNN legacy far-apart multistate"
+        }
+      ],
+      "source_line": 390,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_mutator_additional_lifecycle.py",
+        "tests/test_nampnn_mixed_design.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "version-gated native constructor split; exact post-constructor RNG replay; native joint decode/output unchanged",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "checkpoint",
+        "exact inference/run.py",
+        "na_shared_tokens",
+        "design_na_only",
+        "parse_na_only",
+        "fixed masks/chains",
+        "native sample count",
+        "extra_args.seed"
+      ],
+      "declared_key": "nampnn",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_nampnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "nampnn",
+      "keys": [
+        "nampnn"
+      ],
+      "kind": "mutator",
+      "note": "Resident AST requires inference/run.py SHA256 8d8937cceb84fbfc2e1b49b65e21b730a74e9dafab9e9c6720d1af75bda403d7 and explicit nonzero seed. Seed 0 remains one-shot.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "extra_args": {
+              "seed": 0
+            },
+            "na_shared_tokens": 0
+          },
+          "execution_manifest": null,
+          "variant": "native one-shot entropy seed / shared_tokens=0"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "extra_args": {
+              "seed": 0
+            },
+            "na_shared_tokens": 1
+          },
+          "execution_manifest": null,
+          "variant": "native one-shot entropy seed / shared_tokens=1"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "na_shared_tokens": 0
+          },
+          "execution_manifest": null,
+          "variant": "audited resident fixed seed / shared_tokens=0"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "na_shared_tokens": 1
+          },
+          "execution_manifest": null,
+          "variant": "audited resident fixed seed / shared_tokens=1"
+        }
+      ],
+      "source_line": 512,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "vendor/na_mpnn": "835974f3d420de18b3eb1dc66f25fbd17c53cc09"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/na_mpnn"
+      ]
+    },
+    {
+      "available_tests": [],
+      "blockers": [
+        "No current full backend certification is run by this inventory tool"
+      ],
+      "boundary": "CPU trajectory owner; no model weights/GPU",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "effective override configuration",
+        "position probabilities",
+        "trajectory RNG and acceptance"
+      ],
+      "declared_key": "pore_blocker_mcmc",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_pore_blocker_mcmc_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "pore_blocker_mcmc",
+      "keys": [
+        "pore_blocker_mcmc"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "PARTIAL"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "NOT_APPLICABLE"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "NOT_RUN_IN_THIS_GENERATION",
+        "PDB/coordinate/score parity under a prespecified tolerance": "NOT_RUN_IN_THIS_GENERATION",
+        "RNG/proposal/acceptance/stage decision parity": "NOT_RUN_IN_THIS_GENERATION",
+        "failure injection and observed process/VRAM recovery": "NOT_RUN_IN_THIS_GENERATION",
+        "input/config cache invalidation": "NOT_RUN_IN_THIS_GENERATION",
+        "repeated fixed-workload effective throughput": "NOT_RUN_IN_THIS_GENERATION",
+        "single pretrained request": "NOT_RUN_IN_THIS_GENERATION",
+        "two continuous requests and observed load count": "NOT_RUN_IN_THIS_GENERATION"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "PARTIAL",
+          "configuration_subset": {
+            "mutation_method": "frequency_adjusted",
+            "select_positions": "plddt"
+          },
+          "execution_manifest": null,
+          "variant": "PoreBlockingSubstitutionMutator"
+        }
+      ],
+      "source_line": 262,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "PARTIAL",
+      "target": "cpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_mutator_resident_runtime.py",
+        "tests/test_mpnn_sync_policy.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "same private runner; native joint/autoregressive call stays atomic; owner retains selector",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "exact checkpoint for selected model_type",
+        "seed and constructor RNG",
+        "temperature, masks, ties, atom context, batch/sample counts",
+        "synchronization_policy and proposal_policy"
+      ],
+      "declared_key": "ProteinMPNN",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_proteinmpnn_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "proteinmpnn",
+      "keys": [
+        "proteinmpnn"
+      ],
+      "kind": "mutator",
+      "note": "Factory rejects non-protein_mpnn model_type; native_tie rejects probability-changing proposal transforms.",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "model_type": "protein_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "protein_mpnn ordinary"
+        },
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "coupling": "native_tie",
+            "model_type": "protein_mpnn"
+          },
+          "execution_manifest": null,
+          "variant": "ProteinMPNN native joint tie"
+        }
+      ],
+      "source_line": 356,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": []
+    },
+    {
+      "available_tests": [
+        "tests/test_surfdesign_mutator.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU PyMOL surface preparation/cache; resident refinement/decoder; CPU result materialization",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "experiment/config/checkpoint",
+        "PyMOL version",
+        "surface_mode",
+        "seed",
+        "max_iter",
+        "strategy",
+        "temperature"
+      ],
+      "declared_key": "surfdesign",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_surfdesign_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "surfdesign",
+      "keys": [
+        "surfdesign"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "checkpoint": "best.ckpt"
+          },
+          "execution_manifest": null,
+          "variant": "configured SurfDesign experiment"
+        }
+      ],
+      "source_line": 425,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "vendor/surfdesign": "9ce30392b72b65e9cb875e2beb45d607e6f34765"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/surfdesign"
+      ]
+    },
+    {
+      "available_tests": [
+        "tests/test_surfpro_mutator.py"
+      ],
+      "blockers": [
+        "No approved real GPU run evidence supplied",
+        "Exact installed source/environment and pretrained weights not configured",
+        "Real frozen workload numerical/lifecycle/failure/throughput gates not run"
+      ],
+      "boundary": "CPU external surface tools/cache; resident native encoder plus complete autoregressive decoder",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "checkpoint",
+        "MSMS/pdb_to_xyzrn contents",
+        "SRU build",
+        "max_surface_vertices",
+        "seed",
+        "logit_temperature"
+      ],
+      "declared_key": "surfpro",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_surfpro_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "surfpro",
+      "keys": [
+        "surfpro"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "BLOCKED"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "BLOCKED"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "BLOCKED",
+        "PDB/coordinate/score parity under a prespecified tolerance": "BLOCKED",
+        "RNG/proposal/acceptance/stage decision parity": "BLOCKED",
+        "failure injection and observed process/VRAM recovery": "BLOCKED",
+        "input/config cache invalidation": "BLOCKED",
+        "repeated fixed-workload effective throughput": "BLOCKED",
+        "single pretrained request": "BLOCKED",
+        "two continuous requests and observed load count": "BLOCKED"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "BLOCKED",
+          "configuration_subset": {
+            "checkpoint": "checkpoint_best.pt"
+          },
+          "execution_manifest": null,
+          "variant": "configured fairseq SurfPro"
+        }
+      ],
+      "source_line": 440,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "vendor/sru": "c2d44e62b90115db59ab92ccea4b2e5b77077cf9",
+        "vendor/surfpro": "d728214126b6fdcb5323f76653377614743dd1f3"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "BLOCKED",
+      "target": "pretrained_gpu",
+      "vendor_gitlinks": [
+        "vendor/surfpro",
+        "vendor/sru"
+      ]
+    },
+    {
+      "available_tests": [],
+      "blockers": [
+        "No current full backend certification is run by this inventory tool"
+      ],
+      "boundary": "CPU mutation implementation; no model weights/GPU",
+      "configuration_state": "NOT_CONFIGURED_FOR_REAL_CERTIFICATION",
+      "configuration_to_freeze": [
+        "mixture/pool inputs",
+        "mutation settings",
+        "trajectory RNG and acceptance"
+      ],
+      "declared_key": "xmix",
+      "evidence_kind": "available code/contract tests; not executed by this generator",
+      "factory": "_build_xmix_mutator",
+      "identity_required": [
+        "actual source file digests and local patches",
+        "all checkpoints and auxiliary assets",
+        "Python/framework/native library versions",
+        "effective scientific configuration and numerical settings",
+        "input structures/sequences/topology/masks and exact RNG state/seed protocol",
+        "allocated physical device identity and resource budget"
+      ],
+      "key": "xmix",
+      "keys": [
+        "xmix"
+      ],
+      "kind": "mutator",
+      "note": "",
+      "performance_certification": {
+        "effective_throughput_improvement_proved": false,
+        "status": "PARTIAL"
+      },
+      "pretrained_gpu": {
+        "evidence": null,
+        "measured": false,
+        "status": "NOT_APPLICABLE"
+      },
+      "real_backend_gates": {
+        "GPU tensor residency and real execution-boundary trace": "NOT_RUN_IN_THIS_GENERATION",
+        "PDB/coordinate/score parity under a prespecified tolerance": "NOT_RUN_IN_THIS_GENERATION",
+        "RNG/proposal/acceptance/stage decision parity": "NOT_RUN_IN_THIS_GENERATION",
+        "failure injection and observed process/VRAM recovery": "NOT_RUN_IN_THIS_GENERATION",
+        "input/config cache invalidation": "NOT_RUN_IN_THIS_GENERATION",
+        "repeated fixed-workload effective throughput": "NOT_RUN_IN_THIS_GENERATION",
+        "single pretrained request": "NOT_RUN_IN_THIS_GENERATION",
+        "two continuous requests and observed load count": "NOT_RUN_IN_THIS_GENERATION"
+      },
+      "registered": true,
+      "registration_is_certification": false,
+      "scopes": [
+        {
+          "certification_status": "PARTIAL",
+          "configuration_subset": {},
+          "execution_manifest": null,
+          "variant": "configured XMixMutator"
+        }
+      ],
+      "source_line": 505,
+      "source_path": "astrolabe/mutators/base.py",
+      "source_references": {
+        "external_or_repository_source": "requires actual configured source digest; no vendor revision invented"
+      },
+      "source_sha256": "e59eddd7fa9e88ff0577dc13e0bea852d4110968f76ecc9ac1485827d71281ff",
+      "status": "PARTIAL",
+      "target": "cpu",
+      "vendor_gitlinks": []
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Builtin factories only; external plugin registrations/configurations require separate enumeration and certification",
+  "status": {
+    "full_backend_runtime_certification": "PARTIAL",
+    "inventory": "DONE",
+    "pretrained_gpu_certification": "BLOCKED"
+  }
+}

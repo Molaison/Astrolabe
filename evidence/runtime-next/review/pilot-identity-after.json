@@ -1,0 +1,24 @@
+{
+  "control": {
+    "generation1": "expected",
+    "generation2": null,
+    "failure_ids": []
+  },
+  "foreign": {
+    "generation1": null,
+    "generation2": null,
+    "failure_ids": [
+      "expected"
+    ]
+  },
+  "future": {
+    "generation1": null,
+    "generation2": null,
+    "failure_ids": [
+      "expected"
+    ]
+  },
+  "source_head": "d57d2ef3c5bcf442228eb71f4f960819faac76b5",
+  "scope": "Independent root execution of actual CandidatePoolScheduler with injected worker replies; no GPU or models",
+  "verdict": "PASS"
+}

@@ -1,0 +1,58 @@
+{
+  "integration_source": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+  "r1_published_source": "71c7592e27d02b2772d984d9b1f5ed9fea47fd6c",
+  "source_batch": [
+    {
+      "local": "96fb3f754a141b29694ff71174f82fa0fe4a4bc2",
+      "remote": "1fcc2830acab4673d54fa992edbcca26ac89432f",
+      "tree": "331bb636bb13566a02d2db1fc741bdc5d3c1a68c"
+    },
+    {
+      "local": "a08b14d98fffea0da494ab4f1f2efe44d1f6b670",
+      "remote": "109f65475722d24e05b64c32928a0adf432a0790",
+      "tree": "dbdabe84747ca7998df1b5628e35e846fd4eb078"
+    },
+    {
+      "local": "c942a5115481cea9a49f04d23a70ad6bd715212d",
+      "remote": "4d8eee4c9f0a7c63658fcf469792908130e06b2e",
+      "tree": "dc726877cb5f6f40633cda363767be7d6b25c01c"
+    },
+    {
+      "local": "b2ec56555d93c7dd69413f012e8b94655ba26cc7",
+      "remote": "71c7592e27d02b2772d984d9b1f5ed9fea47fd6c",
+      "tree": "fb102d8a2480275e68f07de181a058eef21b8f17"
+    }
+  ],
+  "evidence_batch": [
+    {
+      "local": "8374c598c39420bd0085c9daaa18649caea135e9",
+      "remote": "dbe481827ecdcb32427d6fcd64727e64941cbf78",
+      "tree": "9ae47dbd318b227172d61058dbac8dcc0db4db53"
+    },
+    {
+      "local": "c485d6baa15f8a6ae66b5a1bccb55592f1e07745",
+      "remote": "6c57801c4d267139ef169e9fb5383d15051b1098",
+      "tree": "42e7c77dce2cbde321d812aae1ded675e3cafac0"
+    },
+    {
+      "local": "fe13a357898e2acef71738ec4a17ffb2196ec1f8",
+      "remote": "4bab42a7b02fc01ef945806f5b0f48fc3bfbcc07",
+      "tree": "b74c3944b0f335a08b7bb19e3a7857eb7057b4b7"
+    },
+    {
+      "local": "dd77c4d83547fc94a97a455ec76967e179f0be1d",
+      "remote": "e20afedea0572a443a7a60a9ed242f33665720dd",
+      "tree": "273e936578263f791a7f0505b58b9cc4ce6665b8"
+    },
+    {
+      "local": "5ad8742f61149bd79d4031e92d0c5eea11f1d237",
+      "remote": "5583469718be1a5047a5f0c0e9cf7dc4644ccb6d",
+      "tree": "672023e3ccb7b6dc43b0a744e1c395f86928586a"
+    },
+    {
+      "local": "39f3d5fd1f372dfb4d062e9f13a5e771bc70b455",
+      "remote": "9d62b3eb86cb75a2266af49dc48cb851e69e0341",
+      "tree": "bb2cc1ce9b9ad2b17585f581bca86d8dd7d729fc"
+    }
+  ]
+}
