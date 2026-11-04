@@ -161,11 +161,21 @@ class CandidatePoolScheduler:
         self._closed = False
 
     def submit_generation(self, generation: int, tasks: Iterable[CandidateTask]) -> None:
+        """Validate a finite generation plan before starting any worker."""
         if self._closed:
             raise RuntimeError("CandidatePoolScheduler is closed")
-        submitted = 0
         generation_int = int(generation)
-        for task in tasks:
+        batch = tuple(tasks)
+        for task in batch:
+            if task.generation != generation_int:
+                raise ValueError(
+                    "candidate task generation mismatch: "
+                    f"submitted generation={generation_int!r}; "
+                    f"candidate_id={task.candidate_id!r}, "
+                    f"task generation={task.generation!r}"
+                )
+        submitted = 0
+        for task in batch:
             future = self._executor.submit(self._run_task, task)
             self._pending[future] = task
             submitted += 1

@@ -120,3 +120,72 @@ def test_valid_result_preserves_scientific_data_and_worker_rng(return_scalar: bo
         assert collection.selected is returned_results[0]
         assert collection.selected.payload is payload
         assert collection.selected.duration_s == 0.125
+
+
+@pytest.mark.parametrize("wrong_generation", [0, 2], ids=["past", "future"])
+@pytest.mark.parametrize("invalid_position", [0, 1], ids=["first", "last"])
+def test_mismatched_submission_generation_rejects_entire_batch(
+    wrong_generation: int, invalid_position: int
+) -> None:
+    calls = []
+
+    def worker(task: CandidateTask) -> float:
+        calls.append(task.candidate_id)
+        return 0.5
+
+    valid = [CandidateTask("a", 1), CandidateTask("b", 1)]
+    invalid = list(valid)
+    invalid[invalid_position] = CandidateTask(
+        valid[invalid_position].candidate_id, wrong_generation
+    )
+    config = CandidatePoolConfig(num_candidates=2, min_completed=2, max_wait_s=1.0)
+    with CandidatePoolScheduler(config, worker) as scheduler:
+        with pytest.raises(ValueError, match="candidate task generation mismatch"):
+            scheduler.submit_generation(1, invalid)
+        assert scheduler.drain() == []
+        assert calls == []
+        # Rejection must not reserve either identity or poison a valid retry.
+        scheduler.submit_generation(1, valid)
+        collections = scheduler.drain()
+
+    assert sorted(calls) == ["a", "b"]
+    assert len(collections) == 1
+    assert len(collections[0].completed) == 2
+
+
+def test_failing_input_iterator_does_not_partially_submit() -> None:
+    calls = []
+
+    def worker(task: CandidateTask) -> float:
+        calls.append(task.candidate_id)
+        return 0.5
+
+    def incomplete_batch():
+        yield CandidateTask("prefix", 1)
+        raise RuntimeError("producer failed while building generation")
+
+    config = CandidatePoolConfig(num_candidates=2, min_completed=1, max_wait_s=1.0)
+    with CandidatePoolScheduler(config, worker) as scheduler:
+        with pytest.raises(RuntimeError, match="producer failed"):
+            scheduler.submit_generation(1, incomplete_batch())
+        assert scheduler.drain() == []
+    assert calls == []
+
+
+def test_fixed_parent_generator_keeps_task_count_and_best_score() -> None:
+    calls = []
+    scores = {"a": 0.25, "b": 0.75, "c": 0.5}
+
+    def worker(task: CandidateTask) -> float:
+        calls.append(task.candidate_id)
+        return scores[task.candidate_id]
+
+    config = CandidatePoolConfig(num_candidates=3, min_completed=3, max_wait_s=1.0)
+    with CandidatePoolScheduler(config, worker) as scheduler:
+        scheduler.submit_generation(1, (CandidateTask(name, 1) for name in scores))
+        collection = scheduler.collect_until_ready(target_generation=1)
+    assert sorted(calls) == ["a", "b", "c"]
+    assert collection is not None
+    assert {result.candidate_id: result.score for result in collection.completed} == scores
+    assert collection.selected is not None
+    assert collection.selected.candidate_id == "b"
