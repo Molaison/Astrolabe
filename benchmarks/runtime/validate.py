@@ -371,8 +371,11 @@ def regressions(args):
         return 3
     command = [sys.executable, "-m", "pytest", "-q", "-ra", *REQUIRED_TESTS, f"--junitxml={out / 'junit.xml'}"]
     benchmark.json_write(out / "command.json", command)
+    test_env = dict(os.environ)
+    test_env["PYTHONPATH"] = str(ROOT) + (os.pathsep + test_env["PYTHONPATH"] if test_env.get("PYTHONPATH") else "")
+    benchmark.json_write(out / "environment.json", {"PYTHONPATH": test_env["PYTHONPATH"], "scope": "regression subprocesses only"})
     with (out / "stdout.log").open("w") as log:
-        process = subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT)
+        process = subprocess.run(command, cwd=ROOT, env=test_env, stdout=log, stderr=subprocess.STDOUT)
     print((out / "stdout.log").read_text())
     result = junit_result(out / "junit.xml", process.returncode)
     result["required_suites"] = list(REQUIRED_TESTS)
