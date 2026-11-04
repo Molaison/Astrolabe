@@ -1,0 +1,128 @@
+{
+  "status": "PASS",
+  "errors": [],
+  "source_head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "junit": {
+    "cpu": {
+      "cases": 378,
+      "failure": 0,
+      "error": 0,
+      "skipped": 0
+    },
+    "torch": {
+      "cases": 181,
+      "failure": 0,
+      "error": 0,
+      "skipped": 0
+    }
+  },
+  "w0_counts": {
+    "trajectories": 90,
+    "rows": 270,
+    "accepted_initializations": 90,
+    "accepted_mutations": 0,
+    "mutation_attempts": 180,
+    "cpu_prepare": 270,
+    "cpu_execute": 270,
+    "cpu_finalize": 270,
+    "resident_releases": 20
+  },
+  "performance": {
+    "direct": {
+      "baseline_seconds": [
+        2.920705770000012,
+        2.5198513299999945,
+        2.5030319199999838,
+        2.484689825000004,
+        2.5163731899999675
+      ],
+      "candidate_seconds": [
+        1.584186977999991,
+        1.628235477000004,
+        1.552241104000018,
+        1.549042897999982,
+        1.5885090419999983
+      ],
+      "baseline_median": 2.5163731899999675,
+      "candidate_median": 1.584186977999991,
+      "baseline_eval_per_s": 3.4763390996009984,
+      "candidate_eval_per_s": 5.694605519894344,
+      "aggregate_gain_percent": 63.81041540360519,
+      "paired_speed_ratios": [
+        1.8436622763351793,
+        1.5475963800044312,
+        1.6125277919453644,
+        1.60401614971933,
+        1.5841100827677694
+      ],
+      "faster_pairs": 5,
+      "ranges_separated": true
+    },
+    "resident_serial": {
+      "baseline_seconds": [
+        6.704559694999972,
+        6.521699569999981,
+        6.761762138999984,
+        6.584075192,
+        6.593711771000017
+      ],
+      "candidate_seconds": [
+        3.5157442670000023,
+        3.585287999000002,
+        3.611951298000008,
+        3.6286502499999926,
+        3.650507270999981
+      ],
+      "baseline_median": 6.593711771000017,
+      "candidate_median": 3.611951298000008,
+      "baseline_eval_per_s": 1.356819031879081,
+      "candidate_eval_per_s": 2.5010919927432327,
+      "aggregate_gain_percent": 84.33497275457798,
+      "paired_speed_ratios": [
+        1.9070100626861002,
+        1.8190169302491166,
+        1.8720524118761164,
+        1.8144694964746226,
+        1.8062453466073514
+      ],
+      "faster_pairs": 5,
+      "ranges_separated": true
+    },
+    "resident_adaptive": {
+      "baseline_seconds": [
+        6.69102212300001,
+        6.594503901999985,
+        6.5285798150000005,
+        6.810785126999974,
+        6.629285535999998
+      ],
+      "candidate_seconds": [
+        3.558777125000006,
+        3.518725374000013,
+        3.612123349000001,
+        3.5862766249999822,
+        3.5362338069999737
+      ],
+      "baseline_median": 6.629285535999998,
+      "candidate_median": 3.558777125000006,
+      "baseline_eval_per_s": 1.353213482701651,
+      "candidate_eval_per_s": 2.5263673762999113,
+      "aggregate_gain_percent": 86.69392587310709,
+      "paired_speed_ratios": [
+        1.8801464345705547,
+        1.874117244479211,
+        1.8074077721646484,
+        1.8991243116947254,
+        1.8746739887157147
+      ],
+      "faster_pairs": 5,
+      "ranges_separated": true
+    }
+  },
+  "positive_control": {
+    "rows_exact": true,
+    "state_exact": true,
+    "scientific_rows": 5
+  },
+  "scope": "Lead independently reads original JUnit, every raw CSV/stage stream, config digest, observed release, raw timing, and positive terminal state. No new inference or benchmark."
+}

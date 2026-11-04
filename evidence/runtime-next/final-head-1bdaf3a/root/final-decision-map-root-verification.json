@@ -1,0 +1,10 @@
+{
+  "status": "PASS",
+  "attempts": 23,
+  "path_references": 70,
+  "unique_paths": 54,
+  "commit_anchors": 18,
+  "errors": [],
+  "mapping_sha256": "ebbf7c306dcaca58a92e55e6a151602852d10535de00e42f123d531381e12ef9",
+  "application": "Only baseline/patch/cost/evidence columns updated; original results/decisions/scientific counts remain unchanged; parent evidence paths normalized relative to evidence/runtime-next."
+}

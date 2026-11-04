@@ -26,3 +26,10 @@ f07bf8c36b0b0db73502bd1f7cd2ec623d7a9199371cece4e4b6b9c67089f698  review/scienti
 ee19f98ab22f86502180453ba4d20ee5bc5cfdd5c1b5e0825cd2832fb8a5bbea  root-f102-review/near-allocation.tar.xz
 0b4f6ce02b2e09072d5ea199b67ab813206da107c09a98de018f97b8962e12f5  source-anchors-continuation.bundle
 dff04ac93aa156714e3d683c9a86fc0b7112488861507024f9cb3972bcb582d9  source-anchors.bundle
+f855e9c6a53f272237a24429d89e33409c04e4d7b290e4f84317833f32da74cb  final-head-1bdaf3a/agent-a/postallocation.tar.xz
+cdf243d4634ec6456fa8241578d90591add2950ec68c31ad788a5b444f09a77b  final-head-1bdaf3a/agent-a/preallocation.tar.xz
+38adc3042896c0721787476fec737141dbe851ddf6ee1ffbc90f9f596de6b18a  final-head-1bdaf3a/agent-c/final-head-c-raw-and-review.tar.xz
+1ff69c797cffc42c34aee431b9e787c15558c52e92a843bf46c651fe119bbbdc  final-head-1bdaf3a/agent-a/preservation/raw.tar.xz
+5588acc27dceb7595fe7aff8be79385ec9186913aa7a486fc54e8ea0e750b8e9  final-head-1bdaf3a/agent-b/gpu-admission-blocked-33334.tar.xz
+34c151b454db0a882ddf7bfb4c145281a50b1bfadd7616889daaa27ff4e5284d  final-head-1bdaf3a/agent-b/independent-review-artifacts.tar.xz
+c480ca6a60b67172a52fc8dd2905c6e577efaae241d74474c8f99fab47409883  final-head-1bdaf3a/agent-c/gpu-identity-review/gpu-identity-review-raw.tar.xz

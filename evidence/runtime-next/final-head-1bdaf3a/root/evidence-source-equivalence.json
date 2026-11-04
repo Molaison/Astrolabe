@@ -1,0 +1,110 @@
+{
+  "status": "PASS",
+  "source_head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+  "evidence_parent": "0c385ae3c65a96fb6cbfbca6a0e5b464e1f545c5",
+  "changed_paths": [
+    "docs/runtime_backend_certification.md",
+    "docs/runtime_final_report.md",
+    "docs/runtime_gpu_mutator_certification.md",
+    "evidence/runtime-next/README.md",
+    "evidence/runtime-next/archives.sha256",
+    "evidence/runtime-next/decision.tsv",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/README.md",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/accounting-proof.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/allocation-proof.md",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/files.sha256.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/frozen-measurement-manifest.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/postallocation.manifest.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/postallocation.tar.xz",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/preallocation.manifest.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/preallocation.tar.xz",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/preservation/README.md",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/preservation/archive.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/preservation/preservation-proof.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/preservation/raw.manifest.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/preservation/raw.tar.xz",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-a/source-audit.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/README.md",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/archive-manifest.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/archive-verification.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/cpu-and-admission-review.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/files.sha256.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/gpu-admission-blocked-33334.tar.xz",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/independent-review-artifacts.tar.xz",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/independent-review-manifest.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/native-freeze-review.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/native-launch-review.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-b/source-handoff-verification.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/MANIFEST.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/RAW_MANIFEST.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/README.md",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/archive-verification.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/final-head-c-raw-and-review.tar.xz",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/final-source-identity.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/MANIFEST.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/RAW_MANIFEST.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/README.md",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/archive-verification.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/child-identity-after-4889f7b.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/child-identity-before-separate.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/child-identity-before.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/gpu-identity-review-raw.tar.xz",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/probe_child_identity.py",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/protocol-review.md",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/gpu-identity-review/review-b-4889f7b.md",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/historical-decision-map.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/independent-gates-review.json",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/review_final_ci.py",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/review_final_gates.py",
+    "evidence/runtime-next/final-head-1bdaf3a/agent-c/summary.json",
+    "evidence/runtime-next/gpu-control-01/README.md",
+    "evidence/runtime-next/gpu-control-01/runner-certification-supplement.json"
+  ],
+  "new_paths": [
+    "evidence/runtime-next/final-head-1bdaf3a/README.md",
+    "evidence/runtime-next/final-head-1bdaf3a/root/MANIFEST.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/audit_final_head_root.py",
+    "evidence/runtime-next/final-head-1bdaf3a/root/evidence-source-equivalence.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/final-decision-map-c.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/final-decision-map-cas-note.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/final-decision-map-root-verification.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/final-source-1bdaf3a-manifest-30k.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/final-source-large-input-negative.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/input-digests.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/native-results.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/published-all.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/raw-independent-audit.json",
+    "evidence/runtime-next/final-head-1bdaf3a/root/source-transfer-tool-receipts.json"
+  ],
+  "production_and_gate_objects": {
+    "astrolabe": {
+      "source_object": "00a5fe5f014717c29f752047b5f016c5d9700835",
+      "evidence_object": "00a5fe5f014717c29f752047b5f016c5d9700835"
+    },
+    "config": {
+      "source_object": "09e1b5886df74cca4341f48d5d66cee2c280b472",
+      "evidence_object": "09e1b5886df74cca4341f48d5d66cee2c280b472"
+    },
+    "run.py": {
+      "source_object": "690c86bea54840d2ab4aad7de39e6468afdb4c86",
+      "evidence_object": "690c86bea54840d2ab4aad7de39e6468afdb4c86"
+    },
+    "scripts/validation": {
+      "source_object": "271b2fb80ead2ed0a60d7faeba2f4af062d9e759",
+      "evidence_object": "271b2fb80ead2ed0a60d7faeba2f4af062d9e759"
+    },
+    "benchmarks/runtime": {
+      "source_object": "7f35eaf814efbec93bb3d034ae9e44d976f292f1",
+      "evidence_object": "7f35eaf814efbec93bb3d034ae9e44d976f292f1"
+    },
+    "tests": {
+      "source_object": "7de2e99dee857b8c831570b8bf196dee3c28fbf9",
+      "evidence_object": "7de2e99dee857b8c831570b8bf196dee3c28fbf9"
+    },
+    ".github/workflows": {
+      "source_object": "c1568f3a97ba3662615e065910eccaed5e7ced1c",
+      "evidence_object": "c1568f3a97ba3662615e065910eccaed5e7ced1c"
+    }
+  },
+  "scope": "All final evidence additions are docs/data; frozen implementation, scientific config, tests, workflows and measurements remain byte-identical."
+}

@@ -1,8 +1,8 @@
 # Runtime 2026-11-04 evidence index
 
-Read the [final report](../../docs/runtime_final_report.md), [frozen contract](../../docs/runtime_benchmark_contract.md) and [architecture decision](../../docs/runtime_architecture_decision.md) first. Overall delivery is **PARTIAL**. CPU scope is independently verified; pretrained GPU certification and the requested server destination remain **BLOCKED**.
+Read the [final report](../../docs/runtime_final_report.md), [frozen contract](../../docs/runtime_benchmark_contract.md) and [architecture decision](../../docs/runtime_architecture_decision.md) first. Overall delivery is **PARTIAL**. The fixed CPU throughput target and final-HEAD scientific/contract gates are verified. The real requested server destination is delivered. Pretrained GPU execution is **BLOCKED by actual Slurm admission**, with the full failed request and zero allocated GPU-hours preserved.
 
-**Final source HEAD 9d62b3e passed all actual gates.** See the [final validation record](final/README.md), including its second complete 30-trial CPU comparison, independent raw-data review, direct CLI acceptance/stage/RNG rerun, and original artifacts. This evidence branch attaches the completed results while preserving the tested PR HEAD.
+**Final source HEAD is `1bdaf3a53227c9197b930dc00a01b752acd90067`.** See the [current final validation record](final-head-1bdaf3a/README.md): 378 CPU +181 geometry/Torch tests, zero skips/failures, complete 30-trial CPU comparison, independently rerun acceptance/stage/RNG control, complete raw archives and source/production equivalence. The [earlier 9d validation record](final/README.md) is retained as historical evidence. This evidence branch adds only docs/data while preserving the tested PR source.
 
 ## Production and review anchors
 
@@ -22,6 +22,15 @@ Read the [final report](../../docs/runtime_final_report.md), [frozen contract](.
 
 Paths in this file are relative to `evidence/runtime-next`.
 
+`decision.tsv` is an attempt log: each status describes that historical attempt,
+including initial resource/destination blockers later superseded by successful
+delivery or a different bounded experiment. Use the final report for current
+R0–R12 status. Every early attempt now has a concrete evidence path and known
+source anchors; unrecorded total CPU/wall costs remain explicitly unknown.
+Pre-commit dirty probes are interpreted with their recorded source/patch hashes,
+not by treating their then-current HEAD as the tested patch. The original
+`decision-legacy.tsv` remains unchanged.
+
 ## Actual CI runs and raw preservation
 
 | Run / source | Scope and outcome | Lossless raw archive |
@@ -33,6 +42,8 @@ Paths in this file are relative to `evidence/runtime-next`.
 | Same run / db937f9 | 65 CPU Torch tests, zero skips; synthetic checkpoints, no pretrained/GPU | `ci/runtime-torch-db937f9.tar.xz`, 14 raw files |
 | [41764768462](https://github.com/Molaison/Astrolabe/actions/runs/41764768462) / 71c7592 | 248 tests, 30 valid trials, R1 CPU gain beyond observed variation | `ci/runtime-cpu-71c7592.tar.xz`, 645 raw files |
 | Same run / 71c7592 | 104 CPU Torch/structural tests, zero skips | `ci/runtime-torch-71c7592.tar.xz`, 15 raw files |
+| [41766956074](https://github.com/Molaison/Astrolabe/actions/runs/41766956074) / 9d62b3e | Historical final: 248 CPU +104 geometry; 30 valid trials | `ci/runtime-cpu-9d62b3e.tar.xz`, `ci/runtime-torch-9d62b3e.tar.xz` |
+| [41780311942](https://github.com/Molaison/Astrolabe/actions/runs/41780311942) / **1bdaf3a** | **378 CPU +181 geometry; zero skips/failures; 30 valid trials**, all 15 pairs faster | `final-head-1bdaf3a/agent-c/final-head-c-raw-and-review.tar.xz`, original ZIPs plus all raw/artifact/audit files |
 
 Each successful W0 comparison has 90 trajectories / 270 evaluations / 180 rejected mutation attempts. The 90 accepted initialization rows are not accepted mutation progress. Different CI runners' absolute timings are never compared as speedup. The separate science-control evaluations and 18 A diagnostic evaluations do not enter W0 timing. CPU tests use real CPU libraries and, where named, fake model weights; no row certifies pretrained GPU inference.
 
@@ -76,5 +87,7 @@ This makes original SHA anchors such as 605bad0 and cf62f85 resolvable without m
 - `source-anchors-continuation.bundle` retains critical original source SHAs with a declared 9d prerequisite; `source-anchors-continuation.json` records exact refs/digest. The earlier source bundle remains unchanged.
 - `decision.tsv` now includes baseline, patch, errors, work count, cost and decision columns. `decision-legacy.tsv` preserves the unmodified earlier log; unspecified old row fields explicitly point to its archived evidence.
 
-Actual final-HEAD/GPU results are attached on the separate evidence branch so
-these tested sources remain immutable. No pre-run matrix row is a real device certificate.
+Actual final-HEAD/GPU-admission results are attached on this separate evidence branch so
+the tested source remains immutable. The ProteinMPNN preflight and launcher preparation
+passed, but job 33334 never received an allocation: zero GPU forwards, zero completed
+GPU trials, zero allocated GPU-hours. No pre-run matrix row is a real device certificate.

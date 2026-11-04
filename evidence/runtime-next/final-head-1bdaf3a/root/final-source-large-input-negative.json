@@ -1,0 +1,8 @@
+{
+  "attempt": "75000-byte source bundle transfer chunk",
+  "result": "McpServerError: input_too_large",
+  "execution": "not_started",
+  "status_code": 400,
+  "remote_mutation": false,
+  "decision": "Use the earlier verified 30000-byte transfer size and a new exclusive parts directory; no job or benchmark was started."
+}

@@ -1,10 +1,12 @@
-# Astrolabe Runtime 优化报告 — 2026-11-04
+# Astrolabe Runtime 最终验证报告 — 2026-11-04
 
 ## 结论与当前证据边界
 
 **整体 PARTIAL；CPU W0 的 20% 工程目标已达到。** 在 f102 的同一 SIF 环境中，与此前通过验证的 `9d62b3e` 相比，整合后的 `f9ce87b` 在 direct / resident serial / resident adaptive 的有效 CPU evaluation 吞吐分别提高 **69.08% / 69.99% / 54.92%**。30 个 trial 全部有效，三个模式均 5/5 配对更快、耗时范围严格分离；独立审查核对全部原始科学与进程释放记录。改进复用了上轮尚未合并的 PyRosetta 延迟加载和 requirements 源码扫描优化，并保留已经验证的 SciPy 延迟导入。
 
-这份源码提交中的报告记录 **GPU 执行前的已验证状态**。真实 pretrained GPU control、最终源码 HEAD 的 CI 和科学正控制结果，将在独立 [最终证据分支](https://github.com/Molaison/Astrolabe/tree/evidence/runtime-f102-final-20261104) 更新，以保持被验证源码不因结果文件而改变。不得把本节 CPU 数字当成 GPU 改善，也不得把计划中的 GPU 请求计为已完成工作。
+**最终源码 HEAD 为 `1bdaf3a53227c9197b930dc00a01b752acd90067`，tree 为 `6f763bfb04778ef4f32386ddb8aeb38ce4240bf1`。** 本报告在独立 [最终证据分支](https://github.com/Molaison/Astrolabe/tree/evidence/runtime-f102-final-20261104) 更新；被测源码保持冻结。最终 HEAD 的真实 GitHub Linux CI 完成 **378 CPU +181 geometry/Torch tests，零 failure、零 skip**，完整 30-trial W0 与 acceptance/stage/RNG 正控制均通过。主代理另写独立 reader，从原始 JUnit、全部 CSV、stage events、释放记录与终态重新核实。
+
+**真实 pretrained GPU 执行为 BLOCKED。** 最终源码的真实 CPU 权重/input freeze、SIF 校验和 launcher prepare 已完成；唯一 Slurm 请求 `33334` 等待 60 秒后因节点繁忙失败，未进入 `_inside`、未启动 GPU 容器或推理。A 独立核实该请求已经 CANCELLED，Start=None、ElapsedRaw=0、AllocCPUS=0、AllocTRES 为空、own squeue 为空，实际 allocation GPU-hours 为 **0**。GPU 性能、输出与 RNG 一致性均没有获得认证，没有重复提交或占用其它共享 jobs。
 
 代码通过 [draft PR #9](https://github.com/Molaison/Astrolabe/pull/9) 审查，不合并生产分支。实际交付目录已经建立并回读验证：`/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104`。最初服务器断连与网络 clone 超时的失败记录保留；后续通过校验过的 Git bundle 交付源码与证据，没有用本地同名目录代替服务器路径。
 
@@ -14,7 +16,9 @@
 
 初始 HEAD 固定为 `d66ee714f2e755948534f95d9d125287ce8dbd91`，历史 Repository Mental Model 来源为 `b537b8a`。本轮先检查当前源码、提交历史、merge-base 和 worktree；原 `261b240` 等工作线没有被覆盖。服务器恢复后进一步确认 `cloud-20261103-review/fix/opt` 是同一个 Git common directory 的 linked worktrees，并完整保存 fix 的 14 个 tracked 修改/7 个新文件、opt 的 16 个 tracked 修改/9 个新文件及其逐文件 digest。原目录保持原样，新代码只进入本任务的隔离 worktree。
 
-使用安装的 pstack，以 `poteto-mode` 选择 `orchestrate`。主代理实际调度 A Runtime & Performance、B Evaluator & Model Lifecycle、C Producer & Scientific Correctness 三个子代理；先并行只读调查与 `architect` 比较，再冻结 workload、完成被独立复验的 identity pilot，随后以 `swarm` 分工实施。各轮 `hillclimb` 记录假设、改动、计时及 keep/revert；`interrogate` 要求可复现反例，主代理独立复验关键修复。没有使用不存在的 Cursor orch/Task 能力冒充调度。
+最终 preservation gate 再次只读核对三个旧 worktrees 的 HEAD、branch、Git topology、完整 normal-mode status，以及原 modified/untracked 文件和完整 patch hashes：**全部与初始一致，differences=[]**。75 个受限路径中 72 个文件逐字节 SHA 匹配，3 个原先不存在的 helper 仍不存在；未扫描大型模型或 ignored artifacts，也不将该比较声称为期间所有瞬时写入的监控。完整请求/响应与 [保存性证明](../evidence/runtime-next/final-head-1bdaf3a/agent-a/preservation/README.md) 一并交付。
+
+使用安装的 pstack，以 `poteto-mode` 选择 `orchestrate`。主代理通过实际可用的 collaboration 工具调度 A Runtime & Performance、B Evaluator & Model Lifecycle、C Producer & Scientific Correctness 三个子代理；先并行只读调查与 `architect` 比较，再冻结 workload、完成被独立复验的 identity pilot，随后以 `swarm` 分工实施。各轮 `hillclimb` 记录假设、改动、计时及 keep/revert；`interrogate` 要求可复现反例，主代理独立复验关键修复。各 owner 的工作树、提交及原始验证记录独立保存。
 
 | Owner / 范围 | 实际代码与复用 | 通过的证据及限制 |
 |---|---|---|
@@ -24,7 +28,7 @@
 | A / 启动性能 | 已有 SciPy lazy imports，加上复用旧 opt 的 lazy PyRosetta 和按 AST UTF-8 byte offsets 提取 source | 已安装 PyRosetta 的 C 独立真实科学 gate、主代理复算、固定完整 W0；科学函数体、registry metadata/signatures 保持 |
 | B + A/root review / GPU 验证入口 | 固定 ProteinMPNN public-runner control、一次性 Slurm launcher、完整身份/释放/账单检查 | child identity、矛盾 release、UUID remapping、时间/TRES 反例均先失败再通过；此处合同测试不是实际 GPU 执行 |
 
-当前生产差异相对 d66 为 16 个文件，主要 Runtime owner 改动来自已保存的旧 fix，未重造已有机制。未改 MCMC proposal/acceptance、stage owner、repeat seeds、模型样本数、recycles 或精度来取得性能收益；没有把同一自适应轨迹的未来 proposal 伪装成独立任务。
+当前生产差异相对 d66 为 16 个文件，主要 Runtime owner 改动来自已保存的旧 fix，未重造已有机制。A 独立核对最终源码与已测 f9 的 948 个 production paths：917 个 blobs 的 Git/working SHA 全部一致，31 个 gitlinks 的 commit references 一致；没有声称未 materialize 的 submodule 已执行。四个冻结 measurement modules 与 d66/f9/final 逐字节一致。后续 launcher、validation、tests、docs/evidence 的变化单独记录，没有把 production 一致扩大成整仓一致。未改 MCMC proposal/acceptance、stage owner、repeat seeds、模型样本数、recycles 或精度来取得性能收益；没有把同一自适应轨迹的未来 proposal 伪装成独立任务。
 
 ## 2. 完整 CPU 性能对照与因果证据
 
@@ -44,6 +48,20 @@ Aggregate eval/s 为每 cell 的 45 个有效 evaluation 除以五次完整 work
 
 因果诊断与正式计时分开执行。4 个 ABBA 冷进程合计 44.985457 CPU 秒：baseline 的 PyRosetta cumulative import 为 3.217/3.008 s，candidate 在不用 native loss 时没有该 import；第一次 requirements 扫描从 1.183/1.191 s 降至 0.06157/0.06172 s。Torch import 在两侧仍存在，未计作被消除的成本。两项 startup 改动组合验证，未做单独端到端 ablation，不将整体收益精确归到某一个函数。
 
+### 最终 HEAD 的独立 Linux CI 复验
+
+[Runtime CI run 41780311942](https://github.com/Molaison/Astrolabe/actions/runs/41780311942) 在 exact `1bdaf3a` 上完成，baseline 为原始 d66。协议、种子、步数、三模式和五组配对均保持；全部 30 trials 有效。C 下载原始 GitHub artifacts 并核对服务端 ZIP digest，审计全部 645 个 CPU raw files；主代理直接重读 90 个科学 CSV 和 810 个 stage events，并从每个 trial 的完整时长独立重算下表。
+
+| 模式 | Baseline 中位 / 范围（s） | Final 中位 / 范围（s） | 有效 eval/s，前 → 后 | Aggregate 增益 |
+|---|---:|---:|---:|---:|
+| direct | 2.5164 / 2.4847–2.9207 | 1.5842 / 1.5490–1.6282 | 3.47634 → 5.69461 | **63.81%** |
+| resident serial | 6.5937 / 6.5217–6.7618 | 3.6120 / 3.5157–3.6505 | 1.35682 → 2.50109 | **84.33%** |
+| resident adaptive | 6.6293 / 6.5286–6.8108 | 3.5588 / 3.5187–3.6121 | 1.35321 → 2.52637 | **86.69%** |
+
+三个模式均 5/5 配对更快、范围分离，完整 experiment wall time 为 **123.836418728 s**，GPU 使用 0。它与上述 f102/SIF 比较有不同 baseline 和执行环境，不能把两个百分比相乘、相减或混合解释为 GPU 效果。最终 CI 的 resident 仍比同版 direct 慢约 2.25–2.30 倍，自动选路/长稳态问题仍未解决。
+
+完整原始 artifact、逐文件 manifest、C reader 和主代理独立复算见 [最终 HEAD 证据](../evidence/runtime-next/final-head-1bdaf3a/README.md)。
+
 ### 原始负结果全部保留
 
 | Attempt | 相同机器内的结果 | 决策 |
@@ -60,13 +78,15 @@ Aggregate eval/s 为每 cell 的 45 个有效 evaluation 除以五次完整 work
 
 本轮 f102 W0 全部 30 trials 科学分数/决策一致，189 个数值 tolerance 均为 0；全部已观察进程身份释放、terminal ledger 为空。原始 90 个 CSV 共 270 行。**90 行 accepted 是初始化；180 次 mutation attempts 全拒绝，accepted mutation progress 为 0**。W0 不输出结构，也不验证 acceptance/stage 正分支或 checkpoint/resume。
 
-另有独立的真实 CLI 科学正控制：固定 seed 17/4 steps，AAAA → GAAA 在 step 1 接受并进入 `accepted_mutation` stage，之后 SAAA/AAAA 被拒绝；每版 4 次 backend evaluation、5 条 score rows、1 次 accepted mutation、1 次 stage entry。首轮错误预期 5 次 backend calls 的失败保留，修正的只是计数预期，科学配置未变。9d 最终正控制已经完成，终态 owner、Python/NumPy/Torch CPU RNG 与输出 hash exact；本次新最终 HEAD 的重跑结果将附在最终证据分支，不将旧结果冒充新 HEAD。
+另有独立的真实 CLI 科学正控制：固定 seed 17/4 steps，AAAA → GAAA 在 step 1 接受并进入 `accepted_mutation` stage，之后 SAAA/AAAA 被拒绝；每版 4 次 backend evaluation、5 条 score rows、1 次 accepted mutation、1 次 stage entry。首轮错误预期 5 次 backend calls 的失败保留，修正的只是计数预期，科学配置未变。**C 已在 d66 和最终 1bd 各实际执行一次该固定 CLI**：完整 score rows、终态 owner、Python/NumPy/Torch CPU RNG 与科学输出 hash exact；主代理从两个原始 CSV 和完整 terminal-scientific-state JSON 独立重读通过。该控制使用 CPU Dummy evaluator，不认证 pretrained GPU 或 checkpoint 恢复。
 
 针对 PyRosetta lazy first-use，C 在真实 SIF/PyRosetta 2026.03+releasequarterly.5e498f 环境独立运行两进程，实际合计 30.020256 CPU 秒、GPU 未初始化。169 项完整 registry metadata/signatures、169 项 requirements、40 项 PyRosetta 分类、7 个 native symbols 全部一致；完整 27-residue 三链 fixture 的所有原子坐标、实际 SASA 和两次 registered losses 完全一致：`chain_buried_fraction=0.28873283581553477`、`com_distance=9.000000000000002`。首次 require 与科学阶段 Python/NumPy/Torch CPU RNG exact。主代理在未修改的原始 JSON 上独立重跑全部 28 个比较检查，通过。这是该 native CPU loss 的科学对照，不是 rosetta_crystal 整个 backend 或 GPU 认证。
 
 已完成的真实 f102 process contracts 为 309 passed、零 skip，来源 60684bd。原 9d GitHub final CI 为 248 runtime +104 Torch/geometry，零 skip。子代理与主代理的聚焦测试互有重叠，不相加成总覆盖数。新 mandatory suites 覆盖 scanner、launcher、PyRosetta lazy import 和 GPU checker；需要 RDKit 的 lazy-import suite 放入已有 Torch/geometry job，保留 minimal CPU benchmark dependencies。主代理曾在 minimal CPU env 得到 90 passed/8 个缺 RDKit 的 failures，原 JUnit 保留，未以 skip 或改 benchmark 环境掩盖。
 
-已复现并修复的边界包括 admission 后 waiting 泄漏、过期后重新 dispatch、queued timeout 清除其他 owner delegation、foreign/stale/replayed candidate，以及 GPU checker 的 child identity/release 记录矛盾。launcher 额外检查指定 UUID、UTC/standard 时间格式、有效终态日期和一致 GPU TRES；原失败案例与最终 50 单测、7 个 metadata cases、5 个 caller cases 均保留。后者是 CPU controlled-contract evidence，实际 Slurm/GPU release 必须等待真实运行。
+最终 `1bdaf3a` 的两份 CI 原始 JUnit 分别为 **378/378 CPU、181/181 geometry/Torch**，全部零 skip/failure/error；这些是本次精确 HEAD 的独立完整 gate，与历史或聚焦测试不累加。Runtime CI、release push run `41780311999` 和 release PR run `41780318835` 均完成 success。
+
+已复现并修复的边界包括 admission 后 waiting 泄漏、过期后重新 dispatch、queued timeout 清除其他 owner delegation、foreign/stale/replayed candidate，以及 GPU checker 的 child identity/release 记录矛盾。launcher 额外检查指定 UUID、UTC/standard 时间格式、有效终态日期和一致 GPU TRES；原失败案例与最终 50 单测、7 个 metadata cases、5 个 caller cases 均保留。后者是 CPU controlled-contract evidence；本次真实 Slurm 请求仅验证了 admission timeout 和排队请求终结，没有获得 GPU 执行/释放证据。
 
 ## 4. Backend 认证与真实 GPU control
 
@@ -76,23 +96,25 @@ ProteinMPNN 的实际 CPU preflight 已验证 checkpoint `proteinmpnn_v_48_020.p
 
 准备的 GPU control 固定 5 seeds、10 fresh trials、每 trial 一次 public `build_runner` 和三个连续 `design_sequences`，共计划 10 次 model loads/30 次 decode；完整输入、temperature 0.3、omit C、zero-occupancy parser、全部 native kwargs、随机数消耗与 float tolerance 均冻结。比较同一源码的 legacy 与 private resident；两边原本都保留模型，不制造反复加载的弱 baseline。它只覆盖该 public-runner 的构造/完整 decode/CPU-ready output/释放，**不覆盖完整 registry selector、MCMC acceptance、shared broker、W1 evaluator、OOM/restart 或本轮 revision-attributed GPU speedup**。
 
+最终实际执行停在 scheduler admission：`frozen.json` SHA256 为 `21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a`，`launch.json` SHA256 为 `9bbbae547470afda98c361f6a6796e14c6ef0f71dab536b7a6f503ee2ba8a921`；root 分别独立回读重算，B 从完整原字节核实 302 个 frozen sources、原协议及十个 trial 的计划。CPU freeze 7.7852 s、launcher prepare 23.6179 s，真实 GPU loads/decode 均为 **0**。原始 launcher 标记 `PARTIAL_ACCOUNTING_OR_BUDGET`，因为它没有进入 `_inside` 取得 job ID；A 通过 stderr 的唯一 job `33334` 与 exact owner/name/account 独立取得终态会计，补齐“未分配、0 GPU-hours”的证据，不篡改原始 status。详见 [GPU control 认证补充](runtime_gpu_mutator_certification.md)。
+
 ESMFold W1 的具体阻塞是：已定位的 2,097,152,000-byte checkpoint 为 invalid ZIP，所检 SIF 缺少 fair-esm/OpenFold distribution metadata 和预期 helper；没有把 metadata 缺失写成已经执行过 import failure。其它 AF/Protenix/Boltz 资产仅完成 metadata 清点，未冻结认证。没有声称服务器完全没有 pretrained assets。
 
 ## 5. Backlog 状态
 
 | ID | 状态 | 当前边界与剩余条件 |
 |---|---|---|
-| R0 | PARTIAL | W0 同机冻结/全量原始证据 DONE；GPU mutator control 协议已冻结、执行身份 freeze 待完成，完整 evaluator W1/W2 尚未认证 |
+| R0 | PARTIAL | W0 同机冻结/全量原始证据 DONE；GPU mutator control 协议与最终执行身份 freeze DONE，实际 admission BLOCKED；完整 evaluator W1/W2 尚未认证 |
 | R1 | PARTIAL | 主导 startup 成本与 >20% 可重复 CPU 改善 DONE；resident/direct 差距、长稳态 break-even/auto routing 未完成 |
 | R2 | PARTIAL | identity、整批校验、进程内 replay guard DONE；没有完整有界 asynchronous producer、GPU overlap 或 durable ordered commit |
 | R3 | PARTIAL | ESMFold audited 边界与 CPU contracts DONE；该 evaluator 的真实 GPU 阶段/传输实测 BLOCKED |
 | R4 | DONE | owner map、至少两种独立架构备选、caller-first 接口及选型 ADR；复用已有机制 |
-| R5 | BLOCKED | full-scope evaluator W1/长期故障与吞吐认证未完成；真权重 CPU preflight/窄 GPU control 入口 DONE，实际 runner 结果待最终证据 |
+| R5 | BLOCKED | full-scope evaluator W1/长期故障与吞吐认证未完成；真权重 CPU preflight/窄 GPU control 入口 DONE，真实请求因 nodes busy 未获 allocation，GPU inference 为 0 |
 | R6 | BLOCKED | 不在缺少 backend 证据时提高同卡并发或 microbatch 档位 |
 | R7 | PARTIAL | 沿用现有身份/cache/reset；没有新增跨 residue dependency cache 的完整 stale-negative/收益认证 |
 | R8 | PARTIAL | admission、三 ingress lanes、prepared ownership 和 failure isolation CPU gate DONE；GPU fairness/多 GPU 尚未认证 |
 | R9 | PARTIAL | deadline/cancel/OutcomeUnknown、late/replay 与进程释放有证据；不是 restart exactly-once，pretrained OOM/crash/resume 未认证 |
-| R10 | PARTIAL | W0、旧最终正控制、新 PyRosetta native parity DONE；新最终 HEAD 正控制待附，坐标型 evaluator/checkpoint 恢复未完成 |
+| R10 | PARTIAL | W0、最终 1bd acceptance/stage/RNG 正控制、真实 PyRosetta native parity DONE；坐标型 evaluator/checkpoint 恢复未完成 |
 | R11 | PARTIAL | registry/variant 清点 DONE；真实逐 backend 的完整认证仍有明确缺口 |
 | R12 | BLOCKED | 新版本和异构多 GPU 部署不在现有证据上扩张 |
 
@@ -100,6 +122,8 @@ ESMFold W1 的具体阻塞是：已定位的 2,097,152,000-byte checkpoint 为 i
 
 服务器目录已真实写入并回读核对，离线 bundle 有完整 SHA/先决 commit/每块校验。新 clone 曾继承 Git object alternates，已只对本任务 clone 完成 repack、保存并移除 alternate、fsck 和必需 commit 核验；旧 worktrees 未被修改。初次 clone timeout、原 wrapper 未隐藏所有 accelerator 的预检失败、工具/依赖环境错误均留存。
 
-GPU 请求准备为一个新 Slurm job：xulab/boron/normal，1 g4090、4 CPUs、32 GiB、900 秒上限、admission 最多等待 60 秒，总上限 0.25 GPU-hour。只用 scheduler 分配的设备并在任何 CUDA 初始化前绑定已核对的 UUID；不复用用户现有 jobs，不扫描共享 GPU 来挑空卡。实际 cost、driver、UUID、whole-job terminal accounting 和 process release 以最终运行原始证据为准。**截至本源码报告冻结时 GPU 使用仍为 0。**
+GPU 请求实际只提交一次：xulab/boron/normal，1 g4090、4 CPUs、32 GiB、900 秒上限、admission 最多等待 60 秒，总上限 0.25 GPU-hour。外层完整 launcher 调用为 **60.659714499 s**，其中 srun client wall time 为 **60.107918978 s**；Slurm 返回 nodes busy，job 33334 终态 CANCELLED、无 allocation，实际 **0 GPU-hours**。这是 bounded admission 失败；不提供 GPU UUID、driver、模型输出或显存 telemetry，因为那些步骤从未执行。调度器先前显示的算术余量不保证即时 admission，Priority/其它 pending 需求仍可能影响调度。本次没有复用、cancel 或变更用户其它任务。
+
+所有容器预检保留完整 stdout/stderr。Apptainer 忽略请求的 HOME 环境覆盖，实际 HOME 仍是 `/xcf26/zpzeng`；launcher 的 `--no-home`、`--no-mount hostfs,bind-paths` 与 private tmp/cache 设置保留，未声称 actual HOME 变量指向 private 目录。freeze 中 ProDy 的 readonly-home warning 原样归档，不删日志，也没有修改用户 HOME 来消除 warning。
 
 CPU 可复现入口见 `benchmarks/runtime/README.md` 与冻结 source manifests；GPU 命令/预算/拒绝条件见 `benchmarks/runtime/gpu_mutator_control.md` 和 `gpu_slurm_launcher.md`。所有性能/科学输出、完整 RNG codec、JUnit、环境指纹、真实配置与 raw telemetry 均以 archive 和逐文件 manifest 保存；历史证据不被新结果替换。最终报告应同时阅读精确 source HEAD、同树映射、最终 CI、实际 GPU supplement 及剩余缺口，不能只凭一个 PASS 标签扩大认证范围。

@@ -1,0 +1,132 @@
+{
+  "f102_final_source_assemble_complete": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"7f4338d2-dc7c-4db0-bc94-b6cecd9d8a53\",\"status\":\"exited\",\"stdout\":\"{\\\"head\\\": \\\"1bdaf3a53227c9197b930dc00a01b752acd90067\\\", \\\"tree\\\": \\\"6f763bfb04778ef4f32386ddb8aeb38ce4240bf1\\\", \\\"tracked_status\\\": \\\"\\\", \\\"source\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a\\\", \\\"bundle_sha256\\\": \\\"7ebee27476c76761a51bb45f2cef7e49b9b5302fb764ab64b61abff34c864fac\\\"}\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"bbe1b346-3a3a-4160-aa01-fd2e360c44c8\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_gpu_freeze_poll1": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"d37260b4-34fb-470f-9dde-85852aeb95f8\",\"status\":\"exited\",\"stdout\":\"{\\\"returncode\\\": 0, \\\"wall_seconds\\\": 7.785164701010217}\\n{\\\"frozen\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-control-01/frozen.json\\\", \\\"sha256\\\": \\\"21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a\\\", \\\"status\\\": \\\"CPU_PREFLIGHT_ONLY\\\", \\\"model_loads_planned\\\": 10, \\\"decode_calls_planned\\\": 30}\\n\\nWARNING: Overriding HOME environment variable with APPTAINERENV_HOME is not permitted\\n@> ProDy is configured: verbosity='none'\\n@> WARNING prody cannot write configuration file to '/xcf26/zpzeng', user does not have write access.\\n\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"419c1f2e-1059-47b8-a10d-38c0264a2045\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_gpu_freeze_independent_hash": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"a9af6ceb-e199-4061-b91a-6aff1951e523\",\"status\":\"exited\",\"stdout\":\"{\\\"size\\\": 47296, \\\"sha256\\\": \\\"21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a\\\", \\\"head\\\": \\\"1bdaf3a53227c9197b930dc00a01b752acd90067\\\", \\\"root\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a\\\", \\\"keys\\\": [\\\"assets\\\", \\\"cpu_preflight\\\", \\\"created_unix\\\", \\\"head\\\", \\\"output\\\", \\\"plan\\\", \\\"protocol\\\", \\\"protocol_sha256\\\", \\\"root\\\", \\\"schema\\\", \\\"source_sha256\\\", \\\"tree\\\"], \\\"cpu_preflight\\\": {\\\"chain_order\\\": [\\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"A\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\", \\\"B\\\"], \\\"cuda_build\\\": \\\"12.6\\\", \\\"cuda_initialized\\\": false, \\\"executable\\\": \\\"/alphafold3_venv/bin/python\\\", \\\"mask_sum\\\": 354, \\\"native_sequence\\\": \\\"SLHLPKYDDFVQSISVLALTMSGSELHGIMCGYLCAGADSQGEAYIRALLNNKKDEQSRNALLSMFSVFSISQQQMNNFDFEFEMLLPDDDESLVTRAQAFSEWCEGFTQGLTIAGVGMEQFYEEESQDALQHLMEFAELDCESLEVGEEDERALMEVSEYTRMAVLRLHSDLVLHESLHLPKYDDFVQSISVLALTMSGSELHGIMCGYLCAGADSQGEAYIRALLNNKKDEQSRNALLSMFSVFSISQQQMNNFDFEFEMLLPDDDESLVTRAQAFSEWCEGFTQGLTIAGVGMEQFYEEESQDALQHLMEFAELDCESLEVGEEDERALMEVSEYTRMAVLRLHSDLVLHE\\\", \\\"numpy\\\": \\\"1.26.4\\\", \\\"parsed_input_sha256\\\": {\\\"arrays.npz\\\": \\\"9e892165e0941ba783ff98144dc2a5b3dcd19cde3ae9ae0738ed4498004e5868\\\", \\\"tree.json\\\": \\\"956c784d59995c30e0868efe56fd7a3b27cf48249ab7994c96d017de24017701\\\"}, \\\"python\\\": \\\"3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]\\\", \\\"settings\\\": {\\\"cudnn_benchmark\\\": false, \\\"cudnn_deterministic\\\": false, \\\"cudnn_tf32\\\": true, \\\"default_dtype\\\": \\\"float32\\\", \\\"deterministic\\\": false, \\\"deterministic_warn_only\\\": false, \\\"float32_matmul_precision\\\": \\\"highest\\\", \\\"matmul_tf32\\\": false}, \\\"torch\\\": \\\"2.7.1+cu126\\\", \\\"weights\\\": {\\\"devices\\\": [\\\"cpu\\\"], \\\"dtypes\\\": [\\\"torch.float32\\\"], \\\"forward_calls\\\": 0, \\\"load_count\\\": 1, \\\"parameters\\\": 1660485, \\\"sample_calls\\\": 0}}, \\\"protocol_sha256\\\": \\\"72a18eef550fdf5555501b4163126522d752f441c3b7a5aad517a852d6498fc6\\\"}\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"16dc379d-c930-4df9-a7ea-f709ed706c80\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_gpu_prepare_poll3": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"4f95f86c-03b7-4792-9c81-9342d579cdcd\",\"status\":\"exited\",\"stdout\":\"{\\\"returncode\\\": 0, \\\"wall_seconds\\\": 23.617934076988604}\\n{\\\"status\\\": \\\"READY_FOR_ROOT_REVIEW\\\", \\\"launch\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-allocation-01/launch.json\\\", \\\"sha256\\\": \\\"9bbbae547470afda98c361f6a6796e14c6ef0f71dab536b7a6f503ee2ba8a921\\\", \\\"reviewable_srun_argv\\\": [\\\"/usr/bin/srun\\\", \\\"--account=xulab\\\", \\\"--partition=boron\\\", \\\"--qos=normal\\\", \\\"--nodes=1\\\", \\\"--ntasks=1\\\", \\\"--gres=gpu:g4090:1\\\", \\\"--cpus-per-task=4\\\", \\\"--mem=32G\\\", \\\"--time=00:15:00\\\", \\\"--immediate=60\\\", \\\"--quit-on-interrupt\\\", \\\"--kill-on-bad-exit=1\\\", \\\"--job-name=astrolabe-gpu-20261104-10cf2b34c104\\\", \\\"--chdir=/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a\\\", \\\"/usr/bin/python3\\\", \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a/benchmarks/runtime/gpu_slurm_launcher.py\\\", \\\"_inside\\\", \\\"--launch\\\", \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-allocation-01/launch.json\\\", \\\"--launch-sha256\\\", \\\"9bbbae547470afda98c361f6a6796e14c6ef0f71dab536b7a6f503ee2ba8a921\\\"], \\\"gpu_queries\\\": 0, \\\"slurm_jobs_submitted\\\": 0}\\n\\n\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"f01da8f5-36b4-40f7-a925-17170f7620a4\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_gpu_launch_independent_hash": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"48f5149e-a5a2-4291-b2dd-5b8e1a6aa97a\",\"status\":\"exited\",\"stdout\":\"{\\\"size\\\": 6609, \\\"sha256\\\": \\\"9bbbae547470afda98c361f6a6796e14c6ef0f71dab536b7a6f503ee2ba8a921\\\", \\\"plan\\\": {\\\"status\\\": \\\"READY_FOR_ROOT_REVIEW\\\", \\\"head\\\": \\\"1bdaf3a53227c9197b930dc00a01b752acd90067\\\", \\\"root\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a\\\", \\\"frozen_sha256\\\": \\\"21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a\\\", \\\"job_name\\\": \\\"astrolabe-gpu-20261104-10cf2b34c104\\\", \\\"cpu_container_check\\\": {\\\"cuda_build\\\": \\\"12.6\\\", \\\"cuda_initialized\\\": false, \\\"environment\\\": {\\\"CUDA_VISIBLE_DEVICES\\\": \\\"\\\", \\\"GH_CUDA_PREINITIALIZE\\\": \\\"0\\\", \\\"HIP_VISIBLE_DEVICES\\\": \\\"\\\", \\\"HOME\\\": \\\"/xcf26/zpzeng\\\", \\\"MKL_NUM_THREADS\\\": \\\"1\\\", \\\"NUMEXPR_NUM_THREADS\\\": \\\"1\\\", \\\"NVIDIA_VISIBLE_DEVICES\\\": \\\"void\\\", \\\"OMP_NUM_THREADS\\\": \\\"1\\\", \\\"OPENBLAS_NUM_THREADS\\\": \\\"1\\\", \\\"PYTHONPATH\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-env/lib/python3.11/site-packages\\\", \\\"ROCR_VISIBLE_DEVICES\\\": \\\"\\\", \\\"TMPDIR\\\": \\\"/tmp\\\"}, \\\"executable\\\": \\\"/alphafold3_venv/bin/python\\\", \\\"gpu_forward_calls\\\": 0, \\\"numpy\\\": \\\"1.26.4\\\", \\\"python\\\": \\\"3.11.14 | packaged by conda-forge | (main, Jan 26 2026, 23:48:32) [GCC 14.3.0]\\\", \\\"settings\\\": {\\\"cudnn_benchmark\\\": false, \\\"cudnn_deterministic\\\": false, \\\"cudnn_tf32\\\": true, \\\"default_dtype\\\": \\\"float32\\\", \\\"deterministic\\\": false, \\\"deterministic_warn_only\\\": false, \\\"float32_matmul_precision\\\": \\\"highest\\\", \\\"matmul_tf32\\\": false}, \\\"torch\\\": \\\"2.7.1+cu126\\\"}, \\\"container_environment_cpu\\\": {\\\"CUDA_CACHE_PATH\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-allocation-01/cache/cuda\\\", \\\"CUDA_VISIBLE_DEVICES\\\": \\\"\\\", \\\"GH_CUDA_PREINITIALIZE\\\": \\\"0\\\", \\\"HF_HUB_OFFLINE\\\": \\\"1\\\", \\\"HIP_VISIBLE_DEVICES\\\": \\\"\\\", \\\"HOME\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-allocation-01/home\\\", \\\"JAX_PLATFORMS\\\": \\\"cpu\\\", \\\"MKL_NUM_THREADS\\\": \\\"1\\\", \\\"NUMEXPR_NUM_THREADS\\\": \\\"1\\\", \\\"NVIDIA_VISIBLE_DEVICES\\\": \\\"void\\\", \\\"OMP_NUM_THREADS\\\": \\\"1\\\", \\\"OPENBLAS_NUM_THREADS\\\": \\\"1\\\", \\\"PYTHONDONTWRITEBYTECODE\\\": \\\"1\\\", \\\"PYTHONNOUSERSITE\\\": \\\"1\\\", \\\"PYTHONPATH\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/source-final-1bdaf3a:/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/test-env/lib/python3.11/site-packages\\\", \\\"ROCR_VISIBLE_DEVICES\\\": \\\"\\\", \\\"TMPDIR\\\": \\\"/tmp\\\", \\\"TORCH_HOME\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-allocation-01/cache/torch\\\", \\\"TRANSFORMERS_OFFLINE\\\": \\\"1\\\", \\\"TZ\\\": \\\"UTC\\\", \\\"XDG_CACHE_HOME\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-allocation-01/cache\\\"}, \\\"requested_gpu_hours_ceiling\\\": 0.25, \\\"sif\\\": {\\\"path\\\": \\\"/xcf26/zpzeng/.gh_container/images/GuidedHallucination_af3_licensed_a13_20260722.sif\\\", \\\"sha256\\\": \\\"242aae3bb97c5c7ea374dab5d7462e04863d9d48ba2ee00cc57e6c0a57a538e3\\\", \\\"stat\\\": {\\\"device\\\": 2221890670, \\\"inode\\\": 144115242819995550, \\\"mtime_ns\\\": 1784734453000000000, \\\"size\\\": 6418354176}}, \\\"readonly_files\\\": [\\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-control-01/frozen.json\\\", \\\"/xcf26/zpzeng/gitrepo/ligandmpnn/model_params/proteinmpnn_v_48_020.pt\\\", \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-control-01/input.pdb\\\", \\\"/xcf26/zpzeng/gitrepo/ligandmpnn/inputs/4GYT.pdb\\\"]}}\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"57fbd4ea-35b0-443f-a56a-a8fabf9fd8b2\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_gpu_submit_call": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"45125963-fb37-4d75-b412-1fb8efac56c1\",\"status\":\"running\",\"stdout\":\"\",\"stderr\":\"\",\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"f9bca15a-2c0c-4c48-add9-d218c1b48ff7\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_gpu_progress_0": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"45125963-fb37-4d75-b412-1fb8efac56c1\",\"status\":\"exited\",\"stdout\":\"{\\\"returncode\\\": 1, \\\"wall_seconds\\\": 60.65971449900826}\\n{\\\"status\\\": \\\"PARTIAL_ACCOUNTING_OR_BUDGET\\\", \\\"own_job_id\\\": null, \\\"submission\\\": \\\"/xcf26/zpzeng/practice_arena/astrolabe_runtime_20261102_implementation/cloud-20261104/gpu-allocation-01/submission.json\\\"}\\n\\n\\n\",\"stderr\":\"\",\"exitCode\":1,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"32552ad1-7f3e-4370-8fbe-a47f66d3f494\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_gpu_progress_1": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"dcae86ca-37c7-4f4a-b37f-4bd602e6a2af\",\"status\":\"exited\",\"stdout\":\"{\\\"submission.json\\\": {\\\"status\\\": \\\"PARTIAL_ACCOUNTING_OR_BUDGET\\\"}}\\nsrun: job 33334 queued and waiting for resources\\nsrun: error: Unable to allocate resources: Requested nodes are busy\\n\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"55e9ae39-a9b0-4080-abe7-d100fd145632\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_gpu_root_review": {
+    "source_head": "1bdaf3a53227c9197b930dc00a01b752acd90067",
+    "source_tree": "6f763bfb04778ef4f32386ddb8aeb38ce4240bf1",
+    "frozen_sha256": "21460a82249fadffde75bc0ce058af40548e85daf7aa29851b2fea992e72310a",
+    "launch_sha256": "9bbbae547470afda98c361f6a6796e14c6ef0f71dab536b7a6f503ee2ba8a921",
+    "independent_hashes_match": true,
+    "status": "ROOT_REVIEW_PASSED",
+    "budget": {
+      "gpus": 1,
+      "gpu_type": "g4090",
+      "cpus": 4,
+      "memory_gib": 32,
+      "allocation_seconds": 900,
+      "admission_seconds": 60,
+      "gpu_hours_ceiling": 0.25
+    },
+    "scope": "Exact pretrained same-candidate runner control only; no additional warmup/retry/existing job reuse.",
+    "home_observation": "Apptainer actual HOME remains /xcf26/zpzeng despite requested env; --no-home and --no-mount hostfs,bind-paths remain active. Private tmp/cache are explicitly bound. Preserve warning and audit actual mounts; do not claim env HOME became private.",
+    "scientific_changes": false
+  },
+  "f102_root_own_job_accounting": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"44d59c99-24da-41e4-8847-83e7d7800cf0\",\"status\":\"exited\",\"stdout\":\"33334|astrolabe-gpu-20261104-10cf2b34c104|zpzeng|7054|xulab|boron|normal|CANCELLED by 7054|0:0|None|2026-11-04T05:52:06|0|0||None assigned\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":4096},\"requestId\":\"4692b77c-4f26-4f76-a2ee-dff876cff166\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_connection_status": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"items\":[{\"deviceId\":\"c429fd25-7aa7-492f-8ff2-d8fa86218e56\",\"deviceLabel\":\"f102-zpzeng\",\"instanceId\":\"f102-current\",\"kind\":\"codex\",\"label\":\"zpzeng@f102 当前 app server\",\"fingerprint\":\"f9798c3e4736e6a60b37a8813e24b73fe78fad832b674ae499c0c4447761cd64\",\"scope\":{\"id\":\"f102-current\",\"binary\":\"/xcf26/zpzeng/practice_arena/203_install_codex_proxy_rs_ywl/runs/001_cpr_ywl_deployment/01_upstream_compose_isolated/06_agent_resume_config/codex\",\"cwd\":\"/xcf26/zpzeng\",\"kind\":\"codex\",\"mode\":\"attach-unix\",\"commandMode\":\"managed-stdio\",\"socketPath\":\"/run/user/7054/app-server-control.sock\",\"home\":\"/xcf26/zpzeng/.codex\",\"execution\":\"full-access\"},\"backendVersion\":\"codex-cli 0.160.0\",\"capabilityRevision\":\"codex-0.160.1-attach-management-v1-host-v1\",\"available\":true,\"online\":true}]},\"requestId\":\"5e32184f-fdcb-4ba9-a7a0-71c77f483e75\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  },
+  "f102_transfer_reconnect_inspection": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"execution\":\"accepted\",\"result\":{\"processId\":\"c0ab0ba2-063c-4514-8171-a6b35666135d\",\"status\":\"exited\",\"stdout\":\"{\\\"count\\\": 46, \\\"last\\\": \\\"045.part\\\", \\\"last_sha\\\": \\\"ee12992799947bf30cfda74d16170b5b491c56a729646679e6d7dc47d9e05ec0\\\", \\\"chunk46_exists\\\": false}\\n\",\"stderr\":\"\",\"exitCode\":0,\"outputTruncated\":false,\"outputBytesCap\":2048},\"requestId\":\"79e5e3a7-082f-4777-a7f4-ddd36130184f\"}"
+      }
+    ],
+    "structuredContent": null,
+    "isError": false
+  }
+}

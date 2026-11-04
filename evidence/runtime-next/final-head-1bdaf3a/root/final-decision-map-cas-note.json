@@ -1,0 +1,8 @@
+{
+  "scope": "evidence-map snapshot integrity only",
+  "expected_sha256": "94c048617507992230298a8e739ef0bd70a38dd38753397908426327bc483f55",
+  "observed_sha256": "ebbf7c306dcaca58a92e55e6a151602852d10535de00e42f123d531381e12ef9",
+  "guard": "CAS prevented application of a concurrently updated map before any TSV write",
+  "science_or_source_changed": false,
+  "decision": "Wait for final writer SHA, then verify and apply the stable snapshot"
+}

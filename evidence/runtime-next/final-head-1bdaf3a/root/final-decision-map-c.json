@@ -1,0 +1,644 @@
+{
+  "owner_cross_review": "A and B independently supplied their historical anchors; statements about dirty pre-commit probes and unknown total costs were incorporated without rerunning.",
+  "rows": [
+    {
+      "archive_members": [],
+      "attempt_id": "PILOT-ID",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown total; recorded focused pytest gate 1.30 s; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-c/pilot-manifest.json;evidence/runtime-next/agent-c/pilot-report.md;evidence/runtime-next/agent-c/pilot-identity-before.json;evidence/runtime-next/agent-c/pilot-identity-after.json",
+      "evidence_paths": [
+        {
+          "bytes": 1572,
+          "path": "evidence/runtime-next/agent-c/pilot-manifest.json",
+          "sha256": "7eba3a017fcce3d4d41af1612503b5ced1f88cc69df89ae0d674653662d77bca"
+        },
+        {
+          "bytes": 4021,
+          "path": "evidence/runtime-next/agent-c/pilot-report.md",
+          "sha256": "e037b681e5f03df556d6740208e41c998d217fc80069b7db1699df511e0aa85d"
+        },
+        {
+          "bytes": 2088,
+          "path": "evidence/runtime-next/agent-c/pilot-identity-before.json",
+          "sha256": "d145851c66fb8782487afdcc637a52ceb9c47304163b3c8e2607caf658d50c44"
+        },
+        {
+          "bytes": 1468,
+          "path": "evidence/runtime-next/agent-c/pilot-identity-after.json",
+          "sha256": "c22130ec28126656bbbca701de20a36f9bbb0de1ac4efde359957d691ddc9a76"
+        }
+      ],
+      "notes": "Exact observed heads in pilot manifest. Pytest duration is not throughput.",
+      "patch_sha": "d57d2ef3c5bcf442228eb71f4f960819faac76b5"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "PRODUCER-BATCH",
+      "baseline": "d57d2ef3c5bcf442228eb71f4f960819faac76b5",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-c/submission-before.json;evidence/runtime-next/agent-c/submission-after-generation.json;evidence/runtime-next/agent-c/decision.tsv",
+      "evidence_paths": [
+        {
+          "bytes": 3494,
+          "path": "evidence/runtime-next/agent-c/submission-before.json",
+          "sha256": "3ede8be13db9ceab2f07dc2108be93d2af392d31c09671f170e8c3857e55fa05"
+        },
+        {
+          "bytes": 3175,
+          "path": "evidence/runtime-next/agent-c/submission-after-generation.json",
+          "sha256": "cdb4ae383080430be1edea7bd0cb2b1d813880c97fb60ccb65533e182455f3f6"
+        },
+        {
+          "bytes": 2509,
+          "path": "evidence/runtime-next/agent-c/decision.tsv",
+          "sha256": "7919243bf8c2f908a41b663d23e411d4c923338bedbf83955a94624386019f64"
+        }
+      ],
+      "notes": "Exact source_head fields bind before and after; invalid input computes zero tasks after fix.",
+      "patch_sha": "754976e0443a84e3bcafe8f30bd8017dc6844a76"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "PRODUCER-REPLAY",
+      "baseline": "754976e0443a84e3bcafe8f30bd8017dc6844a76",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-c/submission-after-generation.json;evidence/runtime-next/agent-c/submission-after.json;evidence/runtime-next/agent-c/decision.tsv",
+      "evidence_paths": [
+        {
+          "bytes": 3175,
+          "path": "evidence/runtime-next/agent-c/submission-after-generation.json",
+          "sha256": "cdb4ae383080430be1edea7bd0cb2b1d813880c97fb60ccb65533e182455f3f6"
+        },
+        {
+          "bytes": 2834,
+          "path": "evidence/runtime-next/agent-c/submission-after.json",
+          "sha256": "36a05560cd99ca800feb84e0bda7224753bcb5e2546f168b78df72b6f803e9dd"
+        },
+        {
+          "bytes": 2509,
+          "path": "evidence/runtime-next/agent-c/decision.tsv",
+          "sha256": "7919243bf8c2f908a41b663d23e411d4c923338bedbf83955a94624386019f64"
+        }
+      ],
+      "notes": "Exact source_head fields; generation-only predecessor still admits duplicates, lifetime guard prevents replay.",
+      "patch_sha": "8c987ed86452d2c1bb467a1d20c2434347b5a95b"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "PRODUCER-BACKPRESSURE",
+      "baseline": "8c987ed86452d2c1bb467a1d20c2434347b5a95b",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-c/blocking-backpressure-negative.json;evidence/runtime-next/agent-c/probe_blocking_backpressure.py",
+      "evidence_paths": [
+        {
+          "bytes": 677,
+          "path": "evidence/runtime-next/agent-c/blocking-backpressure-negative.json",
+          "sha256": "b4dc4c4394c2280975560ddea11dbb418fadda73fb8026a990bd5303f7f99602"
+        },
+        {
+          "bytes": 4243,
+          "path": "evidence/runtime-next/agent-c/probe_blocking_backpressure.py",
+          "sha256": "30fc09d502a6ac07420bdb7b7c8d25a4464b88f35690c69785d9ef9dec8a3582"
+        }
+      ],
+      "notes": "Same 3 tasks per arm; winner changes 0 to 1. Script SHA is the prototype identity; no production patch.",
+      "patch_sha": "none (uncommitted evidence-only prototype)"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "CPU-BROKER-BYPASS",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "docs/runtime_architecture_decision.md;evidence/runtime-next/agent-a/INVESTIGATION.md",
+      "evidence_paths": [
+        {
+          "bytes": 12611,
+          "path": "docs/runtime_architecture_decision.md",
+          "sha256": "6bf2bf647ddf68006d8ca8beed1c354fd255a6877fe469b4868c261c8e1033cf"
+        },
+        {
+          "bytes": 13632,
+          "path": "evidence/runtime-next/agent-a/INVESTIGATION.md",
+          "sha256": "6b7cb493f98b87710ae6e050a395bd6e6bb25e8339a3a97e9c48dc943981e2cb"
+        }
+      ],
+      "notes": "ADR explicitly grounds source at d66; no implementation or timed experiment.",
+      "patch_sha": "none (source-only rejected alternative)"
+    },
+    {
+      "archive_members": [
+        "raw/deadline-before/result.json",
+        "raw/deadline-after/result.json",
+        "raw/deadline-after/source.patch"
+      ],
+      "attempt_id": "DEADLINE",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md;evidence/runtime-next/agent-a/probe_deadline.py;evidence/runtime-next/review/deadline-before/result.json;evidence/runtime-next/review/deadline-after/result.json;evidence/runtime-next/agent-a/agent-a-raw.tar.xz",
+      "evidence_paths": [
+        {
+          "bytes": 3415,
+          "path": "evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md",
+          "sha256": "4df8798ff2fb06971ace72aa65a7aae58fdbd1cfe78ffb92c9cfda7e529bd7b2"
+        },
+        {
+          "bytes": 5445,
+          "path": "evidence/runtime-next/agent-a/probe_deadline.py",
+          "sha256": "77c6a3241ec581373d614dcd94c42a060b2caa52deeb70cabf2681395758e914"
+        },
+        {
+          "bytes": 814,
+          "path": "evidence/runtime-next/review/deadline-before/result.json",
+          "sha256": "dcabec2fa1960c8083fc13cdfd57fb98a5330639b420b47446332d1dc78be494"
+        },
+        {
+          "bytes": 765,
+          "path": "evidence/runtime-next/review/deadline-after/result.json",
+          "sha256": "0edf5f1d98c3af3e1f203b818a3812b7bb3797ac502cacc58abc6b62450bbcc5"
+        },
+        {
+          "bytes": 152068,
+          "path": "evidence/runtime-next/agent-a/agent-a-raw.tar.xz",
+          "sha256": "1347bee47ca56ee19ab93a1832e0f97368956433f6ac4e36d9aa99cb7fc09b01"
+        }
+      ],
+      "notes": "Original root probe identifies d66 baseline. Control-plane timing is not model throughput. Author after probe was pre-commit at f1bef6f+dirty; recorded broker SHA9247a3a... and source.patch identify the fix, not that HEAD alone.",
+      "patch_sha": "54031feb7bbfb018b2e64a0fb5b444b95ad8f3c1"
+    },
+    {
+      "archive_members": [
+        "raw/delegated-before.json",
+        "raw/delegated-after.json"
+      ],
+      "attempt_id": "DELEGATION",
+      "baseline": "1055b869b6a2397d776e1c5546f2c78d12f19f4d",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md;evidence/runtime-next/agent-a/agent-a-raw.tar.xz;evidence/runtime-next/review/delegation-pre-fix.json;evidence/runtime-next/review/delegation-after.json",
+      "evidence_paths": [
+        {
+          "bytes": 3415,
+          "path": "evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md",
+          "sha256": "4df8798ff2fb06971ace72aa65a7aae58fdbd1cfe78ffb92c9cfda7e529bd7b2"
+        },
+        {
+          "bytes": 152068,
+          "path": "evidence/runtime-next/agent-a/agent-a-raw.tar.xz",
+          "sha256": "1347bee47ca56ee19ab93a1832e0f97368956433f6ac4e36d9aa99cb7fc09b01"
+        },
+        {
+          "bytes": 1301,
+          "path": "evidence/runtime-next/review/delegation-pre-fix.json",
+          "sha256": "8bb45d1728226603b16d38feb682ac875e0f61eb95e1a18e7b8acec1ddd226dd"
+        },
+        {
+          "bytes": 1410,
+          "path": "evidence/runtime-next/review/delegation-after.json",
+          "sha256": "a10bc238ded459718835a197942620da9917939a5f66ec1233b131079de2d366"
+        }
+      ],
+      "notes": "Author archived before head=1055b86; root integrated before head differs and is retained in its JSON. Author after probe still recorded1055b86+dirty; broker SHAaec1b381... identifies repaired code.00a8b68 is the retained production patch, not a fabricated probe HEAD.",
+      "patch_sha": "00a8b688db3a1e876d014212a614273c14ef29b2"
+    },
+    {
+      "archive_members": [
+        "raw/entry-lock-before.json",
+        "raw/entry-lock-after.json"
+      ],
+      "attempt_id": "ENTRY-LOCK",
+      "baseline": "00a8b688db3a1e876d014212a614273c14ef29b2",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md;evidence/runtime-next/agent-a/agent-a-raw.tar.xz;evidence/runtime-next/review/entry-lock-pre-fix.json;evidence/runtime-next/review/entry-lock-after.json",
+      "evidence_paths": [
+        {
+          "bytes": 3415,
+          "path": "evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md",
+          "sha256": "4df8798ff2fb06971ace72aa65a7aae58fdbd1cfe78ffb92c9cfda7e529bd7b2"
+        },
+        {
+          "bytes": 152068,
+          "path": "evidence/runtime-next/agent-a/agent-a-raw.tar.xz",
+          "sha256": "1347bee47ca56ee19ab93a1832e0f97368956433f6ac4e36d9aa99cb7fc09b01"
+        },
+        {
+          "bytes": 587,
+          "path": "evidence/runtime-next/review/entry-lock-pre-fix.json",
+          "sha256": "c918fca8241a52295d72acb431e93f8551205f40d7d28b362201f22b0c3c863d"
+        },
+        {
+          "bytes": 471,
+          "path": "evidence/runtime-next/review/entry-lock-after.json",
+          "sha256": "cf47500f709c96a782122b01110ecab23080011af56867d97789b9a959d97bf8"
+        }
+      ],
+      "notes": "Author archived before head=00a8b68; root integrated before anchor remains recorded separately. Author after probe was00a8b68+dirty, broker SHA391b9239...; final eac3081 differs only in comment wording per report. No hard wall-clock return claim.",
+      "patch_sha": "eac3081afc6eca374ffc8ae37da8a37a6afd43ec"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "ESMFOLD-BOUNDARY",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-b/esmfold-output-run-manifest.json;evidence/runtime-next/agent-b/esmfold-output-report.md;evidence/runtime-next/agent-b/esmfold-worker-negative.json;evidence/runtime-next/agent-b/esmfold-worker-control.json",
+      "evidence_paths": [
+        {
+          "bytes": 2313,
+          "path": "evidence/runtime-next/agent-b/esmfold-output-run-manifest.json",
+          "sha256": "f2f8879d05e0571f5fd4a0958199b6d86c8f2254a35a44291411c50752ccfae7"
+        },
+        {
+          "bytes": 10826,
+          "path": "evidence/runtime-next/agent-b/esmfold-output-report.md",
+          "sha256": "cde6749f7c6492e524fb6706e955dbba4d697ad2a64659d5c8a3e04a6be4fac7"
+        },
+        {
+          "bytes": 127,
+          "path": "evidence/runtime-next/agent-b/esmfold-worker-negative.json",
+          "sha256": "e2afea70dceb49bd339401aac1b9bf577934aeef1f61381bbef8221211b6ab98"
+        },
+        {
+          "bytes": 74,
+          "path": "evidence/runtime-next/agent-b/esmfold-worker-control.json",
+          "sha256": "66666479784cd3bb37c8c748f14e906c03364209285df88416aebfc4d4501884"
+        }
+      ],
+      "notes": "Synthetic CPU native-format/lease contracts; real pretrained GPU never ran. Author manifest records pre-commit working-source SHA; independent C source is exacta55. Total experiment cost unknown; testwall is not total cost.",
+      "patch_sha": "a55c28553917742ed451aa016ce7dc62cdfea95c"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "ESMFOLD-TIMING",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-c/review-b-output-comparison.json;evidence/runtime-next/agent-b/esmfold-output-comparison.json;evidence/runtime-next/agent-b/hillclimb-output-decision.tsv",
+      "evidence_paths": [
+        {
+          "bytes": 29133,
+          "path": "evidence/runtime-next/agent-c/review-b-output-comparison.json",
+          "sha256": "9f87f01ed821127a13f9af9d29e4ecd83e84159c87444e815de3b64abbde6dad"
+        },
+        {
+          "bytes": 29126,
+          "path": "evidence/runtime-next/agent-b/esmfold-output-comparison.json",
+          "sha256": "e6e523f25f875414412f1c083217c13476ddd7bbe72f5fe8bfc0b082174a3b27"
+        },
+        {
+          "bytes": 398,
+          "path": "evidence/runtime-next/agent-b/hillclimb-output-decision.tsv",
+          "sha256": "6c574329a8881ab385aff257aa2544c9b52ca3613c7b1382bdd74e9ff0dc00a1"
+        }
+      ],
+      "notes": "Baseline algorithm versus split algorithm at pinned source; CPU elapsed samples and counts are inside raw. No D2H or GPU speed claim. Seven alternating trials per implementation/shape; independentC +9.31%/+6.68% latency regressions. B first and later rounds retained, never choose only the best. Output-only latency is not experiment budget cost.",
+      "patch_sha": "a55c28553917742ed451aa016ce7dc62cdfea95c"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "CI-PARSER",
+      "baseline": "68888f805488b3bece3a4204fe10b02efd00300e",
+      "cost": "no job/trial ran; CPU cost unknown; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/ci/initial-attempts.json;evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md",
+      "evidence_paths": [
+        {
+          "bytes": 1344,
+          "path": "evidence/runtime-next/ci/initial-attempts.json",
+          "sha256": "dea7b55ff8764ef2e01ebfa4ba65a0ac74b7d403d4af34e1e71e5593024ceee9"
+        },
+        {
+          "bytes": 3415,
+          "path": "evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md",
+          "sha256": "4df8798ff2fb06971ace72aa65a7aae58fdbd1cfe78ffb92c9cfda7e529bd7b2"
+        }
+      ],
+      "notes": "Actual run41759696271 failed before job start; correction published4358c is authorf1bef6f.",
+      "patch_sha": "4358cc32548eb8913a19eb7958904966d54bf030"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "CI-CHILD-IMPORT",
+      "baseline": "4358cc32548eb8913a19eb7958904966d54bf030",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/ci/initial-attempts.json;evidence/runtime-next/ci/first-regression-failure.log;evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md",
+      "evidence_paths": [
+        {
+          "bytes": 1344,
+          "path": "evidence/runtime-next/ci/initial-attempts.json",
+          "sha256": "dea7b55ff8764ef2e01ebfa4ba65a0ac74b7d403d4af34e1e71e5593024ceee9"
+        },
+        {
+          "bytes": 68225,
+          "path": "evidence/runtime-next/ci/first-regression-failure.log",
+          "sha256": "0b2b9ee634416ece23b4cd7bd51c325f9f44c7b13e1f725a06e915043fdab6db"
+        },
+        {
+          "bytes": 3415,
+          "path": "evidence/runtime-next/agent-a/RUNTIME_CORRECTNESS.md",
+          "sha256": "4df8798ff2fb06971ace72aa65a7aae58fdbd1cfe78ffb92c9cfda7e529bd7b2"
+        }
+      ],
+      "notes": "Actual run41760013668:220pass4fail0skip; no benchmark trials. Published fix6620 is author1055b86.",
+      "patch_sha": "6620da607e66d569eed802057d77b0fbfa9c37b4"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "W0-CORRECTNESS-01",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/ci/cpu-ci-01-summary.json;evidence/runtime-next/ci/runtime-cpu-6620da6.tar.xz",
+      "evidence_paths": [
+        {
+          "bytes": 5827,
+          "path": "evidence/runtime-next/ci/cpu-ci-01-summary.json",
+          "sha256": "3c82812c296fb619f9f703fa5bef7cb0ec184ec2077e0fcd59a9d1fce8b6e392"
+        },
+        {
+          "bytes": 186752,
+          "path": "evidence/runtime-next/ci/runtime-cpu-6620da6.tar.xz",
+          "sha256": "36c84cadc831d1e9736f0c3e665bc979d5d408663cdbd24c186552866aa5011e"
+        }
+      ],
+      "notes": "30 trial before/after within its own runner; preserve overlapping ranges. Cost remains unknown here rather than guessed from another run.",
+      "patch_sha": "6620da607e66d569eed802057d77b0fbfa9c37b4"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "W0-CORRECTNESS-02",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/ci/cpu-ci-02-summary.json;evidence/runtime-next/ci/runtime-cpu-db937f9.tar.xz",
+      "evidence_paths": [
+        {
+          "bytes": 5526,
+          "path": "evidence/runtime-next/ci/cpu-ci-02-summary.json",
+          "sha256": "b242c92bbb1e179a8677bd27509ff20fcbdc3d8bce600f6a0cf82d6171960da7"
+        },
+        {
+          "bytes": 182200,
+          "path": "evidence/runtime-next/ci/runtime-cpu-db937f9.tar.xz",
+          "sha256": "20919702542e9c837396969e413fd1572ed5d5a6719c941b8b728cff95197f6a"
+        }
+      ],
+      "notes": "30 trial before/after within its own runner; preserve overlapping ranges. Cost remains unknown here rather than guessed from another run.",
+      "patch_sha": "db937f9706270cb109e799cda29f52d2872726b5"
+    },
+    {
+      "archive_members": [
+        "raw/r1-red.log",
+        "raw/r1-red.xml",
+        "raw/r1-geometry-missing-torch.log",
+        "raw/r1-geometry-missing-torch.xml"
+      ],
+      "attempt_id": "R1-DEPENDENCY",
+      "baseline": "unknown (failed collection source not pinned in selected report)",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-a/R1_SPATIAL_IMPORT.md;evidence/runtime-next/agent-a/agent-a-raw.tar.xz",
+      "evidence_paths": [
+        {
+          "bytes": 7472,
+          "path": "evidence/runtime-next/agent-a/R1_SPATIAL_IMPORT.md",
+          "sha256": "37af23f3e4ae125563f38e3e85f3ebbedab39e9222673d955384f876e0ebc9f3"
+        },
+        {
+          "bytes": 152068,
+          "path": "evidence/runtime-next/agent-a/agent-a-raw.tar.xz",
+          "sha256": "1347bee47ca56ee19ab93a1832e0f97368956433f6ac4e36d9aa99cb7fc09b01"
+        }
+      ],
+      "notes": "Recorded missing RDKit then missing Torch; do not call dependency collection failure an optimization red. Known pre-R1 parentcf62f85 does not pin the complete dirty trees of the two failed collections; measured baseline remains unknown.",
+      "patch_sha": "none (environment-only correction)"
+    },
+    {
+      "archive_members": [
+        "raw/r1-light-green.log",
+        "raw/r1-residual-import.log",
+        "raw/r1-w0-diagnostic-comparison.json"
+      ],
+      "attempt_id": "R1-TWO-MODULE",
+      "baseline": "cf62f856cf4dfde861a7b0d2589aa843ea53f79e",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-a/r1-failed-two-module-candidate.patch;evidence/runtime-next/agent-a/R1_SPATIAL_IMPORT.md;evidence/runtime-next/agent-a/agent-a-raw.tar.xz",
+      "evidence_paths": [
+        {
+          "bytes": 3632,
+          "path": "evidence/runtime-next/agent-a/r1-failed-two-module-candidate.patch",
+          "sha256": "4e9d9cf492193784d0dd523f0e7b2973ed813b7dfd3bc4332c73985963757bf1"
+        },
+        {
+          "bytes": 7472,
+          "path": "evidence/runtime-next/agent-a/R1_SPATIAL_IMPORT.md",
+          "sha256": "37af23f3e4ae125563f38e3e85f3ebbedab39e9222673d955384f876e0ebc9f3"
+        },
+        {
+          "bytes": 152068,
+          "path": "evidence/runtime-next/agent-a/agent-a-raw.tar.xz",
+          "sha256": "1347bee47ca56ee19ab93a1832e0f97368956433f6ac4e36d9aa99cb7fc09b01"
+        }
+      ],
+      "notes": "Preserved patch digest is its source anchor; functional source was reconstructed against recorded SHA.18 actual diagnostic evals are not timing trials.",
+      "patch_sha": "none (uncommitted rejected patch)"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "R1-THREE-MODULE",
+      "baseline": "cf62f856cf4dfde861a7b0d2589aa843ea53f79e",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-a/R1_SPATIAL_IMPORT.md;evidence/runtime-next/agent-a/r1-test-scope.json;evidence/runtime-next/ci/cpu-ci-03-summary.json;evidence/runtime-next/ci/cpu-ci-04-summary.json",
+      "evidence_paths": [
+        {
+          "bytes": 7472,
+          "path": "evidence/runtime-next/agent-a/R1_SPATIAL_IMPORT.md",
+          "sha256": "37af23f3e4ae125563f38e3e85f3ebbedab39e9222673d955384f876e0ebc9f3"
+        },
+        {
+          "bytes": 2516,
+          "path": "evidence/runtime-next/agent-a/r1-test-scope.json",
+          "sha256": "9ad6df7c65a6dc0532bd7886346f2628d84c195a5a08a9de3e73a6f9c001f05b"
+        },
+        {
+          "bytes": 33155,
+          "path": "evidence/runtime-next/ci/cpu-ci-03-summary.json",
+          "sha256": "287512a6e415f398d39992107805d0c66d2cce1f5e450bfbe998e979e9259b50"
+        },
+        {
+          "bytes": 33162,
+          "path": "evidence/runtime-next/ci/cpu-ci-04-summary.json",
+          "sha256": "3315e35ef7083678f0595751a7fadad4b6a2b3edb15b1d1e094295f0c61ecb57"
+        }
+      ],
+      "notes": "Patch baselinecf62; actual timed comparison baseline=d66, integrated candidates71c7592 and9d62b3e. Do not conflate source-review and performance-baseline identities. CI wiring commit9ddd39ea38c77587b7e87c4cb9357bdd9c4e51e6 is distinct from production patch.67=39+25+3 cases; do not add overlapping executions.",
+      "patch_sha": "605bad02f5c71083a95142f03bebc0db24a27d84"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "SCIENCE-COUNT",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown actual CPU total; 2 runs bounded to45s each; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-c/scientific-positive-01/plan.json;evidence/runtime-next/agent-c/scientific-positive-01/harness-frozen.py;evidence/runtime-next/agent-c/scientific-positive-01/report.json;evidence/runtime-next/agent-c/scientific-positive-report.md",
+      "evidence_paths": [
+        {
+          "bytes": 2277,
+          "path": "evidence/runtime-next/agent-c/scientific-positive-01/plan.json",
+          "sha256": "a8846c723a9a28906a47820836fb55a1aecd3eb6789b7490fb79c69b7a152bad"
+        },
+        {
+          "bytes": 13797,
+          "path": "evidence/runtime-next/agent-c/scientific-positive-01/harness-frozen.py",
+          "sha256": "3efac312cbee9280a07043871ff72c576dc29ba3ac7768d49d7ea9b373ebc2c4"
+        },
+        {
+          "bytes": 243812,
+          "path": "evidence/runtime-next/agent-c/scientific-positive-01/report.json",
+          "sha256": "1284eded3f330a6250c71e668aff07e781e58a2885c4043f57b648cb4fe18fb9"
+        },
+        {
+          "bytes": 7621,
+          "path": "evidence/runtime-next/agent-c/scientific-positive-report.md",
+          "sha256": "bad61e10276f9b086c48357618740e52d451797460d1b57336930d7a5e186bf1"
+        }
+      ],
+      "notes": "Actual candidate source=db937f9706270cb109e799cda29f52d2872726b5. Frozen harness expected5 calls; actual4calls5rows. Artifact SHA preserves the failed control.",
+      "patch_sha": "none (uncommitted frozen control with wrong expected count)"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "SCIENCE-POSITIVE",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown actual CPU total; 2 runs bounded to45s each; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-c/scientific-positive-02/plan.json;evidence/runtime-next/agent-c/scientific-positive-02/report.json;evidence/runtime-next/agent-c/scientific-control-evidence-checks.json;evidence/runtime-next/agent-c/scientific-positive-report.md",
+      "evidence_paths": [
+        {
+          "bytes": 2369,
+          "path": "evidence/runtime-next/agent-c/scientific-positive-02/plan.json",
+          "sha256": "fdcd2f47e7f51b724ac6f661bf8fc6f10ce4905c7a706799910575abf89f4bae"
+        },
+        {
+          "bytes": 243828,
+          "path": "evidence/runtime-next/agent-c/scientific-positive-02/report.json",
+          "sha256": "011cdf1d6ab943218040a10c5572088ee7f6bbe885f5efd45ad8bd38b39657fc"
+        },
+        {
+          "bytes": 831,
+          "path": "evidence/runtime-next/agent-c/scientific-control-evidence-checks.json",
+          "sha256": "b863e421b05c95880d1e025127e9334806887479e80691b72c0f31d949f288cf"
+        },
+        {
+          "bytes": 7621,
+          "path": "evidence/runtime-next/agent-c/scientific-positive-report.md",
+          "sha256": "bad61e10276f9b086c48357618740e52d451797460d1b57336930d7a5e186bf1"
+        }
+      ],
+      "notes": "c124 is measurement/control implementation commit; actual tested candidate remains db937 per plan. Workload hash unchanged.",
+      "patch_sha": "c124d8023a12d086cbd3988c1bac912876380da8"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "BACKEND-MATRIX",
+      "baseline": "a55c28553917742ed451aa016ce7dc62cdfea95c",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-b/backend-certification-validation.json;evidence/runtime-next/agent-b/backend-certification-tests.txt;evidence/runtime-next/agent-b/backend-certification.json",
+      "evidence_paths": [
+        {
+          "bytes": 1151,
+          "path": "evidence/runtime-next/agent-b/backend-certification-validation.json",
+          "sha256": "49e55133db921e510516cbbaf7803a578bf2d3f21aae6e23cee26c677c99892e"
+        },
+        {
+          "bytes": 98,
+          "path": "evidence/runtime-next/agent-b/backend-certification-tests.txt",
+          "sha256": "d3d0d94971babb44550321d00966b040043cf611431f3fbde81c5ffc681a1a7e"
+        },
+        {
+          "bytes": 119036,
+          "path": "evidence/runtime-next/agent-b/backend-certification.json",
+          "sha256": "c764b288df31bcc08774da01fbaa615a5aaf17e32f4b260334ce336439305b30"
+        }
+      ],
+      "notes": "Initial inventory patch parent is a55 and validation records a55 registry. Current inventory snapshot may have later readiness supplements; legacy counts not re-executed. Inventory context is not a performance baseline. Initial4 tests/1.73s is local pytest time, not total matrix cost; later readiness/admission supplements do not upgrade registry scopes.",
+      "patch_sha": "9ec2d1cd0bf107ead6346db306c0384549bfef85"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "GPU-W1",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/environment/preflight.json;evidence/runtime-next/review/resource-availability.json",
+      "evidence_paths": [
+        {
+          "bytes": 1688,
+          "path": "evidence/runtime-next/environment/preflight.json",
+          "sha256": "4d2e3a8a843ba4d2d7b3581666021bfe1ca84677eb4ccac237dde4050feec7de"
+        },
+        {
+          "bytes": 790,
+          "path": "evidence/runtime-next/review/resource-availability.json",
+          "sha256": "d9f0c0c382b4352fb19604221307fffff1cc6788921a9fd634e3ce2890ba5249"
+        }
+      ],
+      "notes": "Historical cloud/connection failure; later recovered server readiness and final unallocated33334 outcome are separate rows. No inference.",
+      "patch_sha": "none (resource preflight)"
+    },
+    {
+      "archive_members": [],
+      "attempt_id": "DESTINATION",
+      "baseline": "d66ee714f2e755948534f95d9d125287ce8dbd91",
+      "cost": "unknown CPU total; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/environment/preflight.json;evidence/runtime-next/review/resource-availability.json",
+      "evidence_paths": [
+        {
+          "bytes": 1688,
+          "path": "evidence/runtime-next/environment/preflight.json",
+          "sha256": "4d2e3a8a843ba4d2d7b3581666021bfe1ca84677eb4ccac237dde4050feec7de"
+        },
+        {
+          "bytes": 790,
+          "path": "evidence/runtime-next/review/resource-availability.json",
+          "sha256": "d9f0c0c382b4352fb19604221307fffff1cc6788921a9fd634e3ce2890ba5249"
+        }
+      ],
+      "notes": "Historical unavailable mount/native connection; DESTINATION-RECOVERED supersedes current availability without erasing this failure.",
+      "patch_sha": "none (read-only destination preflight)"
+    },
+    {
+      "archive_members": [
+        "raw/plan.json",
+        "raw/budget.json",
+        "raw/findings.json",
+        "raw/import-summary.json",
+        "raw/r1-ci-decomposition.json"
+      ],
+      "attempt_id": "R1-ROUND2",
+      "baseline": "c485d6baa15f8a6ae66b5a1bccb55592f1e07745",
+      "cost": "unknown total CPU/install cost; actual command wall in archived raw/budget.json; 0 scientific evaluations; 0 GPU-hours",
+      "evidence": "evidence/runtime-next/agent-a/r1-round2/REPORT.md;evidence/runtime-next/agent-a/r1-round2/manifest.json;evidence/runtime-next/agent-a/r1-round2/r1-round2-raw.tar.xz",
+      "evidence_paths": [
+        {
+          "bytes": 5063,
+          "path": "evidence/runtime-next/agent-a/r1-round2/REPORT.md",
+          "sha256": "4e01ad052130f0a3237a2fc0566aecb0ea490641fc99987563800ba29af75c22"
+        },
+        {
+          "bytes": 3664,
+          "path": "evidence/runtime-next/agent-a/r1-round2/manifest.json",
+          "sha256": "887547af9e52937fce06e74c51c8cc67115c3f7e36064463ccb76ac3e3a04bc2"
+        },
+        {
+          "bytes": 76308,
+          "path": "evidence/runtime-next/agent-a/r1-round2/r1-round2-raw.tar.xz",
+          "sha256": "54ccef7afc3428f6cf69254351cafda3f8cf6e24fb8ca35f1c73ac331516fc24"
+        }
+      ],
+      "notes": "Actual cold source anchor c485 is recorded in report; three invocations include one interpreter-resolution failure; no production patch.",
+      "patch_sha": "none (bounded source/import investigation)"
+    }
+  ],
+  "schema_version": 1,
+  "scope": "Map only the first23 historical decisions from existing immutable Git/file/archive evidence; no experiments rerun",
+  "status": "READY_FOR_ROOT_APPLICATION",
+  "tsv_fields": [
+    "baseline",
+    "patch_sha",
+    "cost",
+    "evidence"
+  ],
+  "unknown_policy": "unknown means the selected preserved record did not measure/pin this value; none means no production patch was made",
+  "update_note": "Root remains sole writer of decision.tsv. Source patch parent and actual timed comparison candidate are explicitly distinguished."
+}
