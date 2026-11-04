@@ -1,0 +1,115 @@
+--- a/astrolabe/losses/interaction.py
++++ b/astrolabe/losses/interaction.py
+@@ -4,7 +4,7 @@
+ import pathlib
+ from collections import defaultdict
+ from functools import lru_cache
+-from typing import Any, Iterable, Mapping, Sequence
++from typing import TYPE_CHECKING, Any, Iterable, Mapping, Sequence
+ 
+ import numpy as np
+ from Bio.PDB import MMCIFParser, PDBParser
+@@ -31,7 +31,9 @@
+     ShapeComplementarityFilter = None  # type: ignore
+     MutateResidue = None  # type: ignore
+     _PYROSETTA_IMPORT_ERROR = exc
+-from scipy.spatial import Delaunay, QhullError, cKDTree
++
++if TYPE_CHECKING:
++    from scipy.spatial import Delaunay
+ 
+ from astrolabe.core.chain_resolution import (
+     chain_ids_for_oligo,
+@@ -115,6 +117,8 @@
+     *,
+     cutoff: float = 8.0,
+ ) -> list[tuple[int, int]]:
++    from scipy.spatial import cKDTree
++
+     xyz = np.asarray(parsed.get("xyz"), dtype=float)
+     mask = np.asarray(parsed.get("mask"), dtype=bool)
+     if xyz.ndim != 3 or xyz.shape[1] <= 1 or mask.shape[:2] != xyz.shape[:2]:
+@@ -160,6 +164,8 @@
+     *,
+     cutoff: float = 5.0,
+ ) -> list[tuple[int, int]]:
++    from scipy.spatial import cKDTree
++
+     xyz = np.asarray(parsed.get("xyz"), dtype=float)
+     mask = np.asarray(parsed.get("mask"), dtype=bool)
+     if xyz.ndim != 3 or mask.shape[:2] != xyz.shape[:2]:
+@@ -876,6 +882,8 @@
+     interface_distance: float,
+     context: str,
+ ) -> list[Any]:
++    from scipy.spatial import cKDTree
++
+     residues_by_chain: dict[str, list[Any]] = {}
+     ca_by_chain: dict[str, np.ndarray] = {}
+     for chain_id in chain_ids:
+@@ -1455,7 +1463,9 @@
+     alpha_radius_scale: float = 1.8,
+     alpha_min_radius: float = 3.0,
+     alpha_max_radius: float = 8.0,
+-) -> tuple[Delaunay, set[int], float]:
++) -> "tuple[Delaunay, set[int], float]":
++    from scipy.spatial import Delaunay, QhullError
++
+     pts = _require_alpha_shape_points(
+         points,
+         "ligand_aligned_reference_pocket_cb_alpha_shape_occupancy pocket",
+@@ -1756,6 +1766,8 @@
+ 
+ 
+ def _build_ligand_environment_pose(pose, ligand_chain: str, neighbor_distance: float):
++    from scipy.spatial import cKDTree
++
+     ligand_residues = _residue_indices_for_chains(pose, [ligand_chain])
+     if not ligand_residues:
+         return None
+@@ -2114,6 +2126,8 @@
+ 
+ 
+ def find_interface_residues_by_ca(model_path, cutoff=8.0):
++    from scipy.spatial import cKDTree
++
+     parsed_str = parse_mmcif(model_path)
+     coords = parsed_str["xyz"][:, 1]
+     chains = [chain for chain, _ in parsed_str["pdb_idx"]]
+@@ -4119,6 +4133,8 @@
+ 
+ 
+ def get_hotspot_interaction_number(eval_result, protomer):
++    from scipy.spatial import cKDTree
++
+     # -------------
+     # temporary obj
+     hotspot = protomer.hotspots
+--- a/astrolabe/losses/repeat_symmetry.py
++++ b/astrolabe/losses/repeat_symmetry.py
+@@ -9,7 +9,6 @@
+ from pathlib import Path
+ 
+ import numpy as np
+-from scipy.spatial import cKDTree
+ 
+ from astrolabe.core.repeat_symmetry import (
+     apply_transform,
+@@ -352,6 +351,8 @@
+     cutoff: float,
+     atom_mode: str,
+ ) -> int:
++    from scipy.spatial import cKDTree
++
+     coords_a, residue_idx_a = _chain_contact_metric_inputs(residues_a, atom_mode=atom_mode)
+     coords_b, residue_idx_b = _chain_contact_metric_inputs(residues_b, atom_mode=atom_mode)
+     if coords_a.size == 0 or coords_b.size == 0:
+@@ -372,6 +373,8 @@
+     *,
+     atom_mode: str,
+ ) -> float:
++    from scipy.spatial import cKDTree
++
+     coords_a, _ = _chain_contact_metric_inputs(residues_a, atom_mode=atom_mode)
+     coords_b, _ = _chain_contact_metric_inputs(residues_b, atom_mode=atom_mode)
+     if coords_a.size == 0 or coords_b.size == 0:
