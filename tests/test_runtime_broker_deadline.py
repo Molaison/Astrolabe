@@ -22,6 +22,7 @@ class ControlledWorker:
     def __init__(self):
         self.hello = {"worker_epoch": "controlled-worker", "capabilities": {}}
         self.lifecycle = {}
+        self.last_metrics = {}
         self.dispatches = []
         self.error = DispatchReached("controlled dispatch boundary; no scientific execution")
 
@@ -168,3 +169,50 @@ def test_unknown_dispatched_outcome_still_fences_and_is_not_replayed(state):
     with pytest.raises(ValueError, match="duplicate request"):
         state.call(request())
     assert len(client.dispatches) == 1
+
+
+@pytest.mark.parametrize("waiter_times_out", [False, True], ids=["control", "waiter-timeout"])
+def test_waiter_cannot_clear_the_running_request_delegation(state, monkeypatch, waiter_times_out):
+    entered, release = threading.Event(), threading.Event()
+    worker = state.workers["worker"]
+    outcome = {}
+
+    def controlled_call(payload, **kwargs):
+        entered.set()
+        assert release.wait(2), "test controller must release the controlled worker"
+        return {"ok": True}
+
+    monkeypatch.setattr(worker["client"], "call", controlled_call)
+    # This test has no resident process. Only the post-response observations
+    # are substituted; State/ledger locking, admission and cleanup stay real.
+    monkeypatch.setattr(state.ledger, "update_resident", lambda *args, **kwargs: None)
+    monkeypatch.setattr(state.ledger, "observe_resident", lambda *args, **kwargs: None)
+
+    def first_call():
+        try:
+            outcome["result"] = state.call(request(request_id="first"))
+        except BaseException as exc:
+            outcome["error"] = exc
+
+    thread = threading.Thread(target=first_call)
+    thread.start()
+    try:
+        assert entered.wait(1)
+        delegated = worker["delegated"]
+        assert delegated is not None
+        if waiter_times_out:
+            with pytest.raises(TimeoutError):
+                state.call(request(timeout=.03))
+        assert worker["delegated"] is delegated
+        assert worker["busy"] == 1 and state.metrics["waiting"] == 0
+        assert "client:first" in state.ledger.active
+        assert not state.poisoned
+    finally:
+        release.set()
+        thread.join(timeout=3)
+    assert not thread.is_alive()
+    assert "error" not in outcome, repr(outcome.get("error"))
+    assert outcome["result"]["result"] == {"ok": True}
+    assert worker["delegated"] is None and worker["busy"] == 0
+    assert state.ledger.snapshot()["pending"] == 0
+    assert state.metrics["completed"] == 1

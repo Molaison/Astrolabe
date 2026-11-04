@@ -445,7 +445,8 @@ class State:
                     self.metrics['waiting'] -= 1
                 record['busy'] -= 1
                 record['last_used'] = ended
-                record['delegated'] = None
+                if acquired:
+                    record['delegated'] = None
                 self.recent.append({'time': ended, 'backend': record['cohort'], 'worker_handle': key, 'shape_key': shape,
                                     'cold_start': cold, 'phase': phase, 'outcome': outcome,
                                     'duration': ended - start, 'queue_seconds': None if admitted is None else admitted - start})
