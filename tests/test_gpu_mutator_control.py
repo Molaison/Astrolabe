@@ -166,9 +166,11 @@ def synthetic_run(tmp_path, protocol):
         directory = tmp_path / "trials" / item["id"]
         directory.mkdir(parents=True)
         rows.append({**item, "wall_seconds": 2., "observation": {"release_confirmed": True, "exit_code": 0,
-            "cleanup_attempted": False, "observed_tree_empty": True, "remaining_identities": []},
-            "measurement": {"seconds": 2., "stop_reason": None, "measurement_envelope_seconds": 2.5,
+            "cleanup_attempted": False, "observed_tree_empty": True, "remaining_identities": [],
+            "stop_reason": None, "observation_errors": [], "unverified_process_groups": []},
+            "measurement": {"seconds": 2., "exit_code": 0, "stop_reason": None, "measurement_envelope_seconds": 2.5,
                             "peak_process_tree_rss_bytes": None, "peak_device_vram_bytes": None}})
+        rows[-1]["measurement"]["process_release"] = copy.deepcopy(rows[-1]["observation"])
         metadata = {**item, "head": frozen["head"], "status": "COMPLETE", "valid_completed_requests": 3, "frozen_sha256": frozen_sha,
                     "construction_seconds": .5, "device": {"fixture": "synthetic CUDA metadata"},
                     "close_seconds": .1,
@@ -255,6 +257,28 @@ def test_foreign_child_or_replayed_request_metadata_blocks_certificate(synthetic
     data = json.loads(path.read_text())
     mutation(data)
     control.write_json(path, data)
+    report = control.aggregate(frozen, execution)
+    assert report["status"] == "INVALID"
+    assert "effective_design_requests_per_second" not in report["per_mode"]["legacy"]
+    assert "effective_design_requests_per_second" not in report["per_mode"]["resident"]
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda e: e["trials"][0]["measurement"].pop("process_release"),
+    lambda e: e["trials"][0]["measurement"]["process_release"].update(release_confirmed=False),
+    lambda e: e["trials"][0]["measurement"]["process_release"].update(observed_tree_empty=False),
+    lambda e: e["trials"][0]["measurement"]["process_release"].update(remaining_identities=[[123, 456]]),
+    lambda e: e["trials"][0]["measurement"].update(exit_code=1),
+    lambda e: e["trials"][0]["observation"].update(observation_errors=["unknown"]),
+    lambda e: e["trials"][0]["observation"].update(unverified_process_groups=[123]),
+])
+def test_contradictory_or_missing_release_records_cannot_certify(synthetic_run, mutation):
+    frozen, original = synthetic_run
+    assert control.aggregate(frozen, original)["status"] == "PASS"
+    # JSON removes the normal writer's shared Python-dict reference, as on an
+    # independent raw-evidence reread; mutate only one of the duplicated views.
+    execution = json.loads(json.dumps(original))
+    mutation(execution)
     report = control.aggregate(frozen, execution)
     assert report["status"] == "INVALID"
     assert "effective_design_requests_per_second" not in report["per_mode"]["legacy"]

@@ -165,6 +165,11 @@ match its planned controller entry. Request indices must be exactly 0/1/2 with
 first/steady/steady phase labels. Phase times must be positive, finite and fit
 within the observed workflow interval. A complete-looking stale child file or
 duplicated request metadata therefore cannot certify effective throughput.
+The original `measurement.process_release` and the convenient duplicated
+`observation` must exist and agree in full, including the duplicated exit code.
+Missing records, observation errors, unknown groups or contradictory release
+flags invalidate the raw reread. A resource timeline must still exist to mark
+resource telemetry complete; missing measurements or raw files remain unknown.
 
 An independent CPU-only reread of the immutable raw evidence is available:
 

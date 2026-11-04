@@ -495,15 +495,22 @@ def aggregate(frozen_path, execution):
                              and sum(phase_times) <= row["wall_seconds"] + 1e-6)
         measurement = row.get("measurement", {})
         envelope = measurement.get("measurement_envelope_seconds")
+        row["release_record_consistent"] = (isinstance(measurement.get("process_release"), dict)
+                                            and measurement["process_release"] == row["observation"]
+                                            and measurement.get("exit_code") == row["observation"].get("exit_code"))
         measured_ok = (measurement.get("stop_reason") is None and measurement.get("seconds") == row["wall_seconds"]
                        and type(envelope) in (int, float) and math.isfinite(envelope) and envelope >= row["wall_seconds"])
         row["valid"] = (row["observation"].get("release_confirmed") is True and row["observation"].get("exit_code") == 0
                         and not row["observation"].get("cleanup_attempted", True)
                         and row["observation"].get("observed_tree_empty") is True
                         and not row["observation"].get("remaining_identities", ["unknown"])
+                        and row["observation"].get("stop_reason") is None
+                        and not row["observation"].get("observation_errors", ["unknown"])
+                        and not row["observation"].get("unverified_process_groups", ["unknown"])
                         and data.get("status") == "COMPLETE" and len(requests) == 3 and row["valid_completed_requests"] == 3
                         and data.get("valid_completed_requests") == 3
                         and measured_ok
+                        and row["release_record_consistent"]
                         and row["child_identity_valid"] and row["request_order_valid"] and phase_times_valid)
         complete = complete and row["valid"]
     for group in range(5):
@@ -554,7 +561,9 @@ def aggregate(frozen_path, execution):
     report["status"] = "PASS" if complete and len(report["pairs"]) == 5 and execution.get("status") == "COMPLETE" else "INVALID"
     report["resource_telemetry_status"] = "COMPLETE" if len(rows) == 10 and all(
         row.get("measurement", {}).get("peak_process_tree_rss_bytes") is not None and
-        row.get("measurement", {}).get("peak_device_vram_bytes") is not None for row in rows.values()) else "PARTIAL_UNKNOWN"
+        row.get("measurement", {}).get("peak_device_vram_bytes") is not None and
+        Path(row.get("measurement", {}).get("telemetry_file", "")).is_file()
+        for row in rows.values()) else "PARTIAL_UNKNOWN"
     report["resource_telemetry_note"] = "Raw timelines and measured/unknown values remain in trials[].measurement. Missing readings are never zero. Device-wide readings rely on root's exclusive allocation evidence."
     report["per_mode"] = {}
     for mode in ("legacy", "resident"):
