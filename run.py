@@ -16,6 +16,7 @@ import random
 import shutil
 import time
 from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple
 
@@ -1284,7 +1285,7 @@ def apply_initializer(args, *, mutators=None):
         return result
 
 
-def _uses_alphafold3_evaluator(args, stage_manager) -> bool:
+def _uses_alphafold3_evaluator(args, stage_manager, *, current_only=False) -> bool:
     evaluator = getattr(args, "evaluator", None)
     if evaluator is None:
         return False
@@ -1306,7 +1307,12 @@ def _uses_alphafold3_evaluator(args, stage_manager) -> bool:
     used_aliases: set[str] = set()
     default_alias = getattr(stage_manager.default_setting, "evaluator", None)
 
-    for unit in getattr(stage_manager, "stage_args", {}).values():
+    units = (
+        [stage_manager.current_setting]
+        if current_only
+        else getattr(stage_manager, "stage_args", {}).values()
+    )
+    for unit in units:
         alias = getattr(unit, "evaluator", None) or default_alias
         if alias:
             used_aliases.add(str(alias))
@@ -1843,7 +1849,7 @@ def _initialize_pipeline_inputs(
 
     # Setup token numbers
     num_tokens = {}
-    if _uses_alphafold3_evaluator(args, stage_manager):
+    if _uses_alphafold3_evaluator(args, stage_manager, current_only=True):
         num_tokens = calculate_token_numbers(
             construct_standard_input(stage_manager.all_oligos, args.seed)
         )
@@ -1902,6 +1908,49 @@ def prepare_pipeline_math(args, prepared):
     return loss_computer, stage_manager, inputs
 
 
+class LazyEvaluatorMap(Mapping):
+    """Keep configured aliases available and construct each evaluator on demand."""
+
+    def __init__(self, evaluator_conf, raw_model_results_dir, oligo_names, *, enabled_aliases=None):
+        self._config = evaluator_conf
+        self._output_dir = raw_model_results_dir
+        self._oligo_names = oligo_names
+        enabled = set(enabled_aliases) if enabled_aliases is not None else None
+        self._aliases = tuple(
+            alias
+            for alias, conf in evaluator_conf.evaluator_terms.items()
+            if conf is not None
+            and conf.get("_type")
+            and (enabled is None or alias in enabled)
+        )
+        self._instances = {}
+
+    def __getitem__(self, alias):
+        if alias not in self._aliases:
+            raise KeyError(alias)
+        if alias not in self._instances:
+            self._instances.update(construct_evaluators(
+                self._config,
+                self._output_dir,
+                self._oligo_names,
+                enabled_aliases=[alias],
+            ))
+        return self._instances[alias]
+
+    def __iter__(self):
+        return iter(self._aliases)
+
+    def __len__(self):
+        return len(self._aliases)
+
+    def __contains__(self, alias):
+        return alias in self._aliases
+
+    def constructed_items(self):
+        """Enumerate live resources without constructing unused evaluators."""
+        return self._instances.items()
+
+
 def load_pipeline_components(
     args,
     prepared: PreparedPipelineState,
@@ -1923,7 +1972,7 @@ def load_pipeline_components(
         mutators = build_mutators(args.mutator, args.raw_model_results_dir)
         global_config.init_const("mutators", mutators)
     loss_computer, stage_manager = _initialize_pipeline_math(args, prepared)
-    evaluators = construct_evaluators(
+    evaluators = LazyEvaluatorMap(
         args.evaluator,
         args.raw_model_results_dir,
         stage_manager.all_oligos,
@@ -3034,7 +3083,12 @@ def _shutdown_pipeline_resources() -> None:
             components = global_config.get_const(group)
         except RuntimeError:
             continue
-        for alias, component in (components or {}).items():
+        items = (
+            components.constructed_items()
+            if isinstance(components, LazyEvaluatorMap)
+            else (components or {}).items()
+        )
+        for alias, component in items:
             if id(component) in closed:
                 continue
             closed.add(id(component))

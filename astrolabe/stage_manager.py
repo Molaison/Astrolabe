@@ -123,6 +123,7 @@ class StageUnit:
     ignored_complexes: List[str] | None = field(default_factory=list)
     negative_design_complexes: List[str] | None = field(default_factory=list)
     evaluator: str | None = None
+    active_loss_terms: List[str] | None = None
     mutators: List[str] | None = None
     mutator_weights: List[str] | None = None
     transition_consistency_gate: TransitionConsistencyGateConfig | dict[str, Any] | None = None
@@ -256,6 +257,7 @@ class StageManager:
             self.current_acceptance_threshold,
             self.current_acceptance_gate,
             prefix_early_stopping=self.current_prefix_early_stopping,
+            active_loss_terms=self.current_active_loss_terms,
         )
         self._apply_mutation_num()
         mutator_aliases = list(
@@ -332,6 +334,10 @@ class StageManager:
             return self.default_setting.weighted_score_expression
 
         return stage_setting.weighted_score_expression
+
+    @property
+    def current_active_loss_terms(self) -> List[str] | None:
+        return self.execution_setting.active_loss_terms
 
     @property
     def execution_setting(self) -> StageUnit:
@@ -487,6 +493,7 @@ class StageManager:
             self.current_acceptance_threshold,
             self.current_acceptance_gate,
             prefix_early_stopping=self.current_prefix_early_stopping,
+            active_loss_terms=self.current_active_loss_terms,
         )
         self._apply_mutation_num()
 
@@ -526,6 +533,7 @@ class StageManager:
             self.current_acceptance_threshold,
             self.current_acceptance_gate,
             prefix_early_stopping=self.current_prefix_early_stopping,
+            active_loss_terms=self.current_active_loss_terms,
         )
         self._apply_mutation_num()
         return rollback_scores

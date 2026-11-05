@@ -402,3 +402,166 @@ def test_sequence_region_identity_works_through_loss_engine(monkeypatch) -> None
 
     assert env["ABC_patch_barcode_identity"] == pytest.approx(1.0 / 3.0)
     assert score == pytest.approx(1.0 - abs((1.0 / 3.0) - 0.35) / 0.35)
+
+
+def test_rna_defect_preserves_occurrences_weights_and_current_sequences(monkeypatch):
+    import sys
+
+    from astrolabe.losses.rna_secondary import nupack_ensemble_defect, rna_ensemble_defect
+
+    protomer = SimpleNamespace(type=ProtomerTypes.RNA, sequence="AAAA", mutated_sequence="GCGC")
+    _monkeypatch_global_const(monkeypatch, "protomers", {
+        "A": protomer,
+        "B": SimpleNamespace(type=ProtomerTypes.RNA, mutated_sequence="AUAU"),
+    })
+    requests = []
+
+    def defect(*, strands, structure, model):
+        requests.append((strands, structure, model))
+        return 0.2 if len(strands) == 2 else 0.6
+
+    monkeypatch.setitem(sys.modules, "nupack", SimpleNamespace(Model=lambda **kw: kw, defect=defect))
+    targets = {
+        "dimer": {"strands": ["A", "A"], "structure": "((((+))))", "weight": 1},
+        "trimer": {"strands": ["B", "A", "B"], "structure": "(((.+).((+))))", "weight": 3},
+    }
+    settings = dict(material="rna", celsius=25, sodium=1, magnesium=0, ensemble="nostacking")
+    assert rna_ensemble_defect(None, targets, **settings) == pytest.approx(0.5)
+    assert [request[0] for request in requests] == [["GCGC", "GCGC"], ["AUAU", "GCGC", "AUAU"]]
+    assert [request[1] for request in requests] == [spec["structure"] for spec in targets.values()]
+    assert requests[0][2] == settings
+    protomer.mutated_sequence = "GGGG"
+    assert nupack_ensemble_defect({}, {"dimer": targets["dimer"]}) == 0.2
+    assert requests[-1][0] == ["GGGG", "GGGG"]
+
+    from astrolabe.losses.base import LossEngine
+
+    engine = LossEngine({"loss_terms": {"defect": {
+        "_type": "rna_ensemble_defect", "targets": targets, **settings,
+    }}})
+    engine.setup("-defect", None, None)
+    score, terms = engine.compute_loss(_HashableEvalResult(), runtime_config={})
+    assert terms["defect"] == pytest.approx(0.5)
+    assert score == pytest.approx(-0.5)
+
+
+def test_rna_probability_and_ensemble_energy_use_public_backend_quantities(monkeypatch):
+    import sys
+
+    from astrolabe.losses.rna_secondary import (
+        calculate_rna_ensemble_free_energy,
+        calculate_rna_ensemble_defect,
+        calculate_rna_structure_probability,
+        rna_ensemble_free_energy,
+        rna_structure_probability,
+    )
+
+    monkeypatch.setitem(sys.modules, "nupack", SimpleNamespace(
+        Model=lambda **kw: kw,
+        structure_probability=lambda **kw: 0.8,
+        pfunc=lambda **kw: (12345, -4.5),
+    ))
+    _monkeypatch_global_const(monkeypatch, "protomers", {
+        "A": SimpleNamespace(type=ProtomerTypes.RNA, mutated_sequence="GCGC"),
+    })
+    targets = {"monomer": {"strands": ["A"], "structure": "...."}}
+    assert calculate_rna_structure_probability(["GCGC"], "....") == 0.8
+    assert calculate_rna_ensemble_free_energy(["GCGC"]) == -4.5
+    assert rna_structure_probability(None, targets) == 0.8
+    assert rna_ensemble_free_energy(None, targets) == -4.5
+
+    model = SimpleNamespace()
+
+    def fold_compound(sequence, details):
+        assert sequence == "GCGC"
+        assert details.temperature == 25
+        assert details.compute_bpp == 1
+        return SimpleNamespace(
+            mfe=lambda: ("....", -3.0), exp_params_rescale=lambda energy: None,
+            pf=lambda: ("....", -4.5), ensemble_defect=lambda structure: 0.2,
+            pr_structure=lambda structure: 0.8,
+        )
+
+    monkeypatch.setitem(sys.modules, "RNA", SimpleNamespace(md=lambda: model, fold_compound=fold_compound))
+    settings = dict(backend="viennarna", celsius=25, ensemble="vienna")
+    assert calculate_rna_ensemble_defect(["GCGC"], "....", **settings) == 0.2
+    assert calculate_rna_structure_probability(["GCGC"], "....", **settings) == 0.8
+    assert calculate_rna_ensemble_free_energy(["GCGC"], **settings) == -4.5
+
+
+@pytest.mark.parametrize("metric", ["ensemble_defect", "structure_probability"])
+@pytest.mark.parametrize("value", [-0.1, 1.1, float("nan")])
+def test_rna_secondary_rejects_invalid_backend_probabilities(monkeypatch, metric, value):
+    import sys
+
+    from astrolabe.losses.rna_secondary import calculate_rna_secondary
+
+    monkeypatch.setitem(sys.modules, "nupack", SimpleNamespace(
+        Model=lambda **kw: kw, defect=lambda **kw: value,
+        structure_probability=lambda **kw: value,
+    ))
+    with pytest.raises(ValueError):
+        calculate_rna_secondary(["ACGU"], "....", metric=metric)
+
+
+@pytest.mark.parametrize("sequence,structure,occurrences,weight,kind", [
+    ("ACTU", "....", ["A"], 1, ProtomerTypes.RNA),
+    ("ACGN", "....", ["A"], 1, ProtomerTypes.RNA),
+    (None, "....", ["A"], 1, ProtomerTypes.RNA),
+    ("ACGU", "...", ["A"], 1, ProtomerTypes.RNA),
+    ("ACGU", "..+..", ["A"], 1, ProtomerTypes.RNA),
+    ("ACGU", "([)]", ["A"], 1, ProtomerTypes.RNA),
+    ("ACGU", ")..(", ["A"], 1, ProtomerTypes.RNA),
+    ("ACGU", "(...", ["A"], 1, ProtomerTypes.RNA),
+    ("ACGU", "....", "A", 1, ProtomerTypes.RNA),
+    ("ACGU", "....", ["missing"], 1, ProtomerTypes.RNA),
+    ("ACGU", "....", ["A"], -1, ProtomerTypes.RNA),
+    ("ACGU", "....", ["A"], 0, ProtomerTypes.RNA),
+    ("ACGU", "....", ["A"], 1, ProtomerTypes.DNA),
+])
+def test_rna_secondary_validates_targets_before_import(
+    monkeypatch, sequence, structure, occurrences, weight, kind,
+):
+    import sys
+
+    from astrolabe.losses.rna_secondary import rna_ensemble_defect
+
+    monkeypatch.setitem(sys.modules, "nupack", None)
+    _monkeypatch_global_const(monkeypatch, "protomers", {
+        "A": SimpleNamespace(type=kind, mutated_sequence=sequence),
+    })
+    with pytest.raises(ValueError):
+        rna_ensemble_defect(None, {
+            "target": {"strands": occurrences, "structure": structure, "weight": weight},
+        })
+
+
+@pytest.mark.parametrize("backend,settings", [
+    ("nupack", {"sodium": 0.15}),
+    ("nupack", {"magnesium": 0.01}),
+    ("viennarna", {"sodium": 1.0}),
+    ("viennarna", {"ensemble": "stacking"}),
+    ("unknown", {}),
+])
+def test_rna_secondary_rejects_unsupported_settings(monkeypatch, backend, settings):
+    import sys
+
+    from astrolabe.losses.rna_secondary import calculate_rna_ensemble_defect
+
+    monkeypatch.setitem(sys.modules, "nupack", None)
+    monkeypatch.setitem(sys.modules, "RNA", None)
+    with pytest.raises(ValueError):
+        calculate_rna_ensemble_defect(["ACGU"], "....", backend=backend, **settings)
+
+
+def test_rna_secondary_missing_backend_is_honest_and_vienna_rejects_multistrand(monkeypatch):
+    import sys
+
+    from astrolabe.losses.rna_secondary import calculate_rna_ensemble_defect
+
+    for backend, module in [("nupack", "nupack"), ("viennarna", "RNA")]:
+        monkeypatch.setitem(sys.modules, module, None)
+        with pytest.raises(ImportError, match="optional"):
+            calculate_rna_ensemble_defect(["ACGU"], "....", backend=backend)
+    with pytest.raises(ValueError, match="single strand"):
+        calculate_rna_ensemble_defect(["ACGU", "ACGU"], "((((+))))", backend="viennarna")

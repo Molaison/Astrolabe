@@ -4,6 +4,8 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Literal
 
+from astrolabe.evaluators.rna import RNA_BACKENDS
+
 
 @dataclass(frozen=True)
 class Backend:
@@ -36,6 +38,11 @@ BACKENDS = (
             "OpenDDE uses its own interpreter and chemistry assets."),
     Backend("rhofold", "evaluator", ("rhofold",), ("rhofold",), "daemon",
             "The owner retains the RNA model and performs device transfers."),
+    *(Backend(name, "evaluator", (name,), (name,), "daemon",
+              "Single RNA chain; explicit CPU preparation, device inference and CPU output.")
+      for name in RNA_BACKENDS),
+    Backend("sequence", "evaluator", ("sequence",), (), "local",
+            "Sequence-only evaluation without structures or synthetic confidence."),
     Backend("dummy", "evaluator", ("dummy",), (), "local", "No model weights."),
     Backend("rosetta_crystal", "evaluator", ("rosetta_crystal",), ("pyrosetta",), "local",
             "PyRosetta scoring has no neural model weights."),

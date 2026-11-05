@@ -649,6 +649,36 @@ def _build_dummy_evaluator(
     return DummyEvaluator(**kwargs)
 
 
+@register_evaluator_factory("sequence")
+def _build_sequence_evaluator(
+    term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf,
+):
+    from astrolabe.evaluators.sequence import SequenceEvaluator
+
+    return SequenceEvaluator()
+
+
+def _rna_evaluator_factory(backend):
+    def build(
+        term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf,
+    ):
+        from astrolabe.evaluators.rna import RnaEvaluator
+
+        conf = _merge_conf_with_defaults(
+            evaluator_conf, backend, term_conf, alias=alias,
+        )
+        settings = OmegaConf.to_container(conf, resolve=True) if conf is not None else {}
+        return RnaEvaluator(backend, raw_model_results_dir / backend, settings)
+
+    return build
+
+
+from astrolabe.evaluators.rna import RNA_BACKENDS
+
+for _rna_backend in RNA_BACKENDS:
+    EvaluatorRegistry.register(_rna_backend, _rna_evaluator_factory(_rna_backend))
+
+
 @register_evaluator_factory("rosetta_crystal")
 def _build_rosetta_crystal_evaluator(
     term_conf,

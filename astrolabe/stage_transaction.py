@@ -371,11 +371,15 @@ def begin_direct_stage_entry(
             previous_stage_result=previous_stage_result,
             previous_stage_oligo=plan.source_oligo,
         )
-    stage_manager.set_stage(plan.target_stage_name)
-    if plan.needs_stage_reevaluation:
-        evaluation_result = evaluate_target()
-    else:
-        evaluation_result = clone_result(previous_stage_result)
+    try:
+        stage_manager.set_stage(plan.target_stage_name)
+        if plan.needs_stage_reevaluation:
+            evaluation_result = evaluate_target()
+        else:
+            evaluation_result = clone_result(previous_stage_result)
+    except BaseException:
+        rollback_direct_stage_entry(stage_manager, plan)
+        raise
     return DirectStageEntryAttempt(
         plan=plan,
         evaluation_result=evaluation_result,

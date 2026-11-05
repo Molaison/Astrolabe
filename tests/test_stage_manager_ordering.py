@@ -203,3 +203,31 @@ def test_stage_manager_does_not_reenter_prior_stage() -> None:
 
     assert stage_manager.decide_entrance(eval_result, loss_computer) is None
     assert stage_manager.current_stage == "dual_chai"
+
+
+def test_initial_inclusive_entrance_switches_active_losses_and_latches() -> None:
+    global_config.reset()
+    loss_computer = LossEngine({"loss_terms": {"extra": {"_type": "iptm"}}})
+    stages = {
+        "default": {
+            "oligo": ["A"], "mutation_num": 1, "evaluator": "sequence",
+            "mutators": ["MCMC"], "weighted_score_expression": "-plddt",
+            "active_loss_terms": ["plddt"],
+        },
+        "joint": {
+            "_entrance": "plddt <= 0.25", "evaluator": "tertiary",
+            "weighted_score_expression": "plddt + extra",
+        },
+    }
+    manager = StageManager(stages, loss_computer=loss_computer)
+    global_config.init_const("stage_manager", manager)
+    global_config.set_variable("step", 0)
+    result = StandardScores(names=["A"], plddt={"A": [0.25]}, complex_paths={})
+
+    assert loss_computer.loss_names == ["plddt"]
+    assert manager.find_entrance_stage(result, loss_computer) == "joint"
+    assert manager.current_stage == "default"
+    assert manager.decide_entrance(result, loss_computer) == "joint"
+    assert manager.current_active_loss_terms is None
+    assert set(loss_computer.loss_names) == {"plddt", "extra"}
+    assert manager.decide_entrance(result, loss_computer) is None

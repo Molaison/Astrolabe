@@ -2,6 +2,7 @@ import ast
 from pathlib import Path
 
 from astrolabe.backend_catalog import BACKENDS, get_backend
+from astrolabe.evaluators.utils import EvaluatorRegistry
 from astrolabe.software_catalog import SOFTWARE
 
 
@@ -22,6 +23,8 @@ def test_every_registered_model_has_an_execution_disposition():
         ("mutator", "astrolabe/mutators/base.py", "register_mutator_factory"),
     ):
         observed = registered_names(path, decorator)
+        if component == "evaluator":
+            observed = set(EvaluatorRegistry.list_available())
         declared = {alias for record in BACKENDS if record.component == component
                     for alias in record.aliases}
         assert declared == observed

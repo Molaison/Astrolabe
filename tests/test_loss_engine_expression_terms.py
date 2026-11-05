@@ -3,12 +3,73 @@ from __future__ import annotations
 import pathlib
 
 import numpy as np
+import pytest
 
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.decision_context import attach_reference_gate_details
 from astrolabe.decision_maker import Decisions
 from astrolabe.losses.base import LossEngine
 from astrolabe.structure_start import ReferenceGateResult
+
+
+def test_active_loss_terms_skip_inactive_setup_and_entrance_computation() -> None:
+    from astrolabe.evaluators.sequence import SequenceEvaluator
+    from astrolabe.losses.base import loss_registry
+
+    @loss_registry.register(name="__policy_secondary__", optional_params=[])
+    def secondary(eval_result):
+        return {name: 0.25 for name in eval_result.names}
+
+    @loss_registry.register(name="__policy_structure__", optional_params=[])
+    def spatial(eval_result):
+        raise AssertionError("inactive structure loss must not run")
+
+    engine = LossEngine({
+        "loss_terms": {
+            "secondary": {"_type": "__policy_secondary__"},
+            "spatial": {"_type": "__policy_structure__"},
+            "unavailable": {"_type": "__not_installed__"},
+        },
+        "expression_terms": {"spatial_gate": "spatial > 0"},
+    })
+    engine.setup("-secondary", None, None, active_loss_terms=["secondary"])
+    result = SequenceEvaluator().evaluate({"AA": object()})
+    score, detail = engine.compute_loss(result, {})
+    assert score == -0.25
+    assert detail["secondary"] == 0.25
+    assert "spatial" not in detail
+    assert "unavailable" not in engine.loss_specs
+    context = engine.score_context_for_expressions(result, ["secondary <= 0.25"])
+    assert engine.eval_condition(context, "secondary <= 0.25") is True
+    with pytest.raises(ValueError, match="omitted.*spatial"):
+        engine.score_context_for_expressions(result, ["spatial_gate"])
+
+
+@pytest.mark.parametrize("field", [
+    "weighted_score_expression", "early_stopping", "acceptance_threshold",
+    "acceptance_gate", "prefix_early_stopping",
+])
+def test_active_loss_terms_reject_omitted_nested_expression_dependencies(field) -> None:
+    engine = LossEngine({"loss_terms": {}, "expression_terms": {
+        "inner": "iptm", "outer": "inner + 1",
+    }})
+    setup = dict(weighted_score_expression="plddt", early_stopping=None,
+                 acceptance_threshold=None, active_loss_terms=["plddt"])
+    setup[field] = "outer > 0"
+    with pytest.raises(ValueError, match="omitted.*iptm"):
+        engine.setup(**setup)
+
+
+def test_explicit_empty_active_losses_do_not_parse_future_loss_config() -> None:
+    from astrolabe.evaluators.sequence import SequenceEvaluator
+
+    engine = LossEngine({"loss_terms": {"future": {"_type": "__not_installed__"}}})
+    engine.setup("0.0", None, None, active_loss_terms=[])
+    score, detail = engine.compute_loss(SequenceEvaluator().evaluate({"A": object()}), {})
+    assert score == 0.0
+    assert "future" not in detail
+    with pytest.raises((KeyError, ValueError)):
+        engine.setup("0.0", None, None, active_loss_terms=None)
 
 
 def test_expression_terms_can_reference_prior_expression_terms() -> None:

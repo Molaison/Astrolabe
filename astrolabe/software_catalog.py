@@ -7,6 +7,8 @@ from dataclasses import asdict, dataclass
 import json
 from typing import Iterable
 
+from astrolabe.evaluators.rna import RNA_BACKENDS
+
 
 @dataclass(frozen=True)
 class SoftwareSpec:
@@ -23,6 +25,17 @@ class SoftwareSpec:
 
 
 SOFTWARE: dict[str, SoftwareSpec] = {
+    **{
+        name: SoftwareSpec(
+            name,
+            f"{name} single-chain RNA evaluator",
+            "manual",
+            "Supply an upstream checkout, its model assets and an isolated interpreter",
+            asset_urls=(f"https://github.com/{spec.source}",),
+            revision=spec.revision,
+        )
+        for name, spec in RNA_BACKENDS.items()
+    },
     "alphafold3": SoftwareSpec(
         "alphafold3",
         "AlphaFold 3 evaluator",
