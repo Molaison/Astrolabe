@@ -174,6 +174,15 @@ def construct_evaluators(
     return evaluators
 
 
+@register_evaluator_factory("bioemu2")
+def _build_bioemu2_evaluator(term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf):
+    from astrolabe.evaluators.bioemu2 import BioEmu2Evaluator
+
+    conf = _merge_conf_with_defaults(evaluator_conf, "bioemu2", term_conf, alias=alias)
+    options = OmegaConf.to_container(conf, resolve=True) if conf is not None else {}
+    return BioEmu2Evaluator(output_dir=raw_model_results_dir / "bioemu2" / str(alias), **options)
+
+
 @register_evaluator_factory("alphafold3")
 def _build_alphafold3_evaluator(
     term_conf,

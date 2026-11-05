@@ -25,6 +25,9 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 
 ## Constraints that are easy to miss
 
+- BioEmu2 samples are retained as an ensemble, while the legacy structure-loss
+  boundary consumes only the first physicality-passing frame. It provides no
+  AF-style confidence scores; see [BioEmu2 evaluator](bioemu2.md).
 - `RuntimeContext()` captures the active store; `reset()` replaces the facade's store without retargeting existing contexts. Use init/update/set methods, not registered public module assignments. This does not isolate native backend globals or make legacy concurrent runs safe.
 - A frozen Input can contain mutable lists. Snapshotting at dispatch isolates caller inputs while preserving backend-expected types; it does not alter native inference or sample selection.
 - StandardScores numerical/native values retain their existing shallow sharing semantics. Evidence has explicit clone/filter/merge rules. Equal metric names do not prove cross-backend scientific equivalence.
