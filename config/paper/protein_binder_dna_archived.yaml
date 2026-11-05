@@ -100,6 +100,14 @@ evaluator:
     sample_diffusion:
       N_sample: 5
       N_step: 200
+repeat_plan:
+  initial_sequence:
+    owner: python_random
+    target: A
+    alphabet: ADEFGHIKLMNPQRSTVWY
+    length:
+    - 60
+    - 80
 paper_protocol:
   source:
   - MainPaper 205-207
@@ -110,11 +118,6 @@ paper_protocol:
   required_input_paths:
   - homologies.B
   - homologies.C
-  initial_sequence_generator: python_random
-  initial_sequence_alphabet: ADEFGHIKLMNPQRSTVWY
-  initial_sequence_length:
-  - 60
-  - 80
   notes:
   - 'Archived six-target cohort: uniform Python-random 60..80-aa starting sequences, followed by DPLM monomer-stage
     proposals; no HADDOCK predocker.'

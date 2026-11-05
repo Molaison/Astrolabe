@@ -13,7 +13,7 @@ from Bio.PDB import MMCIFParser
 
 from astrolabe.core import global_config
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.boltz import cli, from_af3_to_boltz
 
 if __name__ == "__main__":
@@ -24,6 +24,9 @@ class BoltzEvaluator(Evaluator):
     def __init__(self, model_runner, output_dir):
         self.model_runner = model_runner
         self.output_dir = output_dir
+
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runner)
 
     def run_function(self, input_feat):
         for oligo_name, cplx_input in input_feat.items():

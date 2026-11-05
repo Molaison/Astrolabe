@@ -28,7 +28,26 @@ python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install .
 astrolabe --help
+astrolabe setup
+astrolabe demo --out-dir outputs/first-check
 ```
+
+`setup` checks the installed CPU package by default. The demo analyzes bundled
+coordinates and writes a report. It requires no GPU or model download.
+Run `astrolabe doctor` to check the package and find the next setup command.
+
+For model installation, choose only the software needed by your task:
+
+```bash
+astrolabe setup --profile protein --dry-run
+astrolabe setup --profile protein
+```
+
+The `protein` profile selects AlphaFold 2 and LigandMPNN. The `af3` profile
+requires `--af3-weights /path/to/authorized/models`. Use `--software` for a
+specific catalog selection. `--dry-run` and `--json` print a plan without
+downloads or writes. Model installation uses the source checkout's existing
+container installer. See [the first-run guide](docs/getting_started.md).
 
 The repository may require access through your GitHub account while the
 manuscript is in preparation. A supplied `astrolabe-source.tar.gz` can instead
@@ -160,3 +179,5 @@ Astrolabe is distributed under [Apache-2.0](LICENSE). Third-party source and
 model assets retain their own terms; see [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 For usage or installation problems, open a [GitHub issue](https://github.com/Molaison/Astrolabe/issues)
 with the software version, command, environment and relevant error output.
+
+Binder interface refinement from structures uses `astrolabe refine interface --input complex.pdb --target-homology target_af3.json --out-dir results`. AF3 starts and drains automatically. Inputs may also be a directory; see [interface refinement](docs/interface_refinement.md).

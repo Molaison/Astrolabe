@@ -6,6 +6,22 @@ import pytest
 from omegaconf import OmegaConf
 
 import run
+from astrolabe.run_config_lifecycle import build_persisted_run_config
+
+
+def test_saved_config_keeps_explicit_losses_used_outside_stage_expression():
+    cfg = OmegaConf.create({
+        "stages": {"default": {"weighted_score_expression": "plddt"}},
+        "loss": {"loss_terms": {
+            "report_only": {"_type": "plddt"},
+            "hook_score": {"_type": "iptm"},
+            "disabled": None,
+        }},
+    })
+    saved = build_persisted_run_config(cfg)
+    reloaded = OmegaConf.create(OmegaConf.to_yaml(saved, resolve=False))
+    assert set(reloaded.loss.loss_terms) == {"report_only", "hook_score"}
+    assert reloaded.loss.loss_terms.hook_score._type == "iptm"
 
 
 def test_cleanup_keeps_auto_managed_dir_on_failure(tmp_path):
@@ -140,6 +156,29 @@ def test_run_repeats_rejects_explicit_seed_overflow_before_run(monkeypatch):
     monkeypatch.setattr(run, "_run_pipeline", lambda _: events.append("pipeline"))
 
     with pytest.raises(ValueError, match="seed sequence"):
+        run.run_repeats(cfg)
+
+    assert events == []
+
+
+def test_run_repeats_rejects_resume_with_multiple_repeats_before_setup(monkeypatch):
+    cfg = OmegaConf.create(
+        {
+            "task_name": "demo",
+            "repeats": 2,
+            "seed": 17,
+            "search": {
+                "algorithm": "branching",
+                "owner": "native_refinement",
+                "resume": True,
+            },
+        }
+    )
+    events = []
+    monkeypatch.setattr(run, "install_handlers", lambda: events.append("handlers"))
+    monkeypatch.setattr(run, "plan_repeat_runs", lambda _: events.append("plan"))
+
+    with pytest.raises(ValueError, match="exactly one repeat"):
         run.run_repeats(cfg)
 
     assert events == []

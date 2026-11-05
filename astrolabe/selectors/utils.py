@@ -1,24 +1,8 @@
 import ast
-from functools import partial
 
 import numpy as np
 
-
-_POSE_SELECTOR_VARS = {
-    "sse",
-    "cdr",
-    "bfactor",
-    "interface",
-    "surface",
-    "surface_high_sap",
-    "buried_unsat",
-    "cavity_neighbor",
-    "ligand_unsat",
-    "ligand_contact",
-    "membrane_outer_surface",
-    "long_helix_core",
-    "long_loop",
-}
+from astrolabe.selectors.registry import SelectorRegistry
 
 
 class _SelectorExpressionTransformer(ast.NodeTransformer):
@@ -55,7 +39,8 @@ def construct_position_selector(
     position_vars = extract_variables(expression)
     complex_poses = getattr(evaluation_result, "complex_poses", None)
     if complex_poses is None:
-        if position_vars & _POSE_SELECTOR_VARS:
+        pose_vars = position_vars & SelectorRegistry.pose_required_variables()
+        if pose_vars:
             complex_paths = getattr(evaluation_result, "complex_paths", None)
             if not complex_paths:
                 raise ValueError(
@@ -64,8 +49,8 @@ def construct_position_selector(
                 )
             from astrolabe.evaluators.utils import ComplexPoses
 
-            path_only_vars = {"membrane_outer_surface"}
-            if position_vars <= path_only_vars:
+            path_only_vars = SelectorRegistry.path_only_variables()
+            if pose_vars <= path_only_vars:
                 complex_poses = ComplexPoses({})
                 complex_poses.complex_paths = dict(complex_paths)
             else:
@@ -84,116 +69,12 @@ def construct_position_selector(
         if complex_paths and not hasattr(complex_poses, "complex_paths"):
             complex_poses.complex_paths = dict(complex_paths)
 
-    env = {}
-    for var in position_vars:
-        if var == "sse":
-            from astrolabe.selectors.sse import SecondaryStructurePositionSelector
-
-            env[var] = partial(
-                SecondaryStructurePositionSelector, complex_poses, merge="any"
-            )
-        elif var == "cdr":
-            from astrolabe.selectors.cdr import CDRPositionSelector
-
-            env[var] = partial(CDRPositionSelector, complex_poses, merge="any")
-        elif var == "bfactor":
-            from astrolabe.selectors.bfactor import BFactorPositionSelector
-
-            env[var] = partial(BFactorPositionSelector, complex_poses, merge="any")
-        elif var == "interface":
-            from astrolabe.selectors.interface import InterfacePositionSelector
-
-            env[var] = partial(InterfacePositionSelector, complex_poses, merge="any")
-        elif var == "surface":
-            from astrolabe.selectors.surface import SurfacePositionSelector
-
-            env[var] = partial(SurfacePositionSelector, complex_poses, merge="any")
-        elif var == "surface_high_sap":
-            from astrolabe.selectors.protein_quality import (
-                SurfaceHighSAPPositionSelector,
-            )
-
-            env[var] = partial(
-                SurfaceHighSAPPositionSelector, complex_poses, merge="any"
-            )
-        elif var == "buried_unsat":
-            from astrolabe.selectors.protein_quality import (
-                BuriedUnsatPositionSelector,
-            )
-
-            env[var] = partial(BuriedUnsatPositionSelector, complex_poses, merge="any")
-        elif var == "cavity_neighbor":
-            from astrolabe.selectors.protein_quality import (
-                CavityNeighborPositionSelector,
-            )
-
-            env[var] = partial(
-                CavityNeighborPositionSelector, complex_poses, merge="any"
-            )
-        elif var == "ligand_unsat":
-            from astrolabe.selectors.ligand import (
-                LigandContactPositionSelector,
-                LigandUnsatisfiedPolarPositionSelector,
-            )
-
-            env[var] = partial(
-                LigandUnsatisfiedPolarPositionSelector, complex_poses, merge="any"
-            )
-            env["ligand_contact"] = partial(
-                LigandContactPositionSelector, complex_poses, merge="any"
-            )
-        elif var == "ligand_contact":
-            from astrolabe.selectors.ligand import LigandContactPositionSelector
-
-            env[var] = partial(
-                LigandContactPositionSelector, complex_poses, merge="any"
-            )
-        elif var == "membrane_outer_surface":
-            from astrolabe.selectors.ligand import MembraneOuterSurfacePositionSelector
-
-            env[var] = partial(
-                MembraneOuterSurfacePositionSelector, complex_poses, merge="any"
-            )
-        elif var == "hotspot":
-            from astrolabe.selectors.hotspot import HotspotAliasPositionSelector
-
-            env[var] = partial(HotspotAliasPositionSelector, complex_poses, merge="any")
-        elif var == "hole_surface":
-            from astrolabe.selectors.hole import HoleSurfacePositionSelector
-
-            env[var] = partial(
-                HoleSurfacePositionSelector, complex_poses, merge="any"
-            )
-        elif var == "pore_bottleneck":
-            from astrolabe.selectors.hole import PoreBottleneckPositionSelector
-
-            env[var] = partial(
-                PoreBottleneckPositionSelector, complex_poses, merge="any"
-            )
-        elif var == "long_helix_core":
-            from astrolabe.selectors.sse import LongHelixCorePositionSelector
-
-            env[var] = partial(LongHelixCorePositionSelector, complex_poses, merge="any")
-        elif var == "long_loop":
-            from astrolabe.selectors.sse import (
-                LongLoopPositionSelector,
-            )
-
-            env[var] = partial(
-                LongLoopPositionSelector, complex_poses, merge="any"
-            )
-        elif var == "rosetta_interface_energy":
-            from astrolabe.selectors.rosetta_interface_energy import (
-                RosettaInterfaceEnergyPositionSelector,
-            )
-
-            env[var] = partial(
-                RosettaInterfaceEnergyPositionSelector,
-                evaluation_result,
-                protomers,
-            )
-        else:
-            raise ValueError(f"Invalid variable: {var}")
+    env = SelectorRegistry.construct_environment(
+        position_vars,
+        complex_poses=complex_poses,
+        evaluation_result=evaluation_result,
+        protomers=protomers,
+    )
 
     tree = ast.parse(expression, mode="eval")
     tree = _SelectorExpressionTransformer().visit(tree)

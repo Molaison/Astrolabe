@@ -86,7 +86,11 @@ def test_esm3_mutator_passes_requested_device_to_from_pretrained(monkeypatch) ->
 
     from astrolabe.mutators.esm3 import ESM3Mutator
 
-    mutator = ESM3Mutator(model_name="esm3-open", device="cpu")
+    mutator = ESM3Mutator(
+        model_name="esm3-open",
+        device="cpu",
+        execution_mode="in_process",
+    )
 
     assert calls["model_name"] == "esm3-open"
     assert calls["device"] == torch.device("cpu")
@@ -102,7 +106,11 @@ def test_esm3_uses_pinned_snapshot_data_root(monkeypatch, tmp_path: Path) -> Non
 
     from astrolabe.mutators.esm3 import ESM3Mutator
 
-    ESM3Mutator(model_name="esm3-open", device="cpu")
+    ESM3Mutator(
+        model_name="esm3-open",
+        device="cpu",
+        execution_mode="in_process",
+    )
 
     pretrained = sys.modules["esm3.pretrained"]
     constants = sys.modules["esm3.utils.constants.esm3"]

@@ -12,7 +12,7 @@ from astrolabe.core import global_config
 from astrolabe.core.cyclization import flatten_cyclic_relative_patches
 from astrolabe.core.folding_input import ProteinChain
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.protenix import (
     protenix_from_dict_to_feature,
     from_af3_to_protenix,
@@ -38,6 +38,9 @@ class ProtenixEvaluator(Evaluator):
     def __init__(self, model_runner: "ProtenixRunner", *, use_constraints: bool = True):
         self.model_runner = model_runner
         self.use_constraints = bool(use_constraints)
+
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runner)
 
     @classmethod
     def _normalize_summary_value(cls, value, *, field_name: str) -> np.ndarray:
@@ -177,15 +180,25 @@ class ProtenixEvaluator(Evaluator):
                 self.model_runner.configs, data["N_token"].item()
             )
             self.model_runner.update_model_configs(new_configs)
-            prediction = self.model_runner.predict(data)
-            self.model_runner.dumper.dump(
-                dataset_name=dataset_name,
-                pdb_id=oligo_name,
-                seed=self.model_runner.configs.seed,
-                pred_dict=prediction,
-                atom_array=atom_array,
-                entity_poly_type=data["entity_poly_type"],
-            )
+            if hasattr(self.model_runner, "predict_and_dump"):
+                prediction = self.model_runner.predict_and_dump(
+                    data,
+                    atom_array=atom_array,
+                    dataset_name=dataset_name,
+                    pdb_id=oligo_name,
+                    seed=self.model_runner.configs.seed,
+                    entity_poly_type=data["entity_poly_type"],
+                )
+            else:
+                prediction = self.model_runner.predict(data)
+                self.model_runner.dumper.dump(
+                    dataset_name=dataset_name,
+                    pdb_id=oligo_name,
+                    seed=self.model_runner.configs.seed,
+                    pred_dict=prediction,
+                    atom_array=atom_array,
+                    entity_poly_type=data["entity_poly_type"],
+                )
             prediction["atom_to_residue"] = data["input_feature_dict"][
                 "atom_to_token_idx"
             ]

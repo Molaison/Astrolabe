@@ -18,7 +18,7 @@ from astrolabe.core import global_config
 from astrolabe.core.cyclization import build_cyclic_offset_matrix
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.alphafold import (
     make_AF2_features,
     make_AFM_features,
@@ -51,6 +51,9 @@ class AlphaFold2Evaluator(Evaluator):
         self._seeds: Dict[str, List[int]] = {}
         self._is_multimer: Dict[str, bool] = {}
         self._inputs: Dict[str, Any] = {}
+
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runners)
 
     @staticmethod
     def _resolve_initial_guess_cfg(

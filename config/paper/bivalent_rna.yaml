@@ -838,10 +838,14 @@ evaluator:
     num_recycles: 10
     run_data_pipeline: false
     flash_attention_implementation: cudnn
-beam_search:
-  beam_width: 8
+search:
+  algorithm: branching
+  owner: archived_refinement
+  width: 8
   proposals_per_parent: 4
   max_evaluations: 200
+  measurement: bivalent_geometry
+  summary_format: json
   objective_weights:
     weak_interface: 2.0
     repeat_contacts: 1.0
@@ -862,13 +866,13 @@ beam_search:
     sequence: CACUGUUUCGGUAAGUCGCA
     source_task: bivalent_beam_multistart_1urn_u1a_s66108
     source_step: 774
+repeat_plan:
+  output: "{repeat:03d}_seed_{seed}"
 paper_protocol:
   source:
   - MainPaper 211 (2026-10-08 revision)
   - 010_rna_aptamer_target_protein/scheduler/rna_evaluator_comparison/18_bivalent_40nt.yaml and bivalent_af3_metrics.py
-  engine: bivalent_rna_beam
   representative: final_beam
-  planned_starts: 3
   notes:
   - 'MainPaper 211: initialize three independent random 20nt units, each repeated twice without a linker, with two
     fixed 96-residue U1A copies and 200 AF3 evaluations per start.'

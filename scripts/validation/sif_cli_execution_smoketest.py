@@ -113,7 +113,12 @@ def _pdb_atom(
     )
 
 
-def _write_protein_pdb(path: Path, chains: dict[str, tuple[str, ...]]) -> None:
+def _write_protein_pdb(
+    path: Path,
+    chains: dict[str, tuple[str, ...]],
+    *,
+    chain_offset_step: float = 12.0,
+) -> None:
     lines: list[str] = []
     serial = 1
     chain_offset = 0.0
@@ -142,7 +147,7 @@ def _write_protein_pdb(path: Path, chains: dict[str, tuple[str, ...]]) -> None:
                 )
                 serial += 1
         lines.append("TER")
-        chain_offset += 12.0
+        chain_offset += chain_offset_step
     lines.append("END")
     path.write_text("\n".join(lines) + "\n", encoding="ascii")
 
@@ -240,6 +245,34 @@ def _prepare_fixtures(work_root: Path) -> None:
             "A": ("ALA", "CYS", "GLY", "SER"),
             "B": ("GLY", "ALA", "SER", "GLY"),
         },
+    )
+    _write_protein_pdb(
+        work_root / "interface_complex.pdb",
+        {
+            "A": ("ALA", "CYS", "GLY", "SER"),
+            "B": ("GLY", "ALA", "SER", "GLY"),
+        },
+        chain_offset_step=4.0,
+    )
+    (work_root / "target_homology.json").write_text(
+        json.dumps(
+            {
+                "name": "cli_interface_smoke",
+                "sequences": [
+                    {
+                        "protein": {
+                            "id": ["B"],
+                            "sequence": "GASG",
+                            "unpairedMsa": "",
+                            "pairedMsa": "",
+                            "templates": [],
+                        }
+                    }
+                ],
+            }
+        )
+        + "\n",
+        encoding="ascii",
     )
     _write_channel_pdb(work_root / "channel.pdb", screen=False)
     _write_channel_pdb(work_root / "channel_screen.pdb", screen=True)
@@ -387,6 +420,9 @@ def _case_specs(work_root: Path, repo_root: Path) -> list[Case]:
 
     cases = [
         Case(("run",), configured("run", "--task", "benchmark_binder_v1_4", "--dry-run"), require_stdout=True),
+        Case(("setup",), configured("setup", "--profile", "cpu", "--root", p("install_root"), "--dry-run", "--json"), require_stdout=True, json_stdout=True),
+        Case(("doctor",), configured("doctor"), require_stdout=True),
+        Case(("demo",), ("demo", "--out-dir", p("cpu_demo")), require_stdout=True, json_stdout=True, artifacts=(p("cpu_demo/onboarding.json"),), timeout_seconds=300.0),
         Case(("completion", "bash"), ("completion", "bash", "--init"), require_stdout=True),
         Case(("completion", "zsh"), ("completion", "zsh", "--init"), require_stdout=True),
         Case(("completion", "complete"), ("completion", "complete", "--shell", "bash", "--cword", "1", "astrolabe", ""), require_stdout=True),
@@ -413,6 +449,7 @@ def _case_specs(work_root: Path, repo_root: Path) -> list[Case]:
         Case(("refine", "ligand-pocket"), configured("refine", "ligand-pocket", "-t", "cli_refine_pocket", "-o", p("out_refine_pocket"), "--structure", p("protein.pdb"), "--protein-chain", "A", "--ligand", "CCO", "--ligand-type", "smiles", "--dry-run", "--dump-config", p("refine_pocket.yaml")), artifacts=(p("refine_pocket.yaml"),)),
         Case(("refine", "channel"), configured("refine", "channel", "-t", "cli_refine_channel", "-o", p("out_refine_channel"), "--structure", p("channel.pdb"), "--protein-chain", "A", "--ligand-residue", "L:LIG:101", "--mutable-positions", p("mutable.txt"), "--spheres", p("spheres.pdb"), "--dry-run", "--dump-config", p("refine_channel.yaml")), artifacts=(p("refine_channel.yaml"),)),
         Case(("refine", "oligomer"), configured("refine", "oligomer", "-t", "cli_refine_oligomer", "-o", p("out_refine_oligomer"), "--seq", "ACDE", "--copies", "2", "--dry-run", "--dump-config", p("refine_oligomer.yaml")), artifacts=(p("refine_oligomer.yaml"),)),
+        Case(("refine", "interface"), configured("refine", "interface", "--input", p("interface_complex.pdb"), "--target-homology", p("target_homology.json") + ":B", "--out-dir", p("interface_prepare"), "--target-chain", "B", "--binder-chain", "A", "--prepare-only"), require_stdout=True, artifacts=(p("interface_prepare/interface_plan.json"),), timeout_seconds=300.0),
         Case(("bench-pseudocycle-v1",), configured("bench-pseudocycle-v1", "--task-name", "cli_pseudocycle", "--out-dir", p("out_pseudocycle"), "--unit-len", "8", "--copies", "2", "--dry-run", "--dump-config", p("pseudocycle.yaml")), artifacts=(p("pseudocycle.yaml"),)),
         Case(("bench-tandem-repeat-v1",), configured("bench-tandem-repeat-v1", "--task-name", "cli_tandem", "--out-dir", p("out_tandem"), "--unit-len", "8", "--copies", "2", "--dry-run", "--dump-config", p("tandem.yaml")), artifacts=(p("tandem.yaml"),)),
         Case(("refine-heterooligomer-v1",), configured("refine-heterooligomer-v1", "--task-name", "cli_hetero", "--out-dir", p("out_hetero"), "--seq", "ACDEFG", "--copies", "2", "--interface", "2", "--dry-run", "--dump-config", p("hetero.yaml")), artifacts=(p("hetero.yaml"),)),
@@ -429,6 +466,10 @@ def _case_specs(work_root: Path, repo_root: Path) -> list[Case]:
         Case(("config", "compose"), configured("config", "compose", "--base", "base", "--name", "smoke"), expected_returncode=2, stderr_contains="interactive TTY"),
         Case(("env", "wizard"), configured("env", "wizard", "--task", "benchmark_binder_v1_4"), expected_returncode=2, stderr_contains="interactive TTY"),
         Case(("env", "doctor"), ("env", "doctor", "--env", p("env.yaml"), "--format", "json", "--soft-fail"), json_stdout=True),
+        Case(("daemon", "backends"), ("daemon", "backends", "--json"), require_stdout=True, json_stdout=True),
+        Case(("daemon", "status"), ("daemon", "status", "--directory", p("missing_daemon"), "--json"), expected_returncode=2, require_stdout=True, json_stdout=True),
+        Case(("daemon", "stop"), ("daemon", "stop", "--directory", p("missing_daemon"), "--json"), expected_returncode=2, require_stdout=True, json_stdout=True),
+        Case(("daemon", "serve"), ("daemon", "serve", "--spec", p("missing_service.json")), expected_returncode=2, require_stdout=True),
         Case(("paper", "list"), ("paper", "list", "--format", "json"), json_stdout=True),
         Case(("paper", "show"), configured("paper", "show", "evaluate-af3", "--config-env", "env"), require_stdout=True),
         Case(("paper", "prepare-inputs"),

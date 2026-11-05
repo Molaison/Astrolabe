@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import sys
 import types
 from pathlib import Path
+from textwrap import dedent
 
 import numpy as np
 import pytest
@@ -700,7 +702,9 @@ def test_rfd3_runner_uses_configured_foundry_python(
             "python_bin": str(python_bin),
             "ckpt_path": str(checkpoint),
             "diffusion_batch_size": 1,
-        }
+        },
+        # The fake command exercises the legacy compatibility path directly.
+        execution_mode="subprocess",
     )
     outputs = runner.run(
         specification={"length": "20"},
@@ -712,6 +716,197 @@ def test_rfd3_runner_uses_configured_foundry_python(
     assert calls[0][0][0] == str(python_bin.absolute())
     assert calls[0][1] == str(repo.resolve())
     assert calls[0][3] is True
+
+
+def test_rfd3_runner_consumes_config_mode_and_keyword_takes_precedence(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "foundry"
+    repo.mkdir()
+    checkpoint = repo / "rfd3.ckpt"
+    checkpoint.write_text("checkpoint", encoding="utf-8")
+    base_config = {
+        "repo_path": str(repo),
+        "python_bin": sys.executable,
+        "ckpt_path": str(checkpoint),
+        "execution_mode": "subprocess",
+        "seed": 17,
+    }
+
+    configured = RFD3Runner(base_config)
+    overridden = RFD3Runner(base_config, execution_mode="daemon")
+
+    assert configured.execution_mode == "subprocess"
+    assert overridden.execution_mode == "daemon"
+    assert "execution_mode" not in configured.engine_config
+    assert "execution_mode" not in overridden.engine_config
+    assert configured.engine_config["seed"] == 17
+    configured.shutdown()
+    overridden.shutdown()
+
+
+def _write_fake_rfd3_packages(repo: Path) -> None:
+    engine_module = repo / "models" / "rfd3" / "src" / "rfd3" / "engine.py"
+    pdb_module = repo / "src" / "biotite" / "structure" / "io" / "pdb.py"
+    for module_path in (engine_module, pdb_module):
+        module_path.parent.mkdir(parents=True, exist_ok=True)
+        package_dir = module_path.parent
+        while package_dir != repo:
+            marker = package_dir / "__init__.py"
+            if not marker.exists():
+                marker.write_text("", encoding="utf-8")
+            package_dir = package_dir.parent
+
+    engine_module.write_text(
+        dedent(
+            """
+            import json
+            import os
+            from pathlib import Path
+            from types import SimpleNamespace
+
+
+            def _append(env_name, payload):
+                path = Path(os.environ[env_name])
+                records = (
+                    json.loads(path.read_text(encoding="utf-8"))
+                    if path.exists()
+                    else []
+                )
+                records.append(payload)
+                path.write_text(json.dumps(records), encoding="utf-8")
+
+
+            class RFD3InferenceConfig(dict):
+                pass
+
+
+            class RFD3InferenceEngine:
+                def __init__(self, **config):
+                    self.config = config
+                    _append("RFD3_LOAD_AUDIT", {"config": config})
+
+                def run(self, *, inputs, n_batches, out_dir):
+                    request = json.loads(Path(inputs).read_text(encoding="utf-8"))
+                    specification = request["gh_initializer"]
+                    _append(
+                        "RFD3_RUN_AUDIT",
+                        {
+                            "seed": self.config["seed"],
+                            "n_batches": n_batches,
+                            "specification": specification,
+                            "out_dir": out_dir,
+                        },
+                    )
+                    output = SimpleNamespace(
+                        example_id=f"sample_{n_batches}",
+                        atom_array={"specification": specification},
+                        metadata={
+                            "seed": self.config["seed"],
+                            "n_batches": n_batches,
+                            "specification": specification,
+                        },
+                    )
+                    return {str(n_batches): [output]}
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    pdb_module.write_text(
+        dedent(
+            """
+            from pathlib import Path
+
+
+            class PDBFile:
+                def set_structure(self, structure):
+                    self.structure = structure
+
+                def write(self, path):
+                    Path(path).write_text("ATOM\\n", encoding="utf-8")
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+
+
+def test_rfd3_daemon_reuses_one_engine_and_preserves_artifacts(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = tmp_path / "foundry"
+    _write_fake_rfd3_packages(repo)
+    checkpoint = repo / "rfd3.ckpt"
+    checkpoint.write_text("checkpoint", encoding="utf-8")
+    load_audit = tmp_path / "rfd3-loads.json"
+    run_audit = tmp_path / "rfd3-runs.json"
+    monkeypatch.setenv("RFD3_LOAD_AUDIT", str(load_audit))
+    monkeypatch.setenv("RFD3_RUN_AUDIT", str(run_audit))
+    runner = RFD3Runner(
+        {
+            "repo_path": str(repo),
+            "python_bin": sys.executable,
+            "ckpt_path": str(checkpoint),
+            "diffusion_batch_size": 2,
+            "seed": 42,
+        }
+    )
+    try:
+        first = runner.run(
+            specification={"length": "4"},
+            output_dir=tmp_path / "rfd3-one",
+            n_batches=2,
+        )
+        second = runner.run(
+            specification={"contig": "5"},
+            output_dir=tmp_path / "rfd3-two",
+            n_batches=3,
+        )
+        status = runner._daemon.status()
+
+        assert status["model_load_count"] == 1
+        assert status["request_count"] == 2
+        assert len(json.loads(load_audit.read_text(encoding="utf-8"))) == 1
+        first_metadata = json.loads(
+            first[0].metadata_path.read_text(encoding="utf-8")
+        )
+        second_metadata = json.loads(
+            second[0].metadata_path.read_text(encoding="utf-8")
+        )
+        assert first_metadata == {
+            "seed": 42,
+            "n_batches": 2,
+            "specification": {"length": "4"},
+        }
+        assert second_metadata == {
+            "seed": 42,
+            "n_batches": 3,
+            "specification": {"contig": "5"},
+        }
+        runs = json.loads(run_audit.read_text(encoding="utf-8"))
+        assert [run["n_batches"] for run in runs] == [2, 3]
+        assert [run["specification"] for run in runs] == [
+            {"length": "4"},
+            {"contig": "5"},
+        ]
+        assert first[0].structure_path != second[0].structure_path
+        assert first[0].structure_path.is_file()
+        assert second[0].structure_path.is_file()
+
+        runner.engine_config["seed"] = 43
+        third = runner.run(
+            specification={"length": "6"},
+            output_dir=tmp_path / "rfd3-three",
+            n_batches=1,
+        )
+        loads = json.loads(load_audit.read_text(encoding="utf-8"))
+        assert [load["config"]["seed"] for load in loads] == [42, 43]
+        third_metadata = json.loads(
+            third[0].metadata_path.read_text(encoding="utf-8")
+        )
+        assert third_metadata["seed"] == 43
+        assert third_metadata["specification"] == {"length": "6"}
+    finally:
+        runner.shutdown()
 
 
 def test_compose_validation_checks_structure_initializer_alias_and_chain_map() -> None:

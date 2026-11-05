@@ -3,11 +3,13 @@ from __future__ import annotations
 import logging
 from typing import Callable, Dict, List
 
+from astrolabe.design.operations import OperationOwner
+
 
 MutatorFactory = Callable[..., object]
 
 
-class MutatorRegistry:
+class MutatorRegistry(OperationOwner):
     """Registry for mutator factories keyed by mutator `_type` (case-insensitive)."""
 
     _registry: Dict[str, MutatorFactory] = {}
@@ -44,6 +46,18 @@ class MutatorRegistry:
     @classmethod
     def list_available(cls) -> List[str]:
         return sorted(cls._registry.keys())
+
+    @classmethod
+    def build_operation(cls, name: str, *, alias: str, options: dict, context):
+        from astrolabe.design.native_registry import build_mutator_operation
+
+        return build_mutator_operation(
+            cls,
+            name,
+            alias=alias,
+            options=options,
+            context=context,
+        )
 
 
 def register_mutator_factory(name: str):

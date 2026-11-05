@@ -92,12 +92,24 @@ def set_random_seeds(seed: int):
         torch = None
 
     if torch is not None:
+        from astrolabe.model_execution import reset_remote_random_state
+
+        reset_remote_random_state()
         torch.manual_seed(seed)
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
 
-def parse_arguments(args):
+def parse_arguments(
+    args,
+    *,
+    existing_run_dir=None,
+    persist_config: bool = True,
+):
+    if type(persist_config) is not bool:
+        raise TypeError("persist_config must be boolean")
+    if not persist_config and existing_run_dir is None:
+        raise ValueError("persist_config=False requires existing_run_dir")
     # -------------------------------------------------
     # Configure the output directory, and create the necessary subdirectories
     # -------------------------------------------------
@@ -105,7 +117,15 @@ def parse_arguments(args):
         raise ValueError("Task name is not provided")
 
     args.task_name = sanitised_name(args.task_name)
-    args.out_dir = create_run_directory(args.out_dir, args.task_name)
+    if existing_run_dir is None:
+        args.out_dir = create_run_directory(args.out_dir, args.task_name)
+    else:
+        selected_run_dir = pathlib.Path(existing_run_dir).expanduser().resolve()
+        if not selected_run_dir.is_dir():
+            raise FileNotFoundError(
+                f"Existing run directory does not exist: {selected_run_dir}"
+            )
+        args.out_dir = selected_run_dir
 
     (args.out_dir / "logs").mkdir(parents=True, exist_ok=True)
     (args.out_dir / "structures").mkdir(parents=True, exist_ok=True)
@@ -455,14 +475,25 @@ def parse_arguments(args):
     if args.types is None:
         args.types = {key: "p" for key in args.seqs.keys()}
 
-    # Dump a pruned persisted view after injecting derived fields (selectors, enabled_aliases, etc).
-    OmegaConf.save(
-        run_config_lifecycle.build_persisted_run_config(args),
-        args.out_dir / "config.yaml",
-    )
-    # Record machine-readable provenance for this run directory (best-effort; the
-    # config digest above is only available once the persisted config exists).
-    run_config_lifecycle.start_run_provenance(args)
+    search = args.get("search") if hasattr(args, "get") else None
+    if search is not None:
+        resume = search.get("resume", False)
+        if type(resume) is not bool:
+            raise ValueError("search.resume must be boolean")
+        if persist_config and "resume" not in search:
+            with open_dict(search):
+                search.resume = False
+
+    if persist_config:
+        # Dump a pruned persisted view after injecting derived fields
+        # (selectors, enabled_aliases, etc).
+        OmegaConf.save(
+            run_config_lifecycle.build_persisted_run_config(args),
+            args.out_dir / "config.yaml",
+        )
+        # Record machine-readable provenance for this run directory (best-effort;
+        # the config digest above is only available once config.yaml exists).
+        run_config_lifecycle.start_run_provenance(args)
     return args
 
 

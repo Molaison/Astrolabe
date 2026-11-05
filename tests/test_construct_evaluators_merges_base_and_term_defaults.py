@@ -17,7 +17,11 @@ from astrolabe.evaluators.utils import construct_evaluators
 
 def test_construct_evaluators_merges_esmfold_base_and_term_defaults(tmp_path: Path) -> None:
     class _EvalConf:
-        esmfold = {"model_name": "/tmp/base_model.pt", "device": "cpu"}
+        esmfold = {
+            "model_name": "/tmp/base_model.pt",
+            "device": "cpu",
+            "execution_mode": "in_process",
+        }
         evaluator_terms = {"esmfold": {"_type": "ESMFold", "device": "cuda"}}
 
     evaluators = construct_evaluators(_EvalConf(), raw_model_results_dir=tmp_path)

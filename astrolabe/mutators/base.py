@@ -3,6 +3,7 @@ from abc import abstractmethod
 from typing import Any, Dict
 
 from astrolabe.core import global_config
+from astrolabe.model_execution import ExecutionMode, execution_mode
 from astrolabe.mutators.capabilities import (
     MutatorCapabilities,
     validate_mutator_capabilities,
@@ -22,6 +23,12 @@ class Mutator:
     def shutdown(self) -> None:
         """Release external resources held by the mutator."""
         return None
+
+    def finalize_pending_mutations(self) -> None:
+        """Materialize queued segment mutations before candidate capture."""
+        from astrolabe.design.legacy import finalize_pending_mutations
+
+        finalize_pending_mutations(global_config.segment_manager)
 
     @abstractmethod
     def compute_mutation(self, input_feat):
@@ -254,9 +261,27 @@ def _build_mpnn_mutator(
 ):
     from astrolabe.mutators.wrappers.ligandmpnn_run import LigandMPNN
 
+    term_conf = dict(term_conf)
+    mode_value = term_conf.pop("execution_mode", None)
     runner_conf, mutator_kwargs = _merge_runner_conf(mutator_conf.LigandMPNN, term_conf)
+    configured_mode = runner_conf.pop("execution_mode", None)
+    if mode_value is None:
+        mode_value = configured_mode
+    mode = execution_mode(mode_value)
     runner_conf["out_folder"] = str(raw_model_results_dir / output_name)
-    sequence_model_runner = LigandMPNN(runner_conf)
+    if mode is ExecutionMode.DAEMON:
+        from astrolabe.mutators.native_daemons import (
+            LIGANDMPNN_DAEMON_FACTORY,
+            NativeSequenceRunner,
+        )
+
+        sequence_model_runner = NativeSequenceRunner(
+            backend="ligandmpnn",
+            factory=LIGANDMPNN_DAEMON_FACTORY,
+            runner_config=runner_conf,
+        )
+    else:
+        sequence_model_runner = LigandMPNN(runner_conf)
     return mutator_cls(
         sequence_model_runner=sequence_model_runner,
         **mutator_kwargs,
@@ -384,9 +409,27 @@ def _build_carbondesign_mutator(term_conf, *, alias, mutator_conf, raw_model_res
     from astrolabe.mutators.carbondesign import CarbonDesignMutator
     from astrolabe.mutators.wrappers.carbondesign_runner import CarbonDesignRunner
 
+    term_conf = dict(term_conf)
+    mode_value = term_conf.pop("execution_mode", None)
     runner_conf, mutator_kwargs = _merge_runner_conf(mutator_conf.CarbonDesign, term_conf)
+    configured_mode = runner_conf.pop("execution_mode", None)
+    if mode_value is None:
+        mode_value = configured_mode
+    mode = execution_mode(mode_value)
     runner_conf["output_dir"] = str(raw_model_results_dir / "CarbonDesign")
-    sequence_model_runner = CarbonDesignRunner(runner_conf)
+    if mode is ExecutionMode.DAEMON:
+        from astrolabe.mutators.native_daemons import (
+            CARBONDESIGN_DAEMON_FACTORY,
+            NativeSequenceRunner,
+        )
+
+        sequence_model_runner = NativeSequenceRunner(
+            backend="carbondesign",
+            factory=CARBONDESIGN_DAEMON_FACTORY,
+            runner_config=runner_conf,
+        )
+    else:
+        sequence_model_runner = CarbonDesignRunner(runner_conf)
     return CarbonDesignMutator(
         sequence_model_runner=sequence_model_runner,
         **mutator_kwargs,
@@ -397,21 +440,27 @@ def _build_carbondesign_mutator(term_conf, *, alias, mutator_conf, raw_model_res
 def _build_esmif_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.esm_if1 import ESMIF1Mutator
 
-    return ESMIF1Mutator(**term_conf)
+    term_conf = dict(term_conf)
+    mode = execution_mode(term_conf.pop("execution_mode", None))
+    return ESMIF1Mutator(execution_mode=mode, **term_conf)
 
 
 @register_mutator_factory("esm2")
 def _build_esm2_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.esm2 import ESM2Mutator
 
-    return ESM2Mutator(**term_conf)
+    term_conf = dict(term_conf)
+    mode = execution_mode(term_conf.pop("execution_mode", None))
+    return ESM2Mutator(execution_mode=mode, **term_conf)
 
 
 @register_mutator_factory("esm3")
 def _build_esm3_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.esm3 import ESM3Mutator
 
-    return ESM3Mutator(**term_conf)
+    term_conf = dict(term_conf)
+    mode = execution_mode(term_conf.pop("execution_mode", None))
+    return ESM3Mutator(execution_mode=mode, **term_conf)
 
 
 @register_mutator_factory("motifbreaker")

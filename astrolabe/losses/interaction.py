@@ -1791,19 +1791,28 @@ def _isolate_chains(pose, keep_chains: Iterable[str]):
     return new_pose
 
 
-def _compute_shape_complementarity_between_chains(pose, chain_a: str, chain_b: str):
+def _compute_shape_complementarity_between_chains(pose, chain_a: str, chain_b: str, *, strict: bool = False):
     _require_pyrosetta()
     if not chain_a or not chain_b or chain_a == chain_b:
+        if strict:
+            raise ValueError("Shape complementarity requires two distinct chains")
         return None
     sub_pose = _isolate_chains(pose, [chain_a, chain_b])
     if sub_pose is None or sub_pose.total_residue() < 2 or sub_pose.num_chains() < 2:
+        if strict:
+            raise ValueError("Shape complementarity requires two nonempty chains")
         return None
     sc_filter = ShapeComplementarityFilter()
     sc_filter.jump_id(1)
     sc_filter.use_rosetta_radii(True)
     try:
-        return float(sc_filter.report_sm(sub_pose))
+        value = float(sc_filter.report_sm(sub_pose))
+        if strict and (not math.isfinite(value) or value < 0):
+            raise ValueError("Invalid shape complementarity result")
+        return value
     except RuntimeError as exc:  # pragma: no cover - PyRosetta runtime errors
+        if strict:
+            raise
         logging.warning(
             "Shape complementarity calculation failed for chains %s-%s: %s",
             chain_a,
@@ -1964,6 +1973,8 @@ def _compute_interface_buried_unsatisfied_hbonds(
         xml
     )
     bound_buns = float(buns_filter.report_sm(pose))
+    if not math.isfinite(bound_buns):
+        raise ValueError("Bound BUNS must be finite")
 
     separated_pose = pose.clone()
     atom_id_type = pyrosetta.rosetta.core.id.AtomID
@@ -1982,7 +1993,10 @@ def _compute_interface_buried_unsatisfied_hbonds(
             )
     separated_pose.update_residue_neighbors()
     unbound_buns = float(buns_filter.report_sm(separated_pose))
-    return max(0.0, bound_buns - unbound_buns)
+    delta_buns = bound_buns - unbound_buns
+    if not math.isfinite(unbound_buns) or not math.isfinite(delta_buns):
+        raise ValueError("Unbound BUNS and interface difference must be finite")
+    return max(0.0, delta_buns)
 
 
 def normalize_contact_molecular_surface(
@@ -2243,6 +2257,7 @@ def calculate_ddg_loss(complex_poses, protomer, normalize_factor=5.0):
         "target_sc",
         "saturation_constant",
         "return_raw",
+        "strict",
     ],
     supports_oligomer_specific=True,
 )
@@ -2251,6 +2266,7 @@ def protomer_shape_complementarity(
     protomer_a: str | None = None,
     protomer_b: str | None = None,
     included_protomers: str | None = None,
+    strict: bool = False,
 ):
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
@@ -2267,11 +2283,18 @@ def protomer_shape_complementarity(
             oligo_name, protomer_a, protomer_b
         )
         if chain_a is None or chain_b is None or chain_a == chain_b:
+            if strict:
+                raise ValueError("Missing/invalid shape complementarity chain pair")
             scores[oligo_name] = 0.0
             continue
 
-        sc_value = _compute_shape_complementarity_between_chains(pose, chain_a, chain_b)
+        sc_value = (
+            _compute_shape_complementarity_between_chains(pose, chain_a, chain_b, strict=True)
+            if strict else _compute_shape_complementarity_between_chains(pose, chain_a, chain_b)
+        )
         if sc_value is None or sc_value < 0.0:
+            if strict:
+                raise ValueError("Shape complementarity calculation did not return a valid value")
             scores[oligo_name] = 0.0
             continue
 

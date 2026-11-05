@@ -5,14 +5,18 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 import numpy as np
+import pytest
 from omegaconf import OmegaConf
 
+import astrolabe.model_daemon as model_daemon
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import Input, Ligand, ProteinChain
 from astrolabe.evaluators.opendde import OpenDDEEvaluator
 from astrolabe.evaluators.utils import construct_evaluators
+from astrolabe.evaluators.wrappers.opendde_daemon import OpenDDEHandler
 from astrolabe.evaluators.wrappers.opendde import (
     OpenDDERunner,
     collect_opendde_outputs,
@@ -119,6 +123,7 @@ def test_opendde_runner_builds_subprocess_command_and_logs(tmp_path: Path, monke
         num_samples=1,
         use_msa=False,
         timeout_seconds=12,
+        execution_mode="subprocess",
     )
     out_dir = tmp_path / "raw"
 
@@ -240,3 +245,157 @@ def test_construct_evaluators_builds_opendde_runner(tmp_path: Path) -> None:
     assert evaluator.model_runner.python_bin == "/usr/bin/python3"
     assert evaluator.model_runner.repo_path == tmp_path
     assert evaluator.output_dir == tmp_path / "raw" / "opendde"
+
+
+def test_opendde_daemon_retains_runner_and_recovers_after_failure(tmp_path: Path) -> None:
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        json.dumps([{"name": "AB", "modelSeeds": [123], "sequences": []}]),
+        encoding="utf-8",
+    )
+    out_dirs = [
+        tmp_path / "raw" / "opendde" / "step_1",
+        tmp_path / "raw" / "opendde" / "step_2",
+    ]
+    for out_dir in out_dirs:
+        out_dir.mkdir(parents=True)
+
+    class _Config(dict):
+        __getattr__ = dict.__getitem__
+        __setattr__ = dict.__setitem__
+
+    class _BatchInference:
+        def __init__(self) -> None:
+            self.load_calls = 0
+            self.seeds: list[list[int]] = []
+            self.runner = SimpleNamespace(
+                configs=_Config(
+                    {
+                        "need_atom_confidence": False,
+                        "sorted_by_ranking_score": True,
+                    }
+                ),
+                init_dumper=self._init_dumper,
+                foldcp_recorder=SimpleNamespace(
+                    jsonl_path="",
+                    rank=0,
+                    write_rank_sidecar=False,
+                ),
+            )
+
+        def _init_dumper(self, **kwargs):
+            self.runner.dumper = SimpleNamespace(base_dir=self.runner.dump_dir)
+
+        def get_default_runner(self, **kwargs):
+            self.load_calls += 1
+            self.options = kwargs
+            self.runner.dumper = SimpleNamespace(base_dir=kwargs["dump_dir"])
+            return self.runner
+
+        def preprocess_input(self, input_json, **kwargs):
+            payload = json.loads(Path(input_json).read_text(encoding="utf-8"))
+            self.seeds.append(payload[0]["modelSeeds"])
+            return input_json
+
+    class _Inference:
+        def __init__(self) -> None:
+            self.calls = 0
+            self.fail_next = False
+            self.runners = []
+
+        def infer_predict(self, runner, configs):
+            self.calls += 1
+            self.runners.append(runner)
+            if self.fail_next:
+                self.fail_next = False
+                raise RuntimeError("fake inference failure")
+            assert configs["input_json_path"] == str(input_json)
+            Path(runner.dumper.base_dir, f"result_{self.calls}.txt").write_text(
+                "ok", encoding="utf-8"
+            )
+
+    batch = _BatchInference()
+    inference = _Inference()
+    handler = OpenDDEHandler(
+        {
+            "repo_path": str(tmp_path),
+            "num_samples": 2,
+            "use_msa": True,
+        },
+        batch_inference=batch,
+        inference=inference,
+    )
+    first_payload = {"input_json": str(input_json), "out_dir": str(out_dirs[0])}
+    second_payload = {"input_json": str(input_json), "out_dir": str(out_dirs[1])}
+
+    handler(first_payload)
+    inference.fail_next = True
+    with pytest.raises(RuntimeError, match="fake inference failure"):
+        handler(first_payload)
+    handler(second_payload)
+
+    assert batch.load_calls == 1
+    assert batch.options["n_sample"] == 2
+    assert batch.options["use_msa"] is True
+    assert batch.seeds == [[123], [123], [123]]
+    assert inference.calls == 3
+    assert len({id(runner) for runner in inference.runners}) == 1
+    assert (out_dirs[0] / "result_1.txt").is_file()
+    assert (out_dirs[1] / "result_3.txt").is_file()
+
+
+def test_opendde_runner_owns_one_daemon_for_multiple_requests(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = tmp_path / "opendde"
+    repo.mkdir()
+    input_json = tmp_path / "input.json"
+    input_json.write_text("[]", encoding="utf-8")
+    out_dir = tmp_path / "raw"
+
+    created = []
+
+    class _OwnedDaemon:
+        def __init__(self, spec, **kwargs):
+            self.spec = spec
+            self.kwargs = kwargs
+            self.requests = []
+            created.append(self)
+
+        def request(self, payload):
+            self.requests.append(payload)
+
+        def shutdown(self):
+            self.closed = True
+
+    monkeypatch.setattr(model_daemon, "OwnedModelDaemon", _OwnedDaemon)
+    runner = OpenDDERunner(
+        python_bin=sys.executable,
+        repo_path=repo,
+        num_samples=2,
+        timeout_seconds=12,
+    )
+
+    runner.run_inference(input_json=input_json, out_dir=out_dir)
+    runner.run_inference(input_json=input_json, out_dir=out_dir)
+
+    assert len(created) == 1
+    assert created[0].spec.backend == "opendde"
+    assert created[0].spec.settings["num_samples"] == 2
+    assert "out_dir" not in created[0].spec.settings
+    assert "foldcp_metrics_jsonl" not in created[0].spec.settings
+    assert created[0].kwargs["request_timeout"] == 12
+    assert created[0].requests == [
+        {
+            "input_json": str(input_json),
+            "out_dir": str(out_dir),
+            "foldcp_metrics_jsonl": "",
+        },
+        {
+            "input_json": str(input_json),
+            "out_dir": str(out_dir),
+            "foldcp_metrics_jsonl": "",
+        },
+    ]
+    assert (out_dir / "opendde.stdout.log").is_file()
+    runner.shutdown()

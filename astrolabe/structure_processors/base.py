@@ -11,13 +11,14 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from astrolabe.core import global_config
+from astrolabe.design.operations import OperationOwner
 from astrolabe.utils.log_events import event_span, log_event
 
 
 logger = logging.getLogger(__name__)
 
 
-class StructureProcessorRegistry:
+class StructureProcessorRegistry(OperationOwner):
     """
     Registry for coordinate-processing implementations.
     Stable configuration identifiers select docking, alignment or rescue classes.
@@ -230,6 +231,12 @@ class StructureProcessor(ABC):
         self.debug_dir = Path(self.out_dir) / "predocker"
         self.debug_dir.mkdir(parents=True, exist_ok=True)
         logging.info(f"Debug mode enabled. Outputs will be saved to: {self.debug_dir}")
+
+    def shutdown(self) -> None:
+        runner = getattr(self, "runner", None)
+        shutdown = getattr(runner, "shutdown", None)
+        if callable(shutdown):
+            shutdown()
 
     def _generate_cache_key(self, input_file) -> str:
         """

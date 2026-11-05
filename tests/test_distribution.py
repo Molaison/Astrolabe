@@ -87,7 +87,10 @@ def test_wheel_ships_runner_and_portable_config_resources(wheel_names: list[str]
 
 def test_wheel_excludes_vendor_overlays_and_generated_artifacts(wheel_names: list[str]) -> None:
     assert not [name for name in wheel_names if name.startswith(EXCLUDED_ROOTS)]
-    assert not [name for name in wheel_names if name.startswith("examples/") and not name.startswith("examples/paper/")]
+    assert not [name for name in wheel_names if name.startswith("examples/")
+                and not name.startswith("examples/paper/")
+                and name != "examples/input/9TP_cid.cif"]
+    assert "examples/input/9TP_cid.cif" in wheel_names
     assert not [name for name in wheel_names if "__pycache__" in name or ".egg-info" in name or name.endswith((".pyc", ".un~"))]
     assert not [
         name
@@ -113,7 +116,7 @@ def test_wheel_metadata_declares_distribution_contract(wheel_path: Path, wheel_n
     assert single("Requires-Python") == ">=3.11"
     assert CLI_CPU_REQUIREMENTS <= requires
     assert not MODEL_RUNTIME_REQUIREMENTS & requires
-    assert "astrolabe = astrolabe.cli:main" in entry_points
+    assert "astrolabe = astrolabe.launcher:main" in entry_points
     assert "gh =" not in entry_points
 
 

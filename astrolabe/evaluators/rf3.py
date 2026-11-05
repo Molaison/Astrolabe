@@ -21,7 +21,7 @@ from omegaconf import OmegaConf
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import DnaChain, Input, Ligand, ProteinChain, RnaChain
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.rf3 import RF3RunnerRequest, RF3RunnerResponse
 
 
@@ -934,6 +934,9 @@ class RoseTTAFold3Evaluator(Evaluator):
         self.model_runner = model_runner
         self.output_dir = Path(output_dir)
         self.rf3_conf = rf3_conf or OmegaConf.create({})
+
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runner)
 
     def prepare_input(self, inputs, runtime_config=None):
         runtime_config = runtime_config or {}

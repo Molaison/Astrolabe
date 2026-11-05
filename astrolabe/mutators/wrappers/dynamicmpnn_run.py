@@ -5,6 +5,7 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 from pathlib import Path
 from string import Formatter
 from typing import Any, Callable, Mapping
@@ -12,20 +13,37 @@ from typing import Any, Callable, Mapping
 import numpy as np
 from omegaconf import OmegaConf
 
+from astrolabe.model_execution import (
+    ExecutionMode,
+    NativeModelClient,
+    capture_random_state,
+    execution_mode,
+    restore_random_state,
+)
+from astrolabe.mutators.wrappers.native_dynamicmpnn import (
+    DYNAMICMPNN_DAEMON_FACTORY,
+    create_handler as create_dynamicmpnn_handler,
+)
+
 
 class DynamicMPNNRunner:
-    """Subprocess adapter for Alex-Abrudan/DynamicMPNN.
+    """Adapter for Alex-Abrudan/DynamicMPNN.
 
     The real DynamicMPNN project is an external GVP-GNN inverse-folding model.  This
-    adapter deliberately does not reuse LigandMPNN.  The preferred path calls a
-    configured Python callable in-process and consumes its raw amino-acid
-    probabilities directly.  A subprocess command remains available only for
-    externally isolated DynamicMPNN installations.
+    adapter deliberately does not reuse LigandMPNN. Daemon execution requires a
+    typed backend_factory that loads one persistent object or callable in the
+    child. Existing backend_callable and command_template configurations remain
+    available only through explicit in_process compatibility. torch_device
+    defaults to None. A custom factory that uses CUDA must declare and support
+    torch_device explicitly.
     """
 
     def __init__(self, config: Mapping[str, Any] | Any):
         cfg = OmegaConf.to_container(config, resolve=True) if OmegaConf.is_config(config) else dict(config or {})
         self.output_dir = Path(str(cfg.get("output_dir") or cfg.get("out_folder") or "dynamicmpnn_outputs"))
+        self.mode = execution_mode(cfg.get("execution_mode"))
+        self.backend_factory = cfg.get("backend_factory")
+        self.torch_device = cfg.get("torch_device")
         self.backend_callable = cfg.get("backend_callable")
         self.command_template = cfg.get("command_template")
         self.repo_path = cfg.get("repo_path")
@@ -37,6 +55,82 @@ class DynamicMPNNRunner:
         self.timeout = cfg.get("timeout", None)
         self.extra_env = dict(cfg.get("env") or {})
         self._run_index = 0
+        self._resident_client = None
+        self._in_process_handler = None
+        self.model_metadata = None
+        if self.backend_factory is not None and not isinstance(
+            self.backend_factory, str
+        ):
+            raise TypeError("DynamicMPNN backend_factory must be an import path.")
+        request_only_keys = {
+            "backend_callable",
+            "command_template",
+            "env",
+            "execution_mode",
+            "num_samples",
+            "out_folder",
+            "output_dir",
+            "probabilities_key",
+            "probabilities_path",
+            "python_bin",
+            "request_timeout",
+            "timeout",
+        }
+        self._backend_settings = {
+            str(key): value
+            for key, value in cfg.items()
+            if key not in request_only_keys
+        }
+        self._backend_settings.update(
+            {
+                "backend_factory": str(self.backend_factory or ""),
+                "checkpoint": self.checkpoint,
+                "temperature": self.temperature,
+                "torch_device": self.torch_device,
+            }
+        )
+
+        if self.mode is ExecutionMode.DAEMON:
+            if not self.backend_factory:
+                if self.backend_callable:
+                    detail = (
+                        "backend_callable runs in the current process and cannot "
+                        "guarantee resident weights."
+                    )
+                elif self.command_template:
+                    detail = (
+                        "command_template launches an external command and cannot "
+                        "guarantee resident weights."
+                    )
+                else:
+                    detail = "No resident backend was configured."
+                raise RuntimeError(
+                    "DynamicMPNN execution_mode='daemon' requires backend_factory. "
+                    f"{detail} Set ASTROLABE_MODEL_EXECUTION=in_process or "
+                    "execution_mode='in_process' only for explicit compatibility."
+                )
+            request_timeout = cfg.get("request_timeout")
+            if request_timeout is None:
+                request_timeout = self.timeout
+            self._resident_client = NativeModelClient(
+                "dynamicmpnn",
+                DYNAMICMPNN_DAEMON_FACTORY,
+                self._backend_settings,
+                python_bin=cfg.get("python_bin") or sys.executable,
+                cwd=str(self.repo_path) if self.repo_path else None,
+                env=self.extra_env,
+                request_timeout=(
+                    float(request_timeout) if request_timeout is not None else None
+                ),
+            )
+            self.model_metadata = self._resident_client.metadata
+        elif self.backend_factory:
+            self._in_process_handler = create_dynamicmpnn_handler(
+                self._backend_settings
+            )
+            description = self._in_process_handler({"operation": "describe"})
+            self.model_metadata = description["metadata"]
+            restore_random_state(description["random_state"])
 
     def design_sequences(self, **features):
         pdb_paths = self._load_pdb_paths(features)
@@ -51,6 +145,18 @@ class DynamicMPNNRunner:
         run_dir.mkdir(parents=True, exist_ok=True)
         probabilities_file = run_dir / self.probabilities_path
         manifest = self._build_manifest(features, pdb_paths, run_dir, probabilities_file)
+
+        if self.backend_factory:
+            sampling_probs = self._validate_probabilities(
+                self._request_resident(manifest, features),
+                Path("<resident DynamicMPNN probabilities>"),
+            )
+            return {
+                "sampling_probs": sampling_probs,
+                "dynamicmpnn_backend": "Alex-Abrudan/DynamicMPNN",
+                "dynamicmpnn_backend_mode": self.mode.value,
+                "dynamicmpnn_backend_factory": str(self.backend_factory),
+            }
 
         if self.backend_callable:
             callable_fn = self._resolve_callable(self.backend_callable)
@@ -67,10 +173,8 @@ class DynamicMPNNRunner:
         if not self.command_template:
             raise RuntimeError(
                 "DynamicMPNN mutator is configured for the real Alex-Abrudan/DynamicMPNN "
-                "backend, but mutator.DynamicMPNN.backend_callable is not set. "
-                "Provide an in-process callable that calls DynamicMPNN.sample(..., "
-                "return_logits=True), converts logits to raw amino-acid probabilities, "
-                "and returns an array shaped [samples, residues, 20] or [residues, 20]."
+                "backend, but neither backend_factory nor a compatibility backend "
+                "is configured."
             )
 
         probabilities_file.parent.mkdir(parents=True, exist_ok=True)
@@ -97,6 +201,39 @@ class DynamicMPNNRunner:
             "dynamicmpnn_backend": "Alex-Abrudan/DynamicMPNN",
             "dynamicmpnn_backend_mode": "subprocess",
         }
+
+    def _request_resident(
+        self,
+        manifest: Mapping[str, Any],
+        features: Mapping[str, Any],
+    ):
+        payload = {
+            "manifest": dict(manifest),
+            "features": dict(features),
+        }
+        if self._resident_client is not None:
+            return self._resident_client.request(payload)
+        response = self._in_process_handler(
+            {
+                "operation": "infer",
+                "payload": payload,
+                "random_state": capture_random_state(),
+            }
+        )
+        restore_random_state(response["random_state"])
+        if not response["ok"]:
+            raise RuntimeError(
+                f"{response['error_type']}: {response['error']}"
+            )
+        return response["result"]
+
+    def shutdown(self) -> None:
+        if self._resident_client is not None:
+            self._resident_client.shutdown()
+
+    @property
+    def pid(self) -> int | None:
+        return self._resident_client.pid if self._resident_client is not None else None
 
     @staticmethod
     def _resolve_callable(value) -> Callable[..., Any]:

@@ -9,6 +9,7 @@ import os
 import pathlib
 import string
 import typing
+import uuid
 from collections import Counter, defaultdict
 from typing import Sequence, Callable
 
@@ -121,14 +122,27 @@ class ModelRunner:
         self, featurised_example: features.BatchDict, rng_key: jnp.ndarray
     ) -> model.ModelResult:
         """Computes a forward pass of the model on a featurised example."""
-        featurised_example = jax.device_put(
-            jax.tree_util.tree_map(
-                jnp.asarray, utils.remove_invalidly_typed_feats(featurised_example)
-            ),
+        cleaned = self.prepare_features(featurised_example)
+        device_features = self.upload_features(cleaned)
+        return self.materialize_result(self.run_model(device_features, rng_key))
+
+    def prepare_features(self, featurised_example: features.BatchDict):
+        """CPU feature filtering, before any JAX device conversion."""
+        return utils.remove_invalidly_typed_feats(featurised_example)
+
+    def upload_features(self, cleaned_features):
+        """Preserve the original JAX conversions and chosen device placement."""
+        return jax.device_put(
+            jax.tree_util.tree_map(jnp.asarray, cleaned_features),
             self._device,
         )
 
-        result = self._model(rng_key, featurised_example)
+    def run_model(self, device_features, rng_key):
+        """Dispatch the cached JIT model; returned arrays may still be in flight."""
+        return self._model(rng_key, device_features)
+
+    def materialize_result(self, result) -> model.ModelResult:
+        """Host arrays with the native bfloat16 conversion and model identifier."""
         result = jax.tree.map(np.asarray, result)
         result = jax.tree.map(
             lambda x: x.astype(jnp.float32) if x.dtype == jnp.bfloat16 else x,
@@ -138,6 +152,44 @@ class ModelRunner:
         identifier = self.model_params["__meta__"]["__identifier__"].tobytes()
         result["__identifier__"] = identifier
         return result
+
+    def inference_stages(self, rng_key, *, target_name=None):
+        """CPU -> transfer -> GPU -> CPU, optionally followed by extraction.
+
+        Submit the original featurised batch to these stages. The executor must
+        supply ``cpu``, ``transfer`` and a single-thread ``gpu`` resource. Keep
+        model configuration fixed until its accepted requests have drained.
+        The JIT model itself remains one explicit device stage.
+        """
+        from astrolabe.inference_backends import jax_pending
+        from astrolabe.inference_pipeline import Stage
+
+        def prepare(batch):
+            return dict(batch=batch, cleaned=self.prepare_features(batch))
+
+        def upload(item):
+            item['device_features'] = self.upload_features(item.pop('cleaned'))
+            return jax_pending(item, wait_for=item['device_features'], keepalive=item['batch'])
+
+        def dispatch(item):
+            item['device_result'] = self.run_model(item['device_features'], rng_key)
+            return jax_pending(item, wait_for=item['device_result'],
+                               keepalive=(item['device_features'], rng_key))
+
+        def materialize(item):
+            result = self.materialize_result(item.pop('device_result'))
+            if target_name is None:
+                return result
+            return item['batch'], result
+
+        stages = [Stage('af3_features', 'cpu', prepare),
+                  Stage('af3_upload', 'transfer', upload),
+                  Stage('af3_model', 'gpu', dispatch),
+                  Stage('af3_materialize', 'cpu', materialize)]
+        if target_name is not None:
+            stages.append(Stage('af3_extract', 'cpu', lambda pair: self.extract_structures(
+                pair[0], pair[1], target_name)))
+        return tuple(stages)
 
     def extract_structures(
         self,
@@ -163,6 +215,55 @@ class ModelRunner:
         if "pair_embeddings" in result:
             embeddings["pair_embeddings"] = result["pair_embeddings"]
         return embeddings or None
+
+
+def service_model_settings(config) -> dict:
+    """Model-defining options which must agree with the shared owner."""
+    return {
+        "model_dir": str(config.model_dir),
+        "flash_attention_implementation": str(config.flash_attention_implementation),
+        "num_samples": int(config.num_samples),
+        "num_recycles": int(config.num_recycles),
+        "save_embeddings": bool(config.save_embeddings),
+    }
+
+
+class RemoteModelRunner:
+    """Inference-only proxy; extraction and scoring remain in each CPU worker."""
+
+    extract_structures = ModelRunner.extract_structures
+    extract_embeddings = ModelRunner.extract_embeddings
+
+    def __init__(self, config):
+        self._socket = str(config.service_socket)
+        self._settings = service_model_settings(config)
+        self._cyclic_asym_ids = ()
+        self._cyclic_relative_patches = ()
+
+    def set_cyclic_asym_ids(self, cyclic_asym_ids):
+        self._cyclic_asym_ids = tuple(int(x) for x in (cyclic_asym_ids or ()))
+
+    def set_cyclic_relative_patches(self, cyclic_relative_patches):
+        self._cyclic_relative_patches = tuple(
+            tuple(int(y) for y in x) for x in (cyclic_relative_patches or ())
+        )
+
+    def run_inference(self, featurised_example, rng_key):
+        from astrolabe.evaluators.inference_service import call
+
+        return call(self._socket, {
+            "model": "alphafold3",
+            "identity": {
+                "trajectory": os.environ.get("PH_TRAJECTORY_ID"),
+                "pid": os.getpid(),
+                "request_uuid": uuid.uuid4().hex,
+            },
+            "settings": self._settings,
+            "features": jax.tree.map(np.asarray, featurised_example),
+            "rng_key": np.asarray(rng_key),
+            "cyclic_asym_ids": self._cyclic_asym_ids,
+            "cyclic_relative_patches": self._cyclic_relative_patches,
+        })
 
 
 def make_model_config(
@@ -530,6 +631,8 @@ def _configure_msa_env(config) -> None:
 def alphafold3_setup(config):
     _configure_refstructure_env(config)
     _configure_msa_env(config)
+    if getattr(config, "service_socket", None):
+        return RemoteModelRunner(config)
     try:
         devices = jax.local_devices(backend="gpu")
     except Exception as exc:

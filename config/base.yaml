@@ -224,6 +224,7 @@ evaluator:
     device: cuda
     relax_steps: 200
   alphafold3:
+    service_socket: null  # Optional existing AF3 service; interface owns one by default.
     json_path: None
     input_dir: None
     # construct inputs from astrolabe seqs
@@ -896,11 +897,11 @@ mutator:
     transmembrane_buried: ""
     transmembrane_interface: ""
   DynamicMPNN:
-    # Real Alex-Abrudan/DynamicMPNN backend. This is intentionally separate from
-    # LigandMPNN/ProteinMPNN. Prefer backend_callable for in-process probability
-    # transfer; command_template is only for isolated external installs.
+    execution_mode: null
+    torch_device: null
     repo_path: null
     checkpoint: null
+    backend_factory: null
     backend_callable: null
     command_template: null
     temperature: 0.3
@@ -908,6 +909,8 @@ mutator:
     probabilities_path: probabilities.npy
     probabilities_key: probabilities
     timeout: null
+    request_timeout: null
+    python_bin: null
     output_dir: null
     env: {}
   SurfDesign:
@@ -972,6 +975,11 @@ mutator:
     max_iter: 500
     num_samples: 10
     temperature: 1.0
+
+# Shared execution defaults; task configs choose scientific search settings.
+protein_beam:
+  workers: 3
+  in_flight: 3
 
 hydra:
   run:

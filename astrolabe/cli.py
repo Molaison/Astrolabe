@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager, redirect_stdout
 import json
 import os
 import pathlib
@@ -47,6 +48,33 @@ _MULTITARGET_BINDER_VARIANT_TO_CONFIG = {
     "x-init-direct-dual-protenix": "benchmark_multitarget_binder_xinit_v1",
 }
 _MULTIDOMAIN_BINDER_VARIANTS = ("af3", "protenix")
+
+
+@contextmanager
+def _redirect_stdout_to_stderr():
+    """Keep runtime diagnostics away from a command's machine-readable stdout."""
+
+    stdout = sys.stdout
+    stderr = sys.stderr
+    try:
+        stdout_fd = stdout.fileno()
+        stderr_fd = stderr.fileno()
+    except (AttributeError, OSError, ValueError):
+        with redirect_stdout(stderr):
+            yield
+        return
+
+    stdout.flush()
+    stderr.flush()
+    saved_stdout_fd = os.dup(stdout_fd)
+    try:
+        os.dup2(stderr_fd, stdout_fd)
+        yield
+    finally:
+        stdout.flush()
+        stderr.flush()
+        os.dup2(saved_stdout_fd, stdout_fd)
+        os.close(saved_stdout_fd)
 
 
 def _sanitize_name(raw: str) -> str:
@@ -2997,6 +3025,24 @@ def _cmd_bench_antibody_v1(ns: argparse.Namespace) -> int:
         dump_config=_maybe_dump_config,
         run_config=_run_from_config,
     )
+
+
+def _interface_prediction_budget(value):
+    budget = int(value)
+    if budget < 1:
+        raise argparse.ArgumentTypeError('Prediction budget must be a positive integer, including the root')
+    return budget
+
+
+def _cmd_refine_interface(ns):
+    from astrolabe.interface import run_interface
+    if not ns.prepare_only and not ns.service_socket and "CUDA_VISIBLE_DEVICES" not in os.environ:
+        _maybe_autoselect_cuda_visible_devices(enabled=True)
+    return run_interface(input_path=ns.input, target_homology=ns.target_homology,
+                         output_root=ns.out_dir, socket_path=ns.service_socket,
+                         target_chain=ns.target_chain, binder_chain=ns.binder_chain,
+                         resume=ns.resume, retry_interrupted=ns.retry_interrupted,
+                         prepare_only=ns.prepare_only, budget=getattr(ns, 'budget', None))
 
 
 def _cmd_refine_binder_v1_3(ns: argparse.Namespace) -> int:
@@ -6361,18 +6407,34 @@ def _cmd_refold_run(ns: argparse.Namespace) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
-    summary = run_refold(
-        manifest_jsonl=pathlib.Path(ns.manifest),
-        out_root=pathlib.Path(ns.out_root),
-        evaluators=evaluator_backends,
-        relpath_base=pathlib.Path(ns.relpath_base) if ns.relpath_base else None,
-        path_map=list(getattr(ns, "path_map", []) or []),
-        keep_protenix_structures=bool(getattr(ns, "keep_protenix_structures", False)),
-        config_yaml=pathlib.Path(ns.config_yaml) if getattr(ns, "config_yaml", None) else None,
-        workers=int(getattr(ns, "workers", 1) or 1),
-        dry_run=bool(getattr(ns, "dry_run", False)),
-    )
-    if getattr(ns, "format", "text") == "json":
+    output_format = getattr(ns, "format", "text")
+    context = _redirect_stdout_to_stderr() if output_format == "json" else None
+    if context is None:
+        summary = run_refold(
+            manifest_jsonl=pathlib.Path(ns.manifest),
+            out_root=pathlib.Path(ns.out_root),
+            evaluators=evaluator_backends,
+            relpath_base=pathlib.Path(ns.relpath_base) if ns.relpath_base else None,
+            path_map=list(getattr(ns, "path_map", []) or []),
+            keep_protenix_structures=bool(getattr(ns, "keep_protenix_structures", False)),
+            config_yaml=pathlib.Path(ns.config_yaml) if getattr(ns, "config_yaml", None) else None,
+            workers=int(getattr(ns, "workers", 1) or 1),
+            dry_run=bool(getattr(ns, "dry_run", False)),
+        )
+    else:
+        with context:
+            summary = run_refold(
+                manifest_jsonl=pathlib.Path(ns.manifest),
+                out_root=pathlib.Path(ns.out_root),
+                evaluators=evaluator_backends,
+                relpath_base=pathlib.Path(ns.relpath_base) if ns.relpath_base else None,
+                path_map=list(getattr(ns, "path_map", []) or []),
+                keep_protenix_structures=bool(getattr(ns, "keep_protenix_structures", False)),
+                config_yaml=pathlib.Path(ns.config_yaml) if getattr(ns, "config_yaml", None) else None,
+                workers=int(getattr(ns, "workers", 1) or 1),
+                dry_run=bool(getattr(ns, "dry_run", False)),
+            )
+    if output_format == "json":
         print(json.dumps(summary, indent=2, sort_keys=True))
     else:
         print(f"manifest: {summary['manifest_jsonl']}")
@@ -6457,6 +6519,12 @@ def _build_parser() -> argparse.ArgumentParser:
 
     from astrolabe.paper import register_commands as register_paper_commands
     register_paper_commands(sub)
+
+    from astrolabe.onboarding import register_commands as register_onboarding_commands
+    register_onboarding_commands(sub)
+
+    from astrolabe.daemon_cli import register_commands as register_daemon_commands
+    register_daemon_commands(sub)
 
     run_p = sub.add_parser(
         "run",
@@ -6874,6 +6942,22 @@ def _build_parser() -> argparse.ArgumentParser:
 
     refine_p = sub.add_parser("refine", help="One-shot refine presets (start from structure/seq + run).")
     refine_sub = refine_p.add_subparsers(dest="refine_cmd", required=True)
+
+    interface_p = refine_sub.add_parser(
+        "interface", help="Optimize binder interfaces from one complex or a directory (LigandMPNN + AF3 beam).")
+    interface_p.add_argument("--input", "--structure", required=True, help="Complex PDB/CIF or directory of complexes.")
+    interface_p.add_argument("--target-homology", required=True, help="AF3 JSON with target MSA/templates; optional :chain suffix.")
+    interface_p.add_argument("--out-dir", "--out", required=True, help="Output directory; each input gets an independent beam.")
+    interface_p.add_argument("--budget", type=_interface_prediction_budget, default=None, metavar="N",
+                             help="Maximum AF3 calls per input, including its root. Sets search and quota limits together; allows multiple generations. Omit to keep task defaults; early stopping may use fewer calls.")
+    interface_p.add_argument("--service-socket", default=None, help="Reuse an existing AF3 owner/pool; default starts and drains a private owner automatically.")
+    interface_p.add_argument("--target-chain", default=None, help="Override automatic target chain identification.")
+    interface_p.add_argument("--binder-chain", default=None, help="Override automatic binder chain identification.")
+    interface_p.add_argument("--resume", action="store_true", help="Verify and continue existing output, preserving completed work.")
+    interface_p.add_argument("--retry-interrupted", action="store_true", help="Explicit missing-result retry after prior owner has ended.")
+    interface_p.add_argument("--prepare-only", action="store_true", help="Validate and prepare inputs without predictions.")
+    interface_p.set_defaults(_cuda_preinitialize=False)
+    cli_defs.set_handler(interface_p, _cmd_refine_interface)
 
     refine_binder_p = refine_sub.add_parser(
         "binder",

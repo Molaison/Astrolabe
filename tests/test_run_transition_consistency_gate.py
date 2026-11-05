@@ -14,6 +14,12 @@ from astrolabe.losses.base import LossEngine
 from astrolabe.stage_manager import StageManager
 from astrolabe.stage_transition import compute_reference_consistency
 from astrolabe.structure_start import ReferenceGateResult
+from native_flow_test_support import native_flow_test_projections
+
+
+@pytest.fixture(autouse=True)
+def _native_flow_test_projections(native_flow_test_projections):
+    return native_flow_test_projections
 
 
 def _scores(*names: str) -> StandardScores:

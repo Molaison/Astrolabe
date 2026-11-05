@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import redirect_stderr, redirect_stdout
+from dataclasses import dataclass
+from io import StringIO
 import json
 import os
 from pathlib import Path
@@ -8,6 +11,9 @@ import shutil
 import subprocess
 import sys
 from typing import Any
+
+
+_DAEMON_FACTORY = "astrolabe.evaluators.wrappers.esmfold2:daemon_factory"
 
 
 def _repo_root() -> Path:
@@ -143,45 +149,32 @@ def _mean_float(value: Any) -> float | None:
     return float(value)
 
 
-def _worker_run(payload: dict[str, Any]) -> dict[str, Any]:
-    _prepend_path(_path_with_optional_src(payload.get("transformers_repo_path")))
-    _prepend_path(_path_with_optional_src(payload.get("esm_repo_path")))
-
-    import torch
-    from esm.models.esmfold2 import (
-        ESMFold2InputBuilder,
-        ProteinInput,
-        StructurePredictionInput,
-    )
-    from transformers.models.esmfold2.modeling_esmfold2 import ESMFold2Model
-
+def _model_identity(payload: dict[str, Any]) -> dict[str, Any]:
     model_name, pinned_snapshot = _resolve_model_source(payload["model_name"])
-    device = payload.get("device") or ("cuda" if torch.cuda.is_available() else "cpu")
     esmc_snapshot_path = _resolve_esmc_snapshot_path()
     model_kwargs = _model_load_kwargs(payload, pinned_snapshot=pinned_snapshot)
-
-    model = _load_esmfold2_model(
-        ESMFold2Model,
+    ccd_cache_dir = _ccd_cache_dir(
         model_name,
-        model_kwargs,
-        esmc_snapshot_path=esmc_snapshot_path,
+        pinned_snapshot=pinned_snapshot,
+        local_files_only=bool(payload.get("local_files_only", False)),
     )
-    if device != "cpu":
-        model = model.to(device)
-    if payload.get("chunk_size") is not None and hasattr(model, "set_chunk_size"):
-        model.set_chunk_size(payload["chunk_size"])
+    return {
+        "model_name": model_name,
+        "requested_model_name": payload["model_name"],
+        "pinned_snapshot": pinned_snapshot,
+        "device": payload.get("device"),
+        "model_kwargs": model_kwargs,
+        "esmc_snapshot_path": (
+            str(esmc_snapshot_path) if esmc_snapshot_path is not None else None
+        ),
+        "ccd_cache_dir": str(ccd_cache_dir) if ccd_cache_dir is not None else None,
+        "chunk_size": payload.get("chunk_size"),
+        "esm_repo_path": payload.get("esm_repo_path"),
+        "transformers_repo_path": payload.get("transformers_repo_path"),
+    }
 
-    output_dir = Path(payload["output_dir"]).expanduser().resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    builder = ESMFold2InputBuilder(
-        ccd_cache=_ccd_cache_dir(
-            model_name,
-            pinned_snapshot=pinned_snapshot,
-            local_files_only=bool(payload.get("local_files_only", False)),
-        )
-    )
-    results: list[dict[str, Any]] = []
 
+def _fold_request(payload: dict[str, Any], identity: dict[str, Any]) -> dict[str, Any]:
     fold_kwargs = {
         "num_loops": int(payload.get("num_loops", 3)),
         "num_sampling_steps": int(payload.get("num_sampling_steps", 50)),
@@ -194,8 +187,25 @@ def _worker_run(payload: dict[str, Any]) -> dict[str, Any]:
     for key in ("noise_scale", "step_scale", "max_inference_sigma", "lm_mask_pct"):
         if payload.get(key) is not None:
             fold_kwargs[key] = payload[key]
+    return {
+        "model_identity": identity,
+        "output_dir": payload["output_dir"],
+        "jobs": payload["jobs"],
+        "fold_kwargs": fold_kwargs,
+    }
 
-    for job in payload["jobs"]:
+
+def _fold_jobs(
+    model: Any,
+    builder: Any,
+    request: dict[str, Any],
+) -> dict[str, Any]:
+    from esm.models.esmfold2 import ProteinInput, StructurePredictionInput
+
+    output_dir = Path(request["output_dir"]).expanduser().resolve()
+    output_dir.mkdir(parents=True, exist_ok=True)
+    results: list[dict[str, Any]] = []
+    for job in request["jobs"]:
         name = str(job["name"])
         chains = [
             ProteinInput(id=str(chain["id"]), sequence=str(chain["sequence"]))
@@ -206,7 +216,7 @@ def _worker_run(payload: dict[str, Any]) -> dict[str, Any]:
             model,
             prediction_input,
             complex_id=name,
-            **fold_kwargs,
+            **request["fold_kwargs"],
         )
         if isinstance(result, list):
             result = result[0]
@@ -226,11 +236,92 @@ def _worker_run(payload: dict[str, Any]) -> dict[str, Any]:
             }
         )
 
+    identity = request["model_identity"]
     return {
-        "model_name": model_name,
-        "device": device,
+        "model_name": identity["model_name"],
+        "device": identity.get("device"),
         "jobs": results,
     }
+
+
+@dataclass(frozen=True)
+class _ESMFold2Worker:
+    model: Any
+    builder: Any
+    identity: dict[str, Any]
+    device: str
+
+    def __call__(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.infer(payload)
+
+    def infer(
+        self, payload: dict[str, Any], *, capture_logs: bool = True
+    ) -> dict[str, Any] | Any:
+        if payload.get("model_identity") != self.identity:
+            raise ValueError(
+                "ESMFold2 request model settings do not match the loaded model owner"
+            )
+        if not capture_logs:
+            result = _fold_jobs(self.model, self.builder, payload)
+            result["device"] = self.device
+            return result
+
+        stdout = StringIO()
+        stderr = StringIO()
+        with redirect_stdout(stdout), redirect_stderr(stderr):
+            result = _fold_jobs(self.model, self.builder, payload)
+        result["device"] = self.device
+        return {
+            "result": result,
+            "stdout": stdout.getvalue(),
+            "stderr": stderr.getvalue(),
+        }
+
+
+def daemon_factory(settings: dict[str, Any]) -> _ESMFold2Worker:
+    identity = dict(settings["identity"])
+    _prepend_path(_path_with_optional_src(identity["transformers_repo_path"]))
+    _prepend_path(_path_with_optional_src(identity["esm_repo_path"]))
+
+    import torch
+    from esm.models.esmfold2 import ESMFold2InputBuilder
+    from transformers.models.esmfold2.modeling_esmfold2 import ESMFold2Model
+
+    device = identity.get("device") or (
+        "cuda" if torch.cuda.is_available() else "cpu"
+    )
+    identity["model_kwargs"] = dict(identity["model_kwargs"])
+    esmc_snapshot_path = identity.get("esmc_snapshot_path")
+
+    model = _load_esmfold2_model(
+        ESMFold2Model,
+        identity["model_name"],
+        identity["model_kwargs"],
+        esmc_snapshot_path=(
+            Path(esmc_snapshot_path) if esmc_snapshot_path is not None else None
+        ),
+    )
+    if device != "cpu":
+        model = model.to(device)
+    if identity.get("chunk_size") is not None and hasattr(model, "set_chunk_size"):
+        model.set_chunk_size(identity["chunk_size"])
+
+    ccd_cache_dir = identity.get("ccd_cache_dir")
+    builder = ESMFold2InputBuilder(
+        ccd_cache=Path(ccd_cache_dir) if ccd_cache_dir is not None else None
+    )
+    return _ESMFold2Worker(
+        model=model,
+        builder=builder,
+        identity=identity,
+        device=device,
+    )
+
+
+def _worker_run(payload: dict[str, Any]) -> dict[str, Any]:
+    identity = _model_identity(payload)
+    worker = daemon_factory({"identity": identity})
+    return worker.infer(_fold_request(payload, identity), capture_logs=False)
 
 
 def _main(argv: list[str] | None = None) -> int:
@@ -268,7 +359,12 @@ class ESMFold2Runner:
         chunk_size: int | None = 64,
         local_files_only: bool = False,
         timeout_seconds: float | None = None,
+        execution_mode: str = "daemon",
     ) -> None:
+        if execution_mode not in {"daemon", "subprocess"}:
+            raise ValueError(
+                "ESMFold2 execution_mode must be 'daemon' or 'subprocess'."
+            )
         self.python_bin = python_bin
         self.esm_repo_path = esm_repo_path
         self.transformers_repo_path = transformers_repo_path
@@ -286,6 +382,9 @@ class ESMFold2Runner:
         self.chunk_size = chunk_size
         self.local_files_only = local_files_only
         self.timeout_seconds = timeout_seconds
+        self.execution_mode = execution_mode
+        self._daemon: Any = None
+        self._daemon_settings: dict[str, Any] | None = None
 
     @classmethod
     def from_config(cls, config: Any) -> "ESMFold2Runner":
@@ -315,13 +414,14 @@ class ESMFold2Runner:
             "chunk_size",
             "local_files_only",
             "timeout_seconds",
+            "execution_mode",
         }
         return cls(**{k: v for k, v in container.items() if k in allowed})
 
-    def run(self, jobs: list[dict[str, Any]], output_dir: Path) -> dict[str, Any]:
-        output_dir = Path(output_dir)
-        output_dir.mkdir(parents=True, exist_ok=True)
-        payload = {
+    def _payload(
+        self, jobs: list[dict[str, Any]], output_dir: Path
+    ) -> dict[str, Any]:
+        return {
             "model_name": self.model_name,
             "device": self.device,
             "cache_dir": self.cache_dir,
@@ -340,12 +440,88 @@ class ESMFold2Runner:
             "output_dir": str(output_dir / "structures"),
             "jobs": jobs,
         }
-        input_json = output_dir / "esmfold2_input.json"
-        output_json = output_dir / "esmfold2_output.json"
-        stdout_log = output_dir / "esmfold2.stdout.log"
-        stderr_log = output_dir / "esmfold2.stderr.log"
-        input_json.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
+    def _daemon_spec(self, identity: dict[str, Any]) -> Any:
+        from astrolabe.model_daemon import DaemonSpec
+
+        env = os.environ.copy()
+        import_roots = [str(_repo_root())]
+        if env.get("PYTHONPATH"):
+            import_roots.append(env["PYTHONPATH"])
+        env["PYTHONPATH"] = os.pathsep.join(import_roots)
+        return DaemonSpec(
+            backend="esmfold2",
+            factory=_DAEMON_FACTORY,
+            settings={"identity": identity},
+            python_bin=self.python_bin or sys.executable,
+            cwd=str(_repo_root()),
+            env=env,
+        )
+
+    def _ensure_daemon(self, identity: dict[str, Any]) -> Any:
+        if self._daemon is not None and self._daemon_settings == identity:
+            return self._daemon
+        self.shutdown()
+
+        from astrolabe.model_daemon import OwnedModelDaemon
+
+        self._daemon = OwnedModelDaemon(
+            self._daemon_spec(identity),
+            startup_timeout=300,
+            request_timeout=self.timeout_seconds,
+            shutdown_timeout=30,
+            max_pending=4,
+        )
+        self._daemon_settings = identity
+        return self._daemon
+
+    @property
+    def pid(self) -> int | None:
+        return self._daemon.pid if self._daemon is not None else None
+
+    def shutdown(self) -> None:
+        daemon = self._daemon
+        self._daemon = None
+        self._daemon_settings = None
+        if daemon is not None:
+            daemon.shutdown()
+
+    def _run_daemon(
+        self,
+        payload: dict[str, Any],
+        identity: dict[str, Any],
+        output_json: Path,
+        stdout_log: Path,
+        stderr_log: Path,
+    ) -> dict[str, Any]:
+        response = self._ensure_daemon(identity).request(
+            {
+                **payload,
+                "model_identity": identity,
+                "output_dir": payload["output_dir"],
+                "jobs": payload["jobs"],
+                "fold_kwargs": _fold_request(payload, identity)["fold_kwargs"],
+            }
+        )
+        if not isinstance(response, dict) or "result" not in response:
+            raise RuntimeError(f"Unexpected ESMFold2 daemon response: {response!r}")
+        stdout_log.write_text(str(response.get("stdout") or ""), encoding="utf-8")
+        stderr_log.write_text(str(response.get("stderr") or ""), encoding="utf-8")
+        result = response["result"]
+        output_json.write_text(
+            json.dumps(result, indent=2, sort_keys=True), encoding="utf-8"
+        )
+        return result
+
+    def _run_subprocess(
+        self,
+        payload: dict[str, Any],
+        *,
+        input_json: Path,
+        output_json: Path,
+        stdout_log: Path,
+        stderr_log: Path,
+    ) -> dict[str, Any]:
         python_bin = self.python_bin or sys.executable
         if not shutil.which(python_bin) and not Path(python_bin).exists():
             raise FileNotFoundError(f"ESMFold2 python_bin not found: {python_bin}")
@@ -383,6 +559,33 @@ class ESMFold2Runner:
         if not output_json.exists():
             raise FileNotFoundError(f"ESMFold2 output JSON was not written: {output_json}")
         return json.loads(output_json.read_text(encoding="utf-8"))
+
+    def run(self, jobs: list[dict[str, Any]], output_dir: Path) -> dict[str, Any]:
+        output_dir = Path(output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        payload = self._payload(jobs, output_dir)
+        identity = _model_identity(payload)
+        input_json = output_dir / "esmfold2_input.json"
+        output_json = output_dir / "esmfold2_output.json"
+        stdout_log = output_dir / "esmfold2.stdout.log"
+        stderr_log = output_dir / "esmfold2.stderr.log"
+        input_json.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+        if self.execution_mode == "subprocess":
+            return self._run_subprocess(
+                payload,
+                input_json=input_json,
+                output_json=output_json,
+                stdout_log=stdout_log,
+                stderr_log=stderr_log,
+            )
+        return self._run_daemon(
+            payload,
+            identity,
+            output_json,
+            stdout_log,
+            stderr_log,
+        )
 
 
 if __name__ == "__main__":  # pragma: no cover

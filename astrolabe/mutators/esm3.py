@@ -11,6 +11,10 @@ import torch
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.utils import StandardScores
+from astrolabe.model_execution import (
+    ExecutionMode,
+    execution_mode as resolve_execution_mode,
+)
 from astrolabe.mutators.base import Mutator
 from astrolabe.mutators.capabilities import PROTEIN_ONLY, MutatorCapabilities
 from astrolabe.mutators.utils import (
@@ -47,26 +51,28 @@ class ESM3Mutator(Mutator):
         temperature: float = 0.3,
         position_selector=None,
         predocker=None,
+        execution_mode=None,
     ) -> None:
+        self.execution_mode = resolve_execution_mode(execution_mode)
         try:
-            from esm3.models.esm3 import ESM3
             from esm3.sdk.api import ESMProtein, LogitsConfig
             from esm3.tokenization import get_esm3_model_tokenizers
+            if self.execution_mode is ExecutionMode.IN_PROCESS:
+                from esm3.models.esm3 import ESM3
         except ImportError:  # pragma: no cover - env dependent
             _ensure_vendored_esm3_on_path()
             try:
-                from esm3.models.esm3 import ESM3
                 from esm3.sdk.api import ESMProtein, LogitsConfig
                 from esm3.tokenization import get_esm3_model_tokenizers
+                if self.execution_mode is ExecutionMode.IN_PROCESS:
+                    from esm3.models.esm3 import ESM3
             except ImportError as exc:
                 raise ImportError(
                     "ESM3Mutator requires the vendored `esm3` package and its Python deps "
                     "(notably `huggingface_hub`, `zstd`, and `transformers`)."
                 ) from exc
 
-        self._esm3_cls = ESM3
         self._esm_protein_cls = ESMProtein
-        self._logits_config = LogitsConfig(sequence=True)
 
         self.model_name = model_name
         self.temperature = temperature
@@ -82,30 +88,48 @@ class ESM3Mutator(Mutator):
             snapshot = Path(pinned_snapshot).expanduser().resolve()
             if not snapshot.is_dir():
                 raise FileNotFoundError(f"Pinned ESM3 snapshot does not exist: {snapshot}")
-            import esm3.pretrained as esm3_pretrained
-            import esm3.utils.constants.esm3 as esm3_constants
+            if self.execution_mode is ExecutionMode.IN_PROCESS:
+                import esm3.pretrained as esm3_pretrained
+                import esm3.utils.constants.esm3 as esm3_constants
 
-            original_data_root = esm3_constants.data_root
+                original_data_root = esm3_constants.data_root
 
-            def pinned_data_root(model: str):
-                if model.startswith("esm3"):
-                    return snapshot
-                return original_data_root(model)
+                def pinned_data_root(model: str):
+                    if model.startswith("esm3"):
+                        return snapshot
+                    return original_data_root(model)
 
-            esm3_constants.data_root = pinned_data_root
-            esm3_pretrained.data_root = pinned_data_root
-
-        self.runner = self._esm3_cls.from_pretrained(model_name, device=self.device)
-        self.runner.eval()
-        self.runner = self.runner.to(self.device)
+                esm3_constants.data_root = pinned_data_root
+                esm3_pretrained.data_root = pinned_data_root
 
         tokenizers = get_esm3_model_tokenizers(model_name)
         self.sequence_tokenizer = tokenizers.sequence
         self.aa_order = list(default_aa_order)
-        self._aa_token_ids = torch.tensor(
-            [self.sequence_tokenizer.convert_tokens_to_ids(aa) for aa in self.aa_order],
-            device=self.device,
-        )
+        if self.execution_mode is ExecutionMode.DAEMON:
+            from astrolabe.mutators.native_daemons import NativeESM3Runner
+
+            self.runner = NativeESM3Runner(
+                model_name=model_name,
+                device=str(self.device),
+                temperature=temperature,
+            )
+            self.aa_order = list(self.runner.aa_order)
+            self._aa_token_ids = None
+        else:
+            self._esm3_cls = ESM3
+            self._logits_config = LogitsConfig(sequence=True)
+            self.runner = self._esm3_cls.from_pretrained(
+                model_name, device=self.device
+            )
+            self.runner.eval()
+            self.runner = self.runner.to(self.device)
+            self._aa_token_ids = torch.tensor(
+                [
+                    self.sequence_tokenizer.convert_tokens_to_ids(aa)
+                    for aa in self.aa_order
+                ],
+                device=self.device,
+            )
 
     def _build_protein_prompt(self, sequence: str) -> "ESMProtein":
         return self._esm_protein_cls(sequence=sequence)
@@ -154,6 +178,8 @@ class ESM3Mutator(Mutator):
         return "".join(masked)
 
     def compute_mutation(self, mutation_input_features: Dict[str, Dict[str, Any]]):
+        if self.execution_mode is ExecutionMode.DAEMON:
+            return self.runner.compute_mutation(mutation_input_features)
         mutation_output = {}
         logits_config = self._logits_config
 
@@ -178,6 +204,11 @@ class ESM3Mutator(Mutator):
             }
 
         return mutation_output
+
+    def shutdown(self) -> None:
+        shutdown = getattr(self.runner, "shutdown", None)
+        if callable(shutdown):
+            shutdown()
 
     def prepare_mutation_input(
         self,

@@ -10,6 +10,7 @@ import numpy as np
 
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
+from astrolabe.design.operations import OperationOwner
 from astrolabe.utils.mmcif_ids import int_id_to_str_id
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ class PerResidueMetricContext:
     config: dict[str, Any]
 
 
-class PerResidueScoreRegistry:
+class PerResidueScoreRegistry(OperationOwner):
     """Registry for pose-wide per-residue metrics.
 
     Registered metric functions return one value per pose residue. The caller is

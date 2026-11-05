@@ -12,6 +12,10 @@ from astrolabe.utils.mmcif_ids import int_id_to_str_id
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.utils import StandardScores
+from astrolabe.model_execution import (
+    ExecutionMode,
+    execution_mode as resolve_execution_mode,
+)
 from astrolabe.mutators.base import Mutator
 from astrolabe.mutators.capabilities import PROTEIN_ONLY, MutatorCapabilities
 from astrolabe.mutators.utils import (
@@ -111,17 +115,31 @@ class ESMIF1Mutator(Mutator):
         supports_shared_selection_policy=True,
     )
 
-    def __init__(self, position_selector=None, predocker=None):
-        self.predocker = None
-        model, self.alphabet = esm2.pretrained.esm_if1_gvp4_t16_142M_UR50()
-        # use eval mode for deterministic mutation_output e.g. without random dropout
-        model.eval()
+    def __init__(self, position_selector=None, predocker=None, execution_mode=None):
+        self.execution_mode = resolve_execution_mode(execution_mode)
+        if self.execution_mode is ExecutionMode.DAEMON:
+            from astrolabe.mutators.native_daemons import (
+                ESM_IF1_DAEMON_FACTORY,
+                NativeESMRunner,
+            )
+
+            self.runner = NativeESMRunner(
+                backend="esm_if1",
+                factory=ESM_IF1_DAEMON_FACTORY,
+            )
+            self.alphabet = self.runner.alphabet
+        else:
+            model, self.alphabet = esm2.pretrained.esm_if1_gvp4_t16_142M_UR50()
+            # use eval mode for deterministic mutation_output e.g. without random dropout
+            model.eval()
+            self.runner = model.cuda()
         self.predocker = predocker
-        self.runner = model.cuda()
         self.position_selector = position_selector
         self.aa_order = self.alphabet.all_toks[4:24]
 
     def compute_mutation(self, mutation_input_features: Tuple[Any, Any]):
+        if self.execution_mode is ExecutionMode.DAEMON:
+            return self.runner.compute_mutation(mutation_input_features)
         mutation_output = {}
         for oligo_name, input_feat in mutation_input_features.items():
             oligo_output = esm_extract_probs(model=self.runner, **input_feat)
@@ -129,6 +147,11 @@ class ESMIF1Mutator(Mutator):
             mutation_output[oligo_name] = oligo_output
 
         return mutation_output
+
+    def shutdown(self) -> None:
+        shutdown = getattr(self.runner, "shutdown", None)
+        if callable(shutdown):
+            shutdown()
 
     def prepare_mutation_input(
         self,

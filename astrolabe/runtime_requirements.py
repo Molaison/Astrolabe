@@ -275,7 +275,6 @@ def task_requirements(task_cfg: Any) -> dict:
         in {
             "ligandmpnn",
             "grouped_ligandmpnn",
-            "dynamicmpnn",
             "proteinmpnn",
             "multistateproteinmpnn",
             "multistate_proteinmpnn",
@@ -538,7 +537,7 @@ def task_requirements(task_cfg: Any) -> dict:
             "required by RFD3 initializer subprocess",
         )
     if any(
-        t.lower() in {"ligandmpnn", "grouped_ligandmpnn", "dynamicmpnn"}
+        t.lower() in {"ligandmpnn", "grouped_ligandmpnn"}
         for t in mutator_types_used
     ):
         _note_env(["weight_path.ligandmpnn"], "required by MPNN mutator checkpoints")

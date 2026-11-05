@@ -164,12 +164,12 @@ components:
 
   na_mpnn:
     path: vendor/na_mpnn
-    source_mode: official_submodule
+    source_mode: official_submodule_plus_patch
     expected_url: https://github.com/baker-laboratory/NA-MPNN.git
-    patch_group: null
+    patch_group: na_mpnn
     fork_candidate: false
     migration_status: upstream_owned
-    reason: Optional subprocess backend; no repo-owned patch.
+    reason: A reviewed resident API keeps loaded weights and preserves seeded per-request inference.
 
   openfold_esm2:
     path: vendor/openfold_esm2

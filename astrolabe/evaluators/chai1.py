@@ -14,7 +14,7 @@ import numpy as np
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import Ligand, ProteinChain
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.x_masking import (
     patch_chai1_get_esm_embedding_context,
     preserve_unknown_residue_sequence,
@@ -376,9 +376,13 @@ def _normalize_explicit_chai_restraints(
 
 
 class Chai1Evaluator(Evaluator):
-    def __init__(self, model_config, output_dir):
+    def __init__(self, model_config, output_dir, model_runner=None):
         self.output_dir = output_dir
         self.model_config = model_config
+        self.model_runner = model_runner
+
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runner)
 
     def run_function(self, input_feat):
         output = {}
@@ -388,6 +392,22 @@ class Chai1Evaluator(Evaluator):
         model_kwargs = dict(self.model_config)
         if model_kwargs.get("device") is None:
             model_kwargs["device"] = "cuda:0" if torch.cuda.is_available() else "cpu"
+        if self.model_runner is not None:
+            supports_constraints = getattr(self.model_runner, "supports_constraints", None)
+            for oligo_name, cplx_input in input_feat.items():
+                if (
+                    cplx_input.get("constraint_path") is not None
+                    and supports_constraints is not True
+                ):
+                    raise TypeError(
+                        "The configured Chai1 model owner does not support `constraint_path`."
+                    )
+                output[oligo_name] = self.model_runner.run_inference(
+                    **cplx_input,
+                    **model_kwargs,
+                )
+            return output
+
         chai1 = _load_chai1_module()
         with patch_chai1_get_esm_embedding_context(chai1):
             for oligo_name, cplx_input in input_feat.items():

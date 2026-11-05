@@ -66,7 +66,7 @@ def test_task_requirements_ignore_unused_nampnn_aliases() -> None:
     assert "subprocess_envs.nampnn.repo_path" not in req["required_env_keys"]
 
 
-def test_task_requirements_include_ligandmpnn_weight_for_dynamic_mpnn() -> None:
+def test_dynamic_mpnn_does_not_require_unrelated_ligandmpnn_assets() -> None:
     req = task_requirements(
         {
             "mutator": {
@@ -78,7 +78,8 @@ def test_task_requirements_include_ligandmpnn_weight_for_dynamic_mpnn() -> None:
         }
     )
 
-    assert "weight_path.ligandmpnn" in req["required_env_keys"]
+    assert "weight_path.ligandmpnn" not in req["required_env_keys"]
+    assert "prody" not in req["required_imports"]
 
 
 def test_task_requirements_include_ligandmpnn_weight_for_multistate_proteinmpnn() -> None:

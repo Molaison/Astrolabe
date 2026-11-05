@@ -9,7 +9,7 @@ import torch
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 
 
 def _repo_root() -> Path:
@@ -109,6 +109,9 @@ class ESMFoldEvaluator(Evaluator):
         self._model = model
         self._model_name = model_name
         self._device = device
+
+    def shutdown(self) -> None:
+        shutdown_model_handles(self._model)
 
     def _ensure_model(self):
         if self._model is not None:

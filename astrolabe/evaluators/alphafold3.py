@@ -24,7 +24,7 @@ from astrolabe.utils.mmcif_ids import int_id_to_str_id
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.alphafold3 import (
     BUCKETS,
     ResultsForSeed,
@@ -90,6 +90,9 @@ class AlphaFold3Evaluator(Evaluator):
             if af3_conf is not None
             else None
         )
+
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runner)
 
     @staticmethod
     def _get_config_value(config, key, default=None):

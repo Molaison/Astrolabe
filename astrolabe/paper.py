@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
-import copy
 import hashlib
 import json
 import os
@@ -11,6 +10,7 @@ from pathlib import Path
 import tarfile
 
 from astrolabe import cli_command_definitions as cli_defs
+from astrolabe.configuration import validate_execution_selection
 
 # One inventory supplies parser choices, completion, and the reader-facing list.
 PROTOCOLS = {
@@ -308,6 +308,12 @@ def _prepare_parent_redesign(cfg, path, binder_chain="A", target_chain="B"):
         cfg.paper_protocol.parent_interface_cutoff_angstrom = 4.0
 
 
+def _validate_deprecated_paper_engine(cfg) -> None:
+    """Compatibility wrapper for the central execution-selection validator."""
+
+    validate_execution_selection(cfg)
+
+
 def _run(ns):
     from omegaconf import OmegaConf, open_dict
     from astrolabe import cli
@@ -332,6 +338,8 @@ def _run(ns):
             cfg.repeats = ns.num_runs
             if ns.seed is not None:
                 cfg.seed = ns.seed
+                if cfg.get("repeat_plan") is not None:
+                    cfg.repeat_plan.seed_override = ns.seed
             if ns.parent_structure:
                 if not OmegaConf.select(cfg, "paper_protocol.parent_interface_redesign", default=False):
                     raise ValueError("--parent-structure applies to solublempnn-control")
@@ -352,6 +360,7 @@ def _run(ns):
         if overrides:
             with open_dict(cfg):
                 cfg = OmegaConf.merge(cfg, OmegaConf.from_dotlist([item.lstrip("+") for item in overrides]))
+        validate_execution_selection(cfg)
         if ns.print_config or ns.dry_run:
             print(OmegaConf.to_yaml(cfg, resolve=False))
         if dump:
@@ -370,45 +379,8 @@ def _run(ns):
             for value in cfg.seqs.values():
                 if re.search(r"(?:^|\s)\+?\d+(?:-\d+)?(?:@|\s|$)", str(value)):
                     raise ValueError("Fixed-sequence evaluation requires literal sequences, not random-length segments")
-        engine = OmegaConf.select(cfg, "paper_protocol.engine", default="trajectory")
         print(f"[Astrolabe] {ns.protocol}: {ns.num_runs} run(s), output {output}", flush=True)
-        if engine in ("rna_beam", "bivalent_rna_beam"):
-            from astrolabe.rna_beam import run_rna_beam, run_bivalent_rna_beam
-            cli._maybe_autoselect_cuda_visible_devices(enabled=bool(ns.autoselect_gpu))
-            settings = OmegaConf.to_container(cfg.beam_search, resolve=True)
-            for index in range(ns.num_runs):
-                current = copy.deepcopy(cfg)
-                seed = int(cfg.seed) + index
-                if engine == "bivalent_rna_beam" and settings.get("initialization") == "archived":
-                    selected = int(settings.get("archived_start", 0)) + index
-                    starts = settings["archived_starts"]
-                    if selected >= len(starts):
-                        raise ValueError("--num-runs exceeds the supplied archived bivalent starts")
-                    current.beam_search.archived_start = selected
-                    if ns.seed is None:
-                        seed = int(starts[selected]["seed"])
-                kwargs = dict(out_dir=output / f"{index + 1:03d}_seed_{seed}", seed=seed,
-                              beam_width=int(settings["beam_width"]),
-                              proposals_per_parent=int(settings["proposals_per_parent"]),
-                              max_evaluations=int(settings["max_evaluations"]))
-                if engine == "bivalent_rna_beam":
-                    result = run_bivalent_rna_beam(current, objective_weights=settings["objective_weights"], **kwargs)
-                else:
-                    result = run_rna_beam(current, **kwargs)
-                print(json.dumps(result, default=str))
-        elif OmegaConf.select(cfg, "paper_protocol.initial_sequence_generator") == "python_random":
-            import random
-            lower, upper = cfg.paper_protocol.initial_sequence_length
-            alphabet = str(cfg.paper_protocol.initial_sequence_alphabet)
-            for index in range(ns.num_runs):
-                current = copy.deepcopy(cfg)
-                current.seed = int(cfg.seed) + index
-                current.repeats = 1
-                rng = random.Random(current.seed)
-                current.seqs.A = "".join(rng.choices(alphabet, k=rng.randint(int(lower), int(upper))))
-                cli._run_from_config(current, autoselect_gpu=bool(ns.autoselect_gpu))
-        else:
-            cli._run_from_config(cfg, autoselect_gpu=bool(ns.autoselect_gpu))
+        cli._run_from_config(cfg, autoselect_gpu=bool(ns.autoselect_gpu))
     return 0
 
 

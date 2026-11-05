@@ -22,6 +22,62 @@ from astrolabe.utils.mmcif_fallback import (
 )
 
 
+def _execution_controls(conf) -> tuple[typing.Any, dict[str, typing.Any]]:
+    from astrolabe.model_execution import execution_mode
+
+    if conf is None:
+        return execution_mode(), {}
+    canonical = conf.pop("execution_mode", None) if "execution_mode" in conf else None
+    legacy = conf.pop("execution", None) if "execution" in conf else None
+    if (
+        canonical is not None
+        and legacy is not None
+        and execution_mode(canonical) is not execution_mode(legacy)
+    ):
+        raise ValueError(
+            "execution_mode and its legacy execution alias disagree; specify one value."
+        )
+    value = canonical if canonical is not None else legacy
+    options: dict[str, typing.Any] = {}
+    for config_key, option_key in (
+        ("execution_python_bin", "python_bin"),
+        ("execution_cwd", "cwd"),
+        ("execution_env", "env"),
+        ("execution_request_timeout", "request_timeout"),
+        ("execution_max_frame_bytes", "max_frame_bytes"),
+    ):
+        if config_key in conf:
+            options[option_key] = conf.pop(config_key)
+    if options.get("env") is not None:
+        options["env"] = {
+            str(key): str(value) for key, value in dict(options["env"]).items()
+        }
+    return execution_mode(value), options
+
+
+def shutdown_model_handles(*values: typing.Any) -> None:
+    seen: set[int] = set()
+
+    def shutdown(value: typing.Any) -> None:
+        if value is None or id(value) in seen:
+            return
+        seen.add(id(value))
+        if isinstance(value, dict):
+            for item in value.values():
+                shutdown(item)
+            return
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                shutdown(item)
+            return
+        close = getattr(value, "shutdown", None)
+        if callable(close):
+            close()
+
+    for value in values:
+        shutdown(value)
+
+
 def _resolve_alphafold2_import_root(data_dir: str | pathlib.Path | None) -> pathlib.Path | None:
     vendor_root = pathlib.Path(__file__).resolve().parents[2] / "vendor" / "alphafold2"
     if not data_dir:
@@ -171,7 +227,15 @@ def _build_alphafold3_evaluator(
     )
     if af3_conf is None:
         raise ValueError("AlphaFold3 configuration is missing.")
-    model_runner = alphafold3_setup(af3_conf)
+    mode, execution_options = _execution_controls(af3_conf)
+    if getattr(af3_conf, "service_socket", None):
+        model_runner = alphafold3_setup(af3_conf)
+    elif mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeAF3Runner
+
+        model_runner = NativeAF3Runner(af3_conf, **execution_options)
+    else:
+        model_runner = alphafold3_setup(af3_conf)
     evaluator = AlphaFold3Evaluator(model_runner, raw_model_results_dir / "alphafold3", af3_conf)
     evaluator.pre_eval_hooks_config = getattr(evaluator_conf, "pre_eval_hooks", None)
     return evaluator
@@ -192,6 +256,9 @@ def _build_rf3_evaluator(
     rf3_conf = _merge_conf_with_defaults(evaluator_conf, "rf3", term_conf, alias=alias)
     if rf3_conf is None:
         raise ValueError("RF3 configuration is missing.")
+    mode, _ = _execution_controls(rf3_conf)
+    if mode.value == "daemon" and not rf3_conf.get("python_bin"):
+        rf3_conf.python_bin = sys.executable
     model_runner = rf3_setup(rf3_conf)
     return RoseTTAFold3Evaluator(model_runner, raw_model_results_dir / "rf3", rf3_conf)
 
@@ -211,18 +278,29 @@ def _build_alphafold2_evaluator(
     af2_conf = _merge_conf_with_defaults(
         evaluator_conf, "alphafold2", term_conf, alias=alias
     )
+    mode, execution_options = _execution_controls(af2_conf)
     af2_kwargs = {}
     if af2_conf is not None:
         af2_kwargs = OmegaConf.to_container(af2_conf, resolve=True)
     _ensure_alphafold2_import_path(af2_kwargs.get("data_dir"))
 
     from astrolabe.evaluators.alphafold2 import AlphaFold2Evaluator
-    from astrolabe.evaluators.wrappers.alphafold import alphafold_setup
 
-    model_runner = alphafold_setup(
-        oligo_names=oligo_names,
-        **af2_kwargs,
-    )
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import build_af2_daemon_runners
+
+        model_runner = build_af2_daemon_runners(
+            list(oligo_names),
+            af2_kwargs,
+            **execution_options,
+        )
+    else:
+        from astrolabe.evaluators.wrappers.alphafold import alphafold_setup
+
+        model_runner = alphafold_setup(
+            oligo_names=oligo_names,
+            **af2_kwargs,
+        )
     return AlphaFold2Evaluator(model_runner, raw_model_results_dir / "alphafold2")
 
 
@@ -270,6 +348,7 @@ def _esmfold2_kwargs_from_config(config) -> dict[str, typing.Any]:
         "chunk_size",
         "local_files_only",
         "timeout_seconds",
+        "execution_mode",
     }
     if isinstance(container, dict):
         kwargs.update({k: v for k, v in container.items() if k in allowed})
@@ -290,7 +369,13 @@ def _build_esmfold_evaluator(
     esmfold_conf = _merge_conf_with_defaults(
         evaluator_conf, "esmfold", term_conf, alias=alias
     )
-    return ESMFoldEvaluator(**_esmfold_kwargs_from_config(esmfold_conf))
+    mode, execution_options = _execution_controls(esmfold_conf)
+    kwargs = _esmfold_kwargs_from_config(esmfold_conf)
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeESMFoldModel
+
+        kwargs["model"] = NativeESMFoldModel(**kwargs, **execution_options)
+    return ESMFoldEvaluator(**kwargs)
 
 
 @register_evaluator_factory("esmfold2")
@@ -327,7 +412,17 @@ def _build_chai1_evaluator(
     chai_conf = _merge_conf_with_defaults(evaluator_conf, "chai1", term_conf, alias=alias)
     if chai_conf is None:
         raise ValueError("Chai1 configuration is missing.")
-    return Chai1Evaluator(chai_conf, raw_model_results_dir / "chai1")
+    mode, execution_options = _execution_controls(chai_conf)
+    model_runner = None
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeChai1Runner
+
+        model_runner = NativeChai1Runner(chai_conf, **execution_options)
+    return Chai1Evaluator(
+        chai_conf,
+        raw_model_results_dir / "chai1",
+        model_runner=model_runner,
+    )
 
 
 @register_evaluator_factory("boltz")
@@ -345,7 +440,13 @@ def _build_boltz_evaluator(
     boltz_conf = _merge_conf_with_defaults(evaluator_conf, "boltz", term_conf, alias=alias)
     if boltz_conf is None:
         raise ValueError("Boltz configuration is missing.")
-    model_runner = Boltz1Runner(boltz_conf)
+    mode, execution_options = _execution_controls(boltz_conf)
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeBoltz1Runner
+
+        model_runner = NativeBoltz1Runner(boltz_conf, **execution_options)
+    else:
+        model_runner = Boltz1Runner(boltz_conf)
     return BoltzEvaluator(model_runner, raw_model_results_dir / "boltz")
 
 
@@ -387,6 +488,7 @@ def _build_protenix_evaluator(
     )
     if protenix_conf is None:
         raise ValueError("Protenix configuration is missing.")
+    mode, execution_options = _execution_controls(protenix_conf)
     raw_use_constraints = protenix_conf.get("use_constraints", True)
     if not isinstance(raw_use_constraints, bool):
         raise ValueError(
@@ -469,7 +571,12 @@ def _build_protenix_evaluator(
             )
 
     protenix_conf.dump_dir = raw_model_results_dir / "protenix"
-    model_runner = ProtenixRunner(protenix_conf)
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeProtenixRunner
+
+        model_runner = NativeProtenixRunner(protenix_conf, **execution_options)
+    else:
+        model_runner = ProtenixRunner(protenix_conf)
     return ProtenixEvaluator(model_runner, use_constraints=use_constraints)
 
 
@@ -482,10 +589,6 @@ def _build_rhofold_evaluator(
     oligo_names,
     evaluator_conf,
 ):
-    import torch
-    from rhofold.config import rhofold_config
-    from rhofold.rhofold import RhoFold
-
     from astrolabe.evaluators.rhofold import RhoFoldEvaluator
 
     rhofold_conf = _merge_conf_with_defaults(
@@ -498,10 +601,20 @@ def _build_rhofold_evaluator(
     if not ckpt:
         raise ValueError("RhoFold checkpoint is missing (`evaluator.rhofold.checkpoint`).")
 
-    model_runner = RhoFold(rhofold_config)
-    state = torch.load(str(ckpt), map_location=torch.device("cpu"))
-    model_runner.load_state_dict(state["model"])
-    model_runner.eval()
+    mode, execution_options = _execution_controls(rhofold_conf)
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeRhoFoldRunner
+
+        model_runner = NativeRhoFoldRunner(rhofold_conf, **execution_options)
+    else:
+        import torch
+        from rhofold.config import rhofold_config
+        from rhofold.rhofold import RhoFold
+
+        model_runner = RhoFold(rhofold_config)
+        state = torch.load(str(ckpt), map_location=torch.device("cpu"))
+        model_runner.load_state_dict(state["model"])
+        model_runner.eval()
 
     return RhoFoldEvaluator(
         model_runner,
@@ -582,6 +695,16 @@ class StandardScores:
     chain_pair_scores: dict[str, dict[str, list[np.ndarray]]] | None = None
     complex_poses: dict[str, typing.Any] | None = None
     score_contributions: typing.Any | None = None
+
+    def to_evidence(self, system, candidate, data, **provenance):
+        """Freeze scores with explicit candidate/sample and occurrence subjects.
+
+        Live pose objects need their owning artifact codec first. Ambiguous
+        legacy per-protomer aggregates retain their original limited scope.
+        """
+        from astrolabe.design.legacy import standard_scores_to_evidence
+
+        return standard_scores_to_evidence(self, system, candidate, data, **provenance)
 
     @staticmethod
     def _wrap_dict_values_in_list(

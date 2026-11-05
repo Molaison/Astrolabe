@@ -315,8 +315,6 @@ def _prune_loss_section(
 ) -> None:
     if not isinstance(loss_cfg, dict):
         return
-    from astrolabe.losses.base import extract_loss_terms
-
     expressions = _collect_stage_expressions(stages_cfg)
     expression_terms = loss_cfg.get("expression_terms") or {}
     required_expression_terms: list[str] = []
@@ -325,30 +323,17 @@ def _prune_loss_section(
             expression_terms=expression_terms,
             expressions=expressions,
         )
-    included_loss_terms = set(
-        extract_loss_terms(
-            expressions=[
-                *expressions,
-                *[
-                    str(expression_terms[name])
-                    for name in required_expression_terms
-                    if name in expression_terms
-                ],
-            ],
-            excluded_terms=list(expression_terms.keys())
-            if isinstance(expression_terms, dict)
-            else None,
-        )
-    )
-
     kept: dict[str, Any] = {}
     for key, value in loss_cfg.items():
         if key == "loss_terms":
             if isinstance(value, dict):
+                # LossEngine evaluates every explicitly configured non-null loss,
+                # including terms used by hooks or only emitted in reports.
+                # Dropping them here changes the meaning of a saved run.
                 kept[key] = {
                     str(name): conf
                     for name, conf in value.items()
-                    if str(name) in included_loss_terms
+                    if conf is not None
                 }
             else:
                 kept[key] = value
@@ -369,8 +354,19 @@ def _prune_loss_section(
     loss_cfg.update(kept)
 
 
+def _portable_config_value(value: Any) -> Any:
+    """Keep persisted YAML readable by ordinary YAML loaders."""
+    if isinstance(value, os.PathLike):
+        return os.fspath(value)
+    if isinstance(value, dict):
+        return {key: _portable_config_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_portable_config_value(item) for item in value]
+    return value
+
+
 def build_persisted_run_config(args: Any) -> Any:
-    raw = OmegaConf.to_container(args, resolve=False)
+    raw = _portable_config_value(OmegaConf.to_container(args, resolve=False))
     if not isinstance(raw, dict):
         return args
     _cleanup_legacy_root_fields(raw)
@@ -388,7 +384,20 @@ def build_persisted_run_config(args: Any) -> Any:
     )
     if isinstance(raw.get("evaluator"), dict):
         raw["evaluator"].update(preserved_replay_cfg)
-    _prune_component_section(raw.get("mutator"), terms_key="mutator_terms")
+    mutator_cfg = raw.get("mutator")
+    mutator_preserve_keys: set[str] = set()
+    diagnostics = (
+        mutator_cfg.get("state_conflict_diagnostics")
+        if isinstance(mutator_cfg, dict)
+        else None
+    )
+    if isinstance(diagnostics, dict) and diagnostics.get("enabled") is True:
+        mutator_preserve_keys.add("state_conflict_diagnostics")
+    _prune_component_section(
+        mutator_cfg,
+        terms_key="mutator_terms",
+        preserve_keys=mutator_preserve_keys,
+    )
     predocker_cfg = raw.get("predocker")
     if isinstance(predocker_cfg, dict):
         predocker_cfg["enabled_aliases"] = _collect_enabled_predocker_aliases(raw)
