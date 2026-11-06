@@ -654,8 +654,12 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
     if errors:
         raise StartupValidationError("Startup configuration errors:\n- " + "\n- ".join(errors))
     if check_dependencies:
-        from astrolabe.startup_dependencies import check_startup_dependencies
+        from astrolabe.startup_dependencies import (
+            check_core_runtime_dependencies, check_startup_dependencies,
+        )
         check_startup_dependencies({
             **raw, "loss": {**(raw.get("loss") or {}), "loss_terms": active_losses},
         })
+        if require_inputs:
+            check_core_runtime_dependencies()
     return active_losses

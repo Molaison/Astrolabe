@@ -840,6 +840,7 @@ def _write_docker_apptainer_runner(
     path = pathlib.Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     text = """#!/usr/bin/env python3
+import json
 import os
 import pathlib
 import subprocess
@@ -875,11 +876,11 @@ def _docker_mount_source(bind):
 
 
 def _add_docker_mount(cmd, seen, host_path, mode="rw"):
-    resolved = str(pathlib.Path(host_path).resolve())
-    if resolved in seen:
+    lexical = os.path.abspath(os.path.expanduser(str(host_path)))
+    if lexical in seen:
         return
-    seen.add(resolved)
-    spec = f"{{resolved}}:{{resolved}}"
+    seen.add(lexical)
+    spec = f"{{lexical}}:{{lexical}}"
     if mode:
         spec += f":{{mode}}"
     cmd += ["-v", spec]
@@ -894,6 +895,8 @@ def main() -> int:
     source_map_root = (
         str(pathlib.Path(source_map_value).resolve()) if source_map_value else None
     )
+    host_cwd = os.environ.get("ASTROLABE_HOST_CWD")
+    path_mounts = json.loads(os.environ.get("ASTROLABE_PATH_MOUNTS", "[]")) if host_cwd else []
 
     py_args = sys.argv[1:]
     if source_map_root and len(py_args) >= 2 and py_args[0] == "-c":
@@ -904,6 +907,8 @@ def main() -> int:
         ]
 
     env = os.environ.copy()
+    env.pop("ASTROLABE_HOST_CWD", None)
+    env.pop("ASTROLABE_PATH_MOUNTS", None)
     env_overrides = {{
         key: env[key]
         for key in SENSITIVE_ENV_FORWARD_KEYS
@@ -925,12 +930,16 @@ def main() -> int:
         "--no-mount",
         "cwd",
         "--pwd",
-        CONTAINER_REPO_ROOT,
+        host_cwd or CONTAINER_REPO_ROOT,
     ]
     if USE_NV:
         inner_cmd.append("--nv")
     if host_repo_root:
         inner_cmd += ["-B", f"{{host_repo_root}}:{{CONTAINER_REPO_ROOT}}"]
+        if host_cwd:
+            inner_cmd += ["-B", f"{{host_repo_root}}:{{host_repo_root}}:ro"]
+    for directory in dict.fromkeys(path_mounts):
+        inner_cmd += ["-B", f"{{directory}}:{{directory}}"]
     for bind in BIND_MOUNTS:
         inner_cmd += ["-B", bind]
     dalphaball_dirs = []
@@ -955,6 +964,8 @@ def main() -> int:
     seen = set()
     if host_repo_root:
         _add_docker_mount(docker_cmd, seen, host_repo_root)
+    for directory in path_mounts:
+        _add_docker_mount(docker_cmd, seen, directory)
     _add_docker_mount(docker_cmd, seen, SIF_PATH, mode="ro")
     for bind in BIND_MOUNTS:
         source = _docker_mount_source(bind)
@@ -1034,6 +1045,7 @@ def _write_python_runner(
     path = pathlib.Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     text = """#!/usr/bin/env python3
+import json
 import os
 import pathlib
 import subprocess
@@ -1126,6 +1138,8 @@ def main() -> int:
     source_map_root = (
         str(pathlib.Path(source_map_value).resolve()) if source_map_value else None
     )
+    host_cwd = os.environ.get("ASTROLABE_HOST_CWD")
+    path_mounts = json.loads(os.environ.get("ASTROLABE_PATH_MOUNTS", "[]")) if host_cwd else []
 
     py_args = sys.argv[1:]
     if source_map_root and len(py_args) >= 2 and py_args[0] == "-c":
@@ -1136,6 +1150,8 @@ def main() -> int:
         ]
 
     env = os.environ.copy()
+    env.pop("ASTROLABE_HOST_CWD", None)
+    env.pop("ASTROLABE_PATH_MOUNTS", None)
     env_overrides = {{key: env[key] for key in ENV_FORWARD_KEYS if key in env}}
     apptainer_bin_dir = str(pathlib.Path(APPTAINER_BIN).resolve().parent)
     _prepend_env(env, "PATH", apptainer_bin_dir)
@@ -1155,12 +1171,16 @@ def main() -> int:
         "--no-mount",
         "cwd",
         "--pwd",
-        CONTAINER_REPO_ROOT,
+        host_cwd or CONTAINER_REPO_ROOT,
     ]
     if USE_NV:
         cmd.append("--nv")
     if host_repo_root:
         cmd += ["-B", f"{{host_repo_root}}:{{CONTAINER_REPO_ROOT}}"]
+        if host_cwd:
+            cmd += ["-B", f"{{host_repo_root}}:{{host_repo_root}}:ro"]
+    for directory in dict.fromkeys(path_mounts):
+        cmd += ["-B", f"{{directory}}:{{directory}}"]
     for bind in BIND_MOUNTS:
         cmd += ["-B", bind]
     seen_binds = set(_bind_source(bind) for bind in BIND_MOUNTS)

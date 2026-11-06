@@ -74,8 +74,9 @@ def _validate_runtime_profile(profile, field="runtime profile"):
         raise ValueError(f"{field}.env: expected string keys and scalar values")
 
 
-def _existing_directory(value, *, resolve=True):
-    path = Path(os.path.abspath(os.path.expanduser(value)))
+def _existing_directory(value, cwd, *, resolve=True):
+    path = Path(os.path.expanduser(value))
+    path = Path(os.path.abspath(path if path.is_absolute() else cwd / path))
     if resolve:
         path = path.resolve()
     if not path.is_dir():
@@ -86,28 +87,49 @@ def _existing_directory(value, *, resolve=True):
 
 
 def _input_mounts(argv, cwd):
+    cwd = Path(cwd)
     mounts = {str(cwd.resolve())}
+    # The run CLI resolves its standalone/config-dir against the caller, then
+    # changes directory before reading overlays and resolving output overrides.
+    run_cwd = cwd
+    words = command_words(argv)
+    if words and words[0] == "run":
+        standalone = None
+        chdir = True
+        for i, argument in enumerate(argv):
+            key, equal, value = argument.partition("=")
+            if key == "--standalone":
+                standalone = value if equal else (argv[i + 1] if i + 1 < len(argv) else None)
+            elif argument in ("--chdir", "--no-chdir"):
+                chdir = argument == "--chdir"
+        if standalone and chdir:
+            path = cwd / Path(standalone).expanduser()
+            if path.is_file():
+                run_cwd = path.resolve().parent
     path_options = {
         "--input", "--structure", "--target-homology", "--out-dir", "--out",
         "--service-socket", "--config-dir", "--standalone", "--overlay",
-        "--overrides-file", "--mutable-positions", "--spheres", "--msa",
+        "-o", "--overrides-file", "--mutable-positions", "--spheres", "--msa",
         "--ligand-conformer", "--manifest", "--config-yaml",
     }
     for i, argument in enumerate(argv):
         key, equal, value = argument.partition("=")
-        if key not in path_options:
+        if key not in path_options and key.lstrip("+") not in {"out_dir", "raw_model_results_dir"}:
             continue
         if not equal:
             if i + 1 >= len(argv):
                 continue
             value = argv[i + 1]
-        if key == "--target-homology" and not Path(value).expanduser().exists():
+        base = cwd if key in ("--standalone", "--config-dir") else run_cwd
+        if key == "--target-homology" and not (base / Path(value).expanduser()).exists():
             # The native homology parser also accepts file.json:chain.
             value = value.rsplit(":", 1)[0]
         if value and not value.startswith("-"):
-            mounts.add(str(_existing_directory(value)))
-            # Preserve the path the user typed as well as a symlink target.
-            mounts.add(str(_existing_directory(value, resolve=False)))
+            for resolve in (True, False):
+                directory = _existing_directory(value, base, resolve=resolve)
+                # A missing path immediately under / must not bind the whole host.
+                if directory != Path(directory.anchor):
+                    mounts.add(str(directory))
     return sorted(mounts)
 
 
@@ -205,6 +227,9 @@ def checkout_main(root, argv):
             env.setdefault(key, str(root))
         env.setdefault("GH_HOST_REPO_ROOT", env["ASTROLABE_HOST_REPO_ROOT"])
         env.setdefault("GH_HOST_REPO_MAP_ROOT", env["ASTROLABE_HOST_REPO_MAP_ROOT"])
+        cwd = Path.cwd()
+        env["ASTROLABE_HOST_CWD"] = str(cwd)
+        env["ASTROLABE_PATH_MOUNTS"] = json.dumps(_input_mounts(argv, cwd))
         command = [python, "-c", "import sys; sys.path.insert(0, sys.argv.pop(1)); from astrolabe.launcher import main; raise SystemExit(main(sys.argv[1:]))", str(root), *argv]
         os.execvpe(python, command, env)
     except (OSError, ValueError, KeyError) as error:

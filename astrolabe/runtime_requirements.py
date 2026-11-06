@@ -125,6 +125,8 @@ def task_requirements(task_cfg: Any) -> dict:
 
     # Always needed by `run.py` (used for logging control).
     req_imports.add("absl")
+    # Native operation descriptors validate selected options before execution.
+    req_imports.add("jsonschema")
 
     enable_pyrosetta = bool(task_cfg.get("enable_pyrosetta", True)) if isinstance(task_cfg, dict) else True
     post_eval_hooks = (task_cfg.get("post_eval_hooks") or {}) if isinstance(task_cfg, dict) else {}

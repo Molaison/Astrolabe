@@ -10,12 +10,14 @@ No PyRosetta, model, configuration framework, or GPU imports are needed here.
 from __future__ import annotations
 
 import ast
+import importlib
 import math
 import os
 from pathlib import Path
 import stat
 import shlex
 import subprocess
+import sys
 from collections.abc import Sequence
 
 
@@ -57,7 +59,25 @@ _PROBE_INPUT = "NPOINTS\n1\nCOORDS\n0 0 0 1\nEND\n"
 
 
 class StartupDependencyError(ValueError):
-    """A selected loss cannot use its required executable at startup."""
+    """A selected runtime cannot use a required dependency at startup."""
+
+
+def check_core_runtime_dependencies() -> None:
+    """Import the small mandatory Python dependencies before scientific setup.
+
+    Importing checks transitive/extension failures too; merely finding the
+    top-level module would miss an unusable jsonschema installation. Model
+    libraries keep their selected-backend loading paths.
+    """
+    for module in ("absl.logging", "jsonschema"):
+        try:
+            importlib.import_module(module)
+        except (ImportError, OSError) as exc:
+            raise StartupDependencyError(
+                f"Runtime dependency {module!r} is unavailable in {sys.executable}: "
+                f"{exc}. Install the pinned dependencies from "
+                "container/requirements.runtime.lock in this runtime."
+            ) from exc
 
 
 def _failure(path: Path, required_by: Sequence[str], reason: str) -> StartupDependencyError:
