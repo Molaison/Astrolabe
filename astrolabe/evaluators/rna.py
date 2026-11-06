@@ -1,4 +1,4 @@
-"""Single-chain RNA adapters using the existing resident model owner."""
+"""RNA adapters with explicit per-backend topology capabilities."""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields, is_dataclass
@@ -6,6 +6,7 @@ import importlib
 import json
 import os
 from pathlib import Path
+import string
 import tempfile
 from typing import Any
 
@@ -19,19 +20,32 @@ class RnaBackend:
     class_name: str
     source: str
     revision: str
+    experimental_multichain: bool = False
+    multichain_limitation: str = ""
 
 
 RNA_BACKENDS = {
     spec.name: spec
     for spec in (
         RnaBackend("drfold2", "DRfold2Backend", "leeyang/DRfold2",
-                   "3667d6ac44c5b14cff94c36e0371224acb2cdae5"),
+                   "3667d6ac44c5b14cff94c36e0371224acb2cdae5",
+                   multichain_limitation=(
+                       "Both RCLM and structure positions assume one polymer; "
+                       "PotentialFold adds O3'-P bonds and bonded clash exclusions "
+                       "across every consecutive residue. Chain-aware refinement "
+                       "and homomer initialization are not implemented."
+                   )),
         RnaBackend("numonomer", "NUMonomerBackend", "yunda-si/NUMonomer",
-                   "af38434e7ee3f82c6948841cce1ca4d65840742a"),
+                   "af38434e7ee3f82c6948841cce1ca4d65840742a", True),
         RnaBackend("zfold", "ZfoldBackend", "heqin-zhu/structRFM",
-                   "f0c1add19f8dfc786f16bc4abb7aa775dbadddbf"),
+                   "f0c1add19f8dfc786f16bc4abb7aa775dbadddbf",
+                   multichain_limitation=(
+                       "structRFM/crop and geometry positions lack chain boundaries; "
+                       "the Rosetta path builds one covalently connected polymer, "
+                       "not disconnected chains with movable interchain jumps."
+                   )),
         RnaBackend("rnabpflow", "RNAbpFlowBackend", "Bhattacharya-Lab/RNAbpFlow",
-                   "e8b1c077f7951d4d6ebe00c851d22c37777dfc9f"),
+                   "e8b1c077f7951d4d6ebe00c851d22c37777dfc9f", True),
     )
 }
 
@@ -100,6 +114,7 @@ def _backend_kernel(settings: dict):
             "device": device,
             "upstream_source": spec.source,
             "adapter_source_revision": spec.revision,
+            "experimental_multichain_available": spec.experimental_multichain,
             "stage_contract": (
                 "native_cpu_device_cpu" if native_stages is not None
                 else "serial_cpu_device_cpu"
@@ -128,6 +143,14 @@ class RnaEvaluator(Evaluator):
         self.backend = backend
         self.settings = dict(settings)
         self.settings["backend"] = backend
+        self.multichain_mode = self.settings.setdefault("multichain_mode", "reject")
+        if self.multichain_mode not in {"reject", "experimental"}:
+            raise ValueError("RNA multichain_mode must be 'reject' or 'experimental'")
+        if self.multichain_mode == "experimental" and not RNA_BACKENDS[backend].experimental_multichain:
+            raise ValueError(
+                f"{backend} has no implemented multichain mode: "
+                f"{RNA_BACKENDS[backend].multichain_limitation}"
+            )
         self.output_dir = Path(output_dir).resolve()
         self.model_runner = None
         self._client_options = {}
@@ -169,22 +192,41 @@ class RnaEvaluator(Evaluator):
         validated = {}
         for name, folding_input in inputs.items():
             chains = folding_input.chains
-            if len(chains) != 1:
-                raise ValueError(
-                    f"{self.backend} supports a single RNA chain, not oligomer {name!r}"
+            if not chains:
+                raise ValueError("RNA evaluation requires at least one RNA chain")
+            multichain = len(chains) > 1
+            if multichain and self.multichain_mode != "experimental":
+                spec = RNA_BACKENDS[self.backend]
+                detail = (
+                    "Set multichain_mode: experimental to opt into a chain-aware "
+                    "adaptation of monomer-trained weights; oligomer accuracy is unvalidated."
+                    if spec.experimental_multichain else spec.multichain_limitation
                 )
-            chain = chains[0]
-            native_rna = (
-                type(chain).__name__ == "RnaChain"
-                and type(chain).__module__ == "alphafold3.common.folding_input"
-            )
-            if not isinstance(chain, RnaChain) and not native_rna:
-                raise ValueError(f"{self.backend} requires an RNA chain")
-            sequence = str(chain.sequence).upper()
-            if not sequence or set(sequence) - set("ACGU"):
-                raise ValueError("RNA prediction requires an unmodified A/C/G/U sequence")
-            if getattr(chain, "modifications", None):
-                raise ValueError("Modified RNA is not supported by this adapter")
+                raise ValueError(
+                    f"{self.backend} accepts a single RNA chain in this mode, "
+                    f"not oligomer {name!r}. {detail}"
+                )
+            ordered_chains, identifiers = [], set()
+            for chain in chains:
+                native_rna = (
+                    type(chain).__name__ == "RnaChain"
+                    and type(chain).__module__ == "alphafold3.common.folding_input"
+                )
+                if not isinstance(chain, RnaChain) and not native_rna:
+                    raise ValueError(f"{self.backend} requires RNA chains only")
+                sequence = str(chain.sequence).upper()
+                if not sequence or set(sequence) - set("ACGU"):
+                    raise ValueError("RNA prediction requires an unmodified A/C/G/U sequence")
+                if getattr(chain, "modifications", None):
+                    raise ValueError("Modified RNA is not supported by this adapter")
+                identifier = str(chain.id)
+                if multichain and (
+                    len(identifier) != 1 or identifier not in string.ascii_letters + string.digits
+                    or identifier in identifiers
+                ):
+                    raise ValueError("RNA multichain inputs require unique single-character chain IDs")
+                identifiers.add(identifier)
+                ordered_chains.append({"chain_id": identifier, "sequence": sequence})
             if (
                 getattr(folding_input, "bonded_atom_pairs", None)
                 or getattr(folding_input, "cyclic_chain_ids", None)
@@ -196,9 +238,8 @@ class RnaEvaluator(Evaluator):
                 raise ValueError("RNA adapters require exactly one input seed per evaluation")
             validated[str(name)] = {
                 "name": str(name),
-                "sequence": sequence,
-                "chain_id": str(chain.id),
                 "seed": int(seeds[0]),
+                **({"chains": ordered_chains} if multichain else ordered_chains[0]),
             }
         self.output_dir.mkdir(parents=True, exist_ok=True)
         step = int((runtime_config or {}).get("step", 0))
@@ -231,10 +272,23 @@ class RnaEvaluator(Evaluator):
             plddt = prediction.get("plddt")
             if plddt is not None:
                 values = np.asarray(plddt, dtype=float)
-                if values.shape != (len(request["sequence"]),) or not np.isfinite(values).all():
+                chains = request.get("chains", [request])
+                lengths = [len(chain["sequence"]) for chain in chains]
+                if values.shape != (sum(lengths),) or not np.isfinite(values).all():
                     raise ValueError(f"{self.backend} returned invalid per-residue confidence")
+                # StandardScores stores a full assembly array per sample.
                 confidence[name] = [values]
-                per_proto[name] = [values]
+                if len(chains) == 1:
+                    per_proto[name] = [values]
+                else:
+                    # Astrolabe oligomer names encode protomer occurrences (AAB).
+                    # Physical chain IDs, in contrast, identify distinct copies.
+                    protomers = inputs[name].name
+                    if len(protomers) == len(chains):
+                        offset = 0
+                        for protomer, length in zip(protomers, lengths):
+                            per_proto.setdefault(protomer, []).append(values[offset:offset + length])
+                            offset += length
             receipt = {
                 "backend": self.backend,
                 "request": request,

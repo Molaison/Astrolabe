@@ -5,7 +5,7 @@ Upstream reference: yunda-si/NUMonomer@af38434e7ee3f82c6948841cce1ca4d65840742a.
 
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import importlib
 import json
 from pathlib import Path
@@ -48,6 +48,9 @@ class NUMonomerBackend:
     ``weights_path`` is a checkpoint file. Native defaults are eight recycles,
     a 512-residue confidence prefix, no chunking, CIF output, and confidence
     selection rather than ``save_last``. ``topology`` defaults to linear.
+    Ordered physical ``chains`` require ``multichain_mode='experimental'``.
+    This zero-shot extension is linear RNA only and has no validated assembly
+    accuracy or interface confidence.
     """
 
     def __init__(self, settings: dict):
@@ -115,8 +118,36 @@ class NUMonomerBackend:
         self.device = target
 
     def prepare(self, request: dict) -> dict:
-        seq = request.get("sequence")
-        chain = request.get("chain_id", "A")
+        chains = []
+        if "chains" in request:
+            if "sequence" in request or "chain_id" in request:
+                raise ValueError("NUMonomer accepts chains or sequence/chain_id, not both")
+            supplied = request["chains"]
+            if not isinstance(supplied, (list, tuple)) or len(supplied) < 2:
+                raise ValueError("NUMonomer chains must describe at least two physical chains")
+            if request.get("multichain_mode", self.settings.get("multichain_mode", "reject")) != "experimental":
+                raise ValueError("NUMonomer multichain inference requires multichain_mode: experimental")
+            seen, offset = set(), 0
+            for item in supplied:
+                if not isinstance(item, dict):
+                    raise ValueError("NUMonomer each chain requires chain_id and sequence")
+                identifier, sequence = item.get("chain_id"), item.get("sequence")
+                if (not isinstance(identifier, str) or len(identifier) != 1
+                        or not identifier.isascii() or not identifier.isalnum() or identifier in seen):
+                    raise ValueError("NUMonomer requires unique single-character chain IDs")
+                if not isinstance(sequence, str) or not sequence or set(sequence) - set("ACGU"):
+                    raise ValueError("NUMonomer chains require nonempty A/C/G/U sequences")
+                chains.append({"chain_id": identifier, "sequence": sequence,
+                               "start": offset, "stop": offset + len(sequence)})
+                seen.add(identifier)
+                offset += len(sequence)
+            # Storage layout only. Positional topology is replaced during the
+            # one global model call; no independent chain structures are made.
+            seq = "".join(item["sequence"] for item in chains)
+            chain = chains[0]["chain_id"]
+        else:
+            seq = request.get("sequence")
+            chain = request.get("chain_id", "A")
         if not isinstance(seq, str) or not seq or set(seq) - set("ACGU"):
             raise ValueError("NUMonomer requires one nonempty, unmodified A/C/G/U RNA sequence")
         if not isinstance(chain, str) or not chain or not chain.isascii() or not chain.isalnum():
@@ -126,6 +157,8 @@ class NUMonomerBackend:
         topology = request.get("topology", self.topology)
         if topology not in {"linear", "circular"}:
             raise ValueError("NUMonomer topology must be linear or circular")
+        if chains and topology != "linear":
+            raise ValueError("Experimental NUMonomer multichain inference supports linear chains only")
         seed = _integer(request.get("seed", self.initial_seed), "seed")
         if seed >= 2**32:
             raise ValueError("NUMonomer seed must be less than 2**32")
@@ -134,7 +167,17 @@ class NUMonomerBackend:
         output_dir = Path(request["output_dir"]).expanduser().resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
         fasta = output_dir / "input.fasta"
-        fasta.write_text(f">{chain}|rna|{topology}\n{seq}\n")
+        if chains:
+            fasta.write_text("".join(
+                f">{item['chain_id']}|rna|linear\n{item['sequence']}\n" for item in chains
+            ))
+            (output_dir / "chain_layout.json").write_text(json.dumps(chains, indent=2) + "\n")
+            # Native dataset is reused only for residue labels/random atom
+            # initialization. It has no polymer bond graph or reconstruction.
+            fasta = output_dir / "tensor_layout.fasta"
+            fasta.write_text(f">tensor_layout|rna|linear\n{seq}\n")
+        else:
+            fasta.write_text(f">{chain}|rna|{topology}\n{seq}\n")
         torch = self.torch
         random.seed(seed)
         self.np.random.seed(seed)
@@ -151,7 +194,39 @@ class NUMonomerBackend:
             features = next(iter(torch.utils.data.DataLoader(dataset, batch_size=None, num_workers=0)))
             cpu_rng = torch.get_rng_state().clone()
         return {"features": features, "sequence": seq, "seed": seed, "cpu_rng": cpu_rng,
-                "output_dir": str(output_dir), "topology": topology}
+                "output_dir": str(output_dir), "topology": topology, "chains": chains}
+
+    @contextmanager
+    def _multichain_features(self, chains):
+        """Replace positional priors, not content/geometric attention or weights."""
+        torch = self.torch
+        embedder = self.model.input_embedder
+        positions = torch.tensor(
+            [i for chain in chains for i in range(len(chain["sequence"]))],
+            device=self.device, dtype=torch.long,
+        )
+        chain_index = torch.tensor(
+            [i for i, chain in enumerate(chains) for _ in chain["sequence"]],
+            device=self.device,
+        )
+        off_chain = chain_index[:, None] != chain_index[None, :]
+        pair_indices = embedder.relpos(positions).masked_fill(off_chain, 65)
+
+        def replace(module, args, output):
+            indices, table, sequence = output
+            if (indices.shape != pair_indices.shape or table.ndim != 2
+                    or table.shape[0] != 65 or module.embd_pos.num_embeddings != 65
+                    or args[0]["typo"] != "linear"):
+                raise ValueError("NUMonomer positional layout differs from the pinned contract")
+            # RMSNorm and bias-free projections in both IPA and confidence keep
+            # this row zero. The learned 65-row parameter is left unchanged.
+            return pair_indices, torch.cat((table, table.new_zeros((1, table.shape[1])))), sequence
+
+        handle = embedder.register_forward_hook(replace)
+        try:
+            yield
+        finally:
+            handle.remove()
 
     def execute(self, prepared: dict) -> dict:
         if self.device is None:
@@ -164,7 +239,8 @@ class NUMonomerBackend:
         host_features = prepared["features"]
         features = {key: value.to(self.device) if torch.is_tensor(value) else value
                     for key, value in host_features.items()}
-        with torch.no_grad(), torch.autocast(
+        positional = self._multichain_features(prepared["chains"]) if prepared.get("chains") else nullcontext()
+        with positional, torch.no_grad(), torch.autocast(
                 device_type=self.device.type, dtype=torch.bfloat16,
                 enabled=torch.amp.autocast_mode.is_autocast_available(self.device.type)):
             preds = self.model(features, last_only=self.save_last)
@@ -181,15 +257,20 @@ class NUMonomerBackend:
                 "label_seq": host_features["label_seq"], "sel_idx": host_features["sel_idx"],
                 "mol_type": host_features["mol_type"], "chain_id": host_features["chain_list"],
                 "sequence": prepared["sequence"], "output_dir": prepared["output_dir"],
+                "chains": prepared.get("chains", []),
                 "seed": prepared["seed"], "topology": prepared["topology"],
                 "selected_output_index": idx, "iteration_mean_plddt": iteration_means}
 
     def finalize(self, host_payload: dict) -> dict:
         output_dir = Path(host_payload["output_dir"])
         structure = output_dir / f"pred_{self.weights.stem}_{host_payload['seed']}.{self.ftype}"
-        self.save_struc.to_pdb(host_payload["coords"], host_payload["confidence"],
-                               host_payload["label_seq"].reshape(-1), host_payload["sel_idx"],
-                               host_payload["mol_type"], host_payload["chain_id"], str(structure), self.ftype)
+        chains = host_payload.get("chains", [])
+        if chains:
+            self._write_multichain(host_payload, structure)
+        else:
+            self.save_struc.to_pdb(host_payload["coords"], host_payload["confidence"],
+                                   host_payload["label_seq"].reshape(-1), host_payload["sel_idx"],
+                                   host_payload["mol_type"], host_payload["chain_id"], str(structure), self.ftype)
         if not structure.is_file() or structure.stat().st_size == 0:
             raise RuntimeError(f"NUMonomer did not write a structure: {structure}")
         confidence = host_payload["confidence"].tolist()
@@ -204,8 +285,42 @@ class NUMonomerBackend:
                     "confidence_prefix": confidence,
                     "confidence_is_full_length": full_confidence,
                     "unscored_bfactors": "Upstream save_struc pads the unscored tail with zeros, not predicted confidence." if not full_confidence else None}
+        if chains:
+            metadata.update({
+                "chains": [{"chain_id": c["chain_id"], "sequence": c["sequence"]} for c in chains],
+                "layout": chains,
+                "multichain_mode": "experimental",
+                "method": "joint_prediction_native_intrachain_positions_zero_offchain_positional_row",
+                "checkpoint_training": "single_chain",
+                "accuracy_validation": "unvalidated",
+                "confidence_limitation": "Monomer pLDDT and recycle ranking are not calibrated assembly/interface confidence.",
+            })
         log = output_dir / f"log_{self.weights.stem}_{host_payload['seed']}.json"
         log.write_text(json.dumps(metadata, indent=2) + "\n")
         return {"structure_path": str(structure.resolve()),
                 "plddt": confidence if full_confidence else None,
                 "artifacts": {"confidence_log": str(log)}, "metadata": metadata}
+
+    def _write_multichain(self, payload, path):
+        """Use native residue construction in one coordinate frame, without fitting."""
+        native = self.save_struc
+        structure, model = native.Structure("Structure"), native.Model(1)
+        coordinates, confidence = payload["coords"], payload["confidence"]
+        labels = payload["label_seq"].reshape(-1)
+        if coordinates.shape != (len(labels), 28, 3):
+            raise ValueError("NUMonomer joint coordinates must have shape [residues, 28, 3]")
+        bfactors = self.torch.zeros(len(labels))
+        bfactors[:len(confidence)] = confidence
+        for item in payload["chains"]:
+            chain = native.Chain(item["chain_id"])
+            for local, index in enumerate(range(item["start"], item["stop"]), 1):
+                nucleotide = native.resc.rev_restype1_order[labels[index].item()]
+                residue_name = native.resc.restype_1to3[payload["mol_type"]][nucleotide]
+                chain.add(native.set_residue(
+                    coordinates[index].numpy(), bfactors[index].numpy(), residue_name, local,
+                ))
+            model.add(chain)
+        structure.add(model)
+        writer = native.PDBIO() if self.ftype == "pdb" else native.MMCIFIO()
+        writer.set_structure(structure)
+        writer.save(str(path))

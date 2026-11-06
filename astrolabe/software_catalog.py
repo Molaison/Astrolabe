@@ -28,7 +28,10 @@ SOFTWARE: dict[str, SoftwareSpec] = {
     **{
         name: SoftwareSpec(
             name,
-            f"{name} single-chain RNA evaluator",
+            f"{name} RNA evaluator" + (
+                " with opt-in experimental multichain inference"
+                if spec.experimental_multichain else " (single-chain only)"
+            ),
             "manual",
             "Supply an upstream checkout, its model assets and an isolated interpreter",
             asset_urls=(f"https://github.com/{spec.source}",),

@@ -12,7 +12,7 @@ Targets preserve strand order and multiplicity. `strands: [A, A]` evaluates two 
 
 For targets with weights \(w_j\), Astrolabe returns \(\sum_j w_j s_j / \sum_j w_j\). Weights must be nonnegative and their total must be positive. The input uses dot-parenthesis-plus notation. Pseudoknots, modified nucleotides, and mismatched strand lengths are rejected.
 
-The new DRfold2, NUMonomer, Zfold, and RNAbpFlow adapters accept one linear RNA chain. They do not infer an oligomer by concatenating chains or independently folding its members. Use an existing multichain evaluator such as AlphaFold 3 or Protenix for oligomer tertiary evaluation.
+All four adapters retain their single-chain path. NUMonomer and RNAbpFlow additionally offer **opt-in experimental chain-aware joint inference**, described below. These adaptations change the inputs to monomer-trained weights; they are not native, validated multimer models. DRfold2 and Zfold still reject oligomers with an explanation of their unresolved topology assumptions. No adapter treats ordinary sequence concatenation or independently folded members as oligomer prediction.
 
 ## Configure secondary scoring
 
@@ -74,7 +74,7 @@ astrolabe run --task rna_secondary_to_joint --overrides 'out_dir=/path/to/new/ru
 
 Keep one shared scientific configuration for a batch. Put only sequence, seed, input assets, and output identity in per-run overlays.
 
-## Select a single-chain predictor
+## Select a predictor
 
 Configure one of `drfold2`, `numonomer`, `zfold`, or `rnabpflow` as an evaluator type.
 
@@ -107,6 +107,57 @@ RNAbpFlow conditioning is never silently copied from the secondary optimization 
 Unavailable pLDDT, pTM, ipTM, and PAE remain unavailable. Do not select a confidence loss that the chosen backend cannot produce.
 
 Each evaluation gets its own directory. `astrolabe_prediction.json` records the sequence, seed, selected structure, auxiliary artifacts, and stage contract.
+
+## Experimental multichain inference
+
+The default is `multichain_mode: reject`. Enable `experimental` only for NUMonomer or RNAbpFlow:
+
+```yaml
+evaluator:
+  evaluator_terms:
+    tertiary:
+      _type: numonomer
+      multichain_mode: experimental
+      repo_path: /path/to/NUMonomer
+      weights_path: /path/to/NUMonomer.pt
+      device: cuda:0
+      execution_python_bin: /path/to/compatible/python
+```
+
+Use Astrolabe's normal oligomer specification, for example `oligo: [AAB]`, to request physical copies of protomers A, A, B. Equal sequences are not deduplicated. The evaluator passes an ordered list of chains, validates every chain, and preserves their distinct output IDs. This experimental interface supports linear, unmodified A/C/G/U RNA with unique single-character chain IDs; explicit interchain covalent bonds and circular assemblies are rejected.
+
+| Backend | Multichain implementation and limitation |
+| --- | --- |
+| **NUMonomer** | Native positional encoding within each chain; a non-parameter zero row supplies the cross-chain positional contribution to both structural attention and confidence. All cross-chain content/geometric attention remains active in one joint prediction. Checkpoint parameter shapes are unchanged. The native per-residue reconstruction does not introduce a bond across chain boundaries. It also does not enforce chemical geometry. |
+| **RNAbpFlow** | Chain-local node positions; cross-chain sinusoidal vectors zeroed **before** the existing relative-position projection (its learned bias remains). One joint flow sampler, full interchain attention, and per-residue atom reconstruction. Explicit conditioning must connect the chain graph. |
+| **DRfold2** | Not enabled. Chain handling must change both RCLM and structural positional encodings. PotentialFold additionally treats consecutive packed residues as bonded in its O3′–P springs, local weighting, and clash exclusions. Identical-copy initialization also needs a scientific design decision. Arena can handle distinct chains, but cannot repair an incorrectly specified upstream polymer by relabelling its output. |
+| **Zfold** | Not enabled. LM contexts/crops and relative-position features lack chain boundaries. The current Rosetta initializer builds one covalently connected polymer; enabling jump movement does not create disconnected strand chemistry or interchain jumps. Correct support requires joint geometry plus a topology-aware, jointly restrained assembly/refinement path. |
+
+These DRfold2/Zfold limitations are properties of the **released full pipelines**, not a claim that their neural attention mathematically forbids multimers. A research fork is plausible, but simply relaxing the parser would produce the wrong modeled system. Concrete upstream sites: [DRfold2 positional inputs](https://github.com/leeyang/DRfold2/blob/3667d6ac44c5b14cff94c36e0371224acb2cdae5/cfg_95/EvoMSA2XYZ.py#L91-L122), [PotentialFold bond energy](https://github.com/leeyang/DRfold2/blob/3667d6ac44c5b14cff94c36e0371224acb2cdae5/PotentialFold/Optimization.py#L348-L354), [Zfold relative positions](https://github.com/heqin-zhu/structRFM/blob/f0c1add19f8dfc786f16bc4abb7aa775dbadddbf/tasks/Zfold/src/Zfold/network/modules.py#L531-L556), and [Rosetta initialization](https://github.com/heqin-zhu/structRFM/blob/f0c1add19f8dfc786f16bc4abb7aa775dbadddbf/tasks/Zfold/src/Zfold/util/utils_ros.py#L107-L144).
+
+For RNAbpFlow, a minimal **illustrative**, not benchmarked, four-base-per-strand duplex uses:
+
+```yaml
+evaluator:
+  evaluator_terms:
+    tertiary:
+      _type: rnabpflow
+      multichain_mode: experimental
+      repo_path: /path/to/RNAbpFlow
+      weights_path: /path/to/RNA3DB.ckpt
+      conditioning_dot_bracket: "((((+))))"
+      samples_per_sequence: 1
+      device: cuda:0
+      execution_python_bin: /path/to/compatible/python
+```
+
+The `+`-separated strand lengths must match the ordered physical chains. Alternatively supply explicit finite global-order `conditioning_path`/`map_paths`. Positive interchain entries, across the supplied channels, must form a connected graph over all chains; disconnected conditioning is rejected. This is an adapter scope restriction, not a claim that disconnected RNA complexes are physically impossible. The secondary optimization target is never copied implicitly, even with `use_target_dot_bracket`. Supplied interchain contacts are **conditioning**, not independently predicted interface evidence. [RNAbpFlow's paper describes single-chain RNA monomers](https://www.nature.com/articles/s41592-026-03128-4).
+
+Both adaptations serialize slices of the **same joint coordinates** into one multichain structure, without independent folding, fitting, or docking after prediction. Residue numbering restarts within each chain. Metadata records physical chain layout, experimental method, conditioning where applicable, and unvalidated accuracy. Scoped positional hooks are removed even after inference failure; single-chain requests do not install them.
+
+NUMonomer's pLDDT is still the upstream monomer score, not an interface score. If `clamp_plddt` leaves an unscored suffix, the adapter retains the prefix in metadata and does not publish a fabricated full-length confidence array. Full-length confidence remains one assembly array per sample; per-protomer scores retain repeated physical occurrences. RNAbpFlow provides no pLDDT, pTM, ipTM or PAE: do not reuse the example's pLDDT-based joint objective with that backend. Use an available coordinate-based objective with the secondary score instead.
+
+The existing secondary-to-joint stage logic is unchanged: the accepted sequence crosses the configured secondary threshold, then that same sequence is re-evaluated by the selected tertiary backend to establish the joint baseline. Opting into experimental multichain inference does not change the scientific meaning of NUPACK complex defect or qualify the model's assembly accuracy.
 
 ## CPU and GPU ownership
 
