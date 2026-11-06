@@ -1,0 +1,69 @@
+# @package _global_
+defaults:
+  - base
+  - override env: env
+  - _self_
+
+task_name: rna_secondary_to_joint
+out_dir: null
+seed: 17
+steps: 100
+enable_pyrosetta: false
+use_metropolis: false
+seqs:
+  A: "24-24"
+types:
+  A: rna
+oligo: [AA]
+initializer:
+  mode: random
+
+# These are illustrative settings, not a calibrated design criterion.
+rna_secondary:
+  threshold: 0.10
+  joint_weight: 1.0
+
+mutator:
+  mutator_terms:
+    random_rna:
+      _type: MCMC
+      select_positions: random
+      avoid_current_residue: true
+
+evaluator:
+  evaluator_terms:
+    sequence:
+      _type: sequence
+    tertiary:
+      _type: Alphafold3
+  alphafold3:
+    run_data_pipeline: false
+    num_seeds: 1
+    num_samples: 1
+
+loss:
+  loss_terms:
+    defect:
+      _type: rna_ensemble_defect
+      backend: nupack
+      targets:
+        duplex:
+          strands: [A, A]
+          structure: "((((((((((((((((((((((((+))))))))))))))))))))))))"
+          weight: 1.0
+
+stages:
+  default:
+    oligo: [AA]
+    evaluator: sequence
+    mutators: [random_rna]
+    mutation_num: 1
+    active_loss_terms: [defect]
+    weighted_score_expression: "-defect"
+    acceptance_threshold: null
+    early_stopping: null
+  joint:
+    _entrance: "defect <= ${rna_secondary.threshold}"
+    evaluator: tertiary
+    active_loss_terms: [defect, plddt]
+    weighted_score_expression: "plddt - ${rna_secondary.joint_weight} * defect"

@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+BOOTSTRAP_PY="$(command -v python3 || command -v python || true)"
+if [[ -z "$BOOTSTRAP_PY" ]]; then
+  echo "Astrolabe requires Python to read the installed environment configuration." >&2
+  exit 2
+fi
+exec "$BOOTSTRAP_PY" -c 'import sys; sys.path.insert(0, sys.argv.pop(1)); from astrolabe.launcher import checkout_main; raise SystemExit(checkout_main(sys.argv.pop(1), sys.argv[1:]))' "$REPO_ROOT" "$REPO_ROOT" "$@"
