@@ -1,0 +1,32 @@
+task_name: formal_config
+out_dir: null
+steps: 1
+seed: 17
+types:
+  A: p
+seqs:
+  A: ACDEFGHIKLMNPQRSTVWY
+enable_pyrosetta: false
+skip_complex_poses: true
+initializer:
+  mode: random
+evaluator:
+  evaluator_terms:
+    check:
+      _type: sequence
+      label: ${missing.formal_value}
+mutator:
+  mutator_terms:
+    m:
+      _type: mcmc
+loss:
+  loss_terms: {}
+stages:
+  default:
+    evaluator: check
+    mutators:
+    - m
+    oligo:
+    - A
+    mutation_num: 1
+    weighted_score_expression: '0'

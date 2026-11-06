@@ -485,11 +485,13 @@ class _Server:
             finally:
                 self.active_request = None
                 item["done"].set()
-                self.tasks.task_done()
+                if item.get("stop"):
+                    self.tasks.task_done()
 
     def _handle(self, connection: socket.socket) -> None:
         request_id: str | None = None
         generation: str | None = None
+        admitted_item: dict[str, Any] | None = None
         try:
             _check_child_parent(self.parent_pid)
             if _peer_uid(connection) != os.getuid():
@@ -551,6 +553,7 @@ class _Server:
                     self.tasks.put_nowait(item)
                 except queue.Full as error:
                     raise ModelDaemonError("daemon pending queue is full") from error
+                admitted_item = item
             item["done"].wait()
             _send_frame(connection, item["response"], self.max_frame_bytes)
         except (BrokenPipeError, ConnectionResetError, DaemonDisconnected):
@@ -576,7 +579,11 @@ class _Server:
             except OSError:
                 pass
         finally:
-            connection.close()
+            try:
+                connection.close()
+            finally:
+                if admitted_item is not None:
+                    self.tasks.task_done()
 
     def _drain(self, connection: socket.socket, request_id: str, generation: str) -> None:
         with self.admission:

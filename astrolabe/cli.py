@@ -219,7 +219,8 @@ def _apply_override_config_file(cfg, override_config_path):  # type: (Any, Optio
     if not override_config_path:
         return cfg
     override_cfg = OmegaConf.load(override_config_path)
-    return OmegaConf.merge(cfg, override_cfg)
+    from astrolabe.config_merge import merge_configs
+    return merge_configs(cfg, override_cfg)
 
 
 def _strip_defaults_key(cfg: Any) -> Any:
@@ -424,7 +425,7 @@ def _normalize_dotlist_overrides(overrides: List[str]) -> List[str]:
 def _run_from_config(cfg: Any, *, autoselect_gpu: bool) -> None:
     from astrolabe.startup_validation import startup_validation_scope
 
-    with startup_validation_scope(cfg):
+    with startup_validation_scope(cfg, require_inputs=True):
         _maybe_autoselect_cuda_visible_devices(enabled=autoselect_gpu)
         _preinitialize_cuda_driver(argparse.Namespace(_cuda_preinitialize=True, dry_run=False))
 
@@ -717,14 +718,15 @@ def _cmd_run(ns: argparse.Namespace) -> int:
         overrides=compose_overrides,
     )
     if config_file_path is not None:
+        from astrolabe.config_merge import merge_configs
         external_cfg = OmegaConf.load(str(config_file_path))
         external_cfg = _strip_defaults_key(external_cfg)
         with open_dict(cfg):
-            cfg = OmegaConf.merge(cfg, external_cfg)
+            cfg = merge_configs(cfg, external_cfg)
         if post_overrides:
             dot_cfg = OmegaConf.from_dotlist(_normalize_dotlist_overrides(post_overrides))
             with open_dict(cfg):
-                cfg = OmegaConf.merge(cfg, dot_cfg)
+                cfg = merge_configs(cfg, dot_cfg)
     cfg = _apply_override_config_file(cfg, ns.overlay)
 
     if ns.dry_run:

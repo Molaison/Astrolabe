@@ -3241,7 +3241,7 @@ def run_repeats(
     """Run `_run_pipeline` for configured repeats with unified seed/reset semantics."""
     from astrolabe.startup_validation import validate_startup_config
 
-    validate_startup_config(base_cfg)
+    validate_startup_config(base_cfg, require_inputs=True)
     search = base_cfg.get("search") if hasattr(base_cfg, "get") else None
     if search is not None:
         resume = search.get("resume", False)

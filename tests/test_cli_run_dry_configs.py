@@ -26,6 +26,8 @@ def test_benchmark_binder_v1_4_x_mask_dry_run(capsys) -> None:
             "benchmark_binder_v1_4_x_mask",
             "--dry-run",
             "env=env",
+            "seqs.B=+ACDEFGHIKLMNPQRSTVWY",
+            "homologies.B=null",
         ]
     )
 

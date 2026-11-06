@@ -97,6 +97,7 @@ def load_composed_config(path: str | Path) -> Any:
 
     from astrolabe import config_dir
     from astrolabe.cli import _compose_hydra_config
+    from astrolabe.config_merge import merge_configs
 
     config_path = Path(path).expanduser().resolve()
     repository_config = Path(config_dir()).expanduser().resolve()
@@ -115,7 +116,7 @@ def load_composed_config(path: str | Path) -> Any:
         overrides=["env=env"],
     )
     with open_dict(base):
-        return OmegaConf.merge(base, standalone)
+        return merge_configs(base, standalone)
 
 
 def selected_search_target(cfg: Any) -> tuple[str, str] | None:

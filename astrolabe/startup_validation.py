@@ -12,9 +12,11 @@ import sys
 
 from omegaconf import OmegaConf
 from astrolabe.backend_startup import validate_backend_settings
+from astrolabe.scoring_startup import validate_scoring_settings
 from astrolabe.component_config import merge_component_config
 from astrolabe.loss_config import INTRINSIC_PARAMS
 from astrolabe.stage_config import resolve_mutation_num
+from astrolabe.task_startup import validate_task_config
 
 
 _STAGE_EXPRESSIONS = frozenset({
@@ -107,10 +109,14 @@ _VALIDATED_CONFIG = ContextVar("astrolabe_validated_startup_config", default=Non
 
 
 @contextmanager
-def startup_validation_scope(cfg):
+def startup_validation_scope(cfg, *, require_inputs=False):
     if isinstance(cfg, Mapping):
-        validate_startup_config(cfg)
-    token = _VALIDATED_CONFIG.set(cfg)
+        validate_startup_config(cfg, require_inputs=require_inputs)
+    previous = _VALIDATED_CONFIG.get()
+    input_requirement = require_inputs or (
+        previous is not None and previous[0] is cfg and previous[1]
+    )
+    token = _VALIDATED_CONFIG.set((cfg, input_requirement))
     try:
         yield
     finally:
@@ -172,7 +178,7 @@ def _source_specs():
     return specs
 
 
-def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment=True):
+def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment=True, require_inputs=False):
     """Validate selected configuration, leaving unused backend defaults unresolved.
 
     Returns resolved active loss terms for dependency checks. No output directory,
@@ -180,12 +186,18 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
     """
     if not isinstance(cfg, Mapping):
         raise StartupValidationError("config: expected a mapping")
-    if _VALIDATED_CONFIG.get() is cfg:
+    validated = _VALIDATED_CONFIG.get()
+    if validated is not None and validated[0] is cfg and (validated[1] or not require_inputs):
         return {}
     errors = []
     raw = OmegaConf.to_container(cfg, resolve=False) if OmegaConf.is_config(cfg) else dict(cfg)
     if not isinstance(raw, dict):
         raise StartupValidationError("config: expected a mapping")
+
+    errors.extend(validate_task_config(
+        cfg, raw=raw, resolve_environment=resolve_environment,
+        require_inputs=require_inputs, error_type=StartupValidationError,
+    ))
 
     def resolve(value, path):
         try:
@@ -423,6 +435,11 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                     _check_selector(selector, f"{path}.position_selector", errors)
             if family == "predocker" and kind not in processor_names:
                 errors.append(f"{path}._type: unknown predocker {kind!r}")
+            if family in {"loss", "predocker"}:
+                errors.extend(validate_scoring_settings(
+                    family, kind, resolved, path=path,
+                    check_paths=bool(resolve_environment and not raw.get("dry_run")),
+                ))
             if family == "loss":
                 active_losses[alias] = resolved
                 if kind not in loss_names:
@@ -594,16 +611,19 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
         errors.extend(validate_backend_settings(
             "evaluator", kind, options,
             path=f"evaluator.evaluator_terms.{alias}", check_paths=check_paths,
+            allow_unresolved=not resolve_environment,
         ))
     for alias, kind, options in active_mutators:
         errors.extend(validate_backend_settings(
             "mutator", kind, options,
             path=f"mutator.mutator_terms.{alias}", check_paths=check_paths,
+            allow_unresolved=not resolve_environment,
         ))
     if isinstance(initializer, dict) and initializer.get("mode") == "rfd3" and isinstance(initializer.get("rfd3"), dict):
         errors.extend(validate_backend_settings(
             "initializer", "rfd3", initializer["rfd3"],
             path="initializer.rfd3", check_paths=check_paths,
+            allow_unresolved=not resolve_environment,
         ))
 
     for key, minimum in (("steps", 0), ("repeats", 1)):

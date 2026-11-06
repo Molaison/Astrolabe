@@ -46,8 +46,13 @@ def test_successful_gpu_run_validates_before_initializing_then_loads_application
     )
     monkeypatch.setattr(cli, "_cmd_run", _handler)
     from astrolabe import app, startup_validation
+
+    def _validate_config(cfg, *, require_inputs=False):
+        assert require_inputs is True
+        events.append("validate")
+
     monkeypatch.setattr(startup_validation, "validate_startup_config",
-                        lambda cfg: events.append("validate"))
+                        _validate_config)
     monkeypatch.setattr(app, "run_from_cfg", lambda cfg: events.append("application/model import"))
 
     assert _run_main(["run", "--task", "demo"]) == 0

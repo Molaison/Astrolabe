@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 from collections.abc import Mapping
 from omegaconf import DictConfig, OmegaConf, open_dict, read_write
+from astrolabe.config_merge import merge_configs
 
 
 def merge_component_config(section, default_keys, override, *, resolve=True) -> DictConfig:
@@ -28,7 +29,8 @@ def merge_component_config(section, default_keys, override, *, resolve=True) -> 
             layers.append(disposable_layer(section[key]))
     if override is not None:
         layers.append(disposable_layer(override))
-    merged = OmegaConf.merge(*layers) if layers else OmegaConf.create({})
+    component_path = override._get_full_key(None) if OmegaConf.is_config(override) else ""
+    merged = merge_configs(*layers, path=component_path) if layers else OmegaConf.create({})
     if not OmegaConf.is_dict(merged):
         raise ValueError("component configuration must be a mapping")
     parent = section if OmegaConf.is_config(section) else OmegaConf.create(section)

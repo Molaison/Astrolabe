@@ -31,13 +31,339 @@ _PROTEIN_MPNN_ONLY = frozenset({'proteinmpnn', 'multistateproteinmpnn',
 _MISSING = (None, '', 'None', 'null', '???')
 
 
-def validate_backend_settings(family, kind, options, *, path, check_paths) -> list[str]:
-    """Return field-specific errors for one selected backend, without side effects."""
+def _validate_common_options(family, kind, cfg, root, *, allow_unresolved=False):
+    """Check consumed controls, not the vendor's entire scientific schema.
+
+    Only explicitly supplied values are checked. In particular, null remains
+    meaningful for optional assets, attached services and inherited execution
+    policy. Numeric YAML strings and booleans are not numeric controls.
+    """
+    errors = []
+    absent = object()
+
+    def get(field):
+        node = cfg
+        for part in field.split('.'):
+            if not isinstance(node, Mapping) or part not in node:
+                return absent
+            node = node[part]
+        if allow_unresolved and isinstance(node, str) and '${' in node:
+            return absent
+        return node
+
+    def fail(field, message):
+        errors.append(f'{root}.{field}: {message}')
+
+    def numeric(field, low=0, *, integer=True, high=None, positive=False, nullable=False):
+        raw = get(field)
+        if raw is absent or (raw is None and nullable):
+            return
+        correct_type = type(raw) is int if integer else type(raw) in (int, float)
+        try:
+            good = (correct_type and (type(raw) is int or math.isfinite(raw)) and raw >= low
+                    and (not positive or raw > 0) and (high is None or raw <= high))
+        except (OverflowError, TypeError, ValueError):
+            good = False
+        if not good:
+            bound = '> 0' if positive else f'>= {low}'
+            if high is not None:
+                bound += f' and <= {high}'
+            fail(field, f'expected {"integer" if integer else "finite number"} {bound}')
+
+    def boolean(field, *, binary=False):
+        raw = get(field)
+        if raw is not absent and not (type(raw) is bool or (binary and type(raw) is int and raw in (0, 1))):
+            fail(field, 'expected boolean' + (' or integer 0/1' if binary else ''))
+
+    def enum(field, allowed, *, nullable=False):
+        raw = get(field)
+        if raw is not absent and not (raw is None and nullable):
+            if not isinstance(raw, str) or raw not in allowed:
+                fail(field, f'must be one of {sorted(allowed)!r}')
+
+    def text(field, *, nullable=False):
+        raw = get(field)
+        if raw is not absent and not (nullable and raw in (None, '')):
+            if not isinstance(raw, (str, os.PathLike)) or not str(raw).strip():
+                fail(field, 'expected nonempty name or path')
+
+    def mapping(field):
+        raw = get(field)
+        if raw is not absent and not isinstance(raw, Mapping):
+            fail(field, 'expected mapping')
+
+    def seed(field='seed', *, nullable=True):
+        numeric(field, high=2**32 - 1, nullable=nullable)
+
+    # NativeModelClient consumes these for AF2/AF3/ESMFold/RhoFold.
+    native = family == 'evaluator' and kind in {'alphafold2', 'alphafold3', 'esmfold', 'rhofold'}
+    mpnn = family == 'mutator' and str(kind).lower() in {name.lower() for name in _MPNN}
+    if native or mpnn:
+        enum('execution_mode', {'daemon', 'in_process'}, nullable=True)
+        if native:
+            enum('execution', {'daemon', 'in_process'}, nullable=True)
+    for field in ('execution_request_timeout', 'request_timeout', 'startup_timeout', 'shutdown_timeout'):
+        numeric(field, integer=False, positive=True, nullable=True)
+    numeric('execution_max_frame_bytes', 1)
+
+    if family == 'evaluator':
+        if kind == 'alphafold2':
+            numeric('model_id', 1, high=5)
+            enum('suffix', {'ptm', 'multimer', 'multimer_v2', 'multimer_v3'})
+            numeric('recycles')
+            numeric('msa_clusters', 1)
+            mapping('initial_guess')
+            for field in ('enabled', 'use_initial_prev_pos', 'use_template_features',
+                          'allow_missing_chains', 'allow_missing_residues'):
+                # enabled:null means auto-enable when a path is provided.
+                if field != 'enabled' or get('initial_guess.enabled') is not None:
+                    boolean('initial_guess.' + field)
+        elif kind == 'alphafold3':
+            for field in ('num_samples', 'num_seeds'):
+                numeric(field, 1)
+            for field in ('num_recycles', 'refstructure_workers', 'refstructure_cache_max_entries',
+                          'msa_cache_max_entries', 'bucket_pad_tolerance'):
+                numeric(field)
+            for field in ('refstructure_cache', 'msa_cache'):
+                boolean(field, binary=True)
+            boolean('save_embeddings')
+            text('service_socket', nullable=True)
+            buckets = get('buckets')
+            if buckets is not absent and buckets is not None and (
+                    not isinstance(buckets, (list, tuple)) or not buckets
+                    or any(type(x) is not int or x <= 0 for x in buckets)
+                    or list(buckets) != sorted(set(buckets))):
+                fail('buckets', 'expected strictly increasing positive integer list or null')
+        elif kind == 'esmfold':
+            text('model_name')  # Both cache identifiers and local .pt files work.
+            text('device', nullable=True)
+        elif kind == 'protenix':
+            text('model_name', nullable=True)  # May be inferred from checkpoint stem.
+            enum('dtype', {'fp32', 'fp16', 'bf16'})
+            for field in ('model', 'sample_diffusion', 'sample_diffusion.guidance',
+                          'infer_setting', 'data', 'data.msa', 'data.template',
+                          'model.constraint_embedder', 'skip_amp'):
+                mapping(field)
+            numeric('model.N_cycle')  # Native trunk initializes s/z before the recycle loop.
+            for field in ('N_sample', 'N_step', 'N_sample_mini_rollout', 'N_step_mini_rollout'):
+                numeric('sample_diffusion.' + field, 1)
+            for field in ('gamma0', 'gamma_min', 'noise_scale_lambda', 'step_scale_eta'):
+                numeric('sample_diffusion.' + field, integer=False)
+            for field in ('chunk_size', 'lddt_metrics_chunk_size', 'sample_diffusion_chunk_size'):
+                numeric('infer_setting.' + field, 1, nullable=True)
+            for field in ('num_workers', 'data.num_dl_workers'):
+                numeric(field)
+            for field in ('need_atom_confidence', 'sorted_by_ranking_score', 'load_strict',
+                          'use_msa', 'enable_tf32', 'enable_efficient_fusion',
+                          'enable_diffusion_shared_vars_cache', 'msa_pair_as_unpair',
+                          'use_template', 'use_rna_msa', 'use_seeds_in_json',
+                          'use_deepspeed_evo_attention', 'data.msa.enable',
+                          'data.msa.enable_rna_msa', 'data.template.enable',
+                          'sample_diffusion.guidance.enable'):
+                boolean(field)
+            seed()
+            seeds = get('seeds')
+            if seeds is not absent:
+                if not isinstance(seeds, (list, tuple)) or not seeds:
+                    fail('seeds', 'expected nonempty integer seed list')
+                else:
+                    for index, item in enumerate(seeds):
+                        if type(item) is not int or not 0 <= item <= 2**32 - 1:
+                            fail(f'seeds.{index}', 'expected integer seed in [0, 4294967295]')
+        elif kind == 'boltz':
+            numeric('recycling_steps')
+            numeric('num_workers')  # DataLoader supports zero workers.
+            for field in ('sampling_steps', 'diffusion_samples'):
+                numeric(field, 1)
+            devices = get('devices')
+            if devices is not absent and not (
+                    type(devices) is int and devices > 0 or devices == 'auto'
+                    or isinstance(devices, (list, tuple)) and devices
+                    and all(type(x) is int and x >= 0 for x in devices)
+                    and len(set(devices)) == len(devices)):
+                fail('devices', 'expected positive count, auto, or unique nonnegative device indices')
+            enum('accelerator', {'auto', 'cpu', 'gpu', 'cuda', 'mps', 'tpu'})
+            enum('output_format', {'mmcif', 'pdb'})
+            enum('msa_pairing_strategy', {'greedy', 'complete'})
+            for field in ('write_full_pae', 'write_full_pde', 'use_msa_server'):
+                boolean(field)
+            text('msa_server_url', nullable=True)
+        elif kind == 'chai1':
+            numeric('num_trunk_recycles')
+            numeric('recycle_msa_subsample')
+            for field in ('num_diffn_timesteps', 'num_diffn_samples', 'num_trunk_samples'):
+                numeric(field, 1)
+            for field in ('use_esm_embeddings', 'use_msa_server', 'use_templates_server',
+                          'low_memory', 'fasta_names_as_cif_chains'):
+                boolean(field)
+            seed()
+        elif kind == 'rf3':
+            numeric('n_recycles')
+            for field in ('diffusion_batch_size', 'num_steps'):
+                numeric(field, 1)
+            numeric('template_noise_scale', integer=False)
+            numeric('early_stopping_plddt_threshold', integer=False, nullable=True)
+            for field in ('fallback_conformer_to_input_coords', 'compress_outputs'):
+                # Null fallback deliberately removes the override in _engine_config.
+                if field != 'fallback_conformer_to_input_coords' or get(field) is not None:
+                    boolean(field)
+    elif family == 'mutator':
+        normalized = str(kind).lower()
+        if mpnn:
+            numeric('number_of_batches', 1)
+            numeric('temperature', integer=False, positive=True)
+            seed()
+            for field in ('homo_oligomer', 'ligand_mpnn_use_atom_context',
+                          'ligand_mpnn_use_side_chain_context', 'parse_atoms_with_zero_occupancy',
+                          'save_stats', 'verbose', 'zero_indexed'):
+                boolean(field, binary=True)
+            enum('bias_mode', {'additive', 'multiplicative'})
+            numeric('ligand_mpnn_cutoff_for_score', integer=False)
+            for field in ('fallback_to_all_mutable_if_selector_empty', 'enforce_mutation_num',
+                          'map_sequence_positions_to_pdb_residues'):
+                boolean(field)
+            enum('enforce_mutation_distribution', {'raw_log_probs', 'sampling_probs'})
+            numeric('supplemental_structure_weight', integer=False)
+            numeric('entropy_cutoff', integer=False, nullable=True)
+        elif normalized == 'dplm':
+            for field in ('max_iter', 'num_samples'):
+                numeric(field, 1)
+            numeric('temperature', integer=False, positive=True)
+            text('model_name')  # HF names and local directories are both supported.
+            text('sampling_strategy')  # The installed DPLM defines the strategy names.
+            text('device')
+            for field in ('daemon', 'response_cache', 'prefetch_save',
+                          'prefetch_invalidate_on_sequence_change', 'quality_filter_enable',
+                          'quality_filter_fallback_to_raw'):
+                boolean(field)
+            for field in ('quality_filter_max_rounds', 'quality_filter_attempt_num_samples'):
+                numeric(field, nullable=True)
+        elif normalized in {'mcmc', 'pore_blocker_mcmc'}:
+            # mutation_method is stored but not dispatched on; do not invent an enum.
+            numeric('max_mutations', low=-math.inf, nullable=True)
+            boolean('avoid_current_residue')
+            for field in ('allowed_residues', 'disallowed_residues'):
+                residues = get(field)
+                if residues is not absent and residues is not None and (
+                        not isinstance(residues, (str, list, tuple))
+                        or any(not isinstance(x, str) or len(x) != 1 or x.upper() not in 'ACDEFGHIKLMNPQRSTVWY' for x in residues)):
+                    fail(field, 'expected protein residue letters or null')
+    return errors
+
+
+def _validate_af2_initial_guess(guess, *, path, base, check_paths, allow_unresolved):
+    """Mirror AF2's per-oligomer overlay/path precedence without loading a structure."""
+    if not isinstance(guess, Mapping):
+        return []  # The common mapping check already reports this.
+    errors = []
+
+    def unresolved(raw):
+        return allow_unresolved and isinstance(raw, str) and '${' in raw
+
+    def fail(field, reason):
+        errors.append(f'{path}.{field}: {reason}')
+
+    def check(block, origins):
+        enabled = block.get('enabled')
+        if unresolved(enabled):
+            return
+        # The consumer's auto-enable rule uses path, not source or legacy alias.
+        if enabled is False or (enabled is None and not block.get('path')):
+            return
+        for flag in ('enabled', 'use_initial_prev_pos', 'use_template_features',
+                     'allow_missing_chains', 'allow_missing_residues'):
+            if flag in block and not unresolved(block[flag]) and not (
+                    type(block[flag]) is bool or flag == 'enabled' and block[flag] is None):
+                fail(origins.get(flag, flag), 'expected boolean' + (' or null' if flag == 'enabled' else ''))
+        field = 'path' if block.get('path') else 'init_guess_path' if 'init_guess_path' in block else 'path'
+        raw = block.get(field)
+        label = origins.get(field, field)
+        if not unresolved(raw):
+            if raw is None or raw == '':
+                fail(label, 'is required when initial_guess is enabled (path or init_guess_path)')
+            elif not isinstance(raw, (str, os.PathLike)) or not str(raw).strip():
+                fail(label, 'must be a nonempty structure file path')
+            else:
+                target = Path(raw).expanduser()
+                if base is not None and not target.is_absolute():
+                    target = base / target
+                if check_paths and not target.is_file():
+                    fail(label, f'file does not exist: {target}')
+        chain_map = block.get('chain_map')
+        if chain_map is None or unresolved(chain_map):
+            return
+        label = origins.get('chain_map', 'chain_map')
+        if not isinstance(chain_map, Mapping):
+            fail(label, 'must map input chain or protomer names to source chain names or null')
+            return
+        for chain, source_chain in chain_map.items():
+            if not isinstance(chain, str) or not chain:
+                fail(label, 'keys must be nonempty input chain or protomer names')
+            elif not unresolved(source_chain):
+                if source_chain is not None and not isinstance(source_chain, str):
+                    fail(f'{label}.{chain}', 'must be a source chain name or null')
+                elif source_chain in (None, '', '-') and not (
+                        block.get('allow_missing_chains', False) is True
+                        or unresolved(block.get('allow_missing_chains'))):
+                    fail(f'{label}.{chain}', 'omitted chain requires allow_missing_chains=true')
+
+    # These are settings, not the consumer's inline per-oligomer blocks.
+    fields = {'enabled', 'path', 'source', 'init_guess_path', 'chain_map',
+              'allow_missing_chains', 'allow_missing_residues', 'use_initial_prev_pos',
+              'use_template_features', 'query_residue_index_jumps', 'residue_index_jumps'}
+    tables = {}
+    for table in ('references', 'paths', 'chain_maps'):
+        raw = guess.get(table)
+        if isinstance(raw, Mapping):
+            tables[table] = raw
+        elif raw is not None and not unresolved(raw) and guess.get('enabled') is not False:
+            fail(table, 'expected per-oligomer mapping')
+    inline = {key: val for key, val in guess.items()
+              if key not in fields | {'references', 'paths', 'chain_maps'} and isinstance(val, Mapping)}
+    names = set(inline)
+    for table in tables.values():
+        names.update(table)
+    global_block = {key: val for key, val in guess.items() if key in fields}
+    origins = {key: key for key in global_block}
+    if not names or guess.get('path'):
+        check(global_block, origins)
+    for name in names:
+        block, locations = dict(global_block), dict(origins)
+        override = inline.get(name)
+        prefix = str(name)
+        if override is None and name in tables.get('references', {}):
+            override = tables['references'][name]
+            prefix = f'references.{name}'
+            if not isinstance(override, Mapping):
+                if guess.get('enabled') is not False:
+                    fail(prefix, 'expected initial-guess mapping')
+                continue
+        if override is not None:
+            block.update(override)
+            locations.update({key: f'{prefix}.{key}' for key in override})
+        else:
+            for table, field in (('paths', 'path'), ('chain_maps', 'chain_map')):
+                if name in tables.get(table, {}):
+                    block[field] = tables[table][name]
+                    locations[field] = f'{table}.{name}'
+        check(block, locations)
+    return errors
+
+
+def validate_backend_settings(family, kind, options, *, path, check_paths,
+                              allow_unresolved=False) -> list[str]:
+    """Return field-specific errors without side effects.
+
+    ``allow_unresolved`` is solely for the caller's intentional unresolved
+    dry-run pass; disabling filesystem checks alone does not enable it.
+    """
     root = str(path).rstrip('.')
     errors: list[str] = []
     if not isinstance(options, Mapping):
         return [f'{root}: expected a mapping of resolved backend settings']
     cfg = options
+    errors.extend(_validate_common_options(family, kind, cfg, root,
+                                           allow_unresolved=allow_unresolved))
     child_base = None
     if family == 'evaluator' and kind in {'alphafold2', 'alphafold3', 'esmfold', 'rhofold'}:
         from astrolabe.model_execution import execution_directory, execution_mode
@@ -45,9 +371,12 @@ def validate_backend_settings(family, kind, options, *, path, check_paths) -> li
             selected_mode = cfg.get('execution_mode')
             if selected_mode is None:
                 selected_mode = cfg.get('execution')
-            mode = execution_mode(selected_mode)
+            mode = execution_mode(None if allow_unresolved and isinstance(selected_mode, str)
+                                  and '${' in selected_mode else selected_mode)
         except (TypeError, ValueError) as error:
-            return [f'{root}.execution_mode: {error}']
+            field = 'execution_mode' if cfg.get('execution_mode') is not None else 'execution'
+            errors.append(f'{root}.{field}: {error}')
+            return errors
         if mode.value == 'daemon':
             try:
                 child_base = Path(execution_directory(cfg.get('execution_cwd')))
@@ -86,11 +415,15 @@ def validate_backend_settings(family, kind, options, *, path, check_paths) -> li
 
     def choice(field, allowed, default=None):
         selected = cfg.get(field, default)
+        if allow_unresolved and isinstance(selected, str) and '${' in selected:
+            return
         if not isinstance(selected, str) or selected not in allowed:
             fail(field, f'must be one of {sorted(allowed)!r}')
 
     def number(field, default, low, *, integer=False, high=None):
         selected = cfg.get(field, default)
+        if allow_unresolved and isinstance(selected, str) and '${' in selected:
+            return
         try:
             parsed = int(selected) if integer else float(selected)
             if isinstance(selected, bool) or (integer and (isinstance(selected, float) and not selected.is_integer())):
@@ -115,6 +448,8 @@ def validate_backend_settings(family, kind, options, *, path, check_paths) -> li
     for field in ('execution_env', 'env'):
         if value(field) is not None:
             env = value(field)
+            if allow_unresolved and isinstance(env, str) and '${' in env:
+                continue
             if not isinstance(env, Mapping) or any(not isinstance(k, str) or not isinstance(v, str) for k, v in env.items()):
                 fail(field, 'must map string names to string values')
 
@@ -124,25 +459,48 @@ def validate_backend_settings(family, kind, options, *, path, check_paths) -> li
                 asset('model_dir', kind='dir', base=child_base)
             if value('flash_attention_implementation') not in _MISSING:
                 choice('flash_attention_implementation', {'cudnn', 'triton', 'xla'})
-            for field, minimum in (('num_samples', 1), ('num_seeds', 1), ('num_recycles', 0),
-                                   ('refstructure_workers', 0), ('refstructure_cache_max_entries', 0),
-                                   ('msa_cache_max_entries', 0), ('bucket_pad_tolerance', 0)):
-                if value(field) is not None:
-                    number(field, None, minimum, integer=True)
-            for field in ('refstructure_cache', 'msa_cache'):
-                if value(field) is not None and value(field) not in (True, False, 0, 1):
-                    fail(field, 'must be a boolean or 0/1')
-            buckets = value('buckets')
-            if buckets is not None and (not isinstance(buckets, (list, tuple)) or not buckets
-                    or any(type(x) is not int or x <= 0 for x in buckets)
-                    or list(buckets) != sorted(set(buckets))):
-                fail('buckets', 'must be a strictly increasing list of positive integers')
+            # alphafold3_setup returns before local cache setup for attached services.
+            cache = value('jax_compilation_cache_dir')
+            if not value('service_socket') and cache is not None and cache != '':
+                if allow_unresolved and isinstance(cache, str) and '${' in cache:
+                    pass
+                elif not isinstance(cache, (str, os.PathLike)) or not str(cache).strip():
+                    fail('jax_compilation_cache_dir', 'must be a directory path or null')
+                else:
+                    target = Path(cache).expanduser()
+                    if child_base is not None and not target.is_absolute():
+                        target = child_base / target
+                    if check_paths and target.exists() and not target.is_dir():
+                        fail('jax_compilation_cache_dir', f'existing path is not a directory: {target}')
         elif kind == 'alphafold2':
             if value('data_dir') not in _MISSING:
                 asset('data_dir', kind='dir', base=child_base)
+            errors.extend(_validate_af2_initial_guess(
+                value('initial_guess'), path=f'{root}.initial_guess', base=child_base,
+                check_paths=check_paths, allow_unresolved=allow_unresolved,
+            ))
         elif kind == 'esmfold':
             if value('model_name') not in _MISSING:
-                asset('model_name', explicit_only=True, base=child_base)
+                asset('model_name', explicit_only=not str(value('model_name')).endswith('.pt'), base=child_base)
+        elif kind == 'protenix':
+            for field, asset_kind in (('load_checkpoint_path', 'file'), ('load_checkpoint_dir', 'dir')):
+                if value(field) not in _MISSING:
+                    asset(field, kind=asset_kind)
+        elif kind == 'boltz':
+            # Boltz creates its cache before download; this is an output path,
+            # not an existing model asset. Validation must never create it.
+            cache = value('cache')
+            if cache not in _MISSING:
+                if allow_unresolved and isinstance(cache, str) and '${' in cache:
+                    pass
+                elif not isinstance(cache, (str, os.PathLike)) or not str(cache).strip():
+                    fail('cache', 'must be a directory path')
+                else:
+                    target = Path(cache).expanduser()
+                    if check_paths and target.exists() and not target.is_dir():
+                        fail('cache', f'existing path is not a directory: {target}')
+            if value('checkpoint') not in _MISSING:
+                asset('checkpoint')
         elif kind in _RNA:
             choice('multichain_mode', {'reject', 'experimental'}, 'reject')
             if kind in {'drfold2', 'zfold'} and value('multichain_mode') == 'experimental':
@@ -255,6 +613,8 @@ def validate_backend_settings(family, kind, options, *, path, check_paths) -> li
         # MutatorRegistry.get lowercases names; honor that native behavior.
         normalized_kind = str(kind).strip().lower()
         if normalized_kind in {name.lower() for name in _MPNN}:
+            if allow_unresolved and isinstance(value('model_type'), str) and '${' in value('model_type'):
+                return errors  # The selected checkpoint cannot yet be determined.
             subtype = str(cfg.get('model_type') or 'protein_mpnn').lower()
             if subtype not in _MPNN_CHECKPOINTS:
                 fail('model_type', f'must be one of {sorted(_MPNN_CHECKPOINTS)!r}')
@@ -268,6 +628,9 @@ def validate_backend_settings(family, kind, options, *, path, check_paths) -> li
                 fail('backend_factory', 'is required as an import path for daemon mode')
             if mode not in {'daemon', 'in_process'}:
                 fail('execution_mode', 'must be daemon or in_process')
+        elif normalized_kind == 'dplm':
+            if value('repo_path') not in _MISSING:
+                asset('repo_path', kind='dir')
         elif normalized_kind == 'surfdesign':
             for field, asset_kind in (('python_bin', 'file'), ('repo_path', 'dir'), ('experiment_path', 'dir')):
                 asset(field, required=True, kind=asset_kind, executable=field == 'python_bin')

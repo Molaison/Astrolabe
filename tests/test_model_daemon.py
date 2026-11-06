@@ -463,6 +463,80 @@ def test_shutdown_stops_admission_and_drains_active_request(tmp_path: Path) -> N
     assert outcome.get_nowait() == {"released": True}
 
 
+@pytest.mark.parametrize("outcome", ["result", "model_error", "disconnect", "send_error"])
+def test_drain_waits_for_infer_response_finalization(tmp_path, monkeypatch, outcome):
+    send_entered = threading.Event()
+    release_send = threading.Event()
+    join_entered = threading.Event()
+    stop_response_attempted = threading.Event()
+
+    def handle(_payload):
+        if outcome == "model_error":
+            raise ValueError("model failed")
+        return {"released": True}
+
+    server = model_daemon._Server(
+        handle, socket_path=tmp_path / "unused.sock", identity="test-identity",
+        backend="test", max_pending=1, max_frame_bytes=model_daemon.MAX_FRAME_BYTES,
+        parent_pid=None,
+    )
+    real_send = model_daemon._send_frame
+    real_join = server.tasks.join
+
+    def gated_send(connection, payload, max_frame_bytes=model_daemon.MAX_FRAME_BYTES):
+        if payload.get("request_id") == "infer-request":
+            send_entered.set()
+            assert release_send.wait(5)
+            if outcome == "send_error":
+                raise BrokenPipeError("injected send failure")
+        elif payload.get("request_id") == "stop-request":
+            stop_response_attempted.set()
+        return real_send(connection, payload, max_frame_bytes)
+
+    def observed_join():
+        join_entered.set()
+        real_join()
+
+    monkeypatch.setattr(model_daemon, "_send_frame", gated_send)
+    monkeypatch.setattr(server.tasks, "join", observed_join)
+    infer_client, infer_server = socket.socketpair()
+    stop_client, stop_server = socket.socketpair()
+    server.worker.start()
+    infer_thread = threading.Thread(target=server._handle, args=(infer_server,))
+    stop_thread = threading.Thread(target=server._handle, args=(stop_server,))
+    try:
+        infer_thread.start()
+        infer_client.sendall(model_daemon._frame({
+            "protocol": model_daemon.PROTOCOL, "identity": server.identity,
+            "request_id": "infer-request", "generation": "test-generation",
+            "type": "infer", "payload": {},
+        }))
+        assert send_entered.wait(5)
+        if outcome == "disconnect":
+            infer_client.close()
+        stop_thread.start()
+        stop_client.sendall(model_daemon._frame({
+            "protocol": model_daemon.PROTOCOL, "identity": server.identity,
+            "request_id": "stop-request", "generation": "test-generation",
+            "type": "stop",
+        }))
+        assert join_entered.wait(5)
+        assert not stop_response_attempted.wait(0.2)
+        assert server.tasks.unfinished_tasks == 1
+        assert not server.shutdown_complete.is_set()
+    finally:
+        release_send.set()
+        infer_thread.join(timeout=5)
+        stop_thread.join(timeout=5)
+        server.worker.join(timeout=5)
+        infer_client.close()
+        stop_client.close()
+    assert not infer_thread.is_alive() and not stop_thread.is_alive()
+    assert not server.worker.is_alive()
+    assert server.tasks.unfinished_tasks == 0
+    assert server.shutdown_complete.is_set()
+
+
 def test_startup_failure_is_explicit(tmp_path: Path) -> None:
     spec = _spec(tmp_path, factory="adapter:broken")
     daemon = OwnedModelDaemon(spec, startup_timeout=5)

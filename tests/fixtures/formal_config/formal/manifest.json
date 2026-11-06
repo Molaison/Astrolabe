@@ -1,0 +1,113 @@
+[
+  {
+    "id": "binder_interface_beam",
+    "file": "binder_interface_beam.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "binder_interface_beam.yaml",
+    "source": [
+      "config/binder_interface_beam.yaml",
+      "config/base.yaml"
+    ],
+    "fixture_input_overrides": {
+      "seqs.A": "ACDEFGHIKLMNPQRSTVWY",
+      "seqs.B": "ACDEFGHIKLMNPQRSTVWY"
+    }
+  },
+  {
+    "id": "release_protein",
+    "file": "release_protein.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "release_protein.yaml",
+    "source": [
+      "config/release_protein.yaml",
+      "config/base.yaml"
+    ],
+    "fixture_input_overrides": {}
+  },
+  {
+    "id": "benchmark_binder_v1_4",
+    "file": "benchmark_binder_v1_4.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "benchmark_binder_v1_4.yaml",
+    "source": [
+      "config/benchmark_binder_v1_4.yaml",
+      "config/base.yaml"
+    ],
+    "fixture_input_overrides": {
+      "homologies.B": null,
+      "types.B": "p",
+      "seqs.B": "ACDEFGHIKLMNPQRSTVWY",
+      "types.A": "p"
+    }
+  },
+  {
+    "id": "benchmark_ligand_v1",
+    "file": "benchmark_ligand_v1.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "benchmark_ligand_v1.yaml",
+    "source": [
+      "config/benchmark_ligand_v1.yaml",
+      "config/base.yaml"
+    ],
+    "fixture_input_overrides": {
+      "types.B": "c",
+      "seqs.B": "ATP",
+      "types.A": "p",
+      "seqs.A": "ACDEFGHIKLMNPQRSTVWY"
+    }
+  },
+  {
+    "id": "benchmark_oligomer_v4_refine",
+    "file": "benchmark_oligomer_v4_refine.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "benchmark_oligomer_v4_refine.yaml",
+    "source": [
+      "config/benchmark_oligomer_v4_refine.yaml",
+      "config/base.yaml"
+    ],
+    "fixture_input_overrides": {
+      "types.A": "p",
+      "seqs.A": "ACDEFGHIKLMNPQRSTVWY"
+    }
+  },
+  {
+    "id": "benchmark_multitarget_binder_dplm_v1",
+    "file": "benchmark_multitarget_binder_dplm_v1.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "benchmark_multitarget_binder_dplm_v1.yaml",
+    "source": [
+      "config/benchmark_multitarget_binder_dplm_v1.yaml",
+      "config/base.yaml"
+    ],
+    "fixture_input_overrides": {
+      "types.B": "p",
+      "seqs.B": "ACDEFGHIKLMNPQRSTVWY",
+      "types.A": "p",
+      "types.C": "p",
+      "seqs.C": "ACDEFGHIKLMNPQRSTVWY"
+    }
+  },
+  {
+    "id": "benchmark_peptide_binder_v1",
+    "file": "benchmark_peptide_binder_v1.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "benchmark_peptide_binder_v1.yaml",
+    "source": [
+      "config/benchmark_peptide_binder_v1.yaml",
+      "config/base.yaml"
+    ],
+    "fixture_input_overrides": {
+      "homologies.B": null,
+      "types.B": "p",
+      "seqs.B": "ACDEFGHIKLMNPQRSTVWY",
+      "types.A": "p"
+    }
+  }
+]

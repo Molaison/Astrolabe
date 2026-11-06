@@ -52,7 +52,7 @@ class Astrolabe:
         """Run a direct design composition or the configured repeat lifecycle."""
         from astrolabe.startup_validation import startup_validation_scope
 
-        with startup_validation_scope(self.config):
+        with startup_validation_scope(self.config, require_inputs=True):
             return self._run_validated()
 
     def _run_validated(self) -> RunResult | None:

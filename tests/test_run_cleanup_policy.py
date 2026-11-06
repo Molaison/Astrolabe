@@ -9,6 +9,22 @@ import run
 from astrolabe.run_config_lifecycle import build_persisted_run_config
 
 
+def _repeat_config(**updates):
+    cfg = {
+        "task_name": "demo", "repeats": 1, "seed": 17, "steps": 1,
+        "seqs": {"A": "ACDEFGHIKLMNPQRSTVWY"}, "types": {"A": "p"},
+        "homologies": {},
+        "evaluator": {"evaluator_terms": {"Sequence": {"_type": "sequence"}}},
+        "mutator": {"mutator_terms": {"MCMC": {"_type": "mcmc"}}},
+        "stages": {"default": {
+            "oligo": ["A"], "evaluator": "Sequence", "mutators": ["MCMC"],
+            "mutation_num": 1, "weighted_score_expression": "0",
+        }},
+    }
+    cfg.update(updates)
+    return OmegaConf.create(cfg)
+
+
 def test_saved_config_keeps_explicit_losses_used_outside_stage_expression():
     cfg = OmegaConf.create({
         "stages": {"default": {"weighted_score_expression": "plddt"}},
@@ -68,13 +84,7 @@ def test_cleanup_deletes_auto_managed_dir_with_marker(tmp_path):
 
 
 def test_run_repeats_derives_distinct_seeds_from_explicit_base_seed(monkeypatch):
-    cfg = OmegaConf.create(
-        {
-            "task_name": "demo",
-            "repeats": 3,
-            "seed": 17,
-        }
-    )
+    cfg = _repeat_config(repeats=3)
 
     seen = []
     monkeypatch.setattr(run, "install_handlers", lambda: None)
@@ -90,14 +100,7 @@ def test_run_repeats_isolates_explicit_raw_model_results_dir_by_repeat(
     monkeypatch, tmp_path
 ):
     raw_root = tmp_path / "raw"
-    cfg = OmegaConf.create(
-        {
-            "task_name": "demo",
-            "repeats": 3,
-            "seed": 17,
-            "raw_model_results_dir": str(raw_root),
-        }
-    )
+    cfg = _repeat_config(repeats=3, raw_model_results_dir=str(raw_root))
 
     seen = []
     monkeypatch.setattr(run, "install_handlers", lambda: None)
@@ -129,27 +132,20 @@ def test_run_repeats_isolates_explicit_raw_model_results_dir_by_repeat(
 def test_run_repeats_rejects_coercible_non_integer_lifecycle_values_before_run(
     monkeypatch, field, value
 ):
-    cfg = {"task_name": "demo", "repeats": 1, "seed": 17}
-    cfg[field] = value
+    cfg = _repeat_config(**{field: value})
     events = []
     monkeypatch.setattr(run, "install_handlers", lambda: events.append("handlers"))
     monkeypatch.setattr(run, "stop_requested", lambda: False)
     monkeypatch.setattr(run, "_run_pipeline", lambda _: events.append("pipeline"))
 
     with pytest.raises(ValueError, match=field):
-        run.run_repeats(OmegaConf.create(cfg))
+        run.run_repeats(cfg)
 
     assert events == []
 
 
 def test_run_repeats_rejects_explicit_seed_overflow_before_run(monkeypatch):
-    cfg = OmegaConf.create(
-        {
-            "task_name": "demo",
-            "repeats": 2,
-            "seed": 2**32 - 1,
-        }
-    )
+    cfg = _repeat_config(repeats=2, seed=2**32 - 1)
     events = []
     monkeypatch.setattr(run, "install_handlers", lambda: events.append("handlers"))
     monkeypatch.setattr(run, "stop_requested", lambda: False)
@@ -162,18 +158,9 @@ def test_run_repeats_rejects_explicit_seed_overflow_before_run(monkeypatch):
 
 
 def test_run_repeats_rejects_resume_with_multiple_repeats_before_setup(monkeypatch):
-    cfg = OmegaConf.create(
-        {
-            "task_name": "demo",
-            "repeats": 2,
-            "seed": 17,
-            "search": {
-                "algorithm": "branching",
-                "owner": "native_refinement",
-                "resume": True,
-            },
-        }
-    )
+    cfg = _repeat_config(repeats=2, search={
+        "algorithm": "branching", "owner": "native_refinement", "resume": True,
+    })
     events = []
     monkeypatch.setattr(run, "install_handlers", lambda: events.append("handlers"))
     monkeypatch.setattr(run, "plan_repeat_runs", lambda _: events.append("plan"))
