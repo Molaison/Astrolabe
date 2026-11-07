@@ -42,7 +42,8 @@ class NativeBranchTrial:
 
     def __init__(self, pool, runtime, *, identity, worker, task_factory,
                  result_factory, probe, reserve=None, retry=None, report=None,
-                 terminal_proposal_errors=True, charge_identity=None):
+                 terminal_proposal_errors=True, charge_identity=None,
+                 before_wait=None, ordered_results=False):
         self.runtime, self.data = runtime, runtime.data
         self.identity = identity
         self.worker, self.task_factory = worker, task_factory
@@ -55,7 +56,8 @@ class NativeBranchTrial:
         self._restored = set()
         self._state = self._request = None
         self.executor = BranchExecutor(pool, submit=self._submit,
-            resolve=self._resolve, on_error=self._failure, on_observed=self._observe)
+            resolve=self._resolve, on_error=self._failure, on_observed=self._observe,
+            before_wait=before_wait, ordered_results=ordered_results)
 
     def _name(self, job):
         return "native-jobs/" + job.identity
@@ -158,8 +160,11 @@ class NativeBranchTrial:
                 if raw is None:
                     raw = self.probe(job, task)
                 if raw is not None:
-                    future = Future()
-                    future.set_result(raw)
+                    if isinstance(raw, Future):
+                        future = raw
+                    else:
+                        future = Future()
+                        future.set_result(raw)
                 elif receipt.status == "reserved":
                     future = self._submit_task(self.executor.pool, job, task)
                 elif receipt.status in ("issued", "unknown"):

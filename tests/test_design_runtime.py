@@ -128,6 +128,52 @@ def test_single_owner_prevents_two_writers(tmp_path):
             Runtime(root=tmp_path)
 
 
+def test_persistent_journal_retains_full_sync_and_reopens(tmp_path):
+    import sqlite3
+
+    with Runtime(root=tmp_path) as runtime:
+        assert runtime._connection.execute("PRAGMA journal_mode").fetchone() == ("persist",)
+        assert runtime._connection.execute("PRAGMA synchronous").fetchone() == (2,)
+        runtime.save("first", {"value": 1})
+        journal = tmp_path / "journal.sqlite-journal"
+        assert journal.is_file()
+        assert journal.read_bytes()[:28] == bytes(28)
+        # An incomplete database transaction must roll back on reopen.
+        runtime._connection.execute(
+            "INSERT OR REPLACE INTO records VALUES (?,?,?)",
+            ("checkpoint", "uncommitted", "{}"),
+        )
+    with Runtime(root=tmp_path) as runtime:
+        assert runtime.load("first") == {"value": 1}
+        assert runtime._read("checkpoint", "uncommitted") is None
+        assert runtime._connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+    # Old readers use SQLite's standard rollback-journal protocol.
+    with sqlite3.connect(str(tmp_path / "journal.sqlite")) as connection:
+        assert connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+
+
+def test_persistent_journal_recovers_after_process_exit(tmp_path):
+    import subprocess
+    import sys
+
+    with Runtime(root=tmp_path) as runtime:
+        runtime.save("committed", {"value": 7})
+    child = subprocess.run([sys.executable, "-c", """
+import os, sqlite3, sys
+db = sqlite3.connect(sys.argv[1])
+db.execute("PRAGMA journal_mode=PERSIST")
+db.execute("PRAGMA synchronous=FULL")
+db.execute("PRAGMA cache_size=8")
+db.execute("BEGIN IMMEDIATE")
+db.execute("UPDATE records SET value=?", ("x" * 1048576,))
+os._exit(47)
+""", str(tmp_path / "journal.sqlite")], timeout=30)
+    assert child.returncode == 47
+    with Runtime(root=tmp_path) as runtime:
+        assert runtime.load("committed") == {"value": 7}
+        assert runtime._connection.execute("PRAGMA integrity_check").fetchone() == ("ok",)
+
+
 def test_paid_transport_error_is_unknown_without_owner_terminal_proof():
     def disconnected(request):
         raise ConnectionError("reply lost")

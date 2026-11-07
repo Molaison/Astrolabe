@@ -137,6 +137,10 @@ class Runtime:
                 fcntl.flock(self._lock_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
                 self._connection = sqlite3.connect(str(self.root / "journal.sqlite"))
                 self._connection.execute("PRAGMA synchronous=FULL")
+                # Reuse the rollback journal's allocation instead of unlinking
+                # and recreating it for every durable checkpoint. FULL still
+                # syncs the commit (zeroed journal header); no shared-memory WAL.
+                self._connection.execute("PRAGMA journal_mode=PERSIST")
                 self._connection.execute("CREATE TABLE IF NOT EXISTS records (kind TEXT, name TEXT, value TEXT, PRIMARY KEY(kind,name))")
             existing = self._read("meta", "contract")
             contract = {"revision": self.scientific_contract.digest,

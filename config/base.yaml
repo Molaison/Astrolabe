@@ -368,9 +368,11 @@ evaluator:
     num_sampling_steps: 50
     num_diffusion_samples: 1
     seed: null
-    lm_dropout: 0.0
-    msa_max_depth: 1024
-    msa_column_mask_rate: 0.1
+    # The native Biohub builder does not accept these options. Explicit values
+    # fail validation; null selects its supported native behavior.
+    lm_dropout: null
+    msa_max_depth: null
+    msa_column_mask_rate: null
     chunk_size: 64
     local_files_only: false
     timeout_seconds: null

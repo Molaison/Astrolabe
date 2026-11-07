@@ -40,6 +40,9 @@ _SEARCH_KEYS = frozenset(
         "measurement",
         "resume",
         "summary_format",
+        "proposal_batch_size",
+        "execution",
+        "prediction_rng",
     }
 )
 _WEIGHTED_SCORE_MEASUREMENTS = frozenset({None, "", "score", "loss", "weighted_score"})
@@ -114,6 +117,12 @@ class _SearchSettings:
     measurement: str
     summary_format: str | None
     resume: bool
+    proposal_batch_size: int
+    execution_mode: str
+    workers: int
+    evaluation_width: int
+    prediction_rng: str
+    model_sharing: str
 
 
 @dataclass(frozen=True)
@@ -225,7 +234,10 @@ def _search_settings(cfg: Any) -> _SearchSettings:
     resume = search.get("resume", False)
     if type(resume) is not bool:
         raise ValueError("cfg.search.resume must be boolean")
-    max_evaluations = _positive_int(search, "max_evaluations")
+    max_evaluations = _positive_int(
+        {"max_evaluations": search.get("max_evaluations", cfg.get("steps"))},
+        "max_evaluations",
+    )
     raw_proposal_cap = search.get("proposal_cap")
     proposal_cap = (
         max(1, max_evaluations - 1)
@@ -234,14 +246,60 @@ def _search_settings(cfg: Any) -> _SearchSettings:
     )
     if type(proposal_cap) is not int or proposal_cap < 1:
         raise ValueError("cfg.search.proposal_cap must be a positive integer")
+    execution = search.get("execution", {})
+    if not isinstance(execution, Mapping):
+        raise ValueError("search.execution must be a mapping")
+    unknown_execution = set(execution) - {"mode", "workers", "in_flight", "model_sharing"}
+    if unknown_execution:
+        raise ValueError(f"Unsupported search.execution fields: {sorted(unknown_execution)}")
+    mode = str(execution.get("mode", "serial"))
+    if mode not in {"serial", "isolated"}:
+        raise ValueError("search.execution.mode must be 'serial' or 'isolated'")
+    available_cpus = len(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else (os.cpu_count() or 1)
+    workers = execution.get("workers", min(2, available_cpus) if mode == "isolated" else 1)
+    in_flight = execution.get("in_flight", workers)
+    if type(workers) is not int or workers < 1:
+        raise ValueError("search.execution.workers must be a positive integer")
+    if type(in_flight) is not int or not 1 <= in_flight <= workers:
+        raise ValueError("search.execution.in_flight must be positive and <= workers")
+    if mode == "serial" and (workers != 1 or in_flight != 1):
+        raise ValueError("Multiple evaluator workers require search.execution.mode='isolated'")
+    sharing = str(execution.get("model_sharing", "shared" if mode == "isolated" else "replicated"))
+    if sharing not in {"replicated", "shared"}:
+        raise ValueError("search.execution.model_sharing must be replicated or shared")
+    if mode == "serial" and sharing != "replicated":
+        raise ValueError("Model sharing applies to isolated evaluator workers")
+    width = _positive_int({"width": search.get("width", 2)}, "width")
+    per_parent = _positive_int(
+        {"proposals_per_parent": search.get("proposals_per_parent", 2)},
+        "proposals_per_parent",
+    )
+    batch = search.get(
+        "proposal_batch_size", width * per_parent if mode == "isolated" else 1,
+    )
+    if type(batch) is not int or batch < 1:
+        raise ValueError("search.proposal_batch_size must be a positive integer")
+    prediction_rng = str(search.get(
+        "prediction_rng", "fixed_request" if mode == "isolated" else "continuation",
+    ))
+    if prediction_rng not in {"fixed_request", "continuation"}:
+        raise ValueError("search.prediction_rng must be fixed_request or continuation")
+    if mode == "isolated" and prediction_rng != "fixed_request":
+        raise ValueError("Isolated prediction requires search.prediction_rng='fixed_request'")
     return _SearchSettings(
-        width=_positive_int(search, "width"),
-        proposals_per_parent=_positive_int(search, "proposals_per_parent"),
+        width=width,
+        proposals_per_parent=per_parent,
         max_evaluations=max_evaluations,
         proposal_cap=proposal_cap,
         measurement="weighted_score",
         summary_format=summary_format,
         resume=resume,
+        proposal_batch_size=batch,
+        execution_mode=mode,
+        workers=workers,
+        evaluation_width=in_flight,
+        prediction_rng=prediction_rng,
+        model_sharing=sharing,
     )
 
 
@@ -510,7 +568,10 @@ def _model_component_assets(
             raise ValueError(
                 f"{role} alphafold2 data_dir is not resolvable for durable resume"
             )
-        files = _files_below(role, data_dir)
+        model_id = _case_value(mapping, "model_id")
+        suffix = _case_value(mapping, "suffix")
+        model_name = f"model_{3 if model_id is None else model_id}_{'multimer_v3' if suffix is None else suffix}"
+        files = (_hash_selected_file(role, data_dir / "params" / f"params_{model_name}.npz"),)
         return _AssetComponent(role, selected, "hashed"), files
 
     files = _generic_selected_files(role, mapping)
@@ -802,6 +863,9 @@ def _validate_configured_losses(run_module: Any, cfg: Any) -> None:
     ]
     referenced = set(extract_loss_terms(expressions))
     referenced.update(extract_best_namespace_terms(stage.get("prefix_early_stopping")))
+    isolated = _plain_mapping(
+        _plain_mapping(cfg.get("search")).get("execution")
+    ).get("mode", "serial") == "isolated"
 
     # Defined terms are inspected conservatively even when this stage does not
     # reference them.  That keeps the gate independent of expression pruning.
@@ -825,14 +889,10 @@ def _validate_configured_losses(run_module: Any, cfg: Any) -> None:
                 ) from exc
             continue
         code = getattr(function, "__code__", None)
-        if (
-            spec_name in run_module.PYROSETTA_LOSS_TYPES
-            or spec_name in run_module.POST_EVAL_HOOK_LOSS_TYPES
-            or (
-                code is not None
-                and "_require_pyrosetta" in code.co_names
-            )
-        ):
+        needs_pose = spec_name in run_module.PYROSETTA_LOSS_TYPES or (
+            code is not None and "_require_pyrosetta" in code.co_names
+        )
+        if spec_name in run_module.POST_EVAL_HOOK_LOSS_TYPES or (needs_pose and not isolated):
             raise ValueError(
                 "configured refinement loss requires live complex poses or a "
                 f"post-eval hook ({name!r}); an exact pose codec is required"
@@ -852,6 +912,35 @@ def _validate_static_preflight(run_module: Any, args: Any) -> None:
             f"'default'; got {sorted(active_stages)!r}"
         )
     stage = _plain_mapping(active_stages["default"])
+    search_execution = _plain_mapping(
+        _plain_mapping(getattr(args, "search", None)).get("execution")
+    )
+    search_execution.setdefault("mode", "serial")
+    if search_execution.get("mode") == "isolated":
+        predockers = _plain_mapping(
+            _plain_mapping(getattr(args, "predocker", None)).get("predocker_terms")
+        )
+        loss_specs = _plain_mapping(
+            _plain_mapping(getattr(args, "loss", None)).get("loss_terms")
+        )
+        expressions = [
+            str(stage.get("weighted_score_expression") or ""),
+            *[str(item) for item in _plain_mapping(
+                _plain_mapping(getattr(args, "loss", None)).get("expression_terms")
+            ).values()],
+        ]
+        if (
+            any(value is not None for value in predockers.values())
+            or any(
+                str(_plain_mapping(value).get("_type", alias)).lower() == "autodock_penalty"
+                for alias, value in loss_specs.items() if value is not None
+            )
+            or any("autodock_penalty" in expression for expression in expressions)
+        ):
+            raise ValueError(
+                "isolated refinement cannot preserve predocker/out_dir measurement "
+                "dependencies; use serial refinement for this configuration"
+            )
     unsupported = [
         name
         for name in _UNSUPPORTED_STAGE_FIELDS
@@ -880,7 +969,7 @@ def _validate_static_preflight(run_module: Any, args: Any) -> None:
         )
     if getattr(args, "structure_start", None) is not None:
         raise ValueError("configured refinement does not support structure_start")
-    if bool(getattr(args, "enable_pyrosetta", False)):
+    if bool(getattr(args, "enable_pyrosetta", False)) and search_execution.get("mode") != "isolated":
         raise ValueError(
             "configured refinement cannot persist live PyRosetta poses"
         )
@@ -1077,6 +1166,14 @@ def _canonical_config(cfg: Any, repeat: RepeatRun, search: _SearchSettings) -> A
             "measurement": search.measurement,
             "summary_format": search.summary_format,
             "resume": search.resume,
+            "proposal_batch_size": search.proposal_batch_size,
+            "prediction_rng": search.prediction_rng,
+            "execution": {
+                "mode": search.execution_mode,
+                "workers": search.workers,
+                "in_flight": search.evaluation_width,
+                "model_sharing": search.model_sharing,
+            },
         }
     return value
 
@@ -1442,13 +1539,24 @@ def run_configured_refinement(cfg: Any, repeat: RepeatRun) -> dict[str, Any]:
     _validate_resume_root(run_cfg, search, repeat)
     selected_assets = _selected_asset_manifest(run_cfg)
     _validate_resume_assets(run_cfg, search, selected_assets)
-    with SCIENTIFIC_OWNER:
-        return _run_configured_refinement_locked(
-            run_cfg,
-            repeat,
-            search,
-            selected_assets,
-        )
+    from astrolabe.runtime.session import resource_session
+
+    with resource_session(_plain_mapping(run_cfg.get("execution"))) as resources:
+        if search.execution_mode == "isolated" and resources is None:
+            terms = _plain_mapping(_plain_mapping(run_cfg.get("evaluator")).get("evaluator_terms"))
+            if any(
+                str(_plain_mapping(term).get("_type", "")).lower() != "dummy"
+                for term in terms.values() if term is not None
+            ):
+                raise ValueError(
+                    "Isolated evaluator workers require a shared resource owner: "
+                    "set execution.mode=resident_serial/adaptive, or inherit "
+                    "ASTROLABE_RESOURCE_SOCKET"
+                )
+        with SCIENTIFIC_OWNER:
+            return _run_configured_refinement_locked(
+                run_cfg, repeat, search, selected_assets,
+            )
 
 
 def _run_configured_refinement_locked(
@@ -1473,6 +1581,7 @@ def _run_configured_refinement_locked(
         NativeMeasurement,
         NativeProposal,
         NativeRefinementSpec,
+        _PROPOSAL_CODEC,
         run_native_refinement,
     )
     from astrolabe.design.runtime import ContractConflict, Runtime
@@ -1623,9 +1732,27 @@ def _run_configured_refinement_locked(
             raise ValueError("translated assemblies differ from selected stage assemblies")
         expected_assemblies = assemblies
 
+        def score_context(step):
+            name = f"configured-refinement/score-context/{step}"
+            reference = runtime.load(name)
+            if reference is None:
+                if step != 0:
+                    raise ContractConflict("Proposal has no frozen scoring context")
+                reference = snapshot_score_context(runtime_config, data)
+                runtime.save(name, reference)
+            return reference
+
         def load_mutator() -> _OwnedComponent:
+            overrides = {}
+            if search.execution_mode == "isolated" and search.model_sharing == "replicated":
+                from .parallel_refinement import DeferredEvaluator
+
+                def deferred_factory(*_args, **_kwargs):
+                    return {evaluator_alias: DeferredEvaluator(evaluator_alias)}
+
+                overrides["evaluator_factory"] = deferred_factory
             session = _PipelineSession(
-                *run_module.load_pipeline_components(args, prepared)
+                *run_module.load_pipeline_components(args, prepared, **overrides)
             )
             loaded_mutators = tuple(
                 str(alias)
@@ -1684,6 +1811,12 @@ def _run_configured_refinement_locked(
                 raise RuntimeError("pipeline session is not loaded") from None
             if tuple(mutators.value) != tuple(session.stage_manager.current_mutators):
                 raise ValueError("mutation callback received another pipeline session")
+            # Spawned Score workers do not initialize Rosetta in this process,
+            # and their poses are deliberately absent from the score receipt.
+            # Rebuild the parent's private selector view without rescoring.
+            run_module._ensure_evaluation_complex_poses(
+                args, scores, session.loss_computer,
+            )
             run_module.execute_mutation_step(
                 session.stage_manager.current_mutators,
                 scores,
@@ -1693,6 +1826,11 @@ def _run_configured_refinement_locked(
             # Mutators queue whole-step changes.  Apply them before translating
             # the child Candidate; pre-update stacks remain explicitly rejected.
             global_config.segment_manager.apply_mutations()
+            if search.execution_mode == "isolated":
+                runtime.save(
+                    f"configured-refinement/score-context/{step}",
+                    snapshot_score_context(runtime_config, data),
+                )
             child = context.capture_candidate(
                 assemblies=assemblies,
                 state=translation.state,
@@ -1715,6 +1853,8 @@ def _run_configured_refinement_locked(
                 raise ValueError("native prediction seed differs from the repeat seed")
             if tuple(assemblies) != expected_assemblies:
                 raise ValueError("native prediction assemblies changed during the run")
+            if search.prediction_rng == "fixed_request":
+                set_random_seeds(seed)
             global_config.set_variable("step", int(step))
             del candidate, proposal_id
             try:
@@ -1737,7 +1877,6 @@ def _run_configured_refinement_locked(
             scores: Any,
             job: Any,
         ) -> NativeMeasurement:
-            del job
             try:
                 session = session_holder["session"]
             except KeyError:
@@ -1762,10 +1901,13 @@ def _run_configured_refinement_locked(
             ),
             quota_mode="attempts",
             expansion="round_robin",
-            proposal_batch_size=1,
-            evaluation_width=1,
-            pipeline=False,
-            immediate_evaluation=True,
+            proposal_batch_size=search.proposal_batch_size,
+            evaluation_width=search.evaluation_width,
+            pipeline=search.execution_mode == "isolated",
+            immediate_evaluation=(
+                search.execution_mode == "serial"
+                and search.proposal_batch_size == 1
+            ),
             cap_error=True,
         )
 
@@ -1807,6 +1949,18 @@ def _run_configured_refinement_locked(
                             "max_evaluations": search.max_evaluations,
                             "proposal_cap": search.proposal_cap,
                             "assemblies": assemblies,
+                            "proposal_batch_size": search.proposal_batch_size,
+                            "execution": {
+                                "mode": search.execution_mode,
+                                "workers": search.workers,
+                                "in_flight": search.evaluation_width,
+                                "model_sharing": search.model_sharing,
+                                "prediction_rng": (
+                                    "fixed-request-seed/v1"
+                                    if search.prediction_rng == "fixed_request"
+                                    else "legacy-continuation"
+                                ),
+                            },
                         },
                     )
                 spec = NativeRefinementSpec(
@@ -1831,12 +1985,23 @@ def _run_configured_refinement_locked(
                     proposal_seed=_generic_proposal_seed,
                     on_event=event,
                 )
-                result = run_native_refinement(
-                    spec,
-                    policy=policy,
-                    protocol=protocol,
-                    runtime=runtime,
-                )
+                if search.execution_mode == "isolated":
+                    from omegaconf import OmegaConf
+                    from .parallel_refinement import run_parallel_native_refinement
+
+                    result = run_parallel_native_refinement(
+                        spec, policy=policy, protocol=protocol, runtime=runtime,
+                        config_yaml=OmegaConf.to_yaml(run_cfg, resolve=True),
+                        workers=search.workers,
+                        worker_output=output / ".prediction_workers",
+                        model_sharing=search.model_sharing,
+                        loss_order=lambda: tuple(session_holder["session"].loss_computer.loss_specs),
+                        score_context=score_context,
+                    )
+                else:
+                    result = run_native_refinement(
+                        spec, policy=policy, protocol=protocol, runtime=runtime,
+                    )
                 if not result.selected:
                     raise RuntimeError("configured refinement selected no candidate")
 
@@ -1887,6 +2052,14 @@ def _run_configured_refinement_locked(
                         "proposals_per_parent": search.proposals_per_parent,
                         "max_evaluations": search.max_evaluations,
                         "proposal_cap": search.proposal_cap,
+                        "proposal_batch_size": search.proposal_batch_size,
+                        "execution": {
+                            "mode": search.execution_mode,
+                            "workers": search.workers,
+                            "in_flight": search.evaluation_width,
+                            "prediction_rng": search.prediction_rng,
+                            "model_sharing": search.model_sharing,
+                        },
                         "evaluations": result.evaluations,
                         "proposals": result.proposals,
                         "duplicates": int(getattr(state, "duplicates", 0)),

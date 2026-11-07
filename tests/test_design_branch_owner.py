@@ -278,6 +278,56 @@ def test_verified_proposal_batch_recovers_without_duplicate_native_submit(
         assert recovery_pool.calls == []
 
 
+def test_verified_probe_future_is_restored_without_resubmission(tmp_path: Path) -> None:
+    with _runtime(tmp_path) as runtime:
+        _, request = _ready_proposal_request(runtime)
+        _install_unknown_receipt(runtime, request)
+        pool = _RejectingPool()
+        trial = _trial(runtime, pool, worker=lambda task: _raw_result(task),
+                       result_factory=lambda job, raw: _proposal_result(runtime, job, raw))
+        future = Future()
+        calls = []
+
+        def probe(job, task):
+            calls.append(job.identity)
+            return future
+
+        trial.probe = probe
+        trial.recover(request)
+        trial.recover(request)
+        assert tuple(trial.executor.one_pending) == (future,)
+        assert calls == [request.jobs[0].identity]
+        future.set_result(_raw_result(trial.task_record(request.jobs[0])))
+        result = trial.perform(request)
+        assert result.terminals[0].status == "completed"
+        assert pool.calls == []
+
+
+def test_issued_lazy_proposal_without_terminal_proof_cannot_be_reissued(tmp_path):
+    with _runtime(tmp_path) as runtime:
+        _, request = _ready_proposal_request(runtime)
+        future = Future()
+        submitted = []
+
+        class LazyPool:
+            def submit(self, worker, task):
+                submitted.append(task)
+                return future
+
+        trial = _trial(runtime, LazyPool(), worker=lambda task: task,
+                       result_factory=lambda job, raw: _proposal_result(runtime, job, raw))
+        assert trial.perform(replace(request, wait="none")) == BranchEvent(())
+        assert not future.done()
+        assert _receipt(runtime, request.jobs[0].identity).status == "issued"
+        rejecting = _RejectingPool()
+        recovered = _trial(runtime, rejecting, worker=lambda task: task,
+                           result_factory=lambda job, raw: _proposal_result(runtime, job, raw))
+        with pytest.raises(OutcomeUnknown):
+            recovered.recover(request)
+        assert len(submitted) == 1
+        assert rejecting.calls == []
+
+
 def test_mixed_ready_group_preserves_success_before_peer_failure(
     tmp_path: Path,
 ) -> None:

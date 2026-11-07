@@ -1,0 +1,63 @@
+# @package _global_
+# Small reproducible beam example. Supply your own input/seed/budget explicitly.
+defaults:
+  - base
+  - _self_
+
+task_name: beam_refinement
+seed: 17
+steps: 3
+repeats: 1
+seqs:
+  A: "+TTCCP SIVARSNFNVCRLPGTPEAICATYTGCIIIPGATCPGDYAN"
+types:
+  A: protein
+initializer:
+  mode: random
+skip_complex_poses: true
+mutator:
+  mutator_terms:
+    MCMC:
+      _type: MCMC
+      avoid_current_residue: true
+evaluator:
+  evaluator_terms:
+    ESMFold:
+      _type: ESMFold
+stages:
+  default:
+    evaluator: ESMFold
+    oligo: [A]
+    mutators: [MCMC]
+    mutation_num: 1
+    weighted_score_expression: plddt
+    acceptance_threshold: null
+    early_stopping: null
+
+search:
+  algorithm: branching
+  owner: native_refinement
+  width: 2
+  proposals_per_parent: 2
+  max_evaluations: 3
+  proposal_cap: 30
+  proposal_batch_size: 4
+  prediction_rng: fixed_request
+  measurement: weighted_score
+  summary_format: json
+  execution:
+    mode: isolated
+    workers: 2
+    in_flight: 2
+    model_sharing: shared
+
+execution:
+  mode: resident_serial
+  devices: allocated
+  model_owner: daemon
+  cpu_slots: 2
+  ram_bytes: 68719476736
+  output_bytes: 268435456
+  max_concurrency: 2
+  max_pending: 8
+  max_pending_bytes: 47244640256

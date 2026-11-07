@@ -20,9 +20,11 @@ from pathlib import Path
 import re
 import shutil
 import stat
+import sys
 import tempfile
 import threading
 import time
+from types import SimpleNamespace
 from typing import Any
 
 from .legacy import LEGACY_REFERENCE_CODECS, LegacyContext
@@ -126,13 +128,18 @@ def _private_score_paths(value, raw_root, score_root):
 
 
 class _Worker:
-    def __init__(self, config_yaml, data_root, assemblies, state, output_root):
+    def __init__(self, config_yaml, data_root, assemblies, state, output_root,
+                 role="combined"):
         from omegaconf import OmegaConf, open_dict
         from astrolabe.app import _load_run_module
         from astrolabe.core import global_config
 
         started = time.perf_counter()
+        started_unix = time.time()
         self.pid = os.getpid()
+        if role not in {"combined", "prediction", "score"}:
+            raise ValueError(f"unknown refinement worker role: {role}")
+        self.role = role
         self.lock = threading.Lock()
         self.closed = False
         self.evaluators = {}
@@ -175,17 +182,42 @@ class _Worker:
             self.loss, self.stages = self.run._initialize_pipeline_math(self.args, prepared)
             if tuple(self.stages.current_oligo) != self.assemblies:
                 raise ContractConflict("worker assemblies differ from configured stage")
-            alias = self.stages.execution_setting.evaluator
-            self.evaluators = self.run.construct_evaluators(
-                self.args.evaluator,
-                self.args.raw_model_results_dir,
-                self.stages.all_oligos,
-                enabled_aliases=[alias],
+            if role != "score":
+                alias = self.stages.execution_setting.evaluator
+                self.evaluators = self.run.construct_evaluators(
+                    self.args.evaluator,
+                    self.args.raw_model_results_dir,
+                    self.stages.all_oligos,
+                    enabled_aliases=[alias],
+                )
+                self.constructor_count += 1
+                global_config.init_const("evaluators", self.evaluators)
+                self.evaluator = self.stages.current_evaluator
+            self.run._initialize_pipeline_inputs(
+                self.args, self.loss, self.stages, include_predockers=role != "score",
             )
-            self.constructor_count += 1
-            global_config.init_const("evaluators", self.evaluators)
-            self.evaluator = self.stages.current_evaluator
-            self.run._initialize_pipeline_inputs(self.args, self.loss, self.stages)
+            warmed_score_resources = []
+            if (role == "score" and self.run._evaluation_result_needs_complex_poses(
+                    self.args, SimpleNamespace(complex_poses=None), self.loss,
+                )
+                    and not self.run._needs_molfile_to_params(self.args)):
+                self.run._init_pyrosetta_runtime()
+                # Rosetta's first XML filter construction lazily loads scoring
+                # resources even after init(). Warm only the configured factory;
+                # never apply a filter, retain a mutable filter, or score a pose.
+                buns_options = {
+                    bool(spec[2].get("ignore_surface_res", False))
+                    for spec in self.loss.loss_specs.values()
+                    if spec[0] == "interface_buried_unsatisfied_hbonds"
+                }
+                if buns_options:
+                    from astrolabe.losses.interaction import _make_interface_buns_filter
+
+                    for ignore_surface_res in sorted(buns_options):
+                        _make_interface_buns_filter(ignore_surface_res=ignore_surface_res)
+                        warmed_score_resources.append(
+                            {"filter": "BuriedUnsatHbonds", "ignore_surface_res": ignore_surface_res}
+                        )
             self.context = LegacyContext()
             self.translation = self.context.capture_candidate(
                 assemblies=self.assemblies, state=state, data=self.data
@@ -197,6 +229,22 @@ class _Worker:
                 ),
             }
             self.initialization_seconds = time.perf_counter() - started
+            finished_unix = time.time()
+            if role == "score":
+                from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
+
+                pyrosetta = sys.modules.get("pyrosetta")
+                self.readiness = {
+                    "pid": self.pid, "role": role,
+                    "started_unix": started_unix,
+                    "finished_unix": finished_unix,
+                    "initialization_seconds": self.initialization_seconds,
+                    "warmed_score_resources": warmed_score_resources,
+                    "pyrosetta_initialized": bool(
+                        pyrosetta is not None and pyrosetta_was_initialized(pyrosetta)
+                    ),
+                }
+                _complete(self.session_root / "ready.json", self.readiness)
         except BaseException:
             self.shutdown()
             raise
@@ -414,9 +462,15 @@ class _Worker:
             complete = self.receipts / f"{request_hash}.json"
             issued = self.receipts / f"{request_hash}.issued.json"
             scored = self.receipts / f"{request_hash}.score.json"
-            if complete.exists():
+            if self.role == "score":
+                if not complete.exists():
+                    raise OutcomeUnknown(f"missing raw prediction receipt: {complete}")
                 raw_receipt = self._read(complete, task)
                 return self._score(task, raw_receipt, scored)
+            if complete.exists():
+                raw_receipt = self._read(complete, task)
+                return (raw_receipt if self.role == "prediction" else
+                        self._score(task, raw_receipt, scored))
             if issued.exists():
                 try:
                     prior = json.loads(issued.read_text(encoding="utf-8"))
@@ -483,15 +537,28 @@ class _Worker:
                 _complete(complete, receipt)
             except Exception as error:
                 raise OutcomeUnknown(f"worker evaluation outcome unknown: {issued}") from error
-            return self._score(task, receipt, scored)
+            return (receipt if self.role == "prediction" else
+                    self._score(task, receipt, scored))
 
 
-def initializer(config_yaml: str, data_root: str, assemblies: tuple[str, ...], state: str, output_root: str) -> None:
+def initializer(config_yaml: str, data_root: str, assemblies: tuple[str, ...], state: str,
+                output_root: str, role: str = "combined") -> None:
     """Initialize once through a multiprocessing ``spawn`` pool initializer."""
     global _WORKER
     if _WORKER is not None and not _WORKER.closed:
         raise RuntimeError("refinement worker already initialized")
-    _WORKER = _Worker(config_yaml, data_root, assemblies, state, output_root)
+    if role == "score":
+        os.environ["CUDA_VISIBLE_DEVICES"] = ""
+        os.environ["JAX_PLATFORMS"] = "cpu"
+        os.environ["GH_CUDA_PREINITIALIZE"] = "0"
+    _WORKER = _Worker(config_yaml, data_root, assemblies, state, output_root, role)
+
+
+def ready() -> dict[str, Any]:
+    """Start a resident worker while the parent is still bootstrapping models."""
+    if _WORKER is None or _WORKER.role != "score":
+        raise RuntimeError("Score worker is not ready")
+    return dict(_WORKER.readiness)
 
 
 def execute(task: dict) -> dict:

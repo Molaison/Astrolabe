@@ -15,11 +15,13 @@ from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import Protomer, SegmentManager
 from astrolabe.design.configured_refinement import (
     _asset_manifest_identity,
+    _canonical_config,
     _generic_proposal_seed,
     _model_component_assets,
     _scientific_config_payload,
     _selected_asset_manifest,
     _search_settings,
+    _validate_static_preflight,
     run_configured_refinement,
 )
 from astrolabe.design.repeats import RepeatRun
@@ -90,6 +92,7 @@ def _base_config(root: Path) -> dict:
             "max_evaluations": 2,
             "measurement": "weighted_score",
             "summary_format": "json",
+            "execution": {"mode": "serial"},
         },
     }
 
@@ -660,10 +663,22 @@ def _asset_config(root: Path) -> dict:
     return raw
 
 
-def test_selected_asset_manifest_hashes_af3_model_dir_and_marks_mcmc_weightless(
-    tmp_path,
+@pytest.mark.parametrize("backend", ["alphafold3", "alphafold2"])
+def test_selected_asset_manifest_hashes_selected_model_and_marks_mcmc_weightless(
+    tmp_path, backend,
 ):
     raw = _asset_config(tmp_path)
+    expected_files = ["confidence.npz", "params.npz"]
+    if backend == "alphafold2":
+        data_dir = tmp_path / "af2-data"
+        (data_dir / "params").mkdir(parents=True)
+        (data_dir / "params" / "params_model_3_multimer_v3.npz").write_bytes(b"selected")
+        (data_dir / "params" / "params_model_1_ptm.npz").write_bytes(b"unselected")
+        (data_dir / "bfd").mkdir()
+        (data_dir / "bfd" / "unused.ffdata").write_bytes(b"database-not-used")
+        raw["evaluator"]["evaluator_terms"]["fold"]["_type"] = backend
+        raw["evaluator"][backend] = {"data_dir": str(data_dir)}
+        expected_files = ["params_model_3_multimer_v3.npz"]
     manifest = _selected_asset_manifest(_cfg(raw))
     records = manifest.record()
 
@@ -672,12 +687,12 @@ def test_selected_asset_manifest_hashes_af3_model_dir_and_marks_mcmc_weightless(
         (item["role"], item["type"], item["state"])
         for item in records["components"]
     } >= {
-        ("evaluator:fold", "alphafold3", "hashed"),
+        ("evaluator:fold", backend, "hashed"),
         ("mutator:first", "mcmc", "weight_free"),
     }
     assert [
         Path(item["path"]).name for item in records["files"]
-    ] == ["confidence.npz", "params.npz"]
+    ] == expected_files
     assert all(len(item["sha256"]) == 64 for item in records["files"])
 
 
@@ -700,6 +715,45 @@ def test_rosetta_crystal_reference_and_params_are_content_identified(tmp_path):
     assert {item.path: item.sha256 for item in changed}[str(reference)] != before[str(reference)]
     with pytest.raises(ValueError, match="lacks params or reference"):
         _model_component_assets("evaluator:fold", "rosetta_crystal", {"states": {"s": {}}})
+
+
+@pytest.mark.parametrize("alias", ["mol1", "mol-1", "mol_1"])
+def test_mol1_assets_use_native_probe_and_content_identity(tmp_path, monkeypatch, alias):
+    import os
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    source = repo / "inference.py"
+    source.write_text("native implementation")
+    root = tmp_path / "data"
+    root.mkdir()
+    checkpoint = root / "model.pt"
+    reference = root / "ccd.pkl"
+    checkpoint.write_text("weights")
+    reference.write_text("native reference")
+
+    def probe(command, **kwargs):
+        assert command == ["/qualified/mol1/python", "-m", "astrolabe.evaluators.mol1_assets",
+                           "mol-1-base", str(checkpoint), "0"]
+        assert kwargs["cwd"] == repo
+        assert kwargs["env"]["MOL_ROOT_DIR"] == str(root)
+        assert kwargs["env"]["PYTHONPATH"].split(os.pathsep) == [
+            str(repo), str(Path(__file__).resolve().parents[1]),
+        ]
+        return subprocess.CompletedProcess(command, 0,
+            stdout=json.dumps({"assets": [str(checkpoint), str(reference)]}))
+
+    monkeypatch.setattr(subprocess, "run", probe)
+    mapping = {"python_bin": "/qualified/mol1/python", "repo_path": str(repo),
+               "mol_root_dir": str(root), "load_checkpoint_path": str(checkpoint)}
+    component, files = _model_component_assets("evaluator:fold", alias, mapping)
+    assert component.state == "hashed"
+    assert {Path(item.path) for item in files} == {checkpoint, reference, source}
+    before = {item.path: item.sha256 for item in files}
+    reference.write_text("changed native reference")
+    _, changed = _model_component_assets("evaluator:fold", alias, mapping)
+    assert {item.path: item.sha256 for item in changed}[str(reference)] != before[str(reference)]
 
 
 def test_resume_rejects_same_path_asset_content_change_before_parse_or_models(
@@ -987,6 +1041,46 @@ def test_search_fields_are_required_instead_of_defaulted(tmp_path, monkeypatch):
     assert probe.component_load_calls == 0
 
 
+def test_generic_defaults_use_steps_once_and_resolve_execution(tmp_path, monkeypatch):
+    raw = _base_config(tmp_path)
+    raw["steps"] = 7
+    raw["search"] = {"algorithm": "branching", "owner": "native_refinement"}
+    monkeypatch.setattr("os.sched_getaffinity", lambda pid: {0, 1, 2, 3})
+    cfg = _cfg(raw)
+    settings = _search_settings(cfg)
+    assert (settings.width, settings.proposals_per_parent) == (2, 2)
+    assert settings.max_evaluations == 7
+    assert (settings.execution_mode, settings.workers, settings.evaluation_width) == ("serial", 1, 1)
+    assert settings.model_sharing == "replicated"
+    assert settings.prediction_rng == "continuation"
+    repeat = RepeatRun(index=0, total=1, seed=71, output=tmp_path / "outputs")
+    saved = _canonical_config(cfg, repeat, settings)
+    assert _search_settings(saved) == settings
+    raw["search"].update(max_evaluations=3, width=1, proposals_per_parent=4,
+                         execution={"mode": "serial"})
+    explicit = _search_settings(_cfg(raw))
+    assert (explicit.max_evaluations, explicit.width, explicit.proposals_per_parent) == (3, 1, 4)
+    assert (explicit.workers, explicit.model_sharing, explicit.prediction_rng) == (1, "replicated", "continuation")
+    raw["search"].pop("execution")
+    monkeypatch.setattr("os.sched_getaffinity", lambda pid: {3})
+    assert _search_settings(_cfg(raw)).workers == 1
+
+
+def test_process_local_pose_loss_is_allowed_but_serial_and_hooks_stay_fenced(tmp_path):
+    raw = _base_config(tmp_path)
+    raw["enable_pyrosetta"] = True
+    raw["skip_complex_poses"] = False
+    raw["search"]["execution"] = {"mode": "isolated"}
+    _validate_static_preflight(run, _cfg(raw))
+    raw["search"]["execution"] = {"mode": "serial"}
+    with pytest.raises(ValueError, match="live PyRosetta poses"):
+        _validate_static_preflight(run, _cfg(raw))
+    raw["search"]["execution"] = {"mode": "isolated"}
+    raw["post_eval_hooks"] = {"relax": {"enabled": True}}
+    with pytest.raises(ValueError, match="post-eval hooks"):
+        _validate_static_preflight(run, _cfg(raw))
+
+
 def test_proposal_cap_is_explicit_and_defaults_to_one_fewer_evaluation(tmp_path):
     cfg = _cfg(_base_config(tmp_path))
     assert _search_settings(cfg).proposal_cap == 1
@@ -997,6 +1091,65 @@ def test_proposal_cap_is_explicit_and_defaults_to_one_fewer_evaluation(tmp_path)
         cfg.search.proposal_cap = 0
     with pytest.raises(ValueError, match="proposal_cap.*positive integer"):
         _search_settings(cfg)
+
+
+def test_isolated_beam_settings_use_generation_batch_and_bounded_workers(tmp_path):
+    raw = _base_config(tmp_path)
+    raw["search"].update(
+        width=2, proposals_per_parent=3,
+        execution={"mode": "isolated", "workers": 2, "in_flight": 2,
+                   "model_sharing": "shared"},
+    )
+    settings = _search_settings(_cfg(raw))
+    assert settings.proposal_batch_size == 6
+    assert settings.evaluation_width == 2
+    assert settings.prediction_rng == "fixed_request"
+    assert settings.model_sharing == "shared"
+
+
+@pytest.mark.parametrize("execution,other,match", [
+    ({"mode": "serial", "workers": 2}, {}, "Multiple evaluator"),
+    ({"mode": "isolated", "workers": 2, "in_flight": 3}, {}, "in_flight"),
+    ({"mode": "isolated", "workers": True}, {}, "workers"),
+    ({"mode": "isolated", "workers": 2}, {"prediction_rng": "continuation"}, "fixed_request"),
+    ({"mode": "isolated", "model_sharing": "invented"}, {}, "model_sharing"),
+    ({"mode": "isolated", "unused": 1}, {}, "Unsupported search.execution"),
+])
+def test_unsafe_beam_execution_settings_fail_preflight(tmp_path, execution, other, match):
+    raw = _base_config(tmp_path)
+    raw["search"].update(execution=execution, **other)
+    with pytest.raises(ValueError, match=match):
+        _search_settings(_cfg(raw))
+
+
+def test_prediction_rng_and_execution_survive_canonical_resume_identity(tmp_path):
+    raw = _base_config(tmp_path)
+    repeat = RepeatRun(index=0, total=1, seed=71, output=tmp_path / "outputs")
+    cfg = _cfg(raw)
+    continuation = _canonical_config(cfg, repeat, _search_settings(cfg))
+    raw["search"].update(
+        prediction_rng="fixed_request", proposal_batch_size=4,
+        execution={"mode": "isolated", "workers": 2, "in_flight": 2,
+                   "model_sharing": "shared"},
+    )
+    cfg = _cfg(raw)
+    fixed = _canonical_config(cfg, repeat, _search_settings(cfg))
+    assert fixed.search.prediction_rng == "fixed_request"
+    assert fixed.search.proposal_batch_size == 4
+    assert fixed.search.execution.model_sharing == "shared"
+    assert _scientific_config_payload(continuation) != _scientific_config_payload(fixed)
+
+
+@pytest.mark.parametrize("dependency", ["predocker", "loss"])
+def test_isolated_predocker_measurement_dependencies_fail_before_load(tmp_path, dependency):
+    raw = _base_config(tmp_path)
+    raw["search"]["execution"] = {"mode": "isolated", "workers": 2}
+    if dependency == "predocker":
+        raw["predocker"] = {"predocker_terms": {"dock": {"_type": "autodock"}}}
+    else:
+        raw["stages"]["default"]["weighted_score_expression"] = "autodock_penalty"
+    with pytest.raises(ValueError, match="predocker/out_dir"):
+        _validate_static_preflight(run, _cfg(raw))
 
 
 def test_initialize_pipeline_components_preserves_prepare_then_load_wrapper(
@@ -1020,3 +1173,71 @@ def test_initialize_pipeline_components_preserves_prepare_then_load_wrapper(
 
     assert run.initialize_pipeline_components(args) == expected
     assert calls == [("prepare", args), ("load", args, prepared)]
+
+
+def test_parent_receipt_pose_view_is_ready_before_mutation_without_rescoring(
+    tmp_path, monkeypatch,
+):
+    from types import SimpleNamespace
+
+    raw = _base_config(tmp_path)
+    raw["search"]["max_evaluations"] = 3
+    probe = _Probe(tmp_path / "raw" / "models")
+    _install_probe(monkeypatch, probe)
+    ensure = run._ensure_evaluation_complex_poses
+    mutate = _FakeMutator.mutate
+    compute_loss = _FakeLoss.compute_loss
+    initialized = []
+    parent_views = []
+    mutations = []
+    loss_calls = []
+
+    def init(structure_files=None):
+        initialized.append(dict(structure_files))
+
+    def construct(scores):
+        assert initialized[-1] == scores.complex_paths
+        return run.ComplexPoses(poses={name: object() for name in scores.names})
+
+    def ensure_parent(args, scores, loss_computer=None):
+        if all(path.parent.name.startswith("proposal-input_")
+               for path in scores.complex_paths.values()):
+            # Model a Score receipt: transport has no live poses, while the
+            # parent's selector requires them. Other evaluator views stay raw.
+            assert scores.complex_poses is None
+            before = {path: path.read_bytes() for path in scores.complex_paths.values()}
+            losses_before = len(loss_calls)
+            out = ensure(SimpleNamespace(enable_pyrosetta=True, skip_complex_poses=False),
+                         scores, loss_computer)
+            assert out is scores
+            assert len(loss_calls) == losses_before
+            assert all(path.read_bytes() == content for path, content in before.items())
+            assert set(scores.complex_poses.poses) == set(scores.names)
+            parent_views.append(scores)
+            return out
+        return ensure(args, scores, loss_computer)
+
+    def require_pose(self, protomers, scores, runtime_config):
+        assert any(scores is view for view in parent_views)
+        assert set(scores.complex_poses.poses) == set(scores.names)
+        mutations.append(scores)
+        return mutate(self, protomers, scores, runtime_config)
+
+    def counted_loss(self, scores, runtime_config):
+        loss_calls.append(scores)
+        return compute_loss(self, scores, runtime_config)
+
+    monkeypatch.setattr(run, "_init_pyrosetta_runtime", init)
+    monkeypatch.setattr(run.ComplexPoses, "construct_complex_poses", construct)
+    monkeypatch.setattr(run, "_ensure_evaluation_complex_poses", ensure_parent)
+    monkeypatch.setattr(_FakeMutator, "mutate", require_pose)
+    monkeypatch.setattr(_FakeLoss, "compute_loss", counted_loss)
+    summary = run_configured_refinement(
+        _cfg(raw), RepeatRun(index=0, total=1, seed=71, output=tmp_path / "outputs"),
+    )
+
+    assert summary["search"]["evaluations"] == len(probe.evaluator_calls) == len(loss_calls) == 3
+    assert len(parent_views) == len(initialized) == 2
+    assert parent_views[0] is not parent_views[1]
+    assert len(mutations) == 4
+    assert all(scores.complex_poses is None for scores in loss_calls)

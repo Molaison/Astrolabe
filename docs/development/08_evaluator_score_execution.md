@@ -19,11 +19,14 @@
 | `evaluators/af3_pipeline.py`、`native_daemons.py` | AF3 native daemon 的完整模型边界与协议验证 | 根据通用声明替其他 backend 认证 |
 | `design/native_refinement_runtime.py` | 持久 raw、Score、member 三个完成点及身份核对 | 将未完成的设备请求自动重发 |
 | `design/refinement_worker.py` | 进程私有的候选、路径、Pose、评分上下文与回执 | 父控制流程的 proposal 和成员提交 |
-| `design/configured_refinement.py` | 串行配置入口；与 worker 共用 `measure_configured_scores` | 在本批启用并行搜索 |
+| `design/configured_refinement.py` | 串行及显式 isolated 配置入口；与 worker 共用 `measure_configured_scores` | 隐式改变旧配置的搜索和 RNG |
+| `design/parallel_refinement.py` | 有序 proposal 前缀、预测/Score 交接和单一成员提交者 | 根据 worker 完成速度选择候选 |
+| `runtime/session.py`、`model_pool.py` | 资源 owner 的生命周期和兼容模型复用 | 把 CPU worker 数当作模型推理并发数 |
 
-本树没有迁入并行搜索 owner、runtime CLI/session/model pool 或动态供给配置。
-现有公共 RPC pipeline 保持原路径；AF3 native daemon 使用严格阶段合同。
-其他原生 factory 仍为 callable，按保守完整调用执行，未伪装为三阶段。
+日常配置默认保留既有搜索入口。显式 `search.execution.mode: isolated` 启用常驻
+预测和 CPU Score 流水线；省略该字段时保留串行、`continuation` RNG。
+并行模式要求 `fixed_request`，其数值证据不能直接外推到旧随机流。
+后端须提供实际阶段实现；未分类 callable 继续按完整调用执行。
 
 ## 阶段的资源与数据生命周期
 
@@ -61,7 +64,9 @@ measurement → BranchMember
 `ScoreReceipt` 包含 `request_identity`、`raw_scores`、`scoring_identity`、
 `measured_scores`、`measurement` 和 `after_rng`。串行 owner 的请求身份由
 job、prediction blob、protocol 和 output 共同计算；worker 回执使用其父请求
-`_request_hash`。二者各自校验完整请求，不能将不同请求命名空间的回执直接互换。
+`_request_hash`。并行 owner 先校验原始任务、raw、Score 和 sidecar，再生成
+采用 durable 请求身份的不可变回执，保留原 worker 回执。此转换不重新评分，
+也不改变评分后的 RNG；未经校验的不同命名空间回执不能直接互换。
 
 评分恢复独立的 `StandardScores` 和候选上下文，调用原 `LossEngine`，不改变
 loss 注册顺序、归约或表达式。成员提交核对 Score 的请求、raw 和 protocol，
@@ -100,6 +105,9 @@ loss 注册顺序、归约或表达式。成员提交核对 Score 的请求、ra
 | `tests/test_native_refinement_recovery.py` | 各完成点 crash/resume 与不中断路径的候选、成员、分数和最终 RNG 相同；错误 Score 身份拒绝提交 |
 | `tests/test_configured_refinement.py` | 实际配置 wiring、完整候选分配、科学配置与资产变更拒绝、已有回执恢复 |
 | `tests/test_resource_admission.py` | 真实本地 broker/RPC 与合成设备采样下的容量和清理合同 |
+| `tests/test_parallel_refinement.py` | 乱序完成、有序提交、评分身份转换、raw 恢复与不重推 |
+| `tests/test_shape_complementarity.py`、`test_shape_complementarity_loss.py` | SC 精确路径及不适用输入的原实现回退 |
+| `tests/test_design_data.py`、`test_design_runtime.py` | 编码校验、损坏数据、日志回滚与进程中断 |
 
 这些文件由[同一验证入口](../../scripts/validation/release_cpu.py)分层执行：
 
@@ -108,9 +116,9 @@ python scripts/validation/release_cpu.py -q                    # 发布 CI / jus
 python scripts/validation/release_cpu.py --suite execution -q  # just test-execution
 ```
 
-发布清单只新增 `test_evaluator_stages.py`、`test_evaluator_runtime_stages.py` 和
-`test_resource_admission.py`，不要求 Torch/JAX/模型安装。execution 是发布清单的超集，
-补充 kernel、worker、持久恢复、配置 wiring、现有 daemon 和 AF3 回归。
+发布清单包含阶段合同、资源准入、SC 和持久化的 CPU 检查，不要求模型安装。
+execution 是发布清单的超集，补充 kernel、并行 worker、持久恢复、配置 wiring、
+模型复用、RNA adapter、日常启动和 AF3 回归。
 execution 需既有科学运行时及 Torch、AF3 依赖；后端缺失引起的 skip 不是验收通过。
 两套清单均透传 pytest 参数和退出码，`--collect-only -q` 可核对实际选择。
 

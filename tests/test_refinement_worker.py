@@ -9,6 +9,7 @@ import os
 from pathlib import Path
 import random
 import time
+from types import SimpleNamespace
 
 import numpy as np
 from omegaconf import OmegaConf
@@ -159,6 +160,102 @@ def _fresh_data(owner):
     for codec in owner.codecs.values():
         data.register(codec)
     return data
+
+
+def _replace_worker(owner, args, role):
+    owner.shutdown()
+    owner.finalizer.cancel()
+    worker.atexit.unregister(owner.shutdown)
+    worker._WORKER = None
+    worker.initialize(*args, role=role)
+    return worker._WORKER
+
+
+def test_split_roles_reuse_raw_without_score_model_or_prediction_replay(session, monkeypatch):
+    owner, calls, args = session
+    task = _task(session)
+    raw = worker.execute(task)
+    (owner.receipts / "request-one.score.json").unlink()
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("Score must not construct or evaluate a model")
+
+    monkeypatch.setattr(run, "construct_evaluators", forbidden)
+    monkeypatch.setattr(run, "perform_evaluation", forbidden)
+    scorer = _replace_worker(owner, args, "score")
+    assert scorer.constructor_count == 0
+    assert scorer.evaluators == {}
+    scored = worker.execute(task)
+    assert scored["raw_scores"] == raw["raw_scores"]
+    assert scored["score_worker_pid"] == os.getpid()
+    assert len(calls) == 1
+    assert worker.ready() == json.loads((scorer.session_root / "ready.json").read_text())
+    with pytest.raises(OutcomeUnknown):
+        worker.execute({**task, "_request_hash": "missing-raw"})
+    Path(raw["sidecars"][0]["path"]).write_text("damaged")
+    with pytest.raises(OutcomeUnknown):
+        worker.execute(task)
+    assert len(calls) == 1
+
+
+def test_prediction_role_persists_only_raw(session, monkeypatch):
+    owner, calls, args = session
+    task = _task(session)
+    predictor = _replace_worker(owner, args, "prediction")
+
+    def forbidden(*_args, **_kwargs):
+        raise AssertionError("prediction role must not calculate Score")
+
+    monkeypatch.setattr(predictor, "_score", forbidden)
+    raw = worker.execute(task)
+    assert "score_receipt" not in raw
+    assert (predictor.receipts / "request-one.json").is_file()
+    assert not (predictor.receipts / "request-one.score.json").exists()
+    assert worker.execute(task) == raw
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("dynamic_params", [False, True])
+def test_score_ready_records_real_pyrosetta_init_or_dynamic_skip(
+    session, monkeypatch, dynamic_params,
+):
+    owner, _calls, args = session
+    config = OmegaConf.create(args[0])
+    config.enable_pyrosetta = True
+    config.skip_complex_poses = False
+    config.molfile_to_params = "/unused-for-test"
+    config.loss.loss_terms = {
+        "buns": {"_type": "interface_buried_unsatisfied_hbonds", "ignore_surface_res": True},
+    }
+    config.stages.default.weighted_score_expression = "buns"
+    initialized, calls = [False], []
+
+    def init_runtime(*_args, **_kwargs):
+        calls.append("init")
+        initialized[0] = True
+
+    monkeypatch.setattr(run, "_needs_molfile_to_params", lambda _args: dynamic_params)
+    monkeypatch.setattr(run, "setup_extra_residues", lambda **_kwargs: None)
+    monkeypatch.setattr(run, "_init_pyrosetta_runtime", init_runtime)
+    from astrolabe.losses import interaction
+    monkeypatch.setattr(
+        interaction, "_make_interface_buns_filter",
+        lambda *, ignore_surface_res: calls.append(("buns", ignore_surface_res)),
+    )
+    monkeypatch.setitem(worker.sys.modules, "pyrosetta", SimpleNamespace(
+        is_initialized=lambda: initialized[0],
+    ))
+    scorer = _replace_worker(owner, (OmegaConf.to_yaml(config), *args[1:]), "score")
+    ready = worker.ready()
+    assert ready["pid"] == scorer.pid
+    assert ready["role"] == "score"
+    assert ready["started_unix"] <= ready["finished_unix"]
+    assert ready["initialization_seconds"] >= 0
+    assert ready["pyrosetta_initialized"] is (not dynamic_params)
+    assert calls == ([] if dynamic_params else ["init", ("buns", True)])
+    assert ready["warmed_score_resources"] == ([] if dynamic_params else [
+        {"filter": "BuriedUnsatHbonds", "ignore_surface_res": True},
+    ])
 
 
 def test_full_candidates_fixed_seed_and_request_outputs_are_isolated(session):

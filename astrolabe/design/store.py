@@ -181,7 +181,10 @@ class DataclassCodec(Generic[T]):
 
     def encode(self, value: T) -> bytes:
         self._sealed = True
-        self._validate_root(value)
+        # Object roots are validated by the encoding traversal itself. Decode
+        # still needs its separate check after dataclass constructors have run.
+        if self.value_type is not object:
+            self._validate_root(value)
         return _json_bytes(self._encode_value(value, path="$"))
 
     def decode(self, data: bytes) -> T:
@@ -194,7 +197,8 @@ class DataclassCodec(Generic[T]):
 
     def references(self, value: T) -> tuple[Blob, ...]:
         self._sealed = True
-        self._validate_root(value)
+        if self.value_type is not object:
+            self._validate_root(value)
         return tuple(self._collect_references(value, path="$"))
 
     def compatibility_key(self) -> tuple[Any, ...]:
@@ -397,9 +401,18 @@ class DataclassCodec(Generic[T]):
         raise ValueError(f"unknown dataclass codec envelope at {path}")
 
     def _collect_references(self, value: Any, *, path: str) -> list[Blob]:
-        if value is None or isinstance(value, (str, bool, int, float, bytes, Path)):
+        if value is None or isinstance(value, (str, bool, int, bytes, Path)):
+            return []
+        if isinstance(value, float):
+            # Typed-root reference discovery historically accepts all floats.
+            if self.value_type is object and not math.isfinite(value):
+                raise ValueError(f"non-finite float at {path}")
             return []
         if isinstance(value, Blob):
+            if self.value_type is object:
+                # A Blob is a reference leaf, but its fields still need the
+                # object-root structural validation (including its allowlist).
+                self._validate_structured_value(value, path=path)
             return [value]
         if isinstance(value, (tuple, list, set, frozenset)):
             result: list[Blob] = []
@@ -667,9 +680,13 @@ class DataStore:
 
     def _write_reference(self, reference: Blob, encoded: bytes) -> None:
         target = self._path_for(reference)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists():
+        try:
             existing = target.read_bytes()
+        except FileNotFoundError:
+            # Only a missing target needs directory creation. Existing closure
+            # members still have their actual bytes checked on every persist.
+            target.parent.mkdir(parents=True, exist_ok=True)
+        else:
             if existing != encoded:
                 raise ValueError(
                     f"durable content differs at {reference.codec}:"

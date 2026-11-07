@@ -2,7 +2,6 @@ import itertools
 import logging
 import math
 import pathlib
-import threading
 from collections import defaultdict
 from functools import lru_cache
 from typing import Any, Iterable, Mapping, Sequence
@@ -11,16 +10,27 @@ import numpy as np
 from Bio.PDB import MMCIFParser, PDBParser
 
 _PYROSETTA_IMPORT_ERROR = None
-_PYROSETTA_IMPORT_ATTEMPTED = False
-_PYROSETTA_IMPORT_LOCK = threading.Lock()
-# Keep these module globals available for existing callers and monkeypatches.
-pyrosetta = None
-rosetta_hbonds = None
-PerResidueSasaMetric = None
-ContactMolecularSurfaceFilter = None
-HolesFilter = None
-ShapeComplementarityFilter = None
-MutateResidue = None
+try:
+    import pyrosetta  # type: ignore
+    from pyrosetta.rosetta.core.scoring import hbonds as rosetta_hbonds  # type: ignore
+    from pyrosetta.rosetta.core.simple_metrics.per_residue_metrics import (  # type: ignore
+        PerResidueSasaMetric,
+    )
+    from pyrosetta.rosetta.protocols.simple_filters import (  # type: ignore
+        ContactMolecularSurfaceFilter,
+        HolesFilter,
+        ShapeComplementarityFilter,
+    )
+    from pyrosetta.rosetta.protocols.simple_moves import MutateResidue  # type: ignore
+except Exception as exc:  # pragma: no cover - optional/proprietary dependency
+    pyrosetta = None  # type: ignore
+    rosetta_hbonds = None  # type: ignore
+    PerResidueSasaMetric = None  # type: ignore
+    ContactMolecularSurfaceFilter = None  # type: ignore
+    HolesFilter = None  # type: ignore
+    ShapeComplementarityFilter = None  # type: ignore
+    MutateResidue = None  # type: ignore
+    _PYROSETTA_IMPORT_ERROR = exc
 from scipy.spatial import Delaunay, QhullError, cKDTree
 
 from astrolabe.core.chain_resolution import (
@@ -64,40 +74,6 @@ CD47_ANTIBODY_CONSENSUS_RESIDUES = (
 
 
 def _require_pyrosetta():
-    global _PYROSETTA_IMPORT_ATTEMPTED, _PYROSETTA_IMPORT_ERROR
-
-    if pyrosetta is None and not _PYROSETTA_IMPORT_ATTEMPTED:
-        with _PYROSETTA_IMPORT_LOCK:
-            if pyrosetta is None and not _PYROSETTA_IMPORT_ATTEMPTED:
-                try:
-                    import pyrosetta as module  # type: ignore
-                    from pyrosetta.rosetta.core.scoring import hbonds  # type: ignore
-                    from pyrosetta.rosetta.core.simple_metrics.per_residue_metrics import (  # type: ignore
-                        PerResidueSasaMetric as sasa_metric,
-                    )
-                    from pyrosetta.rosetta.protocols.simple_filters import (  # type: ignore
-                        ContactMolecularSurfaceFilter as contact_filter,
-                        HolesFilter as holes_filter,
-                        ShapeComplementarityFilter as shape_filter,
-                    )
-                    from pyrosetta.rosetta.protocols.simple_moves import (  # type: ignore
-                        MutateResidue as mutate_residue,
-                    )
-                except Exception as exc:  # optional/proprietary dependency
-                    _PYROSETTA_IMPORT_ERROR = exc
-                else:
-                    # Publish only the complete import set, under the load lock.
-                    globals().update(
-                        pyrosetta=module,
-                        rosetta_hbonds=hbonds,
-                        PerResidueSasaMetric=sasa_metric,
-                        ContactMolecularSurfaceFilter=contact_filter,
-                        HolesFilter=holes_filter,
-                        ShapeComplementarityFilter=shape_filter,
-                        MutateResidue=mutate_residue,
-                    )
-                _PYROSETTA_IMPORT_ATTEMPTED = True
-
     if pyrosetta is None:
         raise ImportError(
             "PyRosetta is required for these losses/selectors but is not available. "
@@ -1830,7 +1806,18 @@ def _compute_shape_complementarity_between_chains(pose, chain_a: str, chain_b: s
     sc_filter.jump_id(1)
     sc_filter.use_rosetta_radii(True)
     try:
-        value = float(sc_filter.report_sm(sub_pose))
+        from astrolabe.losses.shape_complementarity import (
+            spatial_shape_complementarity,
+            supports_spatial_sc,
+        )
+        if supports_spatial_sc(sub_pose):
+            try:
+                value = float(spatial_shape_complementarity(sub_pose))
+            except RuntimeError:
+                # Preserve the native filter's failure sentinel and strict handling.
+                value = float(sc_filter.report_sm(sub_pose))
+        else:
+            value = float(sc_filter.report_sm(sub_pose))
         if strict and (not math.isfinite(value) or value < 0):
             raise ValueError("Invalid shape complementarity result")
         return value
@@ -1918,7 +1905,6 @@ def _chain_relative_residue_indices(pose, chain: str, residues: str) -> list[int
 
 
 def _chain_region_selector(pose, chain: str, residues: str | None = None):
-    _require_pyrosetta()
     selector_ns = pyrosetta.rosetta.core.select.residue_selector
     if residues is None or str(residues).strip() == "":
         return selector_ns.ChainSelector(chain)
@@ -1933,7 +1919,6 @@ def _chain_group_region_selector(
     chains: Sequence[str],
     residues: str | None = None,
 ):
-    _require_pyrosetta()
     chain_ids = [str(chain) for chain in chains]
     if len(chain_ids) == 1:
         return _chain_region_selector(pose, chain_ids[0], residues)
@@ -1960,6 +1945,23 @@ def _chain_group_region_selector(
         )
     selector_ns = pyrosetta.rosetta.core.select.residue_selector
     return selector_ns.ResidueIndexSelector(",".join(str(i) for i in indices))
+
+
+def _make_interface_buns_filter(*, ignore_surface_res: bool = False):
+    """Construct a fresh native filter; also permits pose-free resident warmup."""
+    _require_pyrosetta()
+    xml = (
+        '<BuriedUnsatHbonds report_all_heavy_atom_unsats="true" '
+        f'ignore_surface_res="{str(bool(ignore_surface_res)).lower()}" '
+        'use_ddG_style="false" dalphaball_sasa="1" probe_radius="1.1" '
+        'burial_cutoff_apo="0.2" confidence="0" />'
+    )
+    rosetta = pyrosetta.rosetta
+    filt = rosetta.protocols.simple_filters.BuriedUnsatHbondFilter()
+    # The same native parser obtains the command-line score function itself.
+    # A full RosettaScripts DataMap additionally loads unrelated score functions.
+    filt.parse_my_tag(rosetta.utility.tag.Tag.create(xml), rosetta.basic.datacache.DataMap())
+    return filt
 
 
 def _compute_interface_buried_unsatisfied_hbonds(
@@ -1989,15 +1991,7 @@ def _compute_interface_buried_unsatisfied_hbonds(
             f"pose={sorted(pose_chain_ids)!r} selected={sorted(selected_chain_ids)!r}."
         )
 
-    xml = (
-        '<BuriedUnsatHbonds report_all_heavy_atom_unsats="true" '
-        f'ignore_surface_res="{str(bool(ignore_surface_res)).lower()}" '
-        'use_ddG_style="false" dalphaball_sasa="1" probe_radius="1.1" '
-        'burial_cutoff_apo="0.2" confidence="0" />'
-    )
-    buns_filter = pyrosetta.rosetta.protocols.rosetta_scripts.XmlObjects.static_get_filter(
-        xml
-    )
+    buns_filter = _make_interface_buns_filter(ignore_surface_res=ignore_surface_res)
     bound_buns = float(buns_filter.report_sm(pose))
     if not math.isfinite(bound_buns):
         raise ValueError("Bound BUNS must be finite")
@@ -2766,7 +2760,6 @@ def _normalized_hotspot_selector_values(
 
 
 def _per_residue_sasa_calculator(sidechain_only: bool):
-    _require_pyrosetta()
     if sidechain_only:
         from pyrosetta.rosetta.core.scoring.sasa import per_res_sc_sasa
 
@@ -2960,7 +2953,6 @@ def chain_holes_diff(eval_result, buried_protomer: str):
 
 
 def calculate_holes_diff(complex_poses=None, buried_chain=None, structure_files=None):
-    _require_pyrosetta()
     result = {}
     holes_filter = HolesFilter()
 
@@ -3872,7 +3864,6 @@ def _load_pose_cached(
     _mtime: float | None,
     extra_residue_params: tuple[tuple[str, float | None], ...],
 ):
-    _require_pyrosetta()
     try:
         allow_mmcif_pdb_fallback = bool(global_config.allow_mmcif_pdb_fallback)
     except RuntimeError:
@@ -4010,7 +4001,6 @@ def calculate_buried_fraction_allala(
 
 @lru_cache(maxsize=4)
 def mutate_pose_to_all_ala(pose):
-    _require_pyrosetta()
     print("get_allala_pose called")
     new_pose = pose.clone()
     for i in range(1, new_pose.size() + 1):

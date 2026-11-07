@@ -618,7 +618,7 @@ class BranchingPolicy:
                 "any" if self.pipeline or state.batch else "all"
             )
         elif state.batch:
-            wait = "all"
+            wait = "any" if self.pipeline else "all"
         else:
             raise RuntimeError("branching policy has no outstanding work")
         return BranchAction(state=state, wait=wait)
@@ -785,24 +785,29 @@ class BranchingPolicy:
         batch_results = tuple(
             sorted(completed.values(), key=lambda item: item.job.id)
         )
-        observed = set(completed)
-        if not set(active) <= {
-            f"propose/{identifier}" for identifier in observed
-        }:
+        batch = tuple(sorted(state.batch, key=lambda item: item.id))
+        if not self.pipeline and any(job.id not in completed for job in batch):
             return replace(
                 state, batch_results=batch_results
             )
 
-        ordered = tuple(
-            completed[job.id]
-            for job in sorted(state.batch, key=lambda item: item.id)
-        )
+        # Only the remaining batch participates: results include earlier
+        # committed batches as well as terminals buffered beyond a gap.
+        ordered: list[BranchTerminal] = []
+        for job in batch:
+            if job.id not in completed:
+                break
+            ordered.append(completed[job.id])
+        if not ordered:
+            return replace(state, batch_results=batch_results)
         seen = list(state.seen)
         counts = self._counts(state)
         queued = list(state.queued)
         refused = list(state.refused)
         next_evaluation = state.next_evaluation
-        stopped = False
+        # A refusal may have committed in an earlier prefix (or evaluation).
+        # Drain admitted work, but never restart the cleared evaluation queue.
+        stopped = state.stop_reason == "native_call_budget"
         rejected = state.rejected
         duplicates = state.duplicates
         load = self._evaluation_load(state)
@@ -855,7 +860,7 @@ class BranchingPolicy:
             state,
             next_evaluation=next_evaluation,
             counts=tuple(sorted(counts.items())),
-            batch=(),
+            batch=batch[len(ordered):],
             batch_results=batch_results,
             queued=tuple(queued),
             refused=tuple(refused),

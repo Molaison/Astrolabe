@@ -181,6 +181,54 @@ def test_proposal_batch_commits_out_of_order_only_at_complete_barrier() -> None:
     assert tuple(job.id for job in state.queued) == (1, 2)
 
 
+def test_pipeline_commits_only_contiguous_remaining_proposal_prefix() -> None:
+    policy = _policy(pipeline=True, quota_mode="attempts",
+                     proposal_batch_size=3, proposals_per_parent=4)
+    state = _ready_generation(policy)
+    action = policy.ask(state)
+    state = policy.admit(state, action)
+    first, second, third = action.jobs
+    state = policy.tell(state, BranchEvent((_proposal_terminal(second, "child-2"),)))
+    assert state.batch == action.jobs
+    assert state.queued == ()
+    assert policy.ask(state).wait == "any"
+
+    state = policy.tell(state, BranchEvent((_proposal_terminal(first, "child-1"),)))
+    assert state.batch == (third,)
+    assert tuple(job.proposal.key for job in state.queued) == ("child-1", "child-2")
+    state = policy.tell(state, BranchEvent((_proposal_terminal(third, "child-2"),)))
+    assert state.batch == ()
+    assert state.duplicates == 1
+    dispatch = policy.ask(state)
+    state = policy.admit(state, dispatch)
+    later = policy.ask(state)
+    assert tuple(job.id for job in later.jobs) == (4,)
+    state = policy.tell(policy.admit(state, later),
+                        BranchEvent((_proposal_terminal(later.jobs[0], "child-4"),)))
+    assert state.batch == ()
+    assert tuple(job.id for job in state.queued) == (3,)
+    assert state.queued[0].proposal.key == "child-4"
+    assert state.duplicates == 1
+    assert state.proposals == 4
+
+
+def test_pipeline_refusal_prefix_does_not_restart_evaluation_queue() -> None:
+    policy = _policy(pipeline=True, quota_mode="attempts")
+    state = _ready_generation(policy)
+    action = policy.ask(state)
+    first, second = action.jobs
+    state = policy.tell(policy.admit(state, action),
+                        BranchEvent((BranchTerminal(first, "refused"),)))
+    assert state.batch == (second,)
+    assert state.stop_reason == "native_call_budget"
+    assert policy.ask(state).wait == "any"
+    state = policy.tell(state, BranchEvent((_proposal_terminal(second, "child-2"),)))
+    assert state.batch == ()
+    assert state.queued == ()
+    assert state.refused == (first,)
+    assert state.stop_reason == "native_call_budget"
+
+
 def test_admitted_quota_refills_invalid_and_duplicate_attempts() -> None:
     policy = _policy(quota_mode="admitted")
     state = _ready_generation(policy)

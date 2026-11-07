@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import hashlib
 import json
 from pathlib import Path
 
@@ -459,6 +460,186 @@ def test_design_codec_supports_heterogeneous_design_roots():
     assert data.get(checkpoint_reference, design_codec) == checkpoint
 
 
+@pytest.mark.parametrize("operation", ["encode", "references"])
+@pytest.mark.parametrize(
+    "bad_value, error, message",
+    [
+        ((object(),), TypeError, "unsupported"),
+        ([np.array([1])], TypeError, "unsupported"),
+        ({object()}, TypeError, "unsupported"),
+        (frozenset({object()}), TypeError, "unsupported"),
+        ({1: "bad key"}, TypeError, "keys"),
+        (NestedValue("unregistered", (1,)), TypeError, "not registered"),
+        (NestedValue, TypeError, "unsupported"),
+        (float("nan"), ValueError, "non-finite"),
+        (float("inf"), ValueError, "non-finite"),
+        (float("-inf"), ValueError, "non-finite"),
+    ],
+)
+def test_object_root_codec_rejects_malformed_nested_values(
+    operation, bad_value, error, message
+):
+    codec = DataclassCodec(object, "test/structured/v1")
+    with pytest.raises(error, match=message):
+        getattr(codec, operation)({"outer": [{"inner": bad_value}]})
+
+
+@pytest.mark.parametrize("operation", ["encode", "references"])
+@pytest.mark.parametrize(
+    "field, bad_value, error, message",
+    [
+        ("identity", Key({"nested": [float("nan")]}), ValueError, "non-finite"),
+        ("identity", Key([object()]), TypeError, "unsupported"),
+        ("identity", Key({1: "bad key"}), TypeError, "keys"),
+        ("identity", NestedValue("unregistered", ()), TypeError, "not registered"),
+        ("codec", {"nested": [np.array([1])]}, TypeError, "unsupported"),
+        ("codec", {"nested": [float("inf")]}, ValueError, "non-finite"),
+    ],
+)
+def test_object_root_codec_validates_nested_blob_fields(
+    operation, field, bad_value, error, message
+):
+    codec = DataclassCodec(object, "test/structured-blob/v1")
+    blob = Blob(**{"identity": Key("abc"), "codec": "json/v1", field: bad_value})
+    with pytest.raises(error, match=message):
+        getattr(codec, operation)({"outer": (blob,)})
+
+
+@pytest.mark.parametrize("operation", ["encode", "references"])
+def test_object_root_codec_checks_blob_subclass_allowlist_and_fields(operation):
+    @dataclass(frozen=True)
+    class ExtendedBlob(Blob):
+        detail: object
+
+    blob = ExtendedBlob(Key("abc"), "json/v1", float("nan"))
+    codec = DataclassCodec(object, "test/unregistered-blob/v1")
+    with pytest.raises(TypeError, match="not registered"):
+        getattr(codec, operation)([blob])
+
+    registered = DataclassCodec(
+        object, "test/registered-blob/v1", nested_types=(ExtendedBlob,)
+    )
+    with pytest.raises(ValueError, match="non-finite"):
+        getattr(registered, operation)([blob])
+
+
+@pytest.mark.parametrize("number", [float("nan"), float("inf"), float("-inf")])
+def test_typed_root_references_preserve_historic_nonfinite_float_support(number):
+    blob = Blob(Key("abc"), "json/v1")
+    value = Payload(NestedValue("nested", ()), blob, {"nested": (number,)})
+    typed = DataclassCodec(Payload, "test/typed-float/v1", nested_types=(NestedValue,))
+    structured = DataclassCodec(
+        object, "test/structured-float/v1", nested_types=(Payload, NestedValue)
+    )
+    assert typed.references(value) == (blob,)
+    with pytest.raises(ValueError, match="non-finite"):
+        typed.encode(value)
+    with pytest.raises(ValueError, match="non-finite"):
+        structured.references(value)
+
+
+def test_typed_root_references_preserve_blob_leaf_semantics():
+    blob = Blob(Key({"nested": [object()]}), "json/v1")
+    value = Payload(NestedValue("nested", ()), blob, {})
+    typed = DataclassCodec(Payload, "test/typed-blob/v1", nested_types=(NestedValue,))
+    assert typed.references(value) == (blob,)
+    with pytest.raises(TypeError, match="unsupported"):
+        typed.encode(value)
+
+
+@pytest.mark.parametrize(
+    "bad_value, error, message",
+    [
+        (object(), TypeError, "unsupported"),
+        (float("nan"), ValueError, "non-finite"),
+        ({1: "bad key"}, TypeError, "keys"),
+        (NestedValue("unregistered", ()), TypeError, "not registered"),
+        (Blob(Key([object()]), "json/v1"), TypeError, "unsupported"),
+    ],
+)
+def test_object_root_decode_revalidates_values_changed_by_post_init(
+    bad_value, error, message
+):
+    @dataclass
+    class PostInitValue:
+        value: object
+
+        def __post_init__(self):
+            if self.value == "replace":
+                self.value = {"nested": [bad_value]}
+
+    codec = DataclassCodec(
+        object, "test/post-init/v1", nested_types=(PostInitValue,)
+    )
+    envelope = json.loads(codec.encode({"wrapped": PostInitValue("safe")}))
+    envelope["$dict"]["wrapped"]["fields"]["value"] = "replace"
+    with pytest.raises(error, match=message):
+        codec.decode(json.dumps(envelope).encode("utf-8"))
+
+
+def test_object_root_codec_preserves_canonical_bytes_identity_and_reference_order():
+    codec = DataclassCodec(object, "test/canonical/v1")
+    first = Blob(Key("first"), "json/v1")
+    second = Blob(Key("second"), "json/v1")
+    value = {
+        "z": [second, first, second],
+        "a": ("é", b"\x00\xff", Path("data/input"), {2, 1}, frozenset({4, 3}),
+              None, True, -0.0, first),
+    }
+    first_json = (
+        '{"$dataclass":"astrolabe.design.types.Blob","fields":{"codec":"json/v1",'
+        '"identity":{"$dataclass":"astrolabe.design.types.Key",'
+        '"fields":{"digest":"first"}}}}'
+    )
+    second_json = first_json.replace('"first"', '"second"')
+    expected = (
+        '{"$dict":{"a":{"$tuple":["é",{"$bytes":"AP8="},'
+        '{"$path":"data/input"},{"$set":[1,2]},{"$set":[3,4]},null,true,-0.0,'
+        + first_json + ']},"z":{"$list":['
+        + ",".join((second_json, first_json, second_json)) + "]}}}"
+    ).encode("utf-8")
+    reordered = {"a": value["a"], "z": value["z"]}
+
+    assert codec.encode(value) == codec.encode(reordered) == expected
+    assert codec.references(value) == (second, first, second, first)
+    assert codec.references(reordered) == (first, second, first, second)
+    data = DataStore()
+    reference = data.put(value, codec)
+    assert reference == Blob(Key(hashlib.sha256(expected).hexdigest()), codec.identity)
+    assert data.put(reordered, codec) == reference
+
+
+def test_object_root_codec_rechecks_mutable_state_and_returns_fresh_decoded_values():
+    @dataclass
+    class MutableValue:
+        data: dict[str, object]
+
+    codec = DataclassCodec(object, "test/mutable/v1", nested_types=(MutableValue,))
+    first = Blob(Key("first"), "json/v1")
+    second = Blob(Key("second"), "json/v1")
+    value = MutableValue({"numbers": [1], "blob": first})
+    data = DataStore()
+    original_bytes = codec.encode(value)
+    original = data.put(value, codec)
+    assert codec.references(value) == (first,)
+
+    value.data["numbers"].append(2)
+    value.data["blob"] = second
+    assert codec.encode(value) != original_bytes
+    assert codec.references(value) == (second,)
+    assert data.put(value, codec) != original
+
+    decoded = data.get(original, codec)
+    decoded.data["numbers"].append(99)
+    decoded.data["blob"] = second
+    assert data.get(original, codec) == MutableValue({"numbers": [1], "blob": first})
+
+    value.data["invalid"] = object()
+    for operation in (codec.encode, codec.references):
+        with pytest.raises(TypeError, match="unsupported"):
+            operation(value)
+
+
 def test_custom_dataclass_codec_seals_its_explicit_type_registry():
     codec = DataclassCodec(Payload, "test/sealed/v1")
     value = Payload(
@@ -530,6 +711,40 @@ def test_store_requires_known_codecs_and_rejects_digest_tampering(tmp_path: Path
     tampered._path_for(reference).write_bytes(b'{"value":[9]}')
     with pytest.raises(ValueError, match="digest mismatch"):
         tampered.get(reference, codec)
+
+
+def test_repersist_rechecks_existing_content_and_restores_missing_blob(tmp_path):
+    data = DataStore(tmp_path / "data")
+    reference = data.put({"value": 1}, JSONCodec())
+    data.persist((reference,))
+    target = data._path_for(reference)
+    original = target.read_bytes()
+    target.write_bytes(b'{"value":2}')
+    with pytest.raises(ValueError, match="durable content differs"):
+        data.persist((reference,))
+    target.unlink()
+    data.persist((reference,))
+    assert target.read_bytes() == original
+
+
+def test_repersist_existing_closure_retains_directory_sync_failure(tmp_path, monkeypatch):
+    import os
+    import stat
+    import astrolabe.design.store as store_module
+
+    data = DataStore(tmp_path / "data")
+    reference = data.put({"value": 1}, JSONCodec())
+    data.persist((reference,))
+    real_fsync = os.fsync
+
+    def fail_directory(descriptor):
+        if stat.S_ISDIR(os.fstat(descriptor).st_mode):
+            raise OSError("directory sync failed")
+        real_fsync(descriptor)
+
+    monkeypatch.setattr(store_module.os, "fsync", fail_directory)
+    with pytest.raises(OSError, match="directory sync failed"):
+        data.persist((reference,))
 
 
 def test_memory_store_refuses_persist_and_json_rejects_non_json_values():

@@ -63,6 +63,8 @@ class BranchExecutor:
         resolve: Callable[[BranchJob, Any], BranchTerminal] | None = None,
         on_error: Callable[[BranchJob, BaseException], None] | None = None,
         on_observed: Callable[[BranchJob, Any], None] | None = None,
+        before_wait: Callable[[BranchAction], None] | None = None,
+        ordered_results: bool = False,
     ) -> None:
         if submit is None and worker is None:
             raise TypeError("worker is required when submit is omitted")
@@ -74,12 +76,18 @@ class BranchExecutor:
             raise TypeError("on_error must be callable")
         if on_observed is not None and not callable(on_observed):
             raise TypeError("on_observed must be callable")
+        if before_wait is not None and not callable(before_wait):
+            raise TypeError("before_wait must be callable")
+        if type(ordered_results) is not bool:
+            raise TypeError("ordered_results must be boolean")
         self.pool = pool
         self.worker = worker
         self._submit = submit
         self._resolve = resolve
         self._on_error = on_error
         self._on_observed = on_observed
+        self._before_wait = before_wait
+        self._ordered_results = ordered_results
         self.one_pending: dict[Future[Any], BranchJob] = {}
         self.observed: dict[str, BranchTerminal] = {}
         self._admitted: dict[str, BranchJob] = {}
@@ -175,17 +183,43 @@ class BranchExecutor:
             raise ValueError(f"unsupported wait mode {action.wait!r}")
 
         self._admit(action.jobs)
+        if self._before_wait is not None:
+            self._before_wait(action)
         if action.wait == "none" or not self.one_pending:
             return BranchEvent(())
 
         return_when = (
             FIRST_COMPLETED if action.wait == "any" else ALL_COMPLETED
         )
+        pending = sorted(
+            self.one_pending, key=lambda future: _job_order(self.one_pending[future])
+        )
+        waiting = pending
+        if self._ordered_results and action.wait == "any":
+            # A ready suffix is not publishable. Wait only on each phase's
+            # earliest pending ID, so it cannot cause a zero-progress spin or
+            # prevent the independent phase from advancing.
+            heads: dict[str, Future[Any]] = {}
+            for future in pending:
+                heads.setdefault(self.one_pending[future].phase, future)
+            waiting = list(heads.values())
         ready, _ = wait(
-            tuple(self.one_pending),
+            waiting,
             return_when=return_when,
         )
-        ordered = sorted(ready, key=lambda future: _job_order(self.one_pending[future]))
+        if self._ordered_results:
+            ordered = []
+            blocked: set[str] = set()
+            for future in pending:
+                phase = self.one_pending[future].phase
+                if phase in blocked:
+                    continue
+                if not future.done():
+                    blocked.add(phase)
+                    continue
+                ordered.append(future)
+        else:
+            ordered = sorted(ready, key=lambda future: _job_order(self.one_pending[future]))
         # Future.result() is the only background-result observation phase. Raw
         # owner adapter records may therefore be native DTOs or JSON projections.
         raw_results, raw_errors = _observe_futures(ordered)

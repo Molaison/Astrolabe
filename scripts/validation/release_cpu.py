@@ -45,6 +45,10 @@ RELEASE_CPU_TESTS = (
     "tests/test_posthoc_target_chain_metrics.py",
     "tests/test_constraint_compliance_analysis.py",
     "tests/test_standard_scores_normalization.py",
+    "tests/test_shape_complementarity.py",
+    "tests/test_shape_complementarity_loss.py",
+    "tests/test_design_data.py",
+    "tests/test_design_runtime.py",
 )
 
 
@@ -63,6 +67,24 @@ EXECUTION_CPU_TESTS = RELEASE_CPU_TESTS + (
     "tests/test_alphafold3_scores_chain_ptm.py",
     "tests/test_af3_bucket_policy.py",
     "tests/test_af3_refstructure_env_wiring.py",
+    "tests/test_parallel_refinement.py",
+    "tests/test_persistent_scientific_worker.py",
+    "tests/test_design_branch_execution.py",
+    "tests/test_design_branch_owner.py",
+    "tests/test_design_branching.py",
+    "tests/test_resource_session.py",
+    "tests/test_local_model_pool.py",
+    "tests/test_model_daemon_concurrency.py",
+    "tests/test_model_pipeline.py",
+    "tests/test_mutator_runtime_stages.py",
+    "tests/test_esmfold_loading_stages.py",
+    "tests/test_staged_loading_admission.py",
+    "tests/test_shared_model_clients.py",
+    "tests/test_shared_model_spawn.py",
+    "tests/test_telemetry_readiness_recovery.py",
+    "tests/test_evaluator_startup.py",
+    "tests/test_daily_task_config.py",
+    "tests/test_rna_evaluator_adapters.py",
 )
 
 

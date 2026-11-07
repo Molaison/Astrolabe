@@ -306,6 +306,42 @@ def test_restore_rejects_same_job_identity_conflicts() -> None:
     assert executor.one_pending == {future: job}
 
 
+def test_ordered_any_waits_only_on_phase_heads_and_publishes_ready_prefix(monkeypatch) -> None:
+    import astrolabe.design.branch_execution as execution
+
+    jobs = (_job("evaluate", 1), _job("evaluate", 2),
+            _job("propose", 1), _job("propose", 2))
+    futures = [Future() for _ in jobs]
+    futures[1].set_result(_terminal(jobs[1]))
+    futures[2].set_result(_terminal(jobs[2]))
+    published = []
+    executor = BranchExecutor(
+        object(), worker=_terminal, ordered_results=True,
+        resolve=lambda job, raw: published.append(job.identity) or raw,
+    )
+    for job, future in zip(jobs, futures):
+        executor.restore(job, future)
+    real_wait = execution.wait
+    waits = []
+
+    def wait_on_heads(waiting, *, return_when):
+        waits.append(tuple(waiting))
+        if len(waits) == 1:
+            assert tuple(waiting) == (futures[0], futures[2])
+        else:
+            # The already-completed evaluation suffix must never wake a wait.
+            assert tuple(waiting) == (futures[0], futures[3])
+            futures[0].set_result(_terminal(jobs[0]))
+        return real_wait(waiting, return_when=return_when)
+
+    monkeypatch.setattr(execution, "wait", wait_on_heads)
+    action = BranchAction(BranchingState(), wait="any")
+    assert executor.perform(action).terminals == (_terminal(jobs[2]),)
+    assert executor.perform(action).terminals == (_terminal(jobs[0]), _terminal(jobs[1]))
+    assert published == ["propose/1", "evaluate/1", "evaluate/2"]
+    assert tuple(executor.one_pending.values()) == (jobs[3],)
+
+
 def test_resolver_runs_on_caller_thread_after_all_raw_results_fetch() -> None:
     events: list[str] = []
     resolve_threads: list[int] = []
