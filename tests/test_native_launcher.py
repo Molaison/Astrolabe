@@ -36,6 +36,19 @@ def test_runtime_is_command_scoped_and_never_recurses(tmp_path):
         runtime_profile(tmp_path, args, {"ASTROLABE_RUNTIME_CONFIG": str(tmp_path / "missing")})
 
 
+def test_resource_broker_profile_can_attest_host_gpu_processes(tmp_path):
+    p = profile(tmp_path)
+    default, _ = runtime_command(tmp_path, ["run"], p, {}, tmp_path)
+    assert "--containall" in default
+    p["host_pid_namespace"] = True
+    command, _ = runtime_command(tmp_path, ["run"], p, {}, tmp_path)
+    assert "--contain" in command and "--ipc" in command
+    assert "--containall" not in command and "--pid" not in command
+    p["host_pid_namespace"] = "false"
+    with pytest.raises(ValueError, match="host_pid_namespace"):
+        runtime_command(tmp_path, ["run"], p, {}, tmp_path)
+
+
 @pytest.mark.parametrize("mask", ["1", "GPU-example", "", None])
 def test_runtime_preserves_resource_assignment_and_native_argv(tmp_path, mask):
     outside = tmp_path / "input with spaces"

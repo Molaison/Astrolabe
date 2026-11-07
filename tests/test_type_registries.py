@@ -25,7 +25,7 @@ def test_construct_evaluators_supports_custom_registry_types(tmp_path: Path) -> 
     @register_evaluator_factory("test_eval")
     def _factory(term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf):
         assert alias == "E1"
-        assert raw_model_results_dir == tmp_path
+        assert raw_model_results_dir == tmp_path / "evaluators" / "alias-E1"
         assert oligo_names == ["A"]
         assert evaluator_conf is not None
         assert term_conf is not None

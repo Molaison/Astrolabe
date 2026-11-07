@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Literal
 
-from astrolabe.evaluators.rna import RNA_BACKENDS
+from astrolabe.rna_backend_catalog import RNA_BACKENDS
 
 
 @dataclass(frozen=True)

@@ -52,6 +52,11 @@ def test_run_from_cfg_uses_canonical_repeat_lifecycle(
     cfg = OmegaConf.create(
         {
             "task_name": "demo",
+            "seqs": {"A": "AAAA"},
+            "mutator": {"mutator_terms": {"m": {"_type": "mcmc"}}},
+            "stages": {"default": {"oligo": ["A"], "evaluator": "first",
+                "mutators": ["m"], "weighted_score_expression": "0", "mutation_num": 1}},
+            "evaluator": {"evaluator_terms": {"first": {"_type": "sequence"}}},
             "count": 4,
             "repeats": "${count}",
             "seed": 17,

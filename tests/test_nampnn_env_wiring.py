@@ -543,8 +543,13 @@ def test_run_repeats_does_not_resolve_unused_env_interpolations(monkeypatch) -> 
     cfg = OmegaConf.create(
         {
             "task_name": "demo",
+            "seqs": {"A": "AAAA"},
+            "stages": {"default": {"oligo": ["A"], "evaluator": "first",
+                "mutators": ["m"], "weighted_score_expression": "0", "mutation_num": 1}},
+            "evaluator": {"evaluator_terms": {"first": {"_type": "sequence"}}},
             "repeats": 1,
             "mutator": {
+                "mutator_terms": {"m": {"_type": "mcmc"}},
                 "LigandMPNN": {
                     "checkpoint_ligand_mpnn": "/tmp/ligand.pt",
                 },

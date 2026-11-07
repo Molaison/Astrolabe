@@ -60,6 +60,11 @@ point. This is an installation setting, independent of a case or project.
 Both the installed console entry point and `python -m astrolabe` select that
 runtime before importing the CLI dependencies. The checkout launcher preserves
 its existing interpreter selection for commands without a matching profile.
+For a `run` profile using the local GPU resource broker, set
+`"host_pid_namespace": true`. The container then shares host process IDs while
+retaining filesystem and IPC containment, allowing the broker to verify NVML
+process ownership through `/proc`. Other profiles retain private PID containment
+by default.
 
 The interface command preserves an assigned `CUDA_VISIBLE_DEVICES`, including
 an explicitly empty restriction. When no device is assigned, it uses the existing

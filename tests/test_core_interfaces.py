@@ -68,7 +68,7 @@ def test_construct_evaluators_defaults_dummy_structure_dir_to_raw_results(tmp_pa
 
     evaluator = evaluators["Dummy"]
     assert evaluator._write_structure is True
-    assert evaluator._structure_dir == tmp_path / "dummy"
+    assert evaluator._structure_dir == tmp_path / "evaluators" / "alias-Dummy" / "dummy"
 
 
 def test_build_mutators_skips_null_term_entries() -> None:

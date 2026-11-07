@@ -5,6 +5,14 @@ from pathlib import Path
 from astrolabe.evaluators import utils
 
 
+def test_weights_only_data_dir_uses_installed_vendor(tmp_path: Path) -> None:
+    weights = tmp_path / "weights"
+    (weights / "params").mkdir(parents=True)
+    assert utils._resolve_alphafold2_import_root(weights) == (
+        Path(__file__).resolve().parents[1] / "vendor" / "alphafold2"
+    )
+
+
 def test_resolve_alphafold2_import_root_accepts_repo_root_data_dir(tmp_path: Path) -> None:
     repo_root = tmp_path / "af2_repo"
     (repo_root / "alphafold" / "common").mkdir(parents=True)

@@ -66,6 +66,8 @@ def _validate_runtime_profile(profile, field="runtime profile"):
     for key in ("python", "repo_mount"):
         if key in profile and (not isinstance(profile[key], str) or not profile[key].strip()):
             raise ValueError(f"{field}.{key}: expected a nonempty string")
+    if "host_pid_namespace" in profile and not isinstance(profile["host_pid_namespace"], bool):
+        raise ValueError(f"{field}.host_pid_namespace: expected a boolean")
     values = profile.get("env", {})
     if not isinstance(values, dict) or not all(
         isinstance(key, str) and key and isinstance(value, (str, int, float, bool))
@@ -143,7 +145,10 @@ def runtime_command(root, argv, profile, environment=None, cwd=None):
     if not os.access(engine, os.X_OK) or not Path(image).is_file():
         raise ValueError("Configured Astrolabe container engine/image is unavailable")
     container_root = profile.get("repo_mount", "/opt/Astrolabe")
-    command = [engine, "exec", "--containall", "--cleanenv", "--no-home", "--no-mount", "cwd", "--pwd", str(cwd)]
+    # NVML reports host task IDs. A local resource broker must be able to
+    # attest those same IDs through /proc; a private PID namespace cannot.
+    containment = ["--contain", "--ipc"] if profile.get("host_pid_namespace") else ["--containall"]
+    command = [engine, "exec", *containment, "--cleanenv", "--no-home", "--no-mount", "cwd", "--pwd", str(cwd)]
     cpu_only = any(a in ("--prepare-only", "--dry-run", "--help", "-h", "--service-socket") or a.startswith("--service-socket=") for a in argv)
     values = dict(profile.get("env", {}))
     if cpu_only:

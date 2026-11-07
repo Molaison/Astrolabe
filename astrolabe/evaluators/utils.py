@@ -94,6 +94,10 @@ def _resolve_alphafold2_import_root(data_dir: str | pathlib.Path | None) -> path
             ):
                 return vendor_root
             return candidate
+    # Installed environments commonly keep only params/ in data_dir.
+    # Prefer the pinned, patched source over an unrelated site-package fallback.
+    if (vendor_root / "alphafold" / "common" / "protein.py").exists():
+        return vendor_root
     return None
 
 
