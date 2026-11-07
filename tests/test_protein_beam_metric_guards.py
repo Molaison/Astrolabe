@@ -3,6 +3,14 @@ from types import SimpleNamespace as NS
 import numpy as np
 import pytest
 from astrolabe.losses import interaction
+from astrolabe.losses import shape_complementarity
+
+
+@pytest.fixture(autouse=True)
+def native_filter_path(monkeypatch):
+    # These doubles exercise native-filter failure handling, not the spatial
+    # accelerator's real Pose capability detection.
+    monkeypatch.setattr(shape_complementarity, 'supports_spatial_sc', lambda _: False)
 
 
 def test_strict_shape_does_not_convert_runtime_failure_to_zero(monkeypatch):
@@ -36,8 +44,10 @@ def test_strict_shape_allows_real_zero_but_rejects_invalid_values(monkeypatch,va
 def test_buns_nonfinite_counts_and_difference_cannot_clip_to_zero(monkeypatch,values):
     readings=iter(values)
     filt=NS(report_sm=lambda pose:next(readings))
-    fake=NS(rosetta=NS(protocols=NS(rosetta_scripts=NS(XmlObjects=NS(static_get_filter=lambda xml:filt))),
-        core=NS(id=NS(AtomID=lambda a,r:(a,r))),numeric=NS(xyzVector_double_t=lambda *x:np.asarray(x))))
+    fake=NS(rosetta=NS(core=NS(id=NS(AtomID=lambda a,r:(a,r))),
+        numeric=NS(xyzVector_double_t=lambda *x:np.asarray(x))))
+    monkeypatch.setattr(interaction,'_require_pyrosetta',lambda:None)
+    monkeypatch.setattr(interaction,'_make_interface_buns_filter',lambda **_:filt)
     monkeypatch.setattr(interaction,'pyrosetta',fake)
     class Pose:
         def total_residue(self):return 2

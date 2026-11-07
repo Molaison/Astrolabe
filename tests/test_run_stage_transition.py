@@ -469,6 +469,9 @@ def test_cli_configuration_entry_uses_stage_native_route_without_recovery(
         }},
     })
     entered = []
+    # This fixture tests dispatch, with the stage graph intentionally supplied
+    # by the test. Full configuration validation has separate CLI coverage.
+    monkeypatch.setattr("astrolabe.startup_validation.validate_startup_config", lambda *_, **__: None)
     monkeypatch.setattr(app, "_load_run_module", lambda: run_mod)
     monkeypatch.setattr(run_mod, "install_handlers", lambda: None)
     monkeypatch.setattr(run_mod, "stop_requested", lambda: False)

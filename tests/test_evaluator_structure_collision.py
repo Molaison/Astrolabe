@@ -76,8 +76,10 @@ def test_af2_and_esmfold_writers_keep_distinct_score_paths(tmp_path: Path, monke
     )
 
     class FakeESM:
-        def infer(self, _sequences):
-            return {
+        _client = object()
+
+        def infer_with_outputs(self, _sequences):
+            output = {
                 "chain_index": torch.tensor([[0, 1]]),
                 "plddt": torch.full((1, 2, 1), 80.0),
                 "mean_plddt": torch.tensor([80.0]),
@@ -85,8 +87,7 @@ def test_af2_and_esmfold_writers_keep_distinct_score_paths(tmp_path: Path, monke
                 "predicted_aligned_error": torch.zeros((1, 2, 2)),
             }
 
-        def output_to_pdb(self, _output):
-            return ["ESMFOLD\n"]
+            return {"output": output, "residue_plddt": None, "pdbs": ["ESMFOLD\n"]}
 
     esm = ESMFoldEvaluator(model=FakeESM())
     esm.alias = "ESM fold"

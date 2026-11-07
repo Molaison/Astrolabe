@@ -125,6 +125,12 @@ def test_runner_import_preserves_registry_without_importing_pyrosetta() -> None:
             "buried_fraction_allala", "ligand_protein_hbond",
         ):
             assert loss_registry.get_function(name).__module__ == interaction.__name__
+        for name in (
+            "interface_shape_complementarity", "interface_hbond_count",
+            "interface_polar_satisfaction", "short_range_interface_pair_energy",
+        ):
+            assert loss_registry.get_function(name).__module__ == "astrolabe.losses.rfd4_feedback"
+        assert loss_registry.get_function("rfd4_native_ligand_reward").__module__ == "astrolabe.losses.rfd4_native"
         assert attempts == [], attempts
         assert "pyrosetta" not in sys.modules
         assert not interaction._PYROSETTA_IMPORT_ATTEMPTED

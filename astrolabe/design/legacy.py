@@ -1137,6 +1137,9 @@ class LegacyContext:
             raise UnsupportedLegacyState("legacy segment/protomer globals are unavailable")
 
         variables = {variable.identity: variable for variable in translation.variables}
+        old_assignments = {
+            assignment.variable: assignment for assignment in translation.candidate.assignments
+        }
         new_assignments = {
             assignment.variable: assignment for assignment in candidate.assignments
         }
@@ -1147,6 +1150,14 @@ class LegacyContext:
             new = new_assignments[variable_id]
             variable = variables[variable_id]
             segment = segments[variable.segment_name]
+            if (getattr(segment, "length_bounds", None) is None
+                    and old_assignments[variable_id].value == new.value
+                    and (variable.kind == "chemical"
+                         or tuple(str(segment.sequence)) == new.value.tokens)):
+                # Fixed-length callers retain their pending mutation when the
+                # accepted assignment is already active. A different live
+                # assignment must still be restored, including the initial one.
+                continue
             if variable.kind == "chemical":
                 if not isinstance(new.value, Chemical):
                     raise UnsupportedLegacyState(

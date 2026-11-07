@@ -60,7 +60,13 @@ def test_isolated_cli_completes_and_resumes_without_new_evaluations(tmp_path, sh
     resume = [f"out_dir={run_root}" if argument.startswith("out_dir=") else argument
               for argument in command]
     invoke([*resume, "search.resume=true"])
-    assert (run_root / "01_evaluations.jsonl").read_bytes() == events
+    resumed_events = (run_root / "01_evaluations.jsonl").read_bytes()
+    assert resumed_events.startswith(events)
+    # Shared owners publish a fresh endpoint on resume. That operational event
+    # is allowed; scientific events, evaluations and receipts remain unchanged.
+    appended = [json.loads(line) for line in resumed_events[len(events):].splitlines()]
+    assert all(row["event"] == "resident_models_shared" for row in appended)
+    assert len(appended) <= (1 if sharing == "shared" else 0)
     assert json.loads(summary_path.read_text())["evaluations"] == summary["evaluations"]
     assert {
         path.name: hashlib.sha256(path.read_bytes()).hexdigest()

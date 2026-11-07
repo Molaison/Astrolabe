@@ -58,6 +58,9 @@ def test_engineering_config_and_target_mask():
 
 
 def test_budget_lineage_resume_and_contract_preservation(monkeypatch,tmp_path):
+    # A coordinator can share its process with a component that imported Torch.
+    # Completed recovery must accept the real captured CPU/CUDA-seed schema.
+    pytest.importorskip("torch")
     from concurrent.futures import Future
     import astrolabe.protein_beam as beam
     cfg=load_config(str(Path(__file__).parent / 'data/protein_beam/02_fixture.yaml'))
@@ -88,6 +91,33 @@ def test_budget_lineage_resume_and_contract_preservation(monkeypatch,tmp_path):
     assert len(calls)==count
     changed=deepcopy(cfg);changed.seed+=1
     with pytest.raises(ValueError,match='changed'): beam.run_beam(changed,tmp_path/'beam','unused',resume=True)
+
+
+@pytest.mark.parametrize("extra", [
+    {"unexpected": 1},
+    {"torch": [1, 2], "torch_seed": 7},
+    {"torch": [1, 2], "torch_seed": 7, "cuda_seed": 7, "cuda": []},
+    {"torch": [-1], "torch_seed": 7, "cuda_seed": 7},
+    {"torch": [1], "torch_seed": "7", "cuda_seed": 7},
+])
+def test_completed_control_rng_rejects_foreign_or_incomplete_schema(extra):
+    from astrolabe.model_execution import capture_random_state
+    from astrolabe.protein_beam_recovery import _validate_control_rng
+    rng = capture_random_state()
+    base = {name: rng[name] for name in ("python", "numpy")}
+    with pytest.raises(ValueError, match="RNG"):
+        _validate_control_rng(dict(base, **extra))
+
+
+def test_completed_control_rng_validation_preserves_live_state():
+    from astrolabe.model_execution import capture_random_state
+    from astrolabe.protein_beam_recovery import _validate_control_rng
+    torch = pytest.importorskip("torch")
+    initialized = torch.cuda.is_initialized()
+    before = capture_random_state()
+    _validate_control_rng(before)
+    assert capture_random_state() == before
+    assert torch.cuda.is_initialized() == initialized
 
 
 def test_unknown_native_attempt_is_not_replayed_and_cost_is_retained(monkeypatch,tmp_path):

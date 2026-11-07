@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -144,7 +145,17 @@ def test_owner_and_cpu_proxy_share_real_af3_settings_without_loading_a_model(mon
     assert proxy._settings == af3.service_model_settings(cfg)
     # Construct the real native owner's handler; importing its real dependency
     # used to fail after the GPU weights had already loaded.
-    assert callable(af3_service.inference_handler(object(), cfg))
+    runner = SimpleNamespace(
+        _model_config=SimpleNamespace(global_config=SimpleNamespace(
+            cyclic_asym_ids=(), cyclic_relative_patches=())),
+        _device=SimpleNamespace(platform="cpu"),
+    )
+    handler = af3_service.inference_handler(runner, cfg)
+    try:
+        assert callable(handler)
+        assert runner._inference_owner_settings == ((), ())
+    finally:
+        handler.close()
     monkeypatch.setattr(af3, "_configure_refstructure_env", lambda config: None)
     monkeypatch.setattr(af3, "_configure_msa_env", lambda config: None)
     monkeypatch.setattr(af3.jax, "local_devices", lambda *args, **kwargs: pytest.fail("CPU proxy initialized GPU"))

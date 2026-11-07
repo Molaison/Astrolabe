@@ -22,6 +22,33 @@ def _contract_digest(contract):
     return hashlib.sha256(json.dumps(contract, sort_keys=True).encode()).hexdigest()
 
 
+def _validate_control_rng(rng):
+    # capture_random_state includes Torch when another CPU component has
+    # imported it. Validate its complete schema without loading Torch or
+    # restoring RNG during the read-only completed-run check.
+    base = {"numpy", "python"}
+    torch = base | {"torch", "torch_seed"}
+    schemas = (base, torch | {"cuda_seed"}, torch | {"cuda", "cuda_visible_devices"})
+    if not isinstance(rng, dict) or set(rng) not in schemas:
+        raise ValueError("Completed beam control journal RNG receipt belongs to another execution")
+    if "torch" in rng:
+        states = [rng["torch"]]
+        if "cuda" in rng:
+            if not isinstance(rng["cuda"], (list, tuple)):
+                raise ValueError("Completed beam control journal has invalid CUDA RNG states")
+            states.extend(rng["cuda"])
+            mapping = rng["cuda_visible_devices"]
+            if mapping is not None and not isinstance(mapping, str):
+                raise ValueError("Completed beam control journal has invalid CUDA RNG mapping")
+        for state in states:
+            if (not isinstance(state, (list, tuple)) or not state
+                    or any(type(value) is not int or not 0 <= value <= 255 for value in state)):
+                raise ValueError("Completed beam control journal has invalid Torch RNG state")
+        for name in ("torch_seed", "cuda_seed"):
+            if name in rng and (type(rng[name]) is not int or not 0 <= rng[name] < 2**64):
+                raise ValueError("Completed beam control journal has invalid Torch RNG seed")
+
+
 def _read_journal(path):
     if not path.is_file():
         raise FileNotFoundError(f"Completed beam control journal is missing: {path}")
@@ -107,8 +134,7 @@ def _load_control_journal(output, state):
     if checkpoint.rng is None:
         raise ValueError("Completed beam control journal has no RNG receipt")
     rng = data.get(checkpoint.rng, design_codec)
-    if not isinstance(rng, dict) or set(rng) != {"numpy", "python"}:
-        raise ValueError("Completed beam control journal RNG receipt belongs to another execution")
+    _validate_control_rng(rng)
     control = data.get(checkpoint.state, state_codec)
     if (
         not control.finished

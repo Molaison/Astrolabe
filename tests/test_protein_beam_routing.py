@@ -187,7 +187,7 @@ def test_configured_branching_rejects_legacy_beam_conflict_before_run(
         beam.run_configured_branching(cfg, repeat)
 
 
-def test_configured_branching_requires_socket_before_output_or_run(
+def test_configured_branching_validates_before_creating_owned_service(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
 ) -> None:
@@ -197,10 +197,18 @@ def test_configured_branching_requires_socket_before_output_or_run(
     monkeypatch.setattr(
         beam,
         "run_beam",
-        lambda *args, **kwargs: pytest.fail("missing socket reached run_beam"),
+        lambda *args, **kwargs: pytest.fail("invalid configuration reached run_beam"),
+    )
+    def invalid_config(value):
+        assert value.seed == repeat.seed
+        raise ValueError("invalid science configuration")
+    monkeypatch.setattr(beam, "validate_config", invalid_config)
+    monkeypatch.setattr(
+        "astrolabe.evaluators.af3_lifecycle.OwnedAF3",
+        lambda *args: pytest.fail("invalid configuration created a model owner"),
     )
 
-    with pytest.raises(ValueError, match="socket_path"):
+    with pytest.raises(ValueError, match="invalid science configuration"):
         beam.run_configured_branching(cfg, repeat)
     assert not output.exists()
 
@@ -338,7 +346,7 @@ def test_run_beam_saves_canonical_config_for_configured_replay(
     assert saved.search.owner == "isolated_native"
     assert saved.search.summary_format == "json"
     assert OmegaConf.to_container(saved.search.execution, resolve=True) == {
-        "socket_path": str(socket_path.resolve()),
+        "socket_path": None,
         "workers": 4,
         "in_flight": 3,
         "resume": False,
@@ -363,6 +371,19 @@ def test_run_beam_saves_canonical_config_for_configured_replay(
         return {"status": "complete"}
 
     monkeypatch.setattr(beam, "run_beam", fake_run_beam)
+    class OwnedService:
+        service_settings = type("Settings", (), {"concurrency_mode": "process_pool"})()
+        def __init__(self, value, run_output, gpu_environment):
+            assert value.search.execution.socket_path is None
+            assert Path(run_output) == output.resolve()
+        def __enter__(self):
+            return str(socket_path.resolve())
+        def __exit__(self, *args):
+            pass
+        def abort(self):
+            pytest.fail("normal replay aborted its owner")
+    monkeypatch.setattr("astrolabe.evaluators.af3_lifecycle.OwnedAF3", OwnedService)
+    monkeypatch.setattr(beam, "validate_config", lambda _: None)
     assert configuration.dispatch_selected_search(replay, repeat) is True
     value, run_output, socket, kwargs = replay_calls[0]
     assert run_output == output.resolve()

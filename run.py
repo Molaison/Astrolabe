@@ -2533,12 +2533,15 @@ def execute_mutation_step(
                 global_config.mutable_protomers, evaluation_result, runtime_config
             )
             from astrolabe.design.generated_structure import publish_generated_structure
+            from astrolabe.mutators.rfd4_types import GenerationResult
 
             attempt = f"{step}:{runtime_config['current_mutator_alias']}"
-            generated_index = publish_generated_structure(
-                mutation_result, pathlib.Path(global_config.out_dir) / "generated_structures",
-                attempt=attempt,
-            )
+            generated_index = None
+            if isinstance(mutation_result, GenerationResult):
+                generated_index = publish_generated_structure(
+                    mutation_result, pathlib.Path(global_config.out_dir) / "generated_structures",
+                    attempt=attempt,
+                )
             if generated_index is not None:
                 runtime_config["generated_structure_records"][mutation_result.assembly] = {
                     "step": int(step),

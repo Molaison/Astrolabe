@@ -183,6 +183,16 @@ def test_fixed_length_domain_retains_pre_extension_identity_and_checkpoint_bytes
         design_codec.decode(legacy.replace(b'"allowed_values":null,', b""))
 
 
+def test_fixed_length_activation_restores_initial_assignment_from_changed_live_state():
+    s = state(bounds=None)
+    initial = s.translation.candidate
+    s.segment.sequence = "GHIK"
+    s.manager.refresh_protomers()
+    with s.context.activate(initial, translation=s.translation, data=s.data):
+        assert s.protein.sequence == "ACDE"
+    assert s.protein.sequence == "GHIK"
+
+
 @pytest.mark.parametrize("boundary", ["fixed", "ptm", "locked", "homology", "shared", "multisegment", "repeat", "smiles"])
 def test_translation_rejects_unsupported_variable_topology(boundary):
     s = state()

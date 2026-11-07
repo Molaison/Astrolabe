@@ -2,7 +2,6 @@
 import math
 
 from astrolabe.losses.base import loss_registry
-from astrolabe.losses.interaction import validate_load_poses
 
 
 def _interface_feedback_scores(eval_result, binder_chains, target_chains, metric, *, empty_interface_score=None, **options):
@@ -13,6 +12,8 @@ def _interface_feedback_scores(eval_result, binder_chains, target_chains, metric
         # Match next-step feedback's source normalization, including H placement.
         analyzer = analyze_interface
     else:
+        from astrolabe.losses.interaction import validate_load_poses
+
         complex_poses = getattr(eval_result, "complex_poses", None)
         sources = validate_load_poses(getattr(complex_poses, "poses", None), None)
         analyzer = analyze_pose_interface

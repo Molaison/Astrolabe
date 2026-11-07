@@ -49,6 +49,9 @@ RELEASE_CPU_TESTS = (
     "tests/test_shape_complementarity_loss.py",
     "tests/test_design_data.py",
     "tests/test_design_runtime.py",
+    "tests/test_backend_startup.py",
+    "tests/test_pyrosetta_lazy_import.py",
+    "tests/test_protein_beam_metric_guards.py",
 )
 
 
@@ -95,6 +98,10 @@ EXECUTION_CPU_TESTS = RELEASE_CPU_TESTS + (
     "tests/test_trajectory_model_owner.py",
     "tests/test_bioemu2.py",
     "tests/test_design_variable_length.py",
+    "tests/test_design_native_prediction.py",
+    "tests/test_protein_beam.py",
+    "tests/test_protein_beam_routing.py",
+    "tests/test_interface_budget.py",
     "tests/test_rfd4_backend.py",
     "tests/test_rfd4_feedback.py",
     "tests/test_rfd4_mutator.py",

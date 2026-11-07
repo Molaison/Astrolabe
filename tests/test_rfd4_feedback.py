@@ -1,5 +1,8 @@
 import json
 from dataclasses import replace
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -537,6 +540,27 @@ def test_contiguous_repair_rejects_invalid_length_or_budget(length, local, budge
     pytest.param("ACACA", 2, {"SG": None}, id="cystine-disulfide"),
 ])
 def test_analyze_pose_interface_real_residue_polar_roles(sequence, position, expected_roles):
+    if sequence != "ACA":
+        _assert_real_residue_polar_roles(sequence, position, expected_roles)
+        return
+
+    pytest.importorskip("pyrosetta")
+    # SH1 donor typing differs between default and -beta initialization. Other
+    # tests may already have initialized Rosetta; never reset that live runtime.
+    # Keep this test's original -beta chemistry contract in a fresh interpreter.
+    result = subprocess.run(
+        [sys.executable, "-c", (
+            "import json, runpy, sys; "
+            "runpy.run_path(sys.argv[1])['_assert_real_residue_polar_roles']"
+            "(*json.loads(sys.argv[2]))"
+        ), str(Path(__file__).resolve()), json.dumps([sequence, position, expected_roles])],
+        cwd=Path(__file__).resolve().parents[1],
+        capture_output=True, text=True, timeout=90,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+
+
+def _assert_real_residue_polar_roles(sequence, position, expected_roles):
     pyrosetta = pytest.importorskip("pyrosetta")
     from astrolabe.mutators.rfd4_feedback import analyze_pose_interface
 

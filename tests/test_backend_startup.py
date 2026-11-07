@@ -142,9 +142,17 @@ def test_registered_mutator_case_and_malformed_enum():
 
 def test_import_is_cheap():
     import subprocess
-    result = subprocess.run([sys.executable, "-c", "import astrolabe.backend_startup, sys; assert not {'torch', 'jax', 'pyrosetta'} & sys.modules.keys()"], capture_output=True, text=True, timeout=10)
+    # Other tests may legitimately load native modules in the pytest process.
+    # Only a fresh interpreter measures this module's import boundary.
+    result = subprocess.run(
+        [sys.executable, "-c", (
+            "import astrolabe.backend_startup, sys; "
+            "loaded = {'torch', 'jax', 'pyrosetta'} & sys.modules.keys(); "
+            "assert not loaded, loaded"
+        )],
+        capture_output=True, text=True, timeout=10,
+    )
     assert result.returncode == 0, result.stderr
-    assert 'pyrosetta' not in sys.modules
 
 
 @pytest.mark.parametrize('options,field', [

@@ -198,8 +198,8 @@ def test_placer_daemon_threads_auto_and_exact_torch_device(
 ) -> None:
     captured = []
 
-    def _kernel(settings, loader, *, torch_device=None):
-        captured.append(torch_device)
+    def _kernel(settings, loader, *, torch_device=None, lifecycle=None):
+        captured.append((torch_device, lifecycle))
         return object()
 
     monkeypatch.setattr(placer_daemon_module, "kernel_handler", _kernel)
@@ -207,4 +207,6 @@ def test_placer_daemon_threads_auto_and_exact_torch_device(
     placer_daemon_module.create_handler({})
     placer_daemon_module.create_handler({"torch_device": "cuda:1"})
 
-    assert captured == ["auto", "cuda:1"]
+    lifecycle = {"backend": "chemnet_placer", "residency": "resident_model",
+                 "weights_loaded": True, "gpu_resident": None}
+    assert captured == [("auto", lifecycle), ("cuda:1", lifecycle)]

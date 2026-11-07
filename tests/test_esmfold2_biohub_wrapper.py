@@ -42,7 +42,7 @@ def _write_fake_esmfold2_packages(
 ) -> tuple[Path, Path]:
     esm_repo = tmp_path / "esm-repo"
     transformers_repo = tmp_path / "transformers-repo"
-    esm_module = esm_repo / "src" / "esm" / "models" / "esmfold2.py"
+    esm_module = esm_repo / "src" / "esm" / "models" / "esmfold2" / "__init__.py"
     model_module = (
         transformers_repo
         / "src"
@@ -71,13 +71,6 @@ def _write_fake_esmfold2_packages(
             from pathlib import Path
             from types import SimpleNamespace
 
-            def _record(env_name, payload):
-                Path(os.environ[env_name]).write_text(
-                    json.dumps(payload, sort_keys=True),
-                    encoding="utf-8",
-                )
-
-
             class ProteinInput:
                 def __init__(self, id, sequence):
                     self.id = id
@@ -101,21 +94,18 @@ def _write_fake_esmfold2_packages(
                 def __init__(self, *, ccd_cache=None):
                     self.ccd_cache = ccd_cache
 
-                def fold(
-                    self,
-                    model,
-                    prediction_input,
-                    *,
-                    complex_id,
-                    num_loops,
-                    num_sampling_steps,
-                    num_diffusion_samples,
-                    seed,
-                    lm_dropout,
-                    msa_max_depth,
-                    msa_column_mask_rate,
-                    **optional,
-                ):
+                def prepare_input(self, prediction_input, *, seed, device):
+                    assert str(device) == "cpu"
+                    return {
+                        "sequences": [[chain.id, chain.sequence]
+                                      for chain in prediction_input.sequences],
+                        "seed": seed,
+                    }, None
+
+                def decode(self, output, features, chain_infos, *,
+                           num_diffusion_samples, complex_id):
+                    assert chain_infos is None
+                    assert num_diffusion_samples == output["num_diffusion_samples"]
                     audit_path = Path(__import__("os").environ["ESMFOLD2_FOLD_AUDIT"])
                     records = (
                         json.loads(audit_path.read_text(encoding="utf-8"))
@@ -125,18 +115,13 @@ def _write_fake_esmfold2_packages(
                     records.append(
                         {
                             "complex_id": complex_id,
-                            "sequences": [
-                                [chain.id, chain.sequence]
-                                for chain in prediction_input.sequences
-                            ],
-                            "num_loops": num_loops,
-                            "num_sampling_steps": num_sampling_steps,
+                            "sequences": features["sequences"],
+                            "num_loops": output["num_loops"],
+                            "num_sampling_steps": output["num_sampling_steps"],
                             "num_diffusion_samples": num_diffusion_samples,
-                            "seed": seed,
-                            "lm_dropout": lm_dropout,
-                            "msa_max_depth": msa_max_depth,
-                            "msa_column_mask_rate": msa_column_mask_rate,
-                            "optional": optional,
+                            "seed": features["seed"],
+                            "early_exit": output["early_exit"],
+                            "chunk_size": output["chunk_size"],
                         }
                     )
                     audit_path.write_text(json.dumps(records), encoding="utf-8")
@@ -154,6 +139,21 @@ def _write_fake_esmfold2_packages(
                         pae=[[0.0, 0.1], [0.1, 0.0]],
                         pde=[[0.0, 0.2], [0.2, 0.0]],
                     )
+            """
+        ).lstrip(),
+        encoding="utf-8",
+    )
+    (esm_module.parent / "processor.py").write_text(
+        dedent(
+            """
+            from contextlib import contextmanager
+            import torch
+
+            @contextmanager
+            def _seed_context(seed):
+                with torch.random.fork_rng(devices=[]):
+                    torch.manual_seed(seed)
+                    yield
             """
         ).lstrip(),
         encoding="utf-8",
@@ -182,6 +182,7 @@ def _write_fake_esmfold2_packages(
                     self.source = source
                     self.model_kwargs = model_kwargs
                     self.chunk_size = None
+                    self.device = "cpu"
 
                 @classmethod
                 def from_pretrained(cls, source, **model_kwargs):
@@ -199,6 +200,13 @@ def _write_fake_esmfold2_packages(
 
                 def set_chunk_size(self, chunk_size):
                     self.chunk_size = chunk_size
+
+                def __call__(self, *, sequences, seed, num_loops,
+                             num_sampling_steps, num_diffusion_samples, early_exit):
+                    return dict(num_loops=num_loops,
+                                num_sampling_steps=num_sampling_steps,
+                                num_diffusion_samples=num_diffusion_samples,
+                                early_exit=early_exit, chunk_size=self.chunk_size)
             """
         ).lstrip(),
         encoding="utf-8",
@@ -259,12 +267,21 @@ def test_esmfold2_daemon_reuses_one_model_and_preserves_request_options(
         num_sampling_steps=11,
         num_diffusion_samples=2,
         seed=123,
-        lm_dropout=0.25,
-        msa_max_depth=9,
-        msa_column_mask_rate=0.4,
+        lm_dropout=None,
+        msa_max_depth=None,
+        msa_column_mask_rate=None,
         chunk_size=32,
     )
     try:
+        # These controls have no native Biohub mapping: reject rather than
+        # teaching a permissive fake to accept scientifically inert options.
+        for knob, value in (("lm_dropout", 0.25), ("msa_max_depth", 9),
+                            ("msa_column_mask_rate", 0.4)):
+            setattr(runner, knob, value)
+            with pytest.raises(ValueError, match=knob):
+                runner.run([], tmp_path / "unsupported")
+            setattr(runner, knob, None)
+        assert not load_audit.exists()
         first = runner.run(
             [{"name": "one", "chains": [{"id": "A", "sequence": "ACD"}]}],
             tmp_path / "request-one",
@@ -274,10 +291,12 @@ def test_esmfold2_daemon_reuses_one_model_and_preserves_request_options(
             [{"name": "two", "chains": [{"id": "B", "sequence": "EFG"}]}],
             tmp_path / "request-two",
         )
-        status = runner._daemon.status()
+        status = runner._daemon.owner.request({"operation": "describe"})[
+            "metadata"]["runtime_lifecycle"]
 
-        assert status["model_load_count"] == 1
-        assert status["request_count"] == 2
+        # Count native loads and inference requests, not transport handshakes.
+        assert status["loader_count"] == 1
+        assert status["requests"] == 2
         assert len(json.loads(load_audit.read_text(encoding="utf-8"))) == 1
         folds = json.loads(fold_audit.read_text(encoding="utf-8"))
         assert [fold["seed"] for fold in folds] == [123, 456]
@@ -287,9 +306,8 @@ def test_esmfold2_daemon_reuses_one_model_and_preserves_request_options(
             assert fold["num_loops"] == 7
             assert fold["num_sampling_steps"] == 11
             assert fold["num_diffusion_samples"] == 2
-            assert fold["lm_dropout"] == 0.25
-            assert fold["msa_max_depth"] == 9
-            assert fold["msa_column_mask_rate"] == 0.4
+            assert fold["early_exit"] is False
+            assert fold["chunk_size"] == 32
         assert Path(first["jobs"][0]["structure_path"]) != Path(
             second["jobs"][0]["structure_path"]
         )
@@ -488,7 +506,6 @@ def test_esmfold2_worker_passes_pinned_ccd_to_real_builder_boundary(
     transformers_module = ModuleType("transformers.models.esmfold2.modeling_esmfold2")
     transformers_module.ESMFold2Model = FakeModel
     module_tree = {
-        "torch": SimpleNamespace(cuda=SimpleNamespace(is_available=lambda: False)),
         "esm": ModuleType("esm"),
         "esm.models": ModuleType("esm.models"),
         "esm.models.esmfold2": esmfold2_module,
@@ -506,6 +523,7 @@ def test_esmfold2_worker_passes_pinned_ccd_to_real_builder_boundary(
             "output_dir": str(tmp_path / "output"),
             "jobs": [],
             "local_files_only": True,
+            "device": "cpu",
         }
     )
 
@@ -534,7 +552,7 @@ def test_esmfold2_evaluator_returns_standard_scores(tmp_path: Path) -> None:
 
     class FakeRunner:
         def run(self, jobs, output_dir):
-            assert jobs == [{"name": "AB", "chains": [{"id": "A", "sequence": "ACDE"}, {"id": "B", "sequence": "FGH"}]}]
+            assert jobs == [{"name": "AB", "chains": [{"id": "A", "sequence": "ACDE"}, {"id": "B", "sequence": "FGH"}], "seed": 0}]
             return {
                 "jobs": [
                     {

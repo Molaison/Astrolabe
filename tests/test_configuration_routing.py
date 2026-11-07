@@ -334,6 +334,7 @@ def test_run_repeats_validates_before_planning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     events: list[str] = []
+    monkeypatch.setattr("astrolabe.startup_validation.validate_startup_config", lambda *a, **k: None)
 
     def reject(_cfg):
         events.append("validate")
@@ -356,6 +357,7 @@ def test_run_repeats_revalidates_each_materialized_config(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     from astrolabe.design.repeats import RepeatRun
+    monkeypatch.setattr("astrolabe.startup_validation.validate_startup_config", lambda *a, **k: None)
 
     events: list[str] = []
 
@@ -404,6 +406,7 @@ def test_run_repeats_holds_scientific_owner_through_setup_and_pipeline(
     from astrolabe.design.owner import SCIENTIFIC_OWNER
     from astrolabe.design.repeats import RepeatRun
 
+    monkeypatch.setattr("astrolabe.startup_validation.validate_startup_config", lambda *a, **k: None)
     reset_entered = threading.Event()
     release_reset = threading.Event()
     pipeline_entered = threading.Event()

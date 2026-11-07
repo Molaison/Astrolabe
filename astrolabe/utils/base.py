@@ -447,7 +447,7 @@ def construct_standard_input(oligo_names, seed):
         after_sequence = protomer.mutated_sequence
         if (len(before_sequence) != len(after_sequence)
                 or any(getattr(global_config.segments[component], "pending_sequence", None) is not None
-                       for component in protomer.components)):
+                       for component in getattr(protomer, "components", ()))):
             mutation_markers = f"whole-sequence reconstruction: {len(before_sequence)} -> {len(after_sequence)} residues"
         else:
             mutation_markers = "".join(

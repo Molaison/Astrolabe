@@ -116,8 +116,12 @@ def simulated_beam(tmp_path, monkeypatch, budget, duplicates=False):
         def __init__(self, **kwargs): pass
         def __enter__(self): return self
         def __exit__(self, *args): pass
-        def submit(self, function, task):
-            if task['kind'] == 'proposal':
+        def submit(self, function, task=None):
+            if task is None:
+                # Transport-only priming is not a candidate or an AF3 call.
+                assert function is beam._worker_ready
+                result = function()
+            elif task['kind'] == 'proposal':
                 seq = list(root)
                 if not duplicates:
                     i = task['id'] % len(seq)
