@@ -78,7 +78,8 @@ def test_healthy_shutdown_is_exit_zero_and_repeated_shutdown_is_safe(tmp_path):
 
 
 def test_ready_owner_keeps_serving_after_its_startup_deadline(tmp_path):
-    owner = OwnedModelDaemon(_spec(tmp_path), startup_timeout=20)
+    import sys
+    owner = OwnedModelDaemon(_spec(tmp_path, python_bin=sys.executable), startup_timeout=20)
     try:
         first = owner.request({"operation": "describe", "action": "snapshot"})
         owner._startup_deadline = time.monotonic() - 1

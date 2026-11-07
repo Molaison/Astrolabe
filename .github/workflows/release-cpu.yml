@@ -51,6 +51,7 @@ jobs:
           OMP_NUM_THREADS: '1'
         run: |
           python -m pytest -q tests/test_integrated_cli_workflow.py \
+            tests/test_model_daemon.py::test_ready_owner_keeps_serving_after_its_startup_deadline \
             tests/test_design_native_prediction.py tests/test_design_variable_length.py \
             tests/test_protein_beam.py tests/test_protein_beam_routing.py \
             tests/test_interface_budget.py \
