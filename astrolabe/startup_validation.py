@@ -8,6 +8,7 @@ from contextvars import ContextVar
 from functools import lru_cache
 from pathlib import Path
 import math
+import os
 import sys
 
 from omegaconf import OmegaConf
@@ -413,6 +414,18 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                         continue
                     if kind != "bioemu2":
                         execution_mode(value)
+                    if kind == "alphafold2" and execution_mode(value).value == "in_process":
+                        resource_config = resolve(cfg.get("execution", {}), "execution")
+                        resource_mode = (resource_config or {}).get("mode", "legacy")
+                        if (resource_mode in {"resident_serial", "adaptive"}
+                                and not os.environ.get("ASTROLABE_RESOURCE_SOCKET")):
+                            # GPU allocators and observed RSS remain charged until
+                            # this process exits. Its own broker cannot drain first.
+                            raise ValueError(
+                                "in_process AlphaFold2 requires execution.mode=legacy "
+                                "or an externally owned resource session; use "
+                                "execution_mode=daemon with a local resource owner"
+                            )
                     if kind != "bioemu2" and mode is not None and legacy is not None and execution_mode(mode) != execution_mode(legacy):
                         raise ValueError("execution_mode and execution disagree")
                 except ValueError as exc:

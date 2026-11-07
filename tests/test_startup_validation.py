@@ -41,6 +41,38 @@ def test_unused_backend_defaults_are_not_resolved():
     assert validate_startup_config(cfg, check_dependencies=False) == {}
 
 
+@pytest.mark.parametrize("mode", ["resident_serial", "adaptive"])
+def test_inprocess_af2_rejects_same_process_resource_owner(mode, monkeypatch):
+    monkeypatch.delenv("ASTROLABE_RESOURCE_SOCKET", raising=False)
+    cfg = config(
+        evaluator={"evaluator_terms": {"first": {
+            "_type": "alphafold2", "execution_mode": "in_process",
+        }}},
+        execution={"mode": mode},
+    )
+    before = set(sys.modules)
+    with pytest.raises(StartupValidationError, match="in_process.*execution.mode=legacy"):
+        validate_startup_config(cfg, check_dependencies=False)
+    assert not {"torch", "pyrosetta", "jax", "run"} & (set(sys.modules) - before)
+
+
+@pytest.mark.parametrize("execution, inherited", [
+    ({"mode": "legacy"}, False),
+    ({"mode": "resident_serial"}, True),
+])
+def test_inprocess_af2_accepts_external_or_legacy_resource_owner(execution, inherited, monkeypatch):
+    monkeypatch.delenv("ASTROLABE_RESOURCE_SOCKET", raising=False)
+    if inherited:
+        monkeypatch.setenv("ASTROLABE_RESOURCE_SOCKET", "/external/owner.sock")
+    cfg = config(
+        evaluator={"evaluator_terms": {"first": {
+            "_type": "alphafold2", "execution_mode": "in_process",
+        }}},
+        execution=execution,
+    )
+    assert validate_startup_config(cfg, check_dependencies=False) == {}
+
+
 def test_selected_backend_defaults_are_resolved():
     cfg = config(evaluator={
         "evaluator_terms": {"first": {"_type": "alphafold3"}},
