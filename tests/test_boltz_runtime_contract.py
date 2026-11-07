@@ -6,6 +6,7 @@ these product checks use only the repository and its execution dependencies.
 from contextlib import contextmanager
 import os
 import random
+import socket
 import struct
 import sys
 import threading
@@ -18,6 +19,32 @@ import torch
 from astrolabe import model_daemon as daemon, model_execution as execution
 
 GPU = 'GPU-11111111-2222-3333-4444-555555555555'
+
+
+def thread_request(server, payload):
+    client, connection = socket.socketpair()
+    client.settimeout(5)
+    item = dict(request_id="cpu-request", generation="original", payload=payload,
+                done=threading.Event(), connection=connection)
+    with server.available:
+        server.tasks.put_nowait(item)
+        server.available.notify()
+    try:
+        reply = daemon._read_frame(client, server.max_frame_bytes)
+        assert item["done"].wait(5)
+        if reply["type"] == "error":
+            raise ValueError(reply["message"])
+        return reply["result"]
+    finally:
+        client.close()
+
+
+def stop_thread(server, thread):
+    with server.available:
+        server.tasks.put_nowait({"stop": True, "done": threading.Event()})
+        server.available.notify_all()
+    thread.join(5)
+    assert not thread.is_alive()
 
 
 @pytest.fixture(autouse=True)
@@ -99,14 +126,7 @@ def test_lazy_exact_identity_profile_rng_and_error_context(monkeypatch, tmp_path
         thread.start()
         owners.append((server, thread))
         def request(payload):
-            item = {'request_id': 'cpu-request', 'generation': 'existing-generation',
-                    'payload': payload, 'done': threading.Event()}
-            server.tasks.put(item)
-            assert item['done'].wait(5)
-            reply = item['response']
-            if reply['type'] == 'error':
-                raise ValueError(reply['message'])
-            return reply['result']
+            return thread_request(server, payload)
         return identity, request
     try:
         with execution.model_kernel_context('outer', 'preserve-caller'):
@@ -140,9 +160,7 @@ def test_lazy_exact_identity_profile_rng_and_error_context(monkeypatch, tmp_path
             if variant == 'local': owner.shutdown()
             else:
                 server, thread = owner
-                item = {'stop': True, 'done': threading.Event()}
-                server.tasks.put(item); thread.join(5)
-                assert not thread.is_alive()
+                stop_thread(server, thread)
         if variant == 'thread': assert stopped_contexts == [None, None]
 
 
@@ -180,12 +198,7 @@ def test_actual_boltz_lazy_factory_keeps_original_identity(monkeypatch, tmp_path
         thread = threading.Thread(target=server._worker)
         thread.start()
         def request(payload):
-            item = {'request_id': 'original', 'generation': 'original', 'payload': payload,
-                    'done': threading.Event()}
-            server.tasks.put(item)
-            assert item['done'].wait(5)
-            assert item['response']['type'] == 'result', item['response']
-            return item['response']['result']
+            return thread_request(server, payload)
     try:
         state = initial
         for ordinal in (1, 2):
@@ -204,9 +217,7 @@ def test_actual_boltz_lazy_factory_keeps_original_identity(monkeypatch, tmp_path
     finally:
         if variant == 'local': owner.shutdown()
         else:
-            server.tasks.put({'stop': True, 'done': threading.Event()})
-            thread.join(5)
-            assert not thread.is_alive()
+            stop_thread(server, thread)
 
 
 def test_canonical_uuid_and_broker_environment_reach_daemon_children(monkeypatch):

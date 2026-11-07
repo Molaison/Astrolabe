@@ -10,7 +10,7 @@ from astrolabe.backend_catalog import get_backend
 from astrolabe.backend_startup import validate_backend_settings
 from astrolabe.core.folding_input import Input, Ligand, ProteinChain
 from astrolabe.evaluators.bioemu2 import BioEmu2Evaluator
-from astrolabe.evaluators.bioemu2_contract import validate_structure_only_scores
+from astrolabe.structure_only_startup import validate_structure_only_scores
 from astrolabe.evaluators.utils import construct_evaluators
 from astrolabe.runtime_requirements import task_requirements
 

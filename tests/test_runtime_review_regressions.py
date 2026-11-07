@@ -88,6 +88,7 @@ def test_allocated_default_starts_broker_with_bounded_capacity(tmp_path, monkeyp
 
 def test_default_esmfold_factory_can_reach_loader_with_real_broker(broker_factory, monkeypatch):
     from astrolabe.evaluators import native_daemons
+    from astrolabe.evaluators import esmfold_stages
 
     broker_factory()
     loaded = []
@@ -107,6 +108,11 @@ def test_default_esmfold_factory_can_reach_loader_with_real_broker(broker_factor
 
     monkeypatch.setitem(sys.modules, "astrolabe.evaluators.esmfold",
                         SimpleNamespace(ESMFoldEvaluator=Evaluator))
+    # The model is a double; retain real loading admission while supplying its
+    # explicit stage boundary instead of pretending its lambda is native ESMFold.
+    monkeypatch.setattr(esmfold_stages, "native_encoding_boundary",
+                        lambda model: (lambda value: value, lambda value: value,
+                                       lambda value: value))
     native_daemons._esmfold_factory(dict(model_name="fixture"))
     assert loaded
 

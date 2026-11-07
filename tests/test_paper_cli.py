@@ -174,6 +174,9 @@ def test_fixed_evaluation_rejects_random_sequence_generation(tmp_path, monkeypat
 
 def test_bivalent_archived_starts_use_their_original_seeds(tmp_path, monkeypatch):
     import astrolabe.rna_beam as beam
+    # This test replaces execution to inspect repeat composition; real CLI
+    # startup validation has its separate valid/invalid configuration corpus.
+    monkeypatch.setattr("astrolabe.startup_validation.validate_startup_config", lambda *a, **k: None)
     seen = []
     engine_calls = []
 
@@ -232,6 +235,7 @@ def test_bivalent_archived_starts_use_their_original_seeds(tmp_path, monkeypatch
 
 
 def test_nucleic_target_initial_sequences_match_original_seeded_generator(tmp_path, monkeypatch):
+    monkeypatch.setattr("astrolabe.startup_validation.validate_startup_config", lambda *a, **k: None)
     inputs = tmp_path / "target.yaml"
     inputs.write_text("seqs:\n  B: +ACGU\nhomologies:\n  B: homology.json\n")
     seen = []

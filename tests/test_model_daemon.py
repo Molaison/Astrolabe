@@ -480,10 +480,12 @@ def test_drain_waits_for_infer_response_finalization(tmp_path, monkeypatch, outc
         backend="test", max_pending=1, max_frame_bytes=model_daemon.MAX_FRAME_BYTES,
         parent_pid=None,
     )
-    real_send = model_daemon._send_frame
+    real_send = server._send_bytes
     real_join = server.tasks.join
 
-    def gated_send(connection, payload, max_frame_bytes=model_daemon.MAX_FRAME_BYTES):
+    def gated_send(connection, frame):
+        import pickle
+        payload = pickle.loads(frame[8:])
         if payload.get("request_id") == "infer-request":
             send_entered.set()
             assert release_send.wait(5)
@@ -491,17 +493,18 @@ def test_drain_waits_for_infer_response_finalization(tmp_path, monkeypatch, outc
                 raise BrokenPipeError("injected send failure")
         elif payload.get("request_id") == "stop-request":
             stop_response_attempted.set()
-        return real_send(connection, payload, max_frame_bytes)
+        return real_send(connection, frame)
 
     def observed_join():
         join_entered.set()
         real_join()
 
-    monkeypatch.setattr(model_daemon, "_send_frame", gated_send)
+    monkeypatch.setattr(server, "_send_bytes", gated_send)
     monkeypatch.setattr(server.tasks, "join", observed_join)
     infer_client, infer_server = socket.socketpair()
     stop_client, stop_server = socket.socketpair()
-    server.worker.start()
+    for worker in server.workers:
+        worker.start()
     infer_thread = threading.Thread(target=server._handle, args=(infer_server,))
     stop_thread = threading.Thread(target=server._handle, args=(stop_server,))
     try:
@@ -528,11 +531,12 @@ def test_drain_waits_for_infer_response_finalization(tmp_path, monkeypatch, outc
         release_send.set()
         infer_thread.join(timeout=5)
         stop_thread.join(timeout=5)
-        server.worker.join(timeout=5)
+        for worker in server.workers:
+            worker.join(timeout=5)
         infer_client.close()
         stop_client.close()
     assert not infer_thread.is_alive() and not stop_thread.is_alive()
-    assert not server.worker.is_alive()
+    assert not any(worker.is_alive() for worker in server.workers)
     assert server.tasks.unfinished_tasks == 0
     assert server.shutdown_complete.is_set()
 

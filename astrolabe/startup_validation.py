@@ -631,7 +631,7 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
         except ValueError as exc:
             errors.append(str(exc))
 
-    from astrolabe.evaluators.bioemu2_contract import validate_structure_only_scores
+    from astrolabe.structure_only_startup import validate_structure_only_scores
     errors.extend(validate_structure_only_scores(
         active_evaluators=active_evaluators, active_mutators=active_mutators,
         active_losses=active_losses,

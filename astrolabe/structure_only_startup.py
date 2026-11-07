@@ -1,4 +1,4 @@
-"""Import-cheap confidence compatibility for structure-only evaluators."""
+"""Import-cheap confidence compatibility, before evaluator imports or startup."""
 from __future__ import annotations
 
 import ast

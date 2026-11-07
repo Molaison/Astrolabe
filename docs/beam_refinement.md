@@ -28,6 +28,10 @@ raw、Score 与成员分别提交。完整 raw 可以恢复 CPU Score；已发�
 运行输出包括 `01_evaluations.jsonl`、`03_final_beam.json`、`.framework`
 和 `.prediction_workers/receipts`。
 
+恢复时保留原任务、seed、评分和搜索配置，设置 `search.resume=true`，并将
+`out_dir` 指向上述文件所在的实际 run 目录，不是首次启动时的输出父目录。
+入口要求恰好一个 repeat；完整 Score 回执直接复用，不再次推理或评分。
+
 当前入口限定单个静态 stage；Metropolis 接受、stage transaction、结构初始化
 及模型初始化器的搜索恢复不在此入口的已支持范围。真实后端的数值、恢复和吞吐
 资格分别验收。合同和对应检查见

@@ -57,7 +57,9 @@ def test_isolated_cli_completes_and_resumes_without_new_evaluations(tmp_path, sh
         for path in (run_root / ".prediction_workers/receipts").glob("*.json")
     }
     assert len([name for name in receipts if name.endswith(".score.json")]) == 3
-    invoke([*command, "search.resume=true"])
+    resume = [f"out_dir={run_root}" if argument.startswith("out_dir=") else argument
+              for argument in command]
+    invoke([*resume, "search.resume=true"])
     assert (run_root / "01_evaluations.jsonl").read_bytes() == events
     assert json.loads(summary_path.read_text())["evaluations"] == summary["evaluations"]
     assert {

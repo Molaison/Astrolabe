@@ -35,6 +35,7 @@ stages:
     early_stopping: null
 
 search:
+  resume: false
   algorithm: branching
   owner: native_refinement
   width: 2

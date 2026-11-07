@@ -982,7 +982,7 @@ class RF3InferenceEngine:
     assert (tmp_path / "output.cif").read_text() == "native cif"
 
 
-def test_legacy_local_evaluate_holds_one_lease_but_rpc_client_holds_none(broker):
+def test_legacy_local_infer_holds_one_lease_but_finalize_and_rpc_hold_none(broker):
     from astrolabe.evaluators.base import Evaluator
 
     class Example(Evaluator):
@@ -994,10 +994,11 @@ def test_legacy_local_evaluate_holds_one_lease_but_rpc_client_holds_none(broker)
 
         @local_evaluator_guard("test", "model_runner")
         def run_function(self, value):
+            assert len(broker.active) == (0 if hasattr(self.model_runner, "_client") else 1)
             return value
 
         def prepare_output(self, value, inputs, runtime_config):
-            assert len(broker.active) == (0 if hasattr(self.model_runner, "_client") else 1)
+            assert not broker.active
             return value
 
     assert Example(object()).evaluate("original") == "original"
