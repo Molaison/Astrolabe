@@ -77,6 +77,21 @@ def test_healthy_shutdown_is_exit_zero_and_repeated_shutdown_is_safe(tmp_path):
         os.kill(pid, 0)
 
 
+def test_ready_owner_keeps_serving_after_its_startup_deadline(tmp_path):
+    owner = OwnedModelDaemon(_spec(tmp_path), startup_timeout=20)
+    try:
+        first = owner.request({"operation": "describe", "action": "snapshot"})
+        owner._startup_deadline = time.monotonic() - 1
+        ordinary = owner.request({"action": "snapshot", "value": "continued"})
+        described = owner.request({"operation": "describe", "action": "snapshot"})
+        assert ordinary["pid"] == described["pid"] == first["pid"]
+        assert ordinary["load_count"] == described["load_count"] == 1
+        assert ordinary["value"] == "continued"
+        assert owner.status()["state"] == "running"
+    finally:
+        owner.shutdown()
+
+
 def test_stop_peer_disconnect_still_exits_cleanly(tmp_path):
     owner = OwnedModelDaemon(_spec(tmp_path), startup_timeout=20)
     try:

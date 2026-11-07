@@ -1116,6 +1116,7 @@ class OwnedModelDaemon:
         self._cancelled = threading.Event()
         self.cleanup_errors: list[BaseException] = []
         self._startup_deadline: float | None = None
+        self._startup_request_complete = False
         self._ready = False
         self._remote_pid: int | None = None
         self.generation = uuid.uuid4().hex
@@ -1159,10 +1160,6 @@ class OwnedModelDaemon:
         with self._start_lock:
             if self._closed or self._cancelled.is_set():
                 raise ModelDaemonError("daemon owner is closed")
-            if self._startup_deadline is None:
-                self._startup_deadline = time.monotonic() + self.startup_timeout
-            if time.monotonic() >= self._startup_deadline:
-                self._startup_failed("startup deadline expired")
             proc = self._proc
             if proc is not None and proc.poll() is None:
                 return
@@ -1171,6 +1168,10 @@ class OwnedModelDaemon:
                     f"{self.spec.backend} child exited with code {proc.returncode}; "
                     f"log: {self.log_path}"
                 )
+            if self._startup_deadline is None:
+                self._startup_deadline = time.monotonic() + self.startup_timeout
+            if time.monotonic() >= self._startup_deadline:
+                self._startup_failed("startup deadline expired")
             self.temp_dir = Path(tempfile.mkdtemp(prefix="astrolabe-model-daemon-")).resolve()
             self.temp_dir.chmod(0o700)
             self._socket_path = self.temp_dir / "model.sock"
@@ -1443,7 +1444,8 @@ class OwnedModelDaemon:
             raise TypeError("request payload must be a mapping")
         self._start()
         timeout = self.request_timeout
-        if payload.get("operation") == "describe" and not self._attached:
+        if (payload.get("operation") == "describe" and not self._attached
+                and not self._startup_request_complete):
             remaining = self._startup_deadline - time.monotonic()
             if remaining <= 0:
                 self._startup_failed("describe exceeded startup deadline")
@@ -1452,6 +1454,7 @@ class OwnedModelDaemon:
             {"type": "infer", "payload": dict(payload)},
             timeout=timeout,
         )
+        self._startup_request_complete = True
         return response.get("result")
 
     def status(self) -> dict[str, Any]:
