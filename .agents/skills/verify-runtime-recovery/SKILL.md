@@ -5,7 +5,7 @@ description: "Verify Astrolabe durable Runtime recovery after changes to call or
 
 # Verify Runtime recovery
 
-An issued prediction or Score call must never run automatically a second time.
+An issued durable Runtime prediction or Score call must never run automatically a second time.
 Every reserved call must keep consuming its budget after a crash.
 A violation can duplicate expensive work or change the scientific search budget.
 
@@ -86,7 +86,7 @@ its dependency files.
 records the sync commit and SHA256 values of `runtime.py`, `operations.py`,
 `store.py`, `types.py`, and `model_execution.py`.
 The last code review anchor is
-`138c5d79ab298c74769eff6c9e7a9d232873460a`.
+`46501fc12136c915516d9a39455767c6f9dbe48b`.
 Dependency hashes trigger review; they do not claim that all their functions
 are modeled. The runner refuses stale hashes.
 

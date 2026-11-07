@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sync_commit": "138c5d79ab298c74769eff6c9e7a9d232873460a",
+  "sync_commit": "46501fc12136c915516d9a39455767c6f9dbe48b",
   "tool": {
     "name": "TLC",
     "version": "2.19 / TLA+ 1.7.4",
@@ -17,10 +17,10 @@
     "crashes": "arbitrary finite sequences at modeled boundaries"
   },
   "files": {
-    "astrolabe/design/runtime.py": "41a0bc01489bf04fcbabefcbb11ff6783367547ed637c18e471a64c6732fb9fc",
+    "astrolabe/design/runtime.py": "25904696cfeeae10f973580abcf700d9965dfba08f4142bef7b80e028dcb6a3f",
     "astrolabe/design/operations.py": "3ef8ce48fc2147507b9d799228c4e50fa54e55ba1892a83e154b790a7fa8e2a5",
-    "astrolabe/design/store.py": "f46325db6c21638a0cacab2a83b814a98ae82d04a5fe0323f9f8658d58f187a7",
-    "astrolabe/design/types.py": "e17109cfa182bee1b758603fd0bdf72d34ebb5cef19fb53a678e3483d74f8d4b",
-    "astrolabe/model_execution.py": "de6ac1ac39d37db663cff3adf6aa00035c1df114cf32774d2842e9f854846f19"
+    "astrolabe/design/store.py": "3712567caf158acf25a7bb8204c55b7f744b9d41584b9c2c2e880a631a78db7d",
+    "astrolabe/design/types.py": "52438ef0f5207b2e1f0fcecd0974565aec205cc6e70e80ff030eb749667922fd",
+    "astrolabe/model_execution.py": "b2cfe10b758506e8a6285b3a0e5424b5b2b95464aa7a646fcfc6c10d8873134f"
   }
 }
