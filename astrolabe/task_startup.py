@@ -36,7 +36,8 @@ _EXECUTION_FIELDS = frozenset({
 })
 
 
-def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=False, error_type=ValueError):
+def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=False,
+                         error_type=ValueError, reference_info=None):
     """Reject explicit common-field errors; omitted API-only fields stay omitted.
 
     ``raw`` is the caller's unresolved plain mapping. ``cfg`` retains the root
@@ -136,6 +137,35 @@ def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=F
 
     for key in _BOOLEAN_FIELDS:
         boolean(read(key), key)
+    name = read("task_name")
+    if name is not _MISSING and (name is not None or require_inputs):
+        if not isinstance(name, str) or not name.strip():
+            fail("task_name", "expected a non-empty task name string")
+    for key in ("out_dir", "raw_model_results_dir"):
+        value = read(key)
+        if value is _MISSING or value is None or value == "":
+            continue
+        if not isinstance(value, (str, os.PathLike)):
+            fail(key, "expected a directory path or null")
+        elif resolve_environment and not raw.get("dry_run"):
+            try:
+                target = Path(value).expanduser()
+                # No writes or probes: a known file in the directory ancestry
+                # cannot become a run directory.
+                for parent in (target, *target.parents):
+                    if parent.exists():
+                        if not parent.is_dir():
+                            fail(key, f"directory path is blocked by a file: {parent}")
+                        break
+            except (OSError, ValueError) as exc:
+                fail(key, f"invalid directory path: {exc}")
+    excluded = read("exclude_AA")
+    if excluded is not _MISSING and excluded is not None:
+        alphabet = set("ACDEFGHIKLMNPQRSTVWY")
+        if not is_list(excluded) or any(not isinstance(x, str) or x not in alphabet for x in excluded):
+            fail("exclude_AA", "expected a list of single standard amino-acid letters")
+        elif set(excluded) == alphabet:
+            fail("exclude_AA", "must leave at least one amino acid available for sampling")
     # calculate_temperature explicitly maps non-positive temperatures to zero.
     if read("use_metropolis_acceptance") is True:
         temperature = read("initial_temperature")
@@ -386,6 +416,27 @@ def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=F
     if summary is not _MISSING and summary is not None and str(summary).strip().lower() != "json":
         fail("search.summary_format", "expected null or 'json'")
     boolean(read("search", "resume"), "search.resume")
+    native = read("search", "algorithm") == "branching" and read("search", "owner") == "native_refinement"
+    if native:
+        for key in ("width", "proposals_per_parent", "max_evaluations", "proposal_cap"):
+            value = read("search", key)
+            if value is None and key == "proposal_cap":
+                continue
+            if value is not _MISSING and (type(value) is not int or value < 1):
+                fail(f"search.{key}", "expected a positive integer")
+        if read("search", "resume") is True:
+            output = read("out_dir")
+            if not isinstance(output, str) or not output.strip():
+                fail("search.resume", "requires out_dir to be the original run root")
+            elif resolve_environment and not raw.get("dry_run"):
+                root = Path(output).expanduser()
+                required = (".framework/journal.sqlite", ".framework/assets.json",
+                            "config.yaml", "provenance.json", "01_evaluations.jsonl")
+                missing = [name for name in required if not (root / name).is_file()]
+                if missing:
+                    fail("search.resume", f"missing durable run files under {root}: {', '.join(missing)}")
+            if read("repeats") not in (_MISSING, 1):
+                fail("search.resume", "requires exactly one repeat")
     isolated = read("search", "algorithm") == "branching" and read("search", "owner") == "isolated_native"
     if isolated:
         execution = read("search", "execution")
@@ -458,6 +509,19 @@ def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=F
                 if value is not _MISSING and (not isinstance(value, str) or not value.strip()):
                     fail(f"protein_beam.af3_call_budget.{key}", "expected a non-empty string")
 
+    if not errors:
+        from astrolabe.task_references import validate_references
+        reference_values = {
+            key: selected(key) if resolve_environment else raw[key] for key in (
+                "seqs", "types", "named_files", "stages", "binding_site",
+                "structure_start", "ligand_resnames",
+            ) if key in raw
+        }
+        inventory = validate_references(
+            reference_values, check_paths=bool(resolve_environment and not raw.get("dry_run")),
+            fail=fail)
+        if reference_info is not None and inventory is not None:
+            reference_info["segments"] = inventory[1]
     if errors:
         raise error_type("Startup configuration errors:\n- " + "\n- ".join(errors + required_errors))
     return required_errors

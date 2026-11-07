@@ -1,0 +1,44 @@
+task_name: "daily_task_control"
+out_dir: null
+seqs:
+  A: "ACDEFGHIKLMNPQRSTVWY"
+types:
+  A: "p"
+homologies: {}
+named_files: null
+seed: 17
+steps: 2
+repeats: 1
+debug: false
+enable_pyrosetta: false
+skip_complex_poses: true
+use_metropolis_acceptance: false
+initial_temperature: 0.05
+initializer:
+  mode: "random"
+evaluator:
+  evaluator_terms:
+    Sequence:
+      _type: "sequence"
+mutator:
+  selector_expression: null
+  mutator_terms:
+    MCMC:
+      _type: "mcmc"
+loss:
+  loss_terms: {}
+  expression_terms: {}
+stages:
+  default:
+    oligo: ["AAAA"]
+    evaluator: "Sequence"
+    mutators: ["MCMC"]
+    mutation_num: 1
+    weighted_score_expression: "0"
+  refine:
+    _entrance: "1 > 0"
+    oligo: ["AAAA"]
+    evaluator: "Sequence"
+    mutators: ["MCMC"]
+    mutation_num: "10%"
+    weighted_score_expression: "0"

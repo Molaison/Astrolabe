@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+import math
 
 
 @dataclass(frozen=True)
@@ -182,11 +183,17 @@ def parse_binding_site(binding_site_cfg, *, oligo_name: str | None = None) -> Bi
 
     max_distance = cfg.get("max_distance", cfg.get("max_distance_angstrom", 6.0))
     min_distance = cfg.get("min_distance", cfg.get("min_distance_angstrom", 0.0))
+    if isinstance(max_distance, bool) or isinstance(min_distance, bool):
+        raise ValueError("binding_site max_distance/min_distance must be finite numeric distances")
     try:
         max_distance_f = float(max_distance)
         min_distance_f = float(min_distance)
     except (TypeError, ValueError) as exc:
         raise ValueError("binding_site max_distance/min_distance must be numeric") from exc
+    if not math.isfinite(max_distance_f):
+        raise ValueError("binding_site.max_distance must be finite")
+    if not math.isfinite(min_distance_f):
+        raise ValueError("binding_site.min_distance must be finite")
     if max_distance_f <= 0:
         raise ValueError(f"binding_site.max_distance must be > 0, got {max_distance_f}")
     if min_distance_f < 0:

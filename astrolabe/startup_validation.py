@@ -194,9 +194,11 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
     if not isinstance(raw, dict):
         raise StartupValidationError("config: expected a mapping")
 
+    reference_info = {}
     errors.extend(validate_task_config(
         cfg, raw=raw, resolve_environment=resolve_environment,
         require_inputs=require_inputs, error_type=StartupValidationError,
+        reference_info=reference_info,
     ))
 
     def resolve(value, path):
@@ -455,6 +457,28 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                 if metadata is not None or kind in source_specs["loss"]:
                     for key in set(resolved) - {"_type", "_for"} - INTRINSIC_PARAMS - required - optional:
                         errors.append(f"{path}.{key}: invalid parameter for loss {kind!r}")
+
+    from astrolabe.task_references import sequence_inventory, validate_loss_references
+    # Alias/complex membership needs no model or structure-coordinate runtime.
+    seqs = resolve(cfg.get("seqs", {}), "seqs") or {}
+    types = resolve(cfg.get("types", {}), "types") or {}
+    files = resolve(cfg.get("named_files", {}), "named_files") or {}
+    if all(isinstance(v, dict) for v in (seqs, types, files)):
+        def reference_error(path, message):
+            errors.append(f"{path}: {message}")
+        segments = reference_info.get("segments")
+        if segments is None:
+            _, segments, _ = sequence_inventory(seqs, types, files, check_paths=False,
+                                                fail=reference_error)
+        oligos = {
+            oligo.lstrip("-~")
+            for stage in stages.values() if isinstance(stage, dict)
+            for oligo in stage.get("oligo") or [] if isinstance(oligo, str)
+        }
+        for alias, options in active_losses.items():
+            validate_loss_references(
+                options, path=f"loss.loss_terms.{alias}", oligos=oligos,
+                segments=segments, fail=reference_error)
 
     loss_section = raw.get("loss") if isinstance(raw.get("loss"), dict) else {}
     expression_terms = loss_section.get("expression_terms") or {}

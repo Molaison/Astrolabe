@@ -1237,34 +1237,7 @@ def get_standard_aa(
     )
 
 
-def parse_ranges(s: str):
-    if s is None:
-        raise ValueError("Missing chain/range statement (expected like 'A' or 'A1-10').")
-    result = defaultdict(list)
-    s = str(s).strip()
-    if not s:
-        raise ValueError("Empty chain/range statement (expected like 'A' or 'A1-10').")
-    items = s.split(",")
-
-    for item in items:
-        item = item.strip()
-        if not item:
-            continue
-        # Allow specifying an entire chain with no residue indices, e.g. "A" or "A,B".
-        match_chain_only = re.fullmatch(r"([A-Za-z])", item)
-        if match_chain_only:
-            result[match_chain_only.group(1)] = []
-            continue
-
-        match = re.fullmatch(r"([A-Za-z])(?::?)(\d+)(?:-(\d+))?", item)
-        if not match:
-            raise ValueError(f"Invalid format: {item}")
-        prefix = match.group(1)
-        start = int(match.group(2))
-        end = int(match.group(3)) if match.group(3) else start
-        result[prefix].extend(range(start, end + 1))
-
-    return dict(result)
+from astrolabe.core.sequence_ranges import parse_ranges
 
 
 def parse_predefined_statement(
