@@ -1,6 +1,8 @@
 """Dispatch order, bounded refill and failure behavior without GPU/timing claims."""
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor,Future
+import multiprocessing as mp
+import os
 import threading
 import pytest
 import astrolabe.protein_beam as beam
@@ -110,14 +112,18 @@ def test_accepted_prefix_overlaps_next_proposal_phase():
     assert all(job.phase=='propose' for job in second.jobs)
 
 
-def _fake_pool(output,eval_calls,fail_proposal=None):
+def _fake_pool(output,eval_calls,fail_proposal=None,submissions=None):
     import json
     class Pool:
         def __init__(self,**kwargs):pass
         def __enter__(self):return self
         def __exit__(self,*args):pass
-        def submit(self,func,t):
+        def submit(self,func,t=None):
             future=Future()
+            if submissions is not None:submissions.append((func,t))
+            if func is beam._worker_ready:
+                # Deliberately unresolved: native work must not wait for warmup.
+                return future
             try:
                 if t['kind']=='proposal':
                     if fail_proposal and t['id']==fail_proposal[0]:
@@ -153,12 +159,56 @@ def test_logical_proposals_and_multigeneration_results_do_not_depend_on_worker_c
     results=[]
     for workers,pipeline in [(3,False),(3,True),(4,True)]:
         config=deepcopy(cfg);config.protein_beam.pipeline_proposals=pipeline
-        output=tmp_path/f'run{workers}-{pipeline}';calls=[]
-        monkeypatch.setattr(beam,'ProcessPoolExecutor',_fake_pool(output,calls))
+        output=tmp_path/f'run{workers}-{pipeline}';calls=[];submissions=[]
+        monkeypatch.setattr(beam,'ProcessPoolExecutor',_fake_pool(output,calls,submissions=submissions))
         state=beam.run_beam(config,output,'unused',workers=workers,in_flight=workers)
         assert state['budget_complete'] and len(calls)==len(set(calls))==7
+        assert submissions[0][0] is beam.worker_task and submissions[0][1]['id']==0
+        assert submissions[1:workers]==[(beam._worker_ready,None)]*(workers-1)
+        assert sum(func is beam._worker_ready for func,_ in submissions)==workers-1
         results.append([(r['id'],r['parent_id'],r['generation'],r['sequence'],r['seed'],r['score']) for r in state['records']])
     assert results[0]==results[1]==results[2]
+
+
+_STARTUP_PROBE = None
+
+
+def _startup_probe_init(counter, root_started, spare_ready, workers):
+    global _STARTUP_PROBE
+    # A parent-only marker must not leak into a spawn worker.
+    assert beam._RUNTIME is None
+    with counter.get_lock():
+        first = counter.value == 0
+        counter.value += 1
+    _STARTUP_PROBE = (root_started, spare_ready, workers)
+    if not first:
+        assert root_started.wait(20), 'Root was held behind spare initialization'
+        spare_ready.release()
+
+
+def _startup_probe_root(task):
+    root_started, spare_ready, workers = _STARTUP_PROBE
+    root_started.set()
+    for _ in range(workers - 1):
+        assert spare_ready.acquire(timeout=20), 'Spare worker did not initialize during root'
+    return task, os.getpid()
+
+
+@pytest.mark.parametrize('workers', [1, 3])
+def test_spawn_initialization_overlaps_root_without_a_ready_barrier(monkeypatch, workers):
+    ctx = mp.get_context('spawn')
+    counter = ctx.Value('i', 0)
+    root_started = ctx.Event()
+    spare_ready = ctx.Semaphore(0)
+    monkeypatch.setattr(beam, '_RUNTIME', 'parent-only state')
+    with beam.controlled_pool(max_workers=workers, mp_context=ctx,
+                              initializer=_startup_probe_init,
+                              initargs=(counter, root_started, spare_ready, workers)) as pool:
+        primed = beam._PrimedWorkerPool(pool, workers)
+        future = primed.submit(_startup_probe_root, {'id': 0, 'seed': 17})
+        task, pid = future.result(timeout=30)
+        assert task == {'id': 0, 'seed': 17} and pid != os.getpid()
+        assert counter.value == workers
 
 
 def test_midgeneration_cpu_interruption_reuses_completed_native_evaluations(monkeypatch,tmp_path):

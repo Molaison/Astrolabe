@@ -411,8 +411,9 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                     value = mode if mode is not None else legacy
                     if not resolve_environment and isinstance(value, str) and "${" in value:
                         continue
-                    execution_mode(value)
-                    if mode is not None and legacy is not None and execution_mode(mode) != execution_mode(legacy):
+                    if kind != "bioemu2":
+                        execution_mode(value)
+                    if kind != "bioemu2" and mode is not None and legacy is not None and execution_mode(mode) != execution_mode(legacy):
                         raise ValueError("execution_mode and execution disagree")
                 except ValueError as exc:
                     errors.append(f"{path}: {exc}")
@@ -629,6 +630,14 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                 _check_expression(structure_start.hotspot_gate.expression, "structure_start.hotspot_gate.expression", errors)
         except ValueError as exc:
             errors.append(str(exc))
+
+    from astrolabe.evaluators.bioemu2_contract import validate_structure_only_scores
+    errors.extend(validate_structure_only_scores(
+        active_evaluators=active_evaluators, active_mutators=active_mutators,
+        active_losses=active_losses,
+        per_residue_scores=resolve(cfg.get("per_residue_scores", {}), "per_residue_scores"),
+        stages=stages, expression_terms=expression_terms,
+    ))
 
     check_paths = bool(resolve_environment and not raw.get("dry_run"))
     for alias, kind, _unused, options in active_evaluators:

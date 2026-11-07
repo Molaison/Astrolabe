@@ -7,9 +7,11 @@ from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.model_execution import (
+    host_result,
     ExecutionMode,
     execution_mode as resolve_execution_mode,
 )
+from astrolabe.mutators.runtime_stages import device_guard
 from astrolabe.mutators.base import Mutator
 from astrolabe.mutators.capabilities import PROTEIN_ONLY, MutatorCapabilities
 from astrolabe.mutators.utils import (
@@ -55,10 +57,11 @@ class ESM2Mutator(Mutator):
             )
             self.alphabet = self.runner.alphabet
         else:
-            model, self.alphabet = esm2.pretrained.esm2_t33_650M_UR50D()
-            # use eval mode for deterministic mutation_output e.g. without random dropout
-            model.eval()
-            self.runner = model.cuda()
+            with device_guard("esm2", phase="load"):
+                model, self.alphabet = esm2.pretrained.esm2_t33_650M_UR50D()
+                # use eval mode for deterministic mutation_output e.g. without random dropout
+                model.eval()
+                self.runner = model.cuda()
         self.predocker = predocker
         self.position_selector = position_selector
         self.aa_order = self.alphabet.all_toks[4:24]  # ESM2 uses a specific token order
@@ -66,6 +69,10 @@ class ESM2Mutator(Mutator):
     def compute_mutation(self, mutation_input_features):
         if self.execution_mode is ExecutionMode.DAEMON:
             return self.runner.compute_mutation(mutation_input_features)
+        with device_guard("esm2", device=getattr(self, "device", getattr(self.runner, "device", None))):
+            return host_result(self._compute_device(mutation_input_features))
+
+    def _compute_device(self, mutation_input_features):
         mutation_output = {}
         for oligo_name, input_feat in mutation_input_features.items():
             oligo_output = extract_esm2_probs(self.runner, **input_feat)

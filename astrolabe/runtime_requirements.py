@@ -275,6 +275,23 @@ def task_requirements(task_cfg: Any) -> dict:
     if any(t.lower() == "chai1" for t in evaluator_types_used):
         req_imports.add("chai_lab")
 
+    # These backends own their explicit interpreter/assets in selected term
+    # settings, checked by backend_startup, not in a synthetic global env block.
+    if any(t.lower() == "bioemu2" for t in evaluator_types_used):
+        req_repo_files.add("astrolabe/evaluators/wrappers/bioemu2_worker.py")
+    if any(t.lower() == "generated_structure" for t in evaluator_types_used):
+        req_repo_files.add("astrolabe/evaluators/generated_structure.py")
+    if any(t.lower() == "rfd4" for t in mutator_types_used):
+        req_repo_files |= {
+            "astrolabe/mutators/wrappers/rfd4_worker.py",
+            "astrolabe/mutators/wrappers/rfd4_unindexed_worker.py",
+            "astrolabe/mutators/rfd4_reconstruction.py",
+        }
+        if any(_as_bool((conf.get("feedback") or {}).get("enabled"), default=False)
+               for conf in mutator_terms_used.values()
+               if str(conf.get("_type") or "").lower() == "rfd4"):
+            req_imports.add("pyrosetta")
+
     if any(t.lower() == "esmfold2" for t in evaluator_types_used):
         req_env_keys |= {
             "subprocess_envs.esmfold2.python_bin",
@@ -468,6 +485,10 @@ def task_requirements(task_cfg: Any) -> dict:
 
     # PyRosetta requirement inference
     pyro_losses = _pyrosetta_loss_types_from_source()
+    pyro_losses |= {
+        "interface_shape_complementarity", "interface_hbond_count",
+        "interface_polar_satisfaction", "short_range_interface_pair_energy",
+    }
     needs_pyrosetta = any(t in pyro_losses for t in loss_types)
     if isinstance(post_eval_hooks, dict):
         rosetta_hook = post_eval_hooks.get("rosetta_minimize") or post_eval_hooks.get("rosetta_repack")

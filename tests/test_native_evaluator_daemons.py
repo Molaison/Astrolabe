@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import random
 import sys
+from threading import RLock
 
 import numpy as np
 from omegaconf import OmegaConf
@@ -27,6 +28,26 @@ from astrolabe.evaluators.native_daemons import (
 from astrolabe.evaluators.utils import _execution_controls, shutdown_model_handles
 from astrolabe.model_daemon import DaemonSpec, model_identity
 from astrolabe.model_execution import ExecutionMode
+
+
+def test_protenix_output_directories_do_not_change_shared_model_identity(monkeypatch, tmp_path):
+    from astrolabe.evaluators import native_daemons
+
+    settings = []
+
+    def client(backend, factory, config, **kwargs):
+        settings.append(config)
+        return RecordingClient()
+
+    monkeypatch.setattr(native_daemons, "_KernelClient", client)
+    runners = [
+        NativeProtenixRunner(OmegaConf.create({
+            "dtype": "bf16", "seed": 17, "dump_dir": str(tmp_path / str(index)),
+        }))
+        for index in range(2)
+    ]
+    assert settings[0] == settings[1] == {"config": {"dtype": "bf16", "seed": 17}}
+    assert runners[0].configs.dump_dir != runners[1].configs.dump_dir
 
 
 ADAPTER = r'''
@@ -188,6 +209,8 @@ def test_facades_emit_only_fixed_typed_operations(tmp_path: Path) -> None:
     af2.multimer_mode = True
     af2._gh_initial_guess_cfg = {"enabled": False}
     feature = np.zeros((2, 3), dtype=np.float32)
+    chains = {"A": {"aatype": feature}}
+    af2.pair_and_merge(chains)
     af2.process_features({"aatype": feature}, random_seed=7)
     af2.predict({"aatype": feature}, random_seed=7)
 
@@ -242,10 +265,12 @@ def test_facades_emit_only_fixed_typed_operations(tmp_path: Path) -> None:
     chai.run_inference(fasta_file=tmp_path / "input.fasta", output_dir=tmp_path / "chai")
 
     assert [request["operation"] for request in af2._client.requests] == [
+        "pair_and_merge",
         "process_features",
         "predict",
     ]
-    assert [request["random_seed"] for request in af2._client.requests] == [7, 7]
+    assert af2._client.requests[0] == {"operation": "pair_and_merge", "all_chain_features": chains}
+    assert [request["random_seed"] for request in af2._client.requests[1:]] == [7, 7]
     assert [request["operation"] for request in boltz._client.requests] == [
         "featurize_data",
         "run_inference",
@@ -328,8 +353,9 @@ def test_evaluator_shutdown_closes_unique_owned_handles_only() -> None:
         (AlphaFold3Evaluator, {"model_runner": RecordingClient()}),
         (BoltzEvaluator, {"model_runner": RecordingClient()}),
         (Chai1Evaluator, {"model_runner": RecordingClient()}),
-        (ESMFoldEvaluator, {"_model": RecordingClient()}),
-        (ProtenixEvaluator, {"model_runner": RecordingClient()}),
+        (ESMFoldEvaluator, {"_model": RecordingClient(), "_inference_kernel": None}),
+        (ProtenixEvaluator, {"model_runner": RecordingClient(), "_prediction_kernel": None,
+                            "_evaluation_lock": RLock()}),
         (RoseTTAFold3Evaluator, {"model_runner": RecordingClient()}),
     ]
     for evaluator_type, attributes in cases:

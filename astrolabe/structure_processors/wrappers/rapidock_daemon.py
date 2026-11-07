@@ -9,6 +9,8 @@ import pathlib
 import sys
 from typing import Any, Dict
 
+from astrolabe.model_execution import KernelStages, kernel_handler
+
 try:
     from .rapidock_runtime import build_rapidock_runtime
 except ImportError:
@@ -43,6 +45,37 @@ def _error_response(message: Dict[str, Any], exc: Exception) -> Dict[str, Any]:
     }
 
 
+def _create_runtime_handler(runtime, device):
+    def load(_settings):
+        runtime.load()
+        if not runtime.status().get("model_ready"):
+            raise RuntimeError("RAPiDock initialization did not produce a ready model")
+
+        def prepare(message):
+            tasks = message.get("tasks") or []
+            params = message.get("params") or {}
+            if not isinstance(tasks, list):
+                raise ValueError("dock tasks must be a list.")
+            if not isinstance(params, dict):
+                raise ValueError("dock params must be an object.")
+            return tasks, params
+
+        # prepare_data includes ESM CUDA work and lazy confidence loading. Keep
+        # the runtime's complete call together under the device execute lease.
+        # ESM may retain CUDA allocator memory even with a CPU score model.
+        # Register the conservative whole graph on its admitted GPU.
+        return KernelStages(prepare, lambda args: runtime.run(*args)), {
+            "device": device if str(device).startswith("cuda") else None,
+        }
+
+    return kernel_handler(
+        {}, load,
+        lifecycle={"backend": "rapidock", "residency": "resident_model",
+                   "weights_loaded": True, "gpu_resident": None,
+                   "device": device if str(device).startswith("cuda:") else None},
+    )
+
+
 def main() -> int:
     args = _parse_args()
     repo_path = pathlib.Path(args.repo_path).expanduser().resolve()
@@ -72,10 +105,14 @@ def main() -> int:
         confidence_ckpt=str(args.confidence_ckpt),
         device=args.device,
     )
+    handler = None
+    load_error = None
     try:
-        runtime.load()
-    except Exception:
-        pass
+        handler = _create_runtime_handler(runtime, args.device)
+    except Exception as exc:
+        # Preserve the raw ping/error protocol, but never report a partially
+        # initialized or unadmitted runtime as ready.
+        load_error = f"{type(exc).__name__}: {exc}"
 
     for raw in sys.stdin:
         line = raw.strip()
@@ -90,11 +127,14 @@ def main() -> int:
             message = decoded
             message_type = message.get("type")
             if message_type == "ping":
+                status = runtime.status()
+                if load_error is not None:
+                    status = dict(status, model_ready=False, message=load_error)
                 _write(
                     {
                         "type": "pong",
                         "id": message.get("id"),
-                        **runtime.status(),
+                        **status,
                     }
                 )
                 continue
@@ -104,14 +144,17 @@ def main() -> int:
             if message_type != "dock":
                 raise ValueError(f"unknown type: {message_type}")
 
-            tasks = message.get("tasks") or []
-            params = message.get("params") or {}
-            if not isinstance(tasks, list):
-                raise ValueError("dock tasks must be a list.")
-            if not isinstance(params, dict):
-                raise ValueError("dock params must be an object.")
-            results = runtime.run(tasks, params)
-            _write({"type": "result", "id": message.get("id"), "results": results})
+            if handler is None:
+                raise RuntimeError(f"RAPiDock model is not ready: {load_error}")
+            response = handler({"operation": "infer", "payload": message,
+                                "random_state": {}})
+            if not response["ok"]:
+                _write({"type": "error", "id": message.get("id"),
+                        "error_type": response["error_type"],
+                        "message": response["error"]})
+            else:
+                _write({"type": "result", "id": message.get("id"),
+                        "results": response["result"]})
         except Exception as exc:
             _write(_error_response(message, exc))
     return 0

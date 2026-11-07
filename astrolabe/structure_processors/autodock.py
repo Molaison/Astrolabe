@@ -12,6 +12,7 @@ from io import StringIO
 
 import numpy as np
 import prody as pr
+from astrolabe.model_execution import device_operation
 from Bio import Align
 from Bio.PDB import MMCIFParser, PDBParser, PDBIO, Structure
 from Bio.SeqUtils import seq1
@@ -2108,7 +2109,10 @@ class AutoDockGPUProcessor(AutoDockProcessorBase):
             "-n",
             str(self.num_docking_modes),
         ]
-        subprocess.run(cmd, cwd=workdir, check=True)
+        # AutoDock-GPU is an external one-shot binary, not a broker-aware RPC
+        # worker. Admit exactly its GPU invocation; preparation stays on CPU.
+        with device_operation("autodock_gpu"):
+            subprocess.run(cmd, cwd=workdir, check=True)
 
     def _run_impl(self, input_file_path: str) -> str:
         """Implementation of the docking workflow."""

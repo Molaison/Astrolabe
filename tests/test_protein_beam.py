@@ -73,7 +73,9 @@ def test_budget_lineage_resume_and_contract_preservation(monkeypatch,tmp_path):
         def __init__(self,**kwargs):pass
         def __enter__(self):return self
         def __exit__(self,*args):pass
-        def submit(self,func,t):
+        def submit(self,func,t=None):
+            if func is beam._worker_ready:
+                f=Future();f.set_result(func());return f
             f=Future();f.set_result(task(t));return f
     monkeypatch.setattr(beam,'ProcessPoolExecutor',Pool)
     state=beam.run_beam(cfg,tmp_path/'beam','unused',workers=3,in_flight=3)
@@ -115,7 +117,9 @@ def test_unknown_native_attempt_is_not_replayed_and_cost_is_retained(monkeypatch
         def __init__(self,**kwargs):pass
         def __enter__(self):return self
         def __exit__(self,*args):pass
-        def submit(self,func,t):
+        def submit(self,func,t=None):
+            if func is beam._worker_ready:
+                f=Future();f.set_result(func());return f
             f=Future()
             try:f.set_result(task(t))
             except Exception as e:f.set_exception(e)
@@ -163,7 +167,9 @@ def test_unknown_attempt_ignores_retry_flag_without_owner_terminal(monkeypatch,t
         def __init__(self,**kwargs):pass
         def __enter__(self):return self
         def __exit__(self,*args):pass
-        def submit(self,func,t):
+        def submit(self,func,t=None):
+            if func is beam._worker_ready:
+                f=Future();f.set_result(func());return f
             f=Future()
             try:f.set_result(task(t))
             except Exception as e:f.set_exception(e)

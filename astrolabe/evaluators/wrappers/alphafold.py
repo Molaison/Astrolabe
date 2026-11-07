@@ -232,7 +232,9 @@ def make_AF2_features(query_sequence: str):
     return feature_dict
 
 
-def make_AFM_features(chain_id_map, is_homomer_or_monomer, chain_homology=None):
+def make_AFM_features(
+    chain_id_map, is_homomer_or_monomer, chain_homology=None, *, pair_and_merge_fn=None
+):
     # split sequence into monomer chunks
 
     all_chain_features = {}
@@ -293,9 +295,8 @@ def make_AFM_features(chain_id_map, is_homomer_or_monomer, chain_homology=None):
 
     all_chain_features_asm = add_assembly_features(all_chain_features)
 
-    np_example = feature_processing.pair_and_merge(
-        all_chain_features=all_chain_features_asm
-    )
+    merger = feature_processing.pair_and_merge if pair_and_merge_fn is None else pair_and_merge_fn
+    np_example = merger(all_chain_features=all_chain_features_asm)
 
     # Pad MSA to avoid zero-sized extra_msa.
     feature_dict = pad_msa(np_example, 512)

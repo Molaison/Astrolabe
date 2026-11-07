@@ -47,6 +47,9 @@ test-cpu:
 test-execution:
     GH_HOST_REPO_ROOT="{{justfile_directory()}}" {{gh_python}} scripts/validation/release_cpu.py --suite execution -q
 
+test-daily-cli report="outputs/daily-cli.json":
+    {{gh_python}} tests/run_daily_task_cli.py --report '{{report}}' --jobs 2
+
 verify-recovery:
     {{gh_python}} scripts/validation/verify_runtime_recovery.py --self-test
 

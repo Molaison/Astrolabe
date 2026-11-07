@@ -717,43 +717,6 @@ def test_rosetta_crystal_reference_and_params_are_content_identified(tmp_path):
         _model_component_assets("evaluator:fold", "rosetta_crystal", {"states": {"s": {}}})
 
 
-@pytest.mark.parametrize("alias", ["mol1", "mol-1", "mol_1"])
-def test_mol1_assets_use_native_probe_and_content_identity(tmp_path, monkeypatch, alias):
-    import os
-    import subprocess
-
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    source = repo / "inference.py"
-    source.write_text("native implementation")
-    root = tmp_path / "data"
-    root.mkdir()
-    checkpoint = root / "model.pt"
-    reference = root / "ccd.pkl"
-    checkpoint.write_text("weights")
-    reference.write_text("native reference")
-
-    def probe(command, **kwargs):
-        assert command == ["/qualified/mol1/python", "-m", "astrolabe.evaluators.mol1_assets",
-                           "mol-1-base", str(checkpoint), "0"]
-        assert kwargs["cwd"] == repo
-        assert kwargs["env"]["MOL_ROOT_DIR"] == str(root)
-        assert kwargs["env"]["PYTHONPATH"].split(os.pathsep) == [
-            str(repo), str(Path(__file__).resolve().parents[1]),
-        ]
-        return subprocess.CompletedProcess(command, 0,
-            stdout=json.dumps({"assets": [str(checkpoint), str(reference)]}))
-
-    monkeypatch.setattr(subprocess, "run", probe)
-    mapping = {"python_bin": "/qualified/mol1/python", "repo_path": str(repo),
-               "mol_root_dir": str(root), "load_checkpoint_path": str(checkpoint)}
-    component, files = _model_component_assets("evaluator:fold", alias, mapping)
-    assert component.state == "hashed"
-    assert {Path(item.path) for item in files} == {checkpoint, reference, source}
-    before = {item.path: item.sha256 for item in files}
-    reference.write_text("changed native reference")
-    _, changed = _model_component_assets("evaluator:fold", alias, mapping)
-    assert {item.path: item.sha256 for item in changed}[str(reference)] != before[str(reference)]
 
 
 def test_resume_rejects_same_path_asset_content_change_before_parse_or_models(

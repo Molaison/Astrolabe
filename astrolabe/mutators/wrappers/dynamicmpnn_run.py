@@ -10,6 +10,8 @@ from pathlib import Path
 from string import Formatter
 from typing import Any, Callable, Mapping
 
+from astrolabe.mutators.runtime_stages import device_guard
+
 import numpy as np
 from omegaconf import OmegaConf
 
@@ -57,7 +59,11 @@ class DynamicMPNNRunner:
         self._run_index = 0
         self._resident_client = None
         self._in_process_handler = None
-        self.model_metadata = None
+        self.model_metadata = {
+            "backend": "dynamicmpnn",
+            "residency": "one_shot" if self.command_template and not (self.backend_factory or self.backend_callable) else "unknown",
+            "device": "unknown",
+        }
         if self.backend_factory is not None and not isinstance(
             self.backend_factory, str
         ):
@@ -160,10 +166,11 @@ class DynamicMPNNRunner:
 
         if self.backend_callable:
             callable_fn = self._resolve_callable(self.backend_callable)
-            sampling_probs = self._validate_probabilities(
-                callable_fn(manifest=manifest, features=features),
-                Path("<in-process DynamicMPNN probabilities>"),
-            )
+            with device_guard("dynamicmpnn", identity=str(self.checkpoint)):
+                sampling_probs = self._validate_probabilities(
+                    callable_fn(manifest=manifest, features=features),
+                    Path("<in-process DynamicMPNN probabilities>"),
+                )
             return {
                 "sampling_probs": sampling_probs,
                 "dynamicmpnn_backend": "Alex-Abrudan/DynamicMPNN",
@@ -183,14 +190,15 @@ class DynamicMPNNRunner:
         command = self._format_command(manifest_path, run_dir, probabilities_file)
         env = os.environ.copy()
         env.update({str(k): str(v) for k, v in self.extra_env.items()})
-        subprocess.run(
-            command,
-            shell=True,
-            cwd=str(self.repo_path) if self.repo_path else None,
-            env=env,
-            check=True,
-            timeout=float(self.timeout) if self.timeout else None,
-        )
+        with device_guard("dynamicmpnn", identity=str(self.checkpoint)):
+            subprocess.run(
+                command,
+                shell=True,
+                cwd=str(self.repo_path) if self.repo_path else None,
+                env=env,
+                check=True,
+                timeout=float(self.timeout) if self.timeout else None,
+            )
 
         sampling_probs = self._read_probabilities(probabilities_file)
         return {

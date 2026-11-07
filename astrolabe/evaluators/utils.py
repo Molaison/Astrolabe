@@ -205,6 +205,18 @@ def construct_evaluators(
     )
 
 
+@register_evaluator_factory("bioemu2")
+def _build_bioemu2_evaluator(term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf):
+    from astrolabe.evaluators.bioemu2 import BioEmu2Evaluator
+
+    conf = _merge_conf_with_defaults(evaluator_conf, "bioemu2", term_conf, alias=alias)
+    options = OmegaConf.to_container(conf, resolve=True) if conf is not None else {}
+    for field in ("execution_mode", "execution"):
+        if options.pop(field, "subprocess") != "subprocess":
+            raise ValueError("BioEmu2 supports only per-request subprocess execution")
+    return BioEmu2Evaluator(output_dir=raw_model_results_dir / "bioemu2" / str(alias), **options)
+
+
 @register_evaluator_factory("alphafold3")
 def _build_alphafold3_evaluator(
     term_conf,
@@ -675,6 +687,25 @@ from astrolabe.evaluators.rna import RNA_BACKENDS
 
 for _rna_backend in RNA_BACKENDS:
     EvaluatorRegistry.register(_rna_backend, _rna_evaluator_factory(_rna_backend))
+
+
+@register_evaluator_factory("generated_structure")
+def _build_generated_structure_evaluator(
+    term_conf,
+    *,
+    alias,
+    raw_model_results_dir,
+    oligo_names,
+    evaluator_conf,
+):
+    from astrolabe.evaluators.generated_structure import GeneratedStructureEvaluator
+
+    conf = _merge_conf_with_defaults(
+        evaluator_conf, "generated_structure", term_conf, alias=alias
+    )
+    if conf is None:
+        raise ValueError("generated_structure.initial_structures is required")
+    return GeneratedStructureEvaluator(**OmegaConf.to_container(conf, resolve=True))
 
 
 @register_evaluator_factory("rosetta_crystal")

@@ -318,6 +318,7 @@ class DataclassCodec(Generic[T]):
                         path=f"{path}.{field.name}",
                     )
                     for field in fields(value)
+                    if not (field.metadata.get("omit_none") and getattr(value, field.name) is None)
                 },
             }
         raise TypeError(
@@ -389,7 +390,11 @@ class DataclassCodec(Generic[T]):
             if value_type is None:
                 raise TypeError(f"unregistered dataclass type {tag!r}")
             expected_fields = {field.name for field in fields(value_type)}
-            if set(encoded_fields) != expected_fields:
+            optional_fields = {
+                field.name for field in fields(value_type)
+                if field.metadata.get("omit_none") and field.default is None
+            }
+            if not expected_fields - optional_fields <= set(encoded_fields) <= expected_fields:
                 raise ValueError(
                     f"dataclass fields for {tag!r} do not match the registered type"
                 )

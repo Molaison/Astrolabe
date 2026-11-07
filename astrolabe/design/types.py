@@ -8,7 +8,7 @@ never part of a framework key.
 from __future__ import annotations
 
 import base64
-from dataclasses import dataclass, fields, is_dataclass
+from dataclasses import dataclass, field, fields, is_dataclass
 import hashlib
 import json
 from pathlib import Path
@@ -68,6 +68,8 @@ class Domain:
     fixed_tokens: tuple[int, ...]
     fixed_atoms: tuple[str, ...]
     allowed_values: Blob | None
+    # Absence preserves the fixed-length v1 identity and stored bytes.
+    length_bounds: tuple[int, int] | None = field(default=None, metadata={"omit_none": True})
 
 
 @dataclass(frozen=True)
@@ -159,7 +161,8 @@ class System:
                 _validate_polymer(variable, new.value)
                 if old.value.kind != new.value.kind:
                     raise ValueError(f"variable {variable!r} cannot change polymer kind")
-                if len(old.value.tokens) != len(new.value.tokens):
+                if (len(old.value.tokens) != len(new.value.tokens)
+                        and (domain is None or domain.length_bounds is None)):
                     raise ValueError(
                         f"variable {variable!r} cannot change token count in an edit"
                     )
@@ -167,6 +170,9 @@ class System:
                     raise ValueError(
                         f"variable {variable!r} cannot change modification topology (PTM) in an assignment edit"
                     )
+                if domain is not None and domain.length_bounds is not None:
+                    _validate_bounded_polymer(variable, old.value, domain)
+                    _validate_bounded_polymer(variable, new.value, domain)
                 for index, _ in old.value.modifications:
                     if old.value.tokens[index] != new.value.tokens[index]:
                         raise ValueError(
@@ -921,6 +927,14 @@ def make_system(
                 f"multiple domains supplied for variable {domain.variable!r}"
             )
         domain_variables.add(domain.variable)
+        if domain.length_bounds is not None:
+            bounds = domain.length_bounds
+            if (not isinstance(bounds, tuple) or len(bounds) != 2
+                    or any(type(value) is not int for value in bounds)
+                    or not 0 < bounds[0] <= bounds[1]):
+                raise ValueError("length_bounds must be a positive ordered integer pair")
+            if domain.fixed_tokens or domain.fixed_atoms or domain.allowed_values is not None:
+                raise ValueError("length_bounds require a completely mutable unrestricted domain")
         if len(set(domain.fixed_tokens)) != len(domain.fixed_tokens):
             raise ValueError(
                 f"fixed token indices must be unique for {domain.variable!r}"
@@ -1046,6 +1060,8 @@ def _validated_assignments(
         if domain is None:
             continue
         if isinstance(assignment.value, Polymer):
+            if domain.length_bounds is not None:
+                _validate_bounded_polymer(variable, assignment.value, domain)
             for index in domain.fixed_tokens:
                 if index >= len(assignment.value.tokens):
                     raise ValueError(
@@ -1055,12 +1071,23 @@ def _validated_assignments(
                 raise ValueError(
                     f"polymer variable {variable!r} cannot declare fixed atoms"
                 )
+        elif domain.length_bounds is not None:
+            raise ValueError("length_bounds require a canonical protein assignment")
         elif domain.fixed_tokens:
             raise ValueError(
                 f"chemical variable {variable!r} cannot declare fixed tokens"
             )
 
     return tuple(by_variable[variable] for variable in system.variables)
+
+
+def _validate_bounded_polymer(variable: str, value: Polymer, domain: Domain) -> None:
+    if (value.kind != "protein" or value.modifications
+            or any(token not in frozenset("ACDEFGHIKLMNPQRSTVWY") for token in value.tokens)):
+        raise ValueError(f"bounded variable {variable!r} requires an unmodified canonical protein")
+    lower, upper = domain.length_bounds
+    if not lower <= len(value.tokens) <= upper:
+        raise ValueError(f"variable {variable!r} token count is outside length_bounds")
 
 
 def _normalize_assignment(assignment: Assignment) -> Assignment:
@@ -1181,6 +1208,7 @@ def _canonical_value(value: Any, *, path: str) -> Any:
                     path=f"{path}.{field.name}",
                 )
                 for field in fields(value)
+                if not (field.metadata.get("omit_none") and getattr(value, field.name) is None)
             },
         }
     if isinstance(value, tuple):

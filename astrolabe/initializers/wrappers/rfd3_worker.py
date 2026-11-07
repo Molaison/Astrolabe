@@ -2,10 +2,13 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
 from typing import Any
+
+from astrolabe.model_execution import KernelStages, kernel_handler
 
 
 _DAEMON_FACTORY = "astrolabe.initializers.wrappers.rfd3_worker:daemon_factory"
@@ -76,11 +79,11 @@ def _restore_rng_state(snapshot: dict[str, Any]) -> None:
         torch.cuda.set_rng_state_all([state.clone() for state in cuda_states])
 
 
-def _write_engine_outputs(
+def _run_engine(
     engine: Any,
     request: dict[str, Any],
     post_init_rng_state: dict[str, Any] | None = None,
-) -> dict[str, Any]:
+) -> tuple:
     from biotite.structure.io.pdb import PDBFile
 
     if post_init_rng_state is not None:
@@ -93,6 +96,11 @@ def _write_engine_outputs(
     if not outputs_by_example:
         raise RuntimeError("RFD3 inference produced no outputs.")
 
+    return request, outputs_by_example, PDBFile
+
+
+def _write_outputs(prepared: tuple) -> dict[str, Any]:
+    request, outputs_by_example, PDBFile = prepared
     output_dir = Path(request["output_dir"])
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest_outputs = []
@@ -130,36 +138,62 @@ def _write_engine_outputs(
 
 def run_once(request: dict[str, Any]) -> dict[str, Any]:
     repo_path = request.get("repo_path") or Path.cwd()
-    engine = _load_engine(repo_path, dict(request["config"]))
-    return _write_engine_outputs(
-        engine,
-        request,
-        post_init_rng_state=_capture_rng_state(),
-    )
+    return _request_handler(
+        {"repo_path": str(repo_path), "engine_config": dict(request["config"])},
+        residency="one_shot",
+    )(request)
 
 
-def daemon_factory(settings: dict[str, Any]):
+def _load_worker(settings: dict[str, Any]):
     repo_path = str(settings["repo_path"])
     engine_config = dict(settings["engine_config"])
+    if os.environ.get("ASTROLABE_RESOURCE_SOCKET") and any(
+        int(engine_config.get(key, 1)) != 1 for key in ("num_nodes", "devices_per_node")
+    ):
+        raise ValueError("Broker-admitted RFD3 requires one worker device; distributed ranks need their own admission")
     engine = _load_engine(repo_path, engine_config)
     post_init_rng_state = _capture_rng_state()
 
-    def infer(request: dict[str, Any]) -> dict[str, Any]:
-        if Path(str(request.get("repo_path", repo_path))).resolve() != Path(
-            repo_path
-        ).resolve():
+    def prepare(request):
+        if Path(str(request.get("repo_path", repo_path))).resolve() != Path(repo_path).resolve():
             raise ValueError("RFD3 request repository does not match the loaded engine")
         if dict(request["config"]) != engine_config:
-            raise ValueError(
-                "RFD3 request engine settings do not match the loaded engine owner"
-            )
-        return _write_engine_outputs(
-            engine,
-            request,
-            post_init_rng_state=post_init_rng_state,
-        )
+            raise ValueError("RFD3 request engine settings do not match the loaded engine owner")
+        return request
+
+    stages = KernelStages(
+        prepare,
+        lambda request: _run_engine(engine, request, post_init_rng_state),
+        _write_outputs,
+    )
+    # Foundry's constructor retains a lazy engine. initialize()/weight loading
+    # happens inside run(), so constructor success does not prove loaded weights.
+    return stages, {"backend": "rfd3", "lazy_initialization": True}
+
+
+def _request_handler(settings, *, residency):
+    handle = kernel_handler(
+        settings, _load_worker,
+        lifecycle={"backend": "rfd3", "residency": residency,
+                   "weights_loaded": None, "gpu_resident": None},
+    )
+
+    def infer(request):
+        # Raw RFD3 callers do not transfer parent RNG. The existing worker's
+        # post-constructor snapshot is restored in the admitted execute stage.
+        response = handle({"operation": "infer", "payload": request,
+                           "random_state": {}})
+        if not response["ok"]:
+            raise RuntimeError(f"{response['error_type']}: {response['error']}")
+        return response["result"]
 
     return infer
+
+
+def daemon_factory(settings: dict[str, Any]):
+    # Registration belongs to the actual worker PID. Leave reclamation to the
+    # broker's process monitor, never to a logical close of this Python closure.
+    return _request_handler(settings, residency="resident_bridge")
 
 
 def main(argv: list[str] | None = None) -> int:

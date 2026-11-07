@@ -18,6 +18,7 @@ protein_beam:
     shutdown_timeout_s: 120
     terminate_timeout_s: 10
     max_pending: 4
+    concurrency_mode: process_pool
 mutator:
   mutator_terms:
     LigandMPNN_itf:

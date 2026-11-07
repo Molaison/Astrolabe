@@ -41,6 +41,23 @@ def teardown_function() -> None:
     global_config.reset()
 
 
+@pytest.mark.parametrize("proposal_length", [2, 6])
+def test_pose_scores_follow_pending_reconstruction_without_changing_parent(proposal_length):
+    from astrolabe.per_residue_scores import _split_pose_metric_by_proto
+    protein = _Protomer(4)
+    protein.mutated_sequence = "A" * proposal_length
+    global_config.init_const("protomers", {"A": protein})
+    pose = SimpleNamespace(num_chains=lambda: 1, chain_begin=lambda _: 1,
+                           chain_end=lambda _: proposal_length)
+    values = np.arange(proposal_length, dtype=float)
+    result = _split_pose_metric_by_proto(pose, values, oligo_name="A")
+    np.testing.assert_array_equal(result["A"][0], values)
+    assert protein.length == 4  # Accepted layout remains unchanged before decision.
+    protein.mutated_sequence = "AAAA"
+    with pytest.raises(ValueError, match="length mismatch"):
+        _split_pose_metric_by_proto(pose, values, oligo_name="A")
+
+
 def _try_pose():
     try:
         import pyrosetta  # type: ignore
@@ -49,7 +66,7 @@ def _try_pose():
     is_initialized = getattr(pyrosetta, "is_initialized", lambda: False)
     if not is_initialized():
         dalpha = pathlib.Path("astrolabe/assets/DAlphaBall.gcc").resolve()
-        pyrosetta.init(f"-mute all -holes:dalphaball {dalpha}")
+        pyrosetta.init(f"-ignore_zero_occupancy false -mute all -beta -holes:dalphaball {dalpha}")
     return pyrosetta.pose_from_sequence("ACDEFGHIK")
 
 
@@ -138,6 +155,48 @@ def test_combine_per_proto_mutator_scores_uses_weights_and_fallback() -> None:
             }
         },
     ) == pytest.approx(-0.2)
+
+
+def test_ligand_scores_never_become_protein_mutation_scores() -> None:
+    global_config.init_const("protomers", {
+        "A": _Protomer(2),
+        # Deliberately no protein length or sequence attributes on this ligand.
+        "B": SimpleNamespace(type=ProtomerTypes.CCD),
+    })
+    scores = SimpleNamespace(
+        per_proto_scores={"A": np.array([0.6, 0.7]), "B": np.array([0.9])},
+        per_proto_score_terms={"B": {"plddt": np.array([0.9])}},
+    )
+    attach_per_residue_scores(scores, {"enabled": True, "terms": {"plddt": {}}})
+    assert set(scores.per_proto_score_terms) == {"A"}
+    combined = combine_per_proto_mutator_scores(scores, {
+        "per_residue_scores": {"mutator_score_terms": {"plddt": 1.0}},
+    })
+    assert set(combined) == {"A"}
+    np.testing.assert_array_equal(combined["A"], [0.6, 0.7])
+
+
+def test_pose_metric_split_skips_ligand_before_protein_length_indexing() -> None:
+    from astrolabe.per_residue_scores import _split_pose_metric_by_proto
+
+    global_config.init_const("protomers", {
+        "A": SimpleNamespace(type=ProtomerTypes.CCD),
+        "B": _Protomer(2),
+    })
+    pose = SimpleNamespace(
+        num_chains=lambda: 2,
+        chain_begin=lambda chain: {1: 1, 2: 2}[chain],
+        chain_end=lambda chain: {1: 1, 2: 3}[chain],
+    )
+    split = _split_pose_metric_by_proto(pose, np.array([999.0, 0.2, 0.3]), oligo_name="AB")
+    assert set(split) == {"B"}
+    np.testing.assert_array_equal(split["B"][0], [0.2, 0.3])
+    # RFD4 writes ligand B first, but physical protein A must keep its scores.
+    global_config.protomers.update(A=_Protomer(2), B=SimpleNamespace(type=ProtomerTypes.CCD))
+    pose.pdb_info = lambda: SimpleNamespace(chain=lambda residue: "B" if residue == 1 else "A")
+    split = _split_pose_metric_by_proto(pose, np.array([999.0, 0.2, 0.3]), oligo_name="AB")
+    assert set(split) == {"A"}
+    np.testing.assert_array_equal(split["A"][0], [0.2, 0.3])
 
 
 def test_dplm_local_site_score_uses_configured_named_terms() -> None:

@@ -16,6 +16,12 @@ import threading
 from typing import Any, Callable
 
 from astrolabe.core import global_config
+from astrolabe.mutators.rfd4_types import GenerationResult
+
+from .generated_structure import (
+    GENERATED_STRUCTURE_REFERENCE_CODECS,
+    bind_generated_structure,
+)
 
 from .legacy import (
     LEGACY_REFERENCE_CODECS,
@@ -147,6 +153,7 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
         native_invoke: Callable[..., Any] | None = None,
         native_invoke_identity: str | None = None,
         mutation_context: MutationContextPolicy | None = None,
+        prepare_native: bool = False,
     ) -> None:
         self.factory = factory
         self.bindings = bindings
@@ -157,6 +164,7 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
         self.native_invoke = native_invoke
         self.native_invoke_identity = native_invoke_identity
         self.mutation_context = mutation_context
+        self.prepare_native = prepare_native
         self._execution_lock = threading.RLock()
         self.owner = LazyNativeOwner(
             factory,
@@ -172,6 +180,7 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
             reference_codecs=_unique_codecs(
                 LEGACY_REFERENCE_CODECS,
                 NATIVE_SCORES_REFERENCE_CODECS,
+                GENERATED_STRUCTURE_REFERENCE_CODECS,
                 (
                     NATIVE_MUTATION_REFERENCE_CODECS
                     if self.mutation_context is not None
@@ -229,6 +238,12 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
             return
         try:
             segments = native_mutation_segments()
+            if any(getattr(segment, "length_bounds", None) is not None
+                   or getattr(segment, "pending_sequence", None) is not None
+                   for _, segment in segments):
+                raise UnsupportedMutationContext(
+                    "complete variable-length proposals cannot be reconstructed by the substitution-only mutation context codec"
+                )
             manager = global_config.segment_manager
             if getattr(manager, "_pre_update_snapshot", None) is not None:
                 raise UnsupportedMutationContext(
@@ -358,10 +373,41 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
                 ),
             ),
         )
+        references = self._references_for(request, runtime_blob)
+        owner = self.owner.get() if self.prepare_native else None
+        prepare_native = getattr(owner, "prepare_native_mutation", None)
+        if self.prepare_native and not callable(prepare_native):
+            raise TypeError("prepared native owner must provide prepare_native_mutation()")
+        if callable(prepare_native):
+            runtime_config.setdefault("seed", request.sample.seed)
+            if self.native_invoke is not None:
+                raise UnsupportedNativeMutation(
+                    "prepared native mutation cannot use an independent custom invoker"
+                )
+            with self._execution_lock, self.bindings.activate(request.working):
+                scores = self.bindings.scores_for(request.evidence[0].evidence)
+                if self.configure is not None:
+                    configured = self.configure(
+                        owner, runtime_config, request=request, sample=request.sample,
+                        step=runtime_config["step"], work_root=Path(self.bindings.work_root),
+                    )
+                    if configured is not None:
+                        if not isinstance(configured, Mapping):
+                            raise TypeError("configure callback must return a mapping or None")
+                        runtime_config = dict(configured)
+                prepared_native = prepare_native(self._scope_mapping(), scores, runtime_config)
+            owner_blob = data.put(prepared_native, _RUNTIME_CONFIG_CODEC)
+            runtime_blob = data.put(runtime_config, _RUNTIME_CONFIG_CODEC)
+            dependencies = tuple(
+                Dependency("runtime-config", runtime_blob.identity)
+                if dependency.role == "runtime-config" else dependency
+                for dependency in dependencies
+            ) + (Dependency("native-prepared", owner_blob.identity),)
+            references = self._references_for(request, runtime_blob) + (owner_blob,)
         return _prepared(
             request,
             manifest(dependencies),
-            self._references_for(request, runtime_blob),
+            references,
         )
 
     def _scope_mapping(self) -> Mapping[str, Any]:
@@ -421,7 +467,7 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
         self,
         request: ProposeRequest,
         prepared: _Prepared[ProposeRequest],
-    ) -> tuple[Candidate, tuple[NativeMutationContextDraft, ...]]:
+    ) -> tuple[Candidate, tuple[NativeMutationContextDraft, ...], GenerationResult | None]:
         data = self.bindings.data
         runtime_blob = _role_blob(
             prepared,
@@ -435,13 +481,20 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
         use = request.evidence[0]
         scores = self.bindings.scores_for(use.evidence)
         mutator = self.owner.get()
+        if not self.prepare_native and callable(getattr(mutator, "prepare_native_mutation", None)):
+            raise UnsupportedNativeMutation(
+                "this native owner requires prepare_native=True to bind assets before Runtime lookup"
+            )
         if self.native_invoke is None and not callable(
             getattr(mutator, "mutate", None)
         ):
             raise TypeError("native mutator factory must return an object with mutate()")
 
         step = runtime_config["step"]
-        if self.configure is not None:
+        has_native_prepared = any(
+            dependency.role == "native-prepared" for dependency in prepared.inputs.dependencies
+        )
+        if self.configure is not None and not has_native_prepared:
             configured = self.configure(
                 mutator,
                 runtime_config,
@@ -458,8 +511,15 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
                 runtime_config = dict(configured)
 
         selected_protomers = self._scope_mapping()
-        if self.native_invoke is None:
-            mutator.mutate(
+        response = None
+        if has_native_prepared:
+            owner_blob = _role_blob(prepared, "native-prepared", _RUNTIME_CONFIG_CODEC.identity)
+            response = mutator.mutate_prepared(
+                data.get(owner_blob, _RUNTIME_CONFIG_CODEC),
+                selected_protomers, scores, runtime_config,
+            )
+        elif self.native_invoke is None:
+            response = mutator.mutate(
                 selected_protomers,
                 scores,
                 runtime_config,
@@ -471,7 +531,7 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
                 scores,
                 runtime_config,
             )
-            if response is not None:
+            if response is not None and not isinstance(response, GenerationResult):
                 raise TypeError("native mutator invoker must return None")
         drafts: tuple[NativeMutationContextDraft, ...] = ()
         if self.mutation_context is not None:
@@ -511,7 +571,7 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
             replacements,
             data=data,
         )
-        return candidate, drafts
+        return candidate, drafts, response if isinstance(response, GenerationResult) else None
 
     def invoke(self, prepared: _Prepared[ProposeRequest]) -> Proposals:
         if not isinstance(prepared, _Prepared):
@@ -531,7 +591,7 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
                     "bindings.activate(candidate) must return a context manager"
                 )
             with activation:
-                candidate, drafts = self._run_native(request, prepared)
+                candidate, drafts, generation = self._run_native(request, prepared)
 
         parents = tuple(item.identity for item in request.parents)
         used_evidence = tuple(
@@ -548,6 +608,11 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
             )[1]
             for draft in drafts
         )
+        if generation is not None:
+            artifacts += (bind_generated_structure(
+                generation, data=data, system=request.system, base=request.working,
+                proposed=candidate, sample=request.sample, inputs=prepared.inputs,
+            ),)
         identity_payload = (
             "proposal/native-mutation/v1",
             self.descriptor.identity,
@@ -622,6 +687,7 @@ def make_mutator_operation(
     invoke: Callable[..., Any] | None = None,
     invoke_identity: str | None = None,
     mutation_context: MutationContextPolicy | None = None,
+    prepare_native: bool = False,
 ) -> FunctionOperation[ProposeRequest, Proposals]:
     """Build a cold native mutation operation.
 
@@ -632,6 +698,9 @@ def make_mutator_operation(
     runs after model construction and immediately before ``mutate``.
     ``runtime_config_factory(request)`` is evaluated during preparation so its
     exact JSON value is journaled and available to a cold rebuild.
+    ``prepare_native=True`` opts an owner into pre-cache preparation through
+    ``prepare_native_mutation`` and invocation through ``mutate_prepared``.
+    Ordinary native owners remain lazy during journal replay.
     """
 
     if not isinstance(alias, str) or not alias.strip():
@@ -666,6 +735,8 @@ def make_mutator_operation(
         mutation_context, MutationContextPolicy
     ):
         raise TypeError("mutation_context must be a MutationContextPolicy or None")
+    if type(prepare_native) is not bool:
+        raise TypeError("prepare_native must be boolean")
 
     selected_options = {"protomer_scope": "mutable"}
     selected_options.update(dict(options or {}))
@@ -677,6 +748,7 @@ def make_mutator_operation(
     owner_identity = key_for(
         (
             "native-mutator-owner/v1",
+            *(("prepared-owner/v1",) if prepare_native else ()),
             model_identity,
             selected_options,
             sampling_policy,
@@ -742,6 +814,7 @@ def make_mutator_operation(
         reference_codecs=_unique_codecs(
             LEGACY_REFERENCE_CODECS,
             NATIVE_SCORES_REFERENCE_CODECS,
+            GENERATED_STRUCTURE_REFERENCE_CODECS,
             (
                 NATIVE_MUTATION_REFERENCE_CODECS
                 if mutation_context is not None
@@ -761,6 +834,7 @@ def make_mutator_operation(
         native_invoke=invoke,
         native_invoke_identity=invoke_identity,
         mutation_context=mutation_context,
+        prepare_native=prepare_native,
     )
 
 

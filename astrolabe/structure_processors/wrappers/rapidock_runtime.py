@@ -12,7 +12,31 @@ import sys
 from argparse import Namespace
 from contextlib import contextmanager, redirect_stderr, redirect_stdout
 from importlib import metadata as importlib_metadata
+from functools import wraps
 from typing import Any, Dict, Iterator, List, Mapping
+
+from astrolabe.model_execution import device_operation
+
+
+def _admitted(phase):
+    def decorate(function):
+        @wraps(function)
+        def run(self, *args, **kwargs):
+            if (os.environ.get("ASTROLABE_RESOURCE_SOCKET") and
+                    self.device not in (None, "", "null", "None", "auto", "cpu", "cuda", "cuda:0")):
+                # Both official ESM and legacy helpers use default .cuda(). A
+                # score-model-only cuda:N hint cannot admit that whole graph.
+                raise ValueError(
+                    "Broker-admitted RAPiDock requires logical cuda:0; use "
+                    "CUDA_VISIBLE_DEVICES to select the physical GPU"
+                )
+            # The official prepare_data path also runs ESM on CUDA. Its device
+            # graph is not CPU-only even when the score model requests CPU.
+            # Inside the JSONL kernel this reuses the existing local lease.
+            with device_operation("rapidock", phase=phase):
+                return function(self, *args, **kwargs)
+        return run
+    return decorate
 
 
 OFFICIAL_RAPIDOCK_REVISION = "36b2f780cf60b6cd80c2ed128b79a7d5c3b29469"
@@ -309,6 +333,7 @@ class RAPiDockRuntime:
             status["message"] = self.load_error
         return status
 
+    @_admitted("load")
     def load(self) -> Any:
         if self._inference is not None:
             return self._inference
@@ -371,6 +396,7 @@ class RAPiDockRuntime:
             candidates.append(str(path))
         return candidates
 
+    @_admitted("compute")
     def run(
         self, tasks: List[Mapping[str, Any]], params: Mapping[str, Any]
     ) -> List[Dict[str, Any]]:
@@ -711,6 +737,7 @@ class OfficialRAPiDockRuntime:
             status["confidence_message"] = self.confidence_load_error
         return status
 
+    @_admitted("load")
     def load(self) -> Any:
         if self.model_ready:
             return self._score_model
@@ -883,6 +910,7 @@ class OfficialRAPiDockRuntime:
         )
         return self._esm_cache
 
+    @_admitted("compute")
     def run(
         self, tasks: List[Mapping[str, Any]], params: Mapping[str, Any]
     ) -> List[Dict[str, Any]]:

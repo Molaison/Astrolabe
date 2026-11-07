@@ -144,8 +144,22 @@ class NativeFlow:
         }
         self.parts = Components(self.operations)
         self.requirements = self.parts.requirements(tuple(_BOUNDARIES))
+        context = getattr(self.stages, "runtime_context", None)
+        mutators = getattr(context, "mutators", {}) or {}
+        for mutator in mutators.values():
+            declare = getattr(mutator, "declare_variable_topology", None)
+            if callable(declare):
+                declare()
         self.translation = _translate(self.stages, data)
         self.system, self.initial = self.translation.system, self.translation.candidate
+        if any(domain.length_bounds is not None for domain in self.system.domains):
+            if len(mutators) != 1:
+                raise ValueError("variable length does not support mixed mutators")
+            if runtime_config.get("mutator_stack_pre_update") or runtime_config.get("updated_sites"):
+                raise ValueError("variable length does not support pre-update mutation stacks")
+            search = getattr(args, "search", None) or {}
+            if search.get("resume", False):
+                raise ValueError("variable length does not support recovery")
 
     def _invoke(self, request):
         if request.revision != self.revision:

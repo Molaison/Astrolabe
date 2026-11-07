@@ -12,6 +12,7 @@ from Bio import PDB as PDB
 from Bio.PDB import MMCIFParser
 
 from astrolabe.core import global_config
+from astrolabe.evaluators.runtime_stages import local_evaluator_guard
 from astrolabe.evaluators.base import Evaluator
 from astrolabe.evaluators.structure_output import project_structure, structure_directory
 from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
@@ -29,6 +30,7 @@ class BoltzEvaluator(Evaluator):
     def shutdown(self) -> None:
         shutdown_model_handles(self.model_runner)
 
+    @local_evaluator_guard("boltz1", "model_runner")
     def run_function(self, input_feat):
         for oligo_name, cplx_input in input_feat.items():
             self.model_runner.run_inference(cplx_input["data"], cplx_input["out_dir"])

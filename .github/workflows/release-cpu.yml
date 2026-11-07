@@ -42,6 +42,15 @@ jobs:
           astrolabe run --task release_protein --dry-run env=env
       - name: CPU workflows and numerical regressions
         run: python scripts/validation/release_cpu.py -q
+      - name: Daily configuration failures and valid CLI controls
+        run: python tests/run_daily_task_cli.py --report "$RUNNER_TEMP/daily-task.json" --jobs 2
+      - name: Upload daily CLI evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-cli-python-${{ matrix.python }}
+          path: ${{ runner.temp }}/daily-task*
+          if-no-files-found: error
       - name: Build public distributions
         run: |
           python scripts/release/export.py "$RUNNER_TEMP/Astrolabe" --archive dist/astrolabe-source.tar.gz

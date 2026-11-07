@@ -4,7 +4,7 @@ import importlib
 from collections.abc import Mapping
 from typing import Any
 
-from astrolabe.model_execution import kernel_handler
+from astrolabe.mutators.runtime_stages import mutator_kernel_handler
 
 
 DYNAMICMPNN_DAEMON_FACTORY = (
@@ -59,11 +59,19 @@ def _load_backend(settings: dict[str, Any]):
 
     metadata = {
         "backend": "dynamicmpnn",
+        "residency": "unknown",
+        "device": str(getattr(backend, "device", "unknown")),
         "implementation": "Alex-Abrudan/DynamicMPNN",
         "backend_factory": factory_path,
         "resident_backend_type": type(backend).__qualname__,
     }
     return run, metadata
+
+
+def kernel_handler(settings, loader, *, torch_device=None):
+    # Preserve the existing adapter seam used by CPU wiring checks.
+    return mutator_kernel_handler(settings, loader, backend="dynamicmpnn",
+                                  residency="unknown", torch_device=torch_device)
 
 
 def create_handler(settings: dict[str, Any]):

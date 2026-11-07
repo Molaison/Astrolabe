@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+import time
 
 import pytest
 from omegaconf import OmegaConf, open_dict
@@ -43,6 +44,203 @@ def fake_command(monkeypatch):
 
 def events(owner):
     return [json.loads(line) for line in owner.log_path.read_text().splitlines() if line.startswith('{')]
+
+
+@pytest.mark.parametrize('mode', ['process_pool', 'resident'])
+@pytest.mark.parametrize('fail', [False, True])
+def test_configured_native_beam_owns_one_service_and_preserves_gpu_environment(
+        config, fake_command, tmp_path, monkeypatch, fail, mode):
+    from astrolabe import protein_beam as beam
+    from astrolabe.design.repeats import RepeatRun
+    monkeypatch.setenv('CUDA_VISIBLE_DEVICES', 'GPU-bounded-test')
+    monkeypatch.setenv('JAX_PLATFORMS', 'cuda')
+    monkeypatch.delenv('ASTROLABE_RESOURCE_SOCKET', raising=False)
+    output = tmp_path / 'native-beam'
+    with open_dict(config):
+        config.seqs = {'A': 'ACDE', 'B': '+FGHI'}
+        config.case_input.structure = '/input/complex.cif'
+        config.protein_beam.service.concurrency_mode = mode
+    original = OmegaConf.to_container(config, resolve=False)
+    observed = []
+    def run_beam(cfg, directory, socket, **kwargs):
+        assert os.environ['CUDA_VISIBLE_DEVICES'] == ''
+        assert os.environ['JAX_PLATFORMS'] == 'cpu'
+        assert cfg.search.execution.socket_path is None
+        assert callable(kwargs['on_abort'])
+        if mode == 'resident':
+            assert callable(kwargs['before_root'])
+            assert kwargs['before_root']() == socket
+        else:
+            assert 'before_root' not in kwargs
+        assert call(socket, {'seed': 29}) == {'seed': 29}
+        observed.append(socket)
+        if fail:
+            raise ValueError('native CPU failure')
+        return {'status': 'complete'}
+    monkeypatch.setattr(beam, 'run_beam', run_beam)
+    repeat = RepeatRun(index=0, total=1, seed=29, output=output)
+    if fail:
+        with pytest.raises(ValueError, match='native CPU failure'):
+            beam.run_configured_branching(config, repeat)
+    else:
+        assert beam.run_configured_branching(config, repeat) == {'status': 'complete'}
+    assert len(observed) == 1 and not Path(observed[0]).exists()
+    records = list((output / 'services').glob('*/lifecycle.json'))
+    assert len(records) == 1
+    state = json.loads(records[0].read_text())
+    assert state['status'] == 'drained' and state['exit_code'] == 0
+    assert state['cuda_visible'] == 'GPU-bounded-test'
+    assert state['execution_mode'] == ('resident_model' if mode == 'resident' else 'serial_model')
+    assert os.environ['CUDA_VISIBLE_DEVICES'] == 'GPU-bounded-test'
+    assert os.environ['JAX_PLATFORMS'] == 'cuda'
+    assert OmegaConf.to_container(config, resolve=False) == original
+
+
+@pytest.fixture
+def delayed_owner(config, tmp_path, monkeypatch):
+    """A real CPU RPC service held before listener creation, not a timed mock."""
+    gate = tmp_path / 'allow-listen'
+    script = FAKE.replace('serve(lambda payload:payload,sys.argv[1])', '''
+import time
+from pathlib import Path
+# Even a matching log record is insufficient before the listener exists.
+mark('service_ready', socket=sys.argv[1])
+mark('startup_waiting')
+deadline = time.monotonic() + 30
+while not Path(sys.argv[2]).exists():
+    if time.monotonic() >= deadline:
+        raise TimeoutError('test readiness gate was not released')
+    time.sleep(.02)
+serve(lambda payload:payload,sys.argv[1])
+''')
+    monkeypatch.delenv('ASTROLABE_RESOURCE_SOCKET', raising=False)
+    monkeypatch.setattr(lifecycle, '_owner_command',
+        lambda config, socket: [sys.executable, '-u', '-c', script, str(socket), str(gate)])
+    with open_dict(config):
+        config.protein_beam.service.concurrency_mode = 'resident'
+    owner = lifecycle.OwnedAF3(config, tmp_path / 'owner', os.environ)
+    yield owner, gate
+    # Keep failed assertions from leaving the real subprocess behind.
+    if owner.process is not None and not owner.stopped:
+        owner.abort()
+
+
+def _wait_for_startup_gate(owner):
+    deadline = time.monotonic() + 10
+    while time.monotonic() < deadline:
+        assert owner.process.poll() is None
+        if any(event['event'] == 'startup_waiting' for event in events(owner)):
+            return
+        time.sleep(.02)
+    pytest.fail('CPU service did not reach its readiness gate')
+
+
+def test_starting_returns_before_readiness_and_barrier_does_not_probe(delayed_owner):
+    from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
+    owner, gate = delayed_owner
+    with owner.starting() as socket:
+        pid = owner.process.pid
+        _wait_for_startup_gate(owner)
+        assert owner.state['status'] == 'starting' and not owner.ready
+        assert not Path(socket).exists()
+        with pytest.raises(RuntimeError, match='only be started once'):
+            owner.start()
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            waiting = executor.submit(owner.wait_ready)
+            try:
+                with pytest.raises(FutureTimeout):
+                    waiting.result(timeout=.2)
+                assert not owner.ready
+                assert not any(event['event'] == 'request_received' for event in events(owner))
+            finally:
+                gate.touch()
+            assert waiting.result(timeout=10) == socket
+        assert owner.wait_ready() == socket and owner.process.pid == pid
+        assert owner.state['status'] == 'ready' and Path(socket).is_socket()
+        assert not any(event['event'] == 'request_received' for event in events(owner))
+        assert call(socket, {'seed': 71}) == {'seed': 71}
+    assert owner.process.poll() == 0 and owner.stopped
+    assert owner.state['status'] == 'drained' and not owner.state['cleanup_errors']
+    assert owner.log.closed and owner.stderr.closed
+    assert not Path(owner.socket_directory).exists()
+    assert sum(event['event'] == 'request_received' for event in events(owner)) == 1
+
+
+def _blocked_startup_worker(marker):
+    Path(marker).touch()
+    time.sleep(600)
+
+
+@pytest.mark.parametrize('error_type', [RuntimeError, KeyboardInterrupt])
+def test_abort_before_ready_reaps_real_owner_and_cpu_pool(delayed_owner, tmp_path, error_type):
+    import multiprocessing as mp
+    from astrolabe.protein_beam import controlled_pool
+    owner, gate = delayed_owner
+    marker = tmp_path / 'cpu-worker-started'
+    with pytest.raises(error_type, match='abort during startup'):
+        with owner.starting():
+            _wait_for_startup_gate(owner)
+            with controlled_pool(owner.abort, max_workers=1, mp_context=mp.get_context('spawn')) as pool:
+                future = pool.submit(_blocked_startup_worker, str(marker))
+                processes = list(pool._processes.values())
+                deadline = time.monotonic() + 10
+                while not marker.exists() and time.monotonic() < deadline:
+                    assert not future.done()
+                    time.sleep(.02)
+                assert marker.exists() and owner.process.poll() is None
+                raise error_type('abort during startup')
+    assert not gate.exists() and not owner.ready
+    assert owner.stopped and owner.process.poll() is not None
+    assert all(not process.is_alive() for process in processes) and future.done()
+    assert not owner.state['cleanup_errors'] and not owner.state['shutdown_acknowledged']
+    assert owner.log.closed and owner.stderr.closed
+    assert not Path(owner.socket_directory).exists()
+    assert not any(event['event'] in {'request_received', 'shutdown_received'} for event in events(owner))
+    # The nested pool and context both clean up; a further abort must be harmless.
+    before = owner.state_path.read_bytes()
+    owner.abort()
+    assert owner.state_path.read_bytes() == before
+
+
+def test_split_startup_timeout_includes_cpu_preparation_and_reaps(delayed_owner):
+    owner, gate = delayed_owner
+    with pytest.raises(TimeoutError, match='did not become ready'):
+        with owner.starting():
+            _wait_for_startup_gate(owner)
+            # Model loading may have consumed the deadline while CPU work ran.
+            # Expire it deterministically rather than relying on wall-clock speed.
+            owner._startup_deadline = time.monotonic() - 1
+            owner.wait_ready()
+    assert not gate.exists() and owner.stopped
+    assert owner.process.poll() is not None
+    assert owner.state['status'] == 'startup_failed' and not owner.state['cleanup_errors']
+    assert owner.log.closed and owner.stderr.closed
+    assert not Path(owner.socket_directory).exists()
+
+
+def test_lazy_child_group_starts_only_demanded_owners_and_drains(config,fake_command,tmp_path,monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from dataclasses import asdict
+    monkeypatch.delenv('ASTROLABE_RESOURCE_SOCKET',raising=False)
+    owner_config=OmegaConf.create(OmegaConf.to_container(config.evaluator.alphafold3,resolve=True))
+    settings=lifecycle.AF3ServiceSettings(startup_timeout_s=10,shutdown_timeout_s=2,
+        terminate_timeout_s=1,adaptive=lifecycle.AdaptiveEvaluationSettings(enabled=True,max_concurrency=3))
+    owner_config._service_settings=asdict(settings)
+    owner_config._service_adaptive=asdict(settings.adaptive)
+    with lifecycle.owned_af3_children(owner_config,tmp_path,lazy=True) as children:
+        assert [c.process is not None for c in children]==[True,False,False]
+        # The request thread ends before drain. It must not be the Linux
+        # parent-death owner of the lazily launched process.
+        with ThreadPoolExecutor(max_workers=1) as requests:
+            first=requests.submit(children.ensure,1).result(timeout=10)
+        assert children.ensure(1)==first
+        assert call(first['socket'],dict(model='alphafold3',seed=7))['seed']==7
+        assert [c.process is not None for c in children]==[True,True,False]
+        manifest=json.loads((tmp_path/'process_pool.json').read_text())
+        assert manifest['resident_owner_count']==2 and manifest['max_owner_count']==3
+    assert all(c.process.poll()==0 for c in children if c.process is not None)
+    assert children[2].state['status']=='created'
+    assert json.loads((tmp_path/'process_pool.json').read_text())['status']=='drained'
 
 
 def test_service_settings_default_without_legacy_block_does_not_mutate_config():
@@ -88,6 +286,105 @@ def test_service_settings_partial_legacy_and_explicit_override():
         terminate_timeout_s=10.0,
         max_pending=1,
     )
+
+
+def test_adaptive_settings_reach_owner_without_mutating_scientific_config(tmp_path):
+    cfg = OmegaConf.create({
+        'protein_beam': {'service': {'max_pending': 6, 'adaptive': {
+            'enabled': True, 'max_concurrency': 6}}},
+        'evaluator': {'alphafold3': {'model_dir': 'untouched'}},
+    })
+    before = OmegaConf.to_container(cfg, resolve=True)
+    owner = lifecycle.OwnedAF3(cfg, tmp_path, os.environ)
+    resolved = OmegaConf.load(owner.config_path)
+    assert resolved._service_adaptive.enabled is True
+    assert resolved._service_adaptive.max_concurrency == 6
+    assert resolved._service_adaptive.target_utilization == 90
+    assert resolved._service_adaptive.observation_window_s == 10
+    assert resolved._service_adaptive.sample_interval_s == 1
+    assert resolved._service_adaptive.memory_per_request_bytes == 6 * 1024**3
+    assert resolved._service_adaptive.memory_reserve_bytes == 1024**3
+    assert resolved._service_adaptive.throughput_drop_fraction == .15
+    assert resolved.model_dir == 'untouched'
+    assert owner.state['adaptive']['enabled'] is True
+    assert OmegaConf.to_container(cfg, resolve=True) == before
+
+
+def test_adaptive_broker_owner_rejected_before_artifacts_or_process(tmp_path, monkeypatch):
+    cfg = OmegaConf.create({
+        'protein_beam': {'service': {'adaptive': {'enabled': True, 'max_concurrency': 6}}},
+        'evaluator': {'alphafold3': {}},
+    })
+    monkeypatch.setattr(lifecycle.subprocess, 'Popen',
+                        lambda *a, **kw: pytest.fail('Rejected owner must not launch a process'))
+    with pytest.raises(RuntimeError, match='resource broker.*not qualified'):
+        lifecycle.OwnedAF3(cfg, tmp_path, {'ASTROLABE_RESOURCE_SOCKET': '/unused/resource.sock'})
+    assert not (tmp_path / 'services').exists()
+
+
+def test_adaptive_children_are_resident_serial_and_preserve_config(tmp_path, fake_command, monkeypatch):
+    monkeypatch.delenv('ASTROLABE_RESOURCE_SOCKET', raising=False)
+    cfg = OmegaConf.create({'evaluator': {'alphafold3': {
+        'model_dir': 'same-weights', 'num_recycles': 3, 'num_samples': 2,
+        'jax_compilation_cache_dir': '/same/cache', 'flash_attention_implementation': 'cudnn'}},
+        'protein_beam': {'service': {'adaptive': {'enabled': True, 'max_concurrency': 3},
+            'startup_timeout_s': 10, 'shutdown_timeout_s': 3, 'terminate_timeout_s': 1}}})
+    before = OmegaConf.to_container(cfg, resolve=True)
+    parent = lifecycle.OwnedAF3(cfg, tmp_path, os.environ)
+    resolved = OmegaConf.load(parent.config_path)
+    with lifecycle.owned_af3_children(resolved, parent.directory) as children:
+        assert len(children) == len({child.process.pid for child in children}) == 3
+        manifest = json.loads((parent.directory / 'process_pool.json').read_text())
+        assert manifest['status'] == 'ready' and manifest['parent_pid'] == os.getpid()
+        assert len(manifest['children']) == 3
+        for index, child in enumerate(children):
+            owner = OmegaConf.load(child.config_path)
+            scientific = {k: v for k, v in OmegaConf.to_container(owner, resolve=True).items()
+                          if not k.startswith('_service_') and k != 'service_socket'}
+            assert scientific == before['evaluator']['alphafold3']
+            assert owner._service_adaptive.enabled is False and child.max_pending == 1
+            assert child.state['pool_index'] == index and child.state['pool_parent_pid'] == os.getpid()
+            assert child.environment['ASTROLABE_AF3_PARENT_PID'] == str(os.getpid())
+            assert call(child.socket_path, {'seed': 7}) == {'seed': 7}
+            assert child.process.poll() is None
+    assert OmegaConf.to_container(cfg, resolve=True) == before
+    assert json.loads((parent.directory / 'process_pool.json').read_text())['status'] == 'drained'
+    for child in children:
+        assert child.process.poll() == 0 and child.log_path.is_file() and child.diagnostics_path.is_file()
+        assert json.loads(child.state_path.read_text())['status'] == 'drained'
+
+
+def test_adaptive_public_service_uses_children_not_a_parent_runner(tmp_path, monkeypatch):
+    from contextlib import contextmanager
+    from types import SimpleNamespace
+    from astrolabe.evaluators import af3_service, af3_pool
+    monkeypatch.delenv('ASTROLABE_RESOURCE_SOCKET', raising=False)
+    monkeypatch.setattr(lifecycle, 'guard_owner_parent', lambda: None)
+    config = OmegaConf.create({'_service_adaptive': {'enabled': True, 'max_concurrency': 3}})
+    monkeypatch.setattr(af3_service, 'load_service_config', lambda _: config)
+    monkeypatch.setattr(af3_service, 'load_runner', lambda _: pytest.fail('Parent must not load a model'))
+    children = lifecycle.AF3ChildGroup(SimpleNamespace(socket_path=tmp_path / f'child-{i}.sock',
+        ready=i==0, process=SimpleNamespace(pid=i+10) if i==0 else None,
+        config_path=tmp_path / f'{i}.yaml', state_path=tmp_path / f'{i}.json',
+        log_path=tmp_path / f'{i}.jsonl', diagnostics_path=tmp_path / f'{i}.stderr') for i in range(3))
+    order = []
+    @contextmanager
+    def owned(config, directory, *, lazy):
+        assert directory == tmp_path
+        assert lazy
+        order.append('children_ready')
+        yield children
+        order.append('children_closed')
+    monkeypatch.setattr(lifecycle, 'owned_af3_children', owned)
+    def handler(backends, **kwargs):
+        assert backends == [child.socket_path if child.ready else child.config_path for child in children]
+        assert [owner['pid'] for owner in kwargs['owners']] == [10, None, None]
+        assert kwargs['backend_loader'] == children.ensure
+        return SimpleNamespace(close=lambda: order.append('pool_drained'))
+    monkeypatch.setattr(af3_pool, 'process_pool_handler', handler)
+    monkeypatch.setattr(af3_service, 'serve', lambda handler, socket, pending: order.append('serve'))
+    af3_service.main(['--config', str(tmp_path / 'owner.yaml'), '--socket', str(tmp_path / 'pool.sock')])
+    assert order == ['children_ready', 'serve', 'pool_drained', 'children_closed']
 
 
 @pytest.mark.parametrize(
@@ -321,7 +618,7 @@ def test_private_owner_real_rpc_drain_and_gpu_environment(config,tmp_path,fake_c
     marks=events(owner)
     assert len([m for m in marks if m['event']=='fake_model_load'])==1
     assert next(m for m in marks if m['event']=='fake_model_load')['cuda']=='GPU-test-only'
-    assert next(m for m in marks if m['event']=='fake_model_load')['jax']=='cuda'
+    assert next(m for m in marks if m['event']=='fake_model_load')['jax']=='cuda,cpu'
     assert any(m['event']=='shutdown_drained' for m in marks)
     assert original['JAX_PLATFORMS']=='cpu'
 
@@ -336,12 +633,18 @@ def test_owner_still_drains_when_cpu_work_raises(config,tmp_path,fake_command):
 
 
 @pytest.mark.parametrize('script,message',[("raise SystemExit(7)",'exited during startup'),('import time;time.sleep(600)','did not become ready')])
-def test_startup_failure_retains_log_and_reaps_owned_process(config,tmp_path,monkeypatch,script,message):
+@pytest.mark.parametrize('split', [False, True])
+def test_startup_failure_retains_log_and_reaps_owned_process(config,tmp_path,monkeypatch,script,message,split):
     config.protein_beam.service.startup_timeout_s=.3
     monkeypatch.setattr(lifecycle,'_owner_command',lambda *args:[sys.executable,'-u','-c',script])
     owner=lifecycle.OwnedAF3(config,tmp_path,os.environ)
     with pytest.raises((RuntimeError,TimeoutError),match=message):
-        with owner:pytest.fail('Failed owner must not run the beam')
+        if split:
+            with owner.starting():
+                owner.wait_ready()
+                pytest.fail('Failed owner must not run the beam')
+        else:
+            with owner:pytest.fail('Failed owner must not run the beam')
     assert owner.process.poll() is not None
     state=json.loads(owner.state_path.read_text())
     assert state['status']=='startup_failed' and owner.log_path.exists()
@@ -366,6 +669,15 @@ mark('service_ready',socket=sys.argv[1]);time.sleep(600)
 def test_batch_auto_starts_one_model_and_completed_resume_starts_none(tmp_path,monkeypatch,fake_command):
     from astrolabe.interface import run_interface
     import astrolabe.protein_beam as beam
+    import astrolabe.protein_beam_recovery as recovery
+    # This test stubs the scientific run/checkpoint, so stub its paired recovery
+    # validation as well. Production integrity validation stays unchanged.
+    recovered=[]
+    def fake_validate(cfg,destination,state=None,**kwargs):
+        assert state['status']=='complete' and state['records']==[{'id':0}]
+        recovered.append(str(destination))
+        return state
+    monkeypatch.setattr(recovery,'validate_completed_beam',fake_validate)
     monkeypatch.setenv('CUDA_VISIBLE_DEVICES','GPU-test-only')
     observed=[]
     def fake(cfg,destination,socket,**kwargs):
@@ -386,6 +698,7 @@ def test_batch_auto_starts_one_model_and_completed_resume_starts_none(tmp_path,m
     monkeypatch.setattr(lifecycle,'OwnedAF3',lambda *a:pytest.fail('Completed recovery must not load a model'))
     assert run_interface(**args,resume=True)==0
     assert len(observed)==3
+    assert len(recovered)==3
 
 
 def test_explicit_service_is_reused_and_never_stopped(config,tmp_path,monkeypatch,fake_command):

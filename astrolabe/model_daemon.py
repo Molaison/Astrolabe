@@ -8,6 +8,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field, is_dataclass
 import hashlib
 import importlib
+import io
 import json
 import logging
 import math
@@ -18,6 +19,7 @@ import queue
 import signal
 import socket
 import stat
+import struct
 import subprocess
 import sys
 import tempfile
@@ -151,11 +153,65 @@ def _adapter_hash(spec: DaemonSpec) -> str:
     return digest.hexdigest()
 
 
+_FILE_DIGESTS = {}
+_FILE_DIGEST_LOCK = threading.Lock()
+
+
+def _content_identity(path: Path) -> str:
+    """Cache by filesystem change identity, never by pathname alone."""
+    path = path.expanduser().resolve()
+    info = path.stat()
+    key = (str(path), info.st_dev, info.st_ino, info.st_size,
+           info.st_mtime_ns, info.st_ctime_ns)
+    with _FILE_DIGEST_LOCK:
+        if key not in _FILE_DIGESTS:
+            digest = hashlib.sha256()
+            with path.open("rb") as handle:
+                for block in iter(lambda: handle.read(8 * 1024**2), b""):
+                    digest.update(block)
+            after = path.stat()
+            if (info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns) != (
+                    after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+                raise ModelDaemonError(f"Model asset changed during identity capture: {path}")
+            _FILE_DIGESTS[key] = digest.hexdigest()
+        return _FILE_DIGESTS[key]
+
+
+def _referenced_asset_identity(value, key=""):
+    """Bind explicit weight/config files visible in this execution environment.
+
+    Vendor-discovered default assets remain private to their loaded owner;
+    portable concurrency certificates additionally require explicit manifests.
+    """
+    result = {}
+    if isinstance(value, Mapping):
+        for name, item in value.items():
+            if not str(name).startswith("_"):
+                result.update(_referenced_asset_identity(item, str(name).lower()))
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            result.update(_referenced_asset_identity(item, key))
+    elif isinstance(value, str) and any(
+            token in key for token in ("checkpoint", "ckpt", "weight", "model_path")):
+        path = Path(value).expanduser()
+        if path.is_file():
+            result[str(path.resolve())] = _content_identity(path)
+    return result
+
+
 def model_identity(spec: DaemonSpec, *, max_pending: int = 4) -> str:
+    pipeline = (spec.env or {}).get(
+        "ASTROLABE_MODEL_PIPELINE", os.environ.get("ASTROLABE_MODEL_PIPELINE", "0")
+    )
+    if not isinstance(pipeline, str) or pipeline not in {"0", "1"}:
+        raise ValueError("ASTROLABE_MODEL_PIPELINE must be '0' or '1'")
     identity_settings = dict(spec.settings)
     identity_settings.pop("_initial_random_state", None)
+    identity_settings.pop("_runtime_profile", None)
     payload = {
         "protocol": PROTOCOL,
+        "model_owner": os.environ.get("ASTROLABE_MODEL_OWNER", "daemon"),
+        "model_pipeline": pipeline,
         "backend": spec.backend,
         "factory": spec.factory,
         "settings": identity_settings,
@@ -164,6 +220,20 @@ def model_identity(spec: DaemonSpec, *, max_pending: int = 4) -> str:
         "env": dict(sorted((spec.env or {}).items())),
         "provider": spec.provider,
         "adapter_sha256": _adapter_hash(spec),
+        "explicit_assets_sha256": _referenced_asset_identity(identity_settings),
+        "execution_sha256": {
+            str(path.relative_to(_REPO_ROOT)): _content_identity(path)
+            for path in (
+                _REPO_ROOT / "astrolabe/model_execution.py",
+                _REPO_ROOT / "astrolabe/model_daemon.py",
+                _REPO_ROOT / "astrolabe/runtime/admission.py",
+                _REPO_ROOT / "astrolabe/runtime/loading.py",
+                _REPO_ROOT / "astrolabe/runtime/model_pool.py",
+                *([_REPO_ROOT / "astrolabe/evaluators/esmfold.py",
+                   _REPO_ROOT / "astrolabe/evaluators/esmfold_stages.py"]
+                  if spec.backend == "esmfold" else []),
+            ) if path.is_file()
+        },
         "max_pending": int(max_pending),
         "max_frame_bytes": int(spec.max_frame_bytes),
     }
@@ -239,16 +309,37 @@ def _handler_from(value: Any) -> Callable[[dict[str, Any]], Any]:
 
 
 def _frame(payload: Mapping[str, Any], max_frame_bytes: int = MAX_FRAME_BYTES) -> bytes:
-    body = pickle.dumps(dict(payload), protocol=5)
-    if not body or len(body) > max_frame_bytes:
-        raise FrameTooLarge(f"frame size {len(body)} exceeds bound {max_frame_bytes}")
-    return len(body).to_bytes(8, "big") + body
+    # Bound the writer itself: dumps() followed by a size check temporarily
+    # retains an arbitrarily large serialized result. Include the header in the
+    # same buffer and serialize each response only once.
+    class BoundedFrame(io.BytesIO):
+        def write(self, data):
+            # Protocol 5 can supply PickleBuffer directly for native arrays.
+            # It has no len(); multidimensional buffers also need byte counts.
+            if self.tell() + memoryview(data).nbytes > max_frame_bytes + 8:
+                raise FrameTooLarge(f"frame size exceeds bound {max_frame_bytes}")
+            return super().write(data)
+
+    with BoundedFrame() as stream:
+        stream.write(b"\0" * 8)
+        pickle.Pickler(stream, protocol=5).dump(dict(payload))
+        size = stream.tell() - 8
+        stream.seek(0)
+        stream.write(size.to_bytes(8, "big"))
+        return stream.getvalue()
 
 
-def _receive_exact(connection: socket.socket, size: int) -> bytes:
+def _receive_exact(
+    connection: socket.socket, size: int, deadline: float | None = None,
+) -> bytes:
     chunks: list[bytes] = []
     remaining = size
     while remaining:
+        if deadline is not None:
+            remaining_time = deadline - time.monotonic()
+            if remaining_time <= 0:
+                raise TimeoutError("frame read deadline exceeded")
+            connection.settimeout(remaining_time)
         chunk = connection.recv(remaining)
         if not chunk:
             raise DaemonDisconnected("connection closed before frame completed")
@@ -260,13 +351,15 @@ def _receive_exact(connection: socket.socket, size: int) -> bytes:
 def _read_frame(
     connection: socket.socket,
     max_frame_bytes: int = MAX_FRAME_BYTES,
+    *,
+    deadline: float | None = None,
 ) -> dict[str, Any]:
-    header = _receive_exact(connection, 8)
+    header = _receive_exact(connection, 8, deadline)
     size = int.from_bytes(header, "big")
     if size <= 0 or size > max_frame_bytes:
         raise FrameTooLarge(f"frame size {size} exceeds bound {max_frame_bytes}")
     try:
-        value = pickle.loads(_receive_exact(connection, size))
+        value = pickle.loads(_receive_exact(connection, size, deadline))
     except (pickle.PickleError, EOFError, AttributeError, ImportError, ValueError) as error:
         raise ProtocolError("invalid pickle frame") from error
     if not isinstance(value, dict):
@@ -385,6 +478,13 @@ def _event(event: str, **fields: Any) -> None:
 
 
 class _Server:
+    """Bound accepted sockets and wire buffers independently of broker leases.
+
+    A handler result may be an arbitrary Python object; the byte receipts below
+    bound serialized transport storage, not the owner's total heap or the
+    broker's stage-output budget. I/O deadlines never re-execute a request.
+    """
+
     def __init__(
         self,
         handler: Callable[[dict[str, Any]], Any],
@@ -395,7 +495,10 @@ class _Server:
         max_pending: int,
         max_frame_bytes: int,
         parent_pid: int | None,
+        io_timeout: float = 5.0,
     ) -> None:
+        if max_pending < 1 or max_frame_bytes < 1 or not 0 < io_timeout < float("inf"):
+            raise ValueError("transport limits must be positive and finite")
         self.handler = handler
         self.socket_path = socket_path
         self.identity = identity
@@ -407,15 +510,49 @@ class _Server:
         self.requests = 0
         self.completed = 0
         self.failed = 0
-        self.active_request: str | None = None
+        concurrency = getattr(handler, "max_concurrency", 1)
+        if type(concurrency) is not int or concurrency < 1:
+            raise ValueError("handler.max_concurrency must be a positive integer")
+        self.worker_count = min(concurrency, max_pending)
+        self.io_timeout = io_timeout
+        self.max_inflight = max_pending + self.worker_count
+        # Inference, including queued work and blocked output, cannot consume
+        # the two extra control/read slots. Partial frames may occupy any slot;
+        # an absolute read deadline reclaims them even for trickling clients.
+        self.max_connections = self.max_inflight + 2
+        self.connection_slots = threading.BoundedSemaphore(self.max_connections)
+        self.inflight_slots = threading.BoundedSemaphore(self.max_inflight)
+        self.connections: dict[socket.socket, str | None] = {}
+        self.inflight = 0
+        self.peak_connections = 0
+        self.output_responses = 0
+        self.output_frame_bytes = 0
+        self.peak_output_responses = 0
+        self.peak_output_frame_bytes = 0
+        # Key by the transport item, not client-supplied IDs: separate clients
+        # may use the same request_id with different generations.
+        self.active_requests: dict[int, str] = {}
+        self.peak_active_requests = 0
         self.tasks: queue.Queue[dict[str, Any]] = queue.Queue(maxsize=max_pending)
-        self.admission = threading.Lock()
+        self.admission = threading.RLock()
+        self.available = threading.Condition(self.admission)
+        self.drain_lock = threading.Lock()
+        self.workers_stopped = False
         self.stopping = False
         self.listener: socket.socket | None = None
         self.shutdown_complete = threading.Event()
-        self.worker = threading.Thread(target=self._worker, name="model-daemon-inference")
+        self.workers = [
+            threading.Thread(target=self._worker, name=f"model-daemon-inference-{index}")
+            for index in range(self.worker_count)
+        ]
+        self.connection_workers: list[threading.Thread] = []
 
     def _status(self) -> dict[str, Any]:
+        with self.admission:
+            return self._status_locked()
+
+    def _status_locked(self) -> dict[str, Any]:
+        active = list(self.active_requests.values())
         return {
             "protocol": PROTOCOL,
             "type": "status",
@@ -425,32 +562,81 @@ class _Server:
             "parent_pid": self.parent_pid,
             "state": "draining" if self.stopping else "running",
             "queue_depth": self.tasks.qsize(),
-            "active_request": self.active_request,
+            "active_request": active[0] if active else None,
+            "active_requests": active,
+            "peak_active_requests": self.peak_active_requests,
+            "worker_count": self.worker_count,
             "max_pending": self.max_pending,
+            "max_inflight_requests": self.max_inflight,
+            "inflight_requests": self.inflight,
+            "max_connections": self.max_connections,
+            "connection_count": len(self.connections),
+            "peak_connections": self.peak_connections,
+            "listen_backlog": self.max_connections,
+            "io_timeout": self.io_timeout,
+            "output_responses": self.output_responses,
+            "output_frame_bytes": self.output_frame_bytes,
+            "peak_output_responses": self.peak_output_responses,
+            "peak_output_frame_bytes": self.peak_output_frame_bytes,
+            "max_output_responses": self.max_connections,
+            "max_output_frame_bytes": self.max_connections * (self.max_frame_bytes + 8),
+            # One bounded frame per sending connection; conservatively include
+            # both the writer and its returned bytes during materialization.
+            # This bounds wire buffers, not arbitrary handler Python objects.
+            "max_serialized_output_bytes": 2 * self.max_connections * (self.max_frame_bytes + 8),
             "request_count": self.requests,
             "completed_count": self.completed,
             "failed_count": self.failed,
             "model_load_count": 1,
+            "model_load_count_scope": "factory_initializations",
             "started_at": self.started_at,
             "socket": str(self.socket_path),
         }
 
+    def _send_bytes(self, connection: socket.socket, frame: bytes) -> None:
+        with self.admission:
+            self.output_responses += 1
+            self.output_frame_bytes += len(frame)
+            self.peak_output_responses = max(self.peak_output_responses, self.output_responses)
+            self.peak_output_frame_bytes = max(self.peak_output_frame_bytes, self.output_frame_bytes)
+        try:
+            connection.settimeout(self.io_timeout)
+            connection.sendall(frame)
+        finally:
+            with self.admission:
+                self.output_responses -= 1
+                self.output_frame_bytes -= len(frame)
+
+    def _send_response(self, connection, response, max_frame_bytes):
+        self._send_bytes(connection, _frame(response, max_frame_bytes))
+
     def _worker(self) -> None:
         while True:
-            item = self.tasks.get()
+            with self.available:
+                while True:
+                    try:
+                        item = self.tasks.get_nowait()
+                        break
+                    except queue.Empty:
+                        self.available.wait()
+                if not item.get("stop"):
+                    self.active_requests[id(item)] = item["request_id"]
+                    self.peak_active_requests = max(
+                        self.peak_active_requests, len(self.active_requests)
+                    )
             try:
                 if item.get("stop"):
                     return
                 request_id = item["request_id"]
                 generation = item["generation"]
-                self.active_request = request_id
-                _event("inference_start", backend=self.backend, request_id=request_id)
+                _event("inference_start", backend=self.backend, request_id=request_id,
+                       generation=generation)
                 try:
-                    result = self.handler(dict(item["payload"]))
+                    from astrolabe.model_execution import model_kernel_context
+                    with model_kernel_context(self.backend, self.identity):
+                        result = self.handler(dict(item["payload"]))
                     response = {"type": "result", "result": result}
-                    self.completed += 1
                 except BaseException as error:
-                    self.failed += 1
                     response = {
                         "type": "error",
                         "code": "inference_failed",
@@ -458,37 +644,73 @@ class _Server:
                         "message": str(error),
                     }
                     print(traceback.format_exc(), file=sys.stderr, flush=True)
-                try:
-                    _frame(response, self.max_frame_bytes)
-                except (TypeError, ValueError, FrameTooLarge) as error:
-                    response = {
-                        "type": "error",
-                        "code": "response_not_materializable",
-                        "error_type": type(error).__name__,
-                        "message": str(error),
-                    }
-                item["response"] = {
+                envelope = {
                     "protocol": PROTOCOL,
                     "request_id": request_id,
                     "identity": self.identity,
                     "generation": generation,
                     "backend": self.backend,
                     "pid": os.getpid(),
-                    **response,
                 }
+                successful = response["type"] == "result"
+                try:
+                    frame = _frame({**envelope, **response}, self.max_frame_bytes)
+                except Exception as error:
+                    successful = False
+                    frame = _frame({
+                        **envelope,
+                        "type": "error",
+                        "code": "response_not_materializable",
+                        "error_type": type(error).__name__,
+                        "message": str(error),
+                    }, self.max_frame_bytes)
+                finally:
+                    # Do not retain the last result in an idle worker, or keep
+                    # an object response and repeatedly pickle it in _handle.
+                    response = None
+                    result = None
+                try:
+                    self._send_bytes(item["connection"], frame)
+                except OSError:
+                    # The execution outcome is unchanged by delivery failure.
+                    # In particular, do not replay or send a second frame.
+                    pass
+                finally:
+                    del frame
                 _event(
                     "inference_end",
                     backend=self.backend,
                     request_id=request_id,
-                    ok=response["type"] == "result",
+                    generation=generation,
+                    ok=successful,
                 )
+            except Exception:
+                # Even an error response may exceed a very small frame limit.
+                # Transport failure must not kill a worker or strand join().
+                successful = False
+                print(traceback.format_exc(), file=sys.stderr, flush=True)
             finally:
-                self.active_request = None
-                item["done"].set()
-                if item.get("stop"):
+                if not item.get("stop"):
+                    item["connection"].close()
+                with self.admission:
+                    self.active_requests.pop(id(item), None)
+                    if not item.get("stop"):
+                        if successful:
+                            self.completed += 1
+                        else:
+                            self.failed += 1
+                    item["done"].set()
                     self.tasks.task_done()
+                del item
 
     def _handle(self, connection: socket.socket) -> None:
+        if not self.connection_slots.acquire(blocking=False):
+            connection.close()
+            return
+        admitted = False
+        with self.admission:
+            self.connections[connection] = None
+            self.peak_connections = max(self.peak_connections, len(self.connections))
         request_id: str | None = None
         generation: str | None = None
         admitted_item: dict[str, Any] | None = None
@@ -496,13 +718,15 @@ class _Server:
             _check_child_parent(self.parent_pid)
             if _peer_uid(connection) != os.getuid():
                 raise PermissionError("daemon requires same UID")
-            request = _read_frame(connection, self.max_frame_bytes)
+            request = _read_frame(connection, self.max_frame_bytes,
+                                  deadline=time.monotonic() + self.io_timeout)
+            connection.settimeout(self.io_timeout)
             request_id = str(request.get("request_id") or uuid.uuid4().hex)
             generation = str(request.get("generation") or "")
             if request.get("protocol") != PROTOCOL:
                 raise ProtocolError("daemon protocol mismatch")
             if request.get("identity") != self.identity:
-                _send_frame(
+                self._send_response(
                     connection,
                     {
                         "protocol": PROTOCOL,
@@ -518,8 +742,10 @@ class _Server:
                 )
                 return
             request_type = request.get("type")
+            with self.admission:
+                self.connections[connection] = request_type
             if request_type == "status":
-                _send_frame(
+                self._send_response(
                     connection,
                     {
                         **self._status(),
@@ -543,24 +769,28 @@ class _Server:
                 "generation": generation,
                 "payload": payload,
                 "done": threading.Event(),
-                "response": None,
+                "connection": connection,
             }
             with self.admission:
                 if self.stopping:
                     raise ProtocolError("daemon is stopping")
+                if not self.inflight_slots.acquire(blocking=False):
+                    raise ModelDaemonError("daemon pending queue is full (including output)")
+                admitted = True
+                self.inflight += 1
                 self.requests += 1
                 try:
                     self.tasks.put_nowait(item)
                 except queue.Full as error:
                     raise ModelDaemonError("daemon pending queue is full") from error
-                admitted_item = item
+                self.available.notify()
+            del request, payload
             item["done"].wait()
-            _send_frame(connection, item["response"], self.max_frame_bytes)
-        except (BrokenPipeError, ConnectionResetError, DaemonDisconnected):
+        except (OSError, DaemonDisconnected):
             return
         except BaseException as error:
             try:
-                _send_frame(
+                self._send_response(
                     connection,
                     {
                         "protocol": PROTOCOL,
@@ -576,45 +806,96 @@ class _Server:
                     },
                     self.max_frame_bytes,
                 )
-            except OSError:
+            except (OSError, ModelDaemonError):
                 pass
         finally:
-            try:
-                connection.close()
-            finally:
-                if admitted_item is not None:
-                    self.tasks.task_done()
+            connection.close()
+            with self.admission:
+                self.connections.pop(connection, None)
+                if admitted:
+                    self.inflight -= 1
+                    self.inflight_slots.release()
+                self.available.notify_all()
+            self.connection_slots.release()
 
     def _drain(self, connection: socket.socket, request_id: str, generation: str) -> None:
         with self.admission:
             self.stopping = True
-        _event("shutdown_received", backend=self.backend, request_id=request_id)
-        self.tasks.join()
-        self.tasks.put({"stop": True, "done": threading.Event()})
-        self.worker.join()
-        try:
-            _send_frame(
-                connection,
-                {
-                    "protocol": PROTOCOL,
-                    "type": "result",
-                    "request_id": request_id,
-                    "generation": generation,
-                    "identity": self.identity,
-                    "backend": self.backend,
-                    "pid": os.getpid(),
-                    "result": {
-                        "drained": True,
-                        "completed_count": self.completed,
-                        "failed_count": self.failed,
+            # Incomplete input has no admitted scientific request to drain.
+            # Wake those readers so they cannot delay connection pool exit.
+            for pending, kind in self.connections.items():
+                if kind is None:
+                    try:
+                        pending.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+        _event("shutdown_received", backend=self.backend, request_id=request_id,
+               generation=generation)
+        # Only one caller may enqueue sentinels. A repeated stop must not leave
+        # an unconsumed sentinel behind after the workers have already exited.
+        with self.drain_lock:
+            if not self.workers_stopped:
+                if self.listener is not None:
+                    try:
+                        # close() alone need not wake a blocked accept().
+                        self.listener.shutdown(socket.SHUT_RDWR)
+                    except OSError:
+                        pass
+                    try:
+                        self.listener.close()
+                    except OSError:
+                        pass
+                self.tasks.join()
+                with self.available:
+                    while self.inflight:
+                        self.available.wait()
+                with self.available:
+                    for _ in self.workers:
+                        self.tasks.put_nowait({"stop": True, "done": threading.Event()})
+                    self.available.notify_all()
+                for worker in self.workers:
+                    worker.join()
+                self.workers_stopped = True
+            with self.admission:
+                completed, failed = self.completed, self.failed
+            try:
+                self._send_response(
+                    connection,
+                    {
+                        "protocol": PROTOCOL,
+                        "type": "result",
+                        "request_id": request_id,
+                        "generation": generation,
+                        "identity": self.identity,
+                        "backend": self.backend,
+                        "pid": os.getpid(),
+                        "result": {
+                            "drained": True,
+                            "completed_count": completed,
+                            "failed_count": failed,
+                        },
                     },
-                },
-                self.max_frame_bytes,
-            )
-        except (OSError, DaemonDisconnected):
-            pass  # A peer may disconnect after requesting an otherwise clean stop.
-        finally:
-            self.shutdown_complete.set()
+                    self.max_frame_bytes,
+                )
+            except (OSError, DaemonDisconnected):
+                pass  # A disconnected stop client must not strand the drained owner.
+            finally:
+                # A disconnected stop client must not strand the server loop.
+                self.shutdown_complete.set()
+
+    def _connection_worker(self) -> None:
+        while True:
+            with self.admission:
+                if self.stopping:
+                    return
+            try:
+                connection, _ = self.listener.accept()
+            except OSError:
+                with self.admission:
+                    if self.stopping:
+                        return
+                raise
+            self._handle(connection)
 
     def run(self) -> None:
         parent = self.socket_path.parent
@@ -628,40 +909,43 @@ class _Server:
         self.listener = listener
         listener.bind(str(self.socket_path))
         self.socket_path.chmod(0o600)
-        listener.listen(max(16, self.max_pending * 4))
-        listener.settimeout(0.2)
-        self.worker.start()
+        # Fixed accept/handle workers, with no userspace accepted-socket queue.
+        # The OS backlog is also finite; overload may disconnect/time out.
+        listener.listen(self.max_connections)
+        for worker in self.workers:
+            worker.start()
+        self.connection_workers = [
+            threading.Thread(target=self._connection_worker,
+                             name=f"model-daemon-connection-{index}")
+            for index in range(self.max_connections)
+        ]
+        for worker in self.connection_workers:
+            worker.start()
         _event(
             "service_ready",
             backend=self.backend,
             identity=self.identity,
             socket=str(self.socket_path),
             max_pending=self.max_pending,
+            worker_count=self.worker_count,
+            max_connections=self.max_connections,
+            io_timeout=self.io_timeout,
             model_load_count=1,
+            model_load_count_scope="factory_initializations",
         )
         try:
-            while not self.stopping:
-                try:
-                    connection, _ = listener.accept()
-                except socket.timeout:
-                    continue
-                except OSError:
-                    if self.stopping:
-                        break
-                    raise
-                threading.Thread(
-                    target=self._handle,
-                    args=(connection,),
-                    name="model-daemon-request",
-                    daemon=True,
-                ).start()
+            self.shutdown_complete.wait()
         finally:
             try:
                 listener.close()
             except OSError:
                 pass
-            if self.stopping:
+            with self.admission:
+                stopping = self.stopping
+            if stopping:
                 self.shutdown_complete.wait()
+            for worker in self.connection_workers:
+                worker.join()
             try:
                 self.socket_path.unlink()
             except FileNotFoundError:
@@ -709,21 +993,83 @@ def serve(
 
     with model_kernel_context(backend, identity):
         handler = _handler_from(factory(settings))
-    _event("model_load_end", backend=backend, model_load_count=1)
-    try:
-        _Server(
-            handler,
-            socket_path=Path(socket_path),
-            identity=identity,
-            backend=backend,
-            max_pending=max_pending,
-            max_frame_bytes=max_frame_bytes,
-            parent_pid=parent_pid,
-        ).run()
-    finally:
-        close = getattr(handler, "close", None)
-        if close is not None:
-            close()
+    _event("model_load_end", backend=backend, model_load_count=1,
+           model_load_count_scope="factory_initializations")
+    _Server(
+        handler,
+        socket_path=Path(socket_path),
+        identity=identity,
+        backend=backend,
+        max_pending=max_pending,
+        max_frame_bytes=max_frame_bytes,
+        parent_pid=parent_pid,
+    ).run()
+
+
+class LocalModelOwner:
+    """A model inside an already isolated trajectory process.
+
+    A different process must own admission. CUDA allocator residency remains
+    charged until this trajectory exits; logical shutdown cannot prove release.
+    Scientific globals stay on the trajectory's main thread.
+    """
+    attached = False
+    release_requires_process_exit = True
+    temp_dir = None
+    log_path = None
+
+    def __init__(self, spec, *, max_pending=4, **kwargs):
+        from astrolabe.model_execution import (
+            _resource_client, model_kernel_context, register_model_owner,
+        )
+        client = _resource_client()
+        if kwargs.get("socket_path") is not None:
+            raise ValueError("Trajectory model ownership cannot attach to a daemon socket")
+        if client is None:
+            raise ValueError("Trajectory model ownership requires a supervising resource broker")
+        with client._connect() as connection:
+            broker_pid = struct.unpack(
+                "3i", connection.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))[0]
+        if broker_pid == os.getpid():
+            raise ValueError("Trajectory models require a broker in a different process")
+        if (Path(spec.python_bin).resolve() != Path(sys.executable).resolve()
+                or spec.provider is not None
+                or (spec.cwd and Path(spec.cwd).resolve() != Path.cwd().resolve())
+                or any(str(value) != os.environ.get(str(key))
+                       for key, value in (spec.env or {}).items())):
+            raise ValueError("Trajectory model ownership cannot change runtime, cwd or provider")
+        self._main_thread()
+        self.spec = spec
+        self.pid = os.getpid()
+        self.identity = model_identity(spec, max_pending=max_pending)
+        self._closed = False
+        with model_kernel_context(spec.backend, self.identity):
+            self.handle = _handler_from(
+                _load_factory(spec.factory)(self._copy_message(spec.settings)))
+        register_model_owner(self)
+
+    @staticmethod
+    def _main_thread():
+        if threading.current_thread() is not threading.main_thread():
+            raise ValueError("Trajectory model/RNG ownership requires its main thread")
+
+    def _copy_message(self, message):
+        # Keep the daemon's bounded serialization/ownership contract even when
+        # transport is local. A kernel may mutate inputs or reuse output storage.
+        return pickle.loads(_frame(message, self.spec.max_frame_bytes)[8:])
+
+    def request(self, request):
+        self._main_thread()
+        if self._closed:
+            raise ModelDaemonError("trajectory model owner is closed")
+        from astrolabe.model_execution import model_kernel_context
+        with model_kernel_context(self.spec.backend, self.identity):
+            return self._copy_message(self.handle(self._copy_message(request)))
+
+    def shutdown(self):
+        self._main_thread()
+        self._closed = True
+        self.handle = None
 
 
 class OwnedModelDaemon:
@@ -1063,6 +1409,12 @@ class OwnedModelDaemon:
                 raise DaemonChildExited(
                     f"{self.spec.backend} child exited with code {proc.returncode}; log: {self.log_path}"
                 ) from error
+            if sent and message.get("type") == "infer":
+                raise RequestOutcomeUnknown(
+                    f"{self.spec.backend} disconnected after send; outcome unknown; not replayed",
+                    request_id=request_id,
+                    generation=self.generation,
+                ) from error
             raise DaemonDisconnected(f"{self.spec.backend} daemon disconnected") from error
         finally:
             connection.close()
@@ -1109,11 +1461,11 @@ class OwnedModelDaemon:
             timeout=self.request_timeout if self.request_timeout is not None else min(self.startup_timeout, 10.0),
         )
 
-    def _stop_process(self, *, graceful: bool) -> None:
+    def _stop_process(self, *, graceful: bool, drained: bool = False) -> None:
         with self._process_stop_lock:
-            self._stop_process_locked(graceful=graceful)
+            self._stop_process_locked(graceful=graceful, drained=drained)
 
-    def _stop_process_locked(self, *, graceful: bool) -> None:
+    def _stop_process_locked(self, *, graceful: bool, drained: bool = False) -> None:
         with self._publication_lock:
             if not graceful:
                 self._cancelled.set()
@@ -1122,13 +1474,14 @@ class OwnedModelDaemon:
             return
         if graceful and self._ready and proc.poll() is None:
             try:
-                self._exchange({"type": "stop"}, timeout=self.shutdown_timeout)
+                response = self._exchange({"type": "stop"}, timeout=self.shutdown_timeout)
+                drained = bool(response.get("result", {}).get("drained"))
             except ModelDaemonError:
                 pass
         if not graceful:
             _signal_owned_group(proc, signal.SIGTERM)
         try:
-            proc.wait(timeout=2.0)
+            proc.wait(timeout=self.shutdown_timeout if drained else 2.0)
         except subprocess.TimeoutExpired:
             _signal_owned_group(proc, signal.SIGTERM)
             try:
@@ -1179,7 +1532,8 @@ class OwnedModelDaemon:
         response = self._exchange({"type": "stop"}, timeout=self.shutdown_timeout)
         if not self._attached:
             with self._shutdown_lock:
-                self._stop_process(graceful=False)
+                self._stop_process(
+                    graceful=False, drained=bool(response.get("result", {}).get("drained")))
                 self._closed = True
                 atexit.unregister(self._atexit)
         return response

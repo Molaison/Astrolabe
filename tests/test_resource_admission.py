@@ -345,16 +345,11 @@ class ResourceAdmissionTests(unittest.TestCase):
 
     def test_jsonl_failure_never_leaks_and_latches_closed(self):
         path = Path(self.temp.name) / "telemetry.jsonl"
-        broker, client = self.start(telemetry_path=str(path))
+        _, client = self.start(telemetry_path=str(path))
         held = client.lease(scratch_bytes=20).__enter__()
-        try:
-            # Exclude the sampler's append while replacing the file: otherwise
-            # it can recreate the file before the intended I/O failure exists.
-            with broker.log._lock:
-                path.unlink()
-                path.mkdir()
-        finally:
-            held.finish()
+        path.unlink()
+        path.mkdir()
+        held.finish()
         state = client.snapshot()
         self.assertEqual(state["active"], 0)
         self.assertFalse(state["healthy"])

@@ -85,6 +85,20 @@ EXECUTION_CPU_TESTS = RELEASE_CPU_TESTS + (
     "tests/test_evaluator_startup.py",
     "tests/test_daily_task_config.py",
     "tests/test_rna_evaluator_adapters.py",
+    "tests/test_integrated_cli_workflow.py",
+    "tests/test_af3_lifecycle.py",
+    "tests/test_af3_pool.py",
+    "tests/test_af3_resident.py",
+    "tests/test_auxiliary_resource_admission.py",
+    "tests/test_boltz_runtime_contract.py",
+    "tests/test_runtime_review_regressions.py",
+    "tests/test_trajectory_model_owner.py",
+    "tests/test_bioemu2.py",
+    "tests/test_design_variable_length.py",
+    "tests/test_rfd4_backend.py",
+    "tests/test_rfd4_feedback.py",
+    "tests/test_rfd4_mutator.py",
+    "tests/test_rfd4_reconstruction.py",
 )
 
 

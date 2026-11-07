@@ -130,6 +130,8 @@ def validate_config(cfg):
     if not objective or "???" in objective:
         raise ValueError("Explicit objective is required")
     settings=cfg.protein_beam
+    if min(int(settings[k]) for k in ("width", "proposals_per_parent", "max_evaluations")) < 1 or int(cfg.seed) < 1:
+        raise ValueError("Positive beam/budget and explicit seed required")
     if str(settings.get('selection','weighted')) not in {'weighted','pareto'}:
         raise ValueError('Unknown protein beam selection policy')
     if str(settings.get('holes_ranking','raw_sum')) not in {'raw_sum','per_atom'}:
@@ -275,9 +277,9 @@ def _configured_branching_execution(cfg, *, socket_path=None):
     raw_socket = execution.get("socket_path")
     if socket_path is not None:
         raw_socket = socket_path
-    if raw_socket is None or not str(raw_socket).strip():
-        raise ValueError("cfg.search.execution.socket_path must be explicitly set")
-    socket_path = str(Path(str(raw_socket)).expanduser().resolve())
+    if raw_socket is not None and (not isinstance(raw_socket, str) or not raw_socket.strip()):
+        raise ValueError("cfg.search.execution.socket_path must be null or a nonempty path")
+    socket_path = str(Path(raw_socket).expanduser().resolve()) if raw_socket is not None else None
     workers = _execution_int(execution.get("workers"), name="workers")
     in_flight = _execution_int(execution.get("in_flight"), name="in_flight")
     if in_flight > workers:
@@ -289,6 +291,12 @@ def _configured_branching_execution(cfg, *, socket_path=None):
     )
     if retry_interrupted and not resume:
         raise ValueError("search.execution.retry_interrupted requires resume=true")
+    from astrolabe.evaluators.af3_lifecycle import service_settings
+    from astrolabe.runtime.evaluation import require_private_evaluator_owner
+    settings = service_settings(cfg)
+    require_private_evaluator_owner(settings.adaptive.enabled)
+    if settings.adaptive.enabled and execution.get("socket_path") is not None:
+        raise ValueError("Adaptive AF3 requires a private owner: set search.execution.socket_path=null")
     return dict(
         socket_path=socket_path,
         workers=workers,
@@ -331,7 +339,12 @@ def _canonical_replay_config(
             "algorithm": PROTEIN_BEAM_SEARCH_ALGORITHM,
             "owner": PROTEIN_BEAM_SEARCH_OWNER,
             "execution": {
-                "socket_path": str(Path(str(socket_path)).expanduser().resolve()),
+                "socket_path": (
+                    None if isinstance(current_search, Mapping)
+                    and "socket_path" in current_search.get("execution", {})
+                    and current_search["execution"]["socket_path"] is None
+                    else str(Path(str(socket_path)).expanduser().resolve())
+                ),
                 "workers": int(workers),
                 "in_flight": int(in_flight),
                 "resume": bool(resume),
@@ -425,15 +438,23 @@ def run_configured_branching(cfg, repeat):
         run_cfg.seed = repeat.seed
         run_cfg.repeats = 1
         run_cfg.out_dir = str(output)
-    return run_beam(
-        run_cfg,
-        output,
-        execution["socket_path"],
-        workers=execution["workers"],
-        in_flight=execution["in_flight"],
-        resume=execution["resume"],
-        retry_interrupted=execution["retry_interrupted"],
-    )
+    from astrolabe.interface import cpu_coordinator_environment
+    from astrolabe.evaluators.af3_lifecycle import OwnedAF3, recover_owned_services
+    with cpu_coordinator_environment() as gpu_environment:
+        options = {key: execution[key] for key in ("workers", "in_flight", "resume", "retry_interrupted")}
+        if execution["socket_path"] is not None:
+            return run_beam(run_cfg, output, execution["socket_path"], **options)
+        # Check native science before creating files, sockets or a model owner.
+        validate_config(run_cfg)
+        if execution["resume"]:
+            recover_owned_services(output)
+        service = OwnedAF3(run_cfg, output, gpu_environment)
+        if service.service_settings.concurrency_mode == "resident":
+            with service.starting() as active_socket:
+                return run_beam(run_cfg, output, active_socket, on_abort=service.abort,
+                                before_root=service.wait_ready, **options)
+        with service as active_socket:
+            return run_beam(run_cfg, output, active_socket, on_abort=service.abort, **options)
 
 
 def worker_init(config_yaml, output, socket_path):
@@ -458,6 +479,13 @@ def worker_init(config_yaml, output, socket_path):
     from astrolabe.mutators.base import build_mutators
     from astrolabe.losses.base import LossEngine
     cfg = load_worker_config(config_yaml)
+    if OmegaConf.select(cfg, "protein_beam.service.concurrency_mode") == "resident":
+        # This isolated, CPU-only process executes one native job at a time.
+        # Reuse its loaded libraries and the existing native in-process path
+        # instead of creating another interpreter/model daemon for each CPU
+        # mutator. Explicit per-model execution settings still take precedence.
+        # AF3 keeps its independent resident GPU owner and explicit socket.
+        os.environ["ASTROLABE_MODEL_EXECUTION"] = "in_process"
     directory = Path(output)/"workers"/(str(os.getpid())+"_"+uuid.uuid4().hex[:8])
     directory.mkdir(parents=True, exist_ok=True)
     with open_dict(cfg):
@@ -465,6 +493,7 @@ def worker_init(config_yaml, output, socket_path):
         cfg.raw_model_results_dir = directory/"raw_model_results"
         cfg.raw_model_results_dir.mkdir()
         cfg.evaluator.alphafold3.service_socket = socket_path
+        cfg.evaluator.alphafold3.service_opaque_rpc = bool(OmegaConf.select(cfg, 'protein_beam.service.adaptive.enabled', default=False))
         cfg.evaluator.enabled_aliases = [cfg.stages.default.evaluator]
         cfg.mutator.enabled_aliases = list(cfg.stages.default.mutators)
     gc.reset()
@@ -605,6 +634,38 @@ def execute_batch(pool, tasks, width):
     return gather_ordered(pool, tasks, width, worker_task, identity=lambda task: task["id"])
 
 
+def _worker_ready():
+    """Start the executor's initializer without touching scientific state."""
+    return None
+
+
+class _PrimedWorkerPool:
+    """Submit native work first, then start spare spawn workers without a wait."""
+
+    def __init__(self, pool, workers):
+        self.pool = pool
+        self.workers = workers
+        self.started = False
+
+    def submit(self, worker, task):
+        future = self.pool.submit(worker, task)
+        if not self.started:
+            self.started = True
+            # The root (or first outstanding job on resume) is already queued.
+            # These transport-only tasks have no candidate, RNG or journal entry;
+            # do not wait for them before allowing the native job to run.
+            for _ in range(self.workers - 1):
+                self.pool.submit(_worker_ready)
+        return future
+
+    def prime(self):
+        """Start CPU initializers only; no candidate, RNG or native request."""
+        if not self.started:
+            self.started = True
+            for _ in range(self.workers):
+                self.pool.submit(_worker_ready)
+
+
 @contextmanager
 def controlled_pool(on_abort=None, **kwargs):
     """Abort owned GPU work before waiting for CPU workers stuck in its RPC."""
@@ -633,7 +694,7 @@ def controlled_pool(on_abort=None, **kwargs):
             raise
 
 
-def run_beam(cfg, output, socket_path, *, workers=3, in_flight=3, resume=False, retry_interrupted=False, on_abort=None):
+def run_beam(cfg, output, socket_path, *, workers=3, in_flight=3, resume=False, retry_interrupted=False, on_abort=None, before_root=None):
     from omegaconf import OmegaConf
     validate_config(cfg)
     settings = cfg.protein_beam
@@ -752,7 +813,8 @@ def run_beam(cfg, output, socket_path, *, workers=3, in_flight=3, resume=False, 
                         record.update(native)
             state["service_socket"] = socket_path
         else:
-            if any(output.iterdir()) and set(p.name for p in output.iterdir()) != {"owner.lock"}:
+            allowed = {"owner.lock", "services"} if on_abort is not None else {"owner.lock"}
+            if set(p.name for p in output.iterdir()) - allowed:
                 raise FileExistsError("Refusing to mix beam output with an existing directory")
             sequence = "".join(str(cfg.seqs.A).replace("+", "").split())
             state = dict(config_hash=digest, scientific_contract=contract, service_socket=socket_path,
@@ -939,7 +1001,11 @@ def run_beam(cfg, output, socket_path, *, workers=3, in_flight=3, resume=False, 
             initial = policy.start(root_job)
             with controlled_pool(on_abort, max_workers=workers, mp_context=mp.get_context("spawn"),
                                  initializer=worker_init, initargs=(worker_config_yaml, str(output), socket_path)) as pool:
-                trial = NativeBranchTrial(pool, runtime, identity=key_for(("isolated-native/v1", digest)),
+                transport = _PrimedWorkerPool(pool, workers)
+                if before_root is not None:
+                    transport.prime()
+                    before_root()
+                trial = NativeBranchTrial(transport, runtime, identity=key_for(("isolated-native/v1", digest)),
                     worker=worker_task, task_factory=native_task, result_factory=native_result,
                     probe=native_probe, reserve=reserve_native, retry=retry_native, report=report_control,
                     charge_identity=lambda task: task.get("af3_call_token"))

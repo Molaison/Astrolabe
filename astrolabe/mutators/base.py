@@ -242,6 +242,21 @@ def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path"):
     return mutators
 
 
+@register_mutator_factory("rfd4")
+def _build_rfd4_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
+    from astrolabe.mutators.rfd4 import RFD4Mutator
+
+    for settings in (mutator_conf, getattr(mutator_conf, "LigandMPNN", None)):
+        if settings is not None and any(settings.get(key) for key in (
+            "aa_bias", "bias_AA", "bias_AA_per_residue", "bias_AA_per_residue_multi",
+        )):
+            raise ValueError("RFD4 does not support amino-acid probability biases")
+    return RFD4Mutator(**term_conf)
+
+
+_build_rfd4_mutator.requires_native_preparation = True
+
+
 @register_mutator_factory("mcmc")
 def _build_mcmc_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.random_substitution import RandomSubstitutionMutator

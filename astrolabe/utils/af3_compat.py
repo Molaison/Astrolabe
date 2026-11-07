@@ -63,10 +63,13 @@ def to_af3_chain(chain: Any):
                 chain.sequence, evaluator="alphafold3"
             ),
             ptms=list(chain.ptms),
-            description=chain.description,
             unpaired_msa=chain.unpaired_msa or "",
             paired_msa=chain.paired_msa or "",
             templates=[to_af3_template(t) for t in templates],
+            # Older native AF3 has no description keyword. An absent optional
+            # description carries no data; explicit descriptions still pass
+            # through (and fail normally if that native version cannot use it).
+            **({"description": chain.description} if chain.description is not None else {}),
         )
     if isinstance(chain, CoreRnaChain):
         return af3.RnaChain(

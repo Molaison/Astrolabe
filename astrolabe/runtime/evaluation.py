@@ -1,7 +1,8 @@
-"""Opt-in, owner-local admission for complete evaluator model calls.
+"""Opt-in admission controller, used by AF3 for complete evaluator RPCs.
 
-The broker remains authoritative. These limits never certify unknown shapes or
-memory profiles. The memory defaults are trial bounds, not measured optima.
+Broker-backed request-local owners are not yet qualified and are rejected,
+never silently serialized or certified. Memory defaults are trial bounds, not
+measured optima.
 """
 from __future__ import annotations
 
@@ -12,6 +13,21 @@ import math
 import os
 import threading
 import time
+
+
+def require_private_evaluator_owner(request_local_rng, *, broker=None, environment=None):
+    """Reject the unqualified broker combination, without changing its policy.
+
+    A broker can keep inference at one and fence a failed GPU lease while other
+    requests wait indefinitely. Neither concurrent admission nor failure/drain
+    is qualified for this path. Do not remove the socket or invent a profile.
+    """
+    environment = os.environ if environment is None else environment
+    if request_local_rng and (broker is not None or environment.get("ASTROLABE_RESOURCE_SOCKET")):
+        raise RuntimeError(
+            "Adaptive/request-local evaluator with ASTROLABE_RESOURCE_SOCKET/resource broker "
+            "is not qualified: concurrent admission and failure/drain are unsupported; "
+            "refusing owner startup before inference")
 
 
 @dataclass(frozen=True)
@@ -57,7 +73,11 @@ def adaptive_settings(raw=None):
 
 
 class EvaluatorInferController:
-    """One monitor thread and one infer gate, owned and drained by the model."""
+    """One monitor and admission gate; its owner defines the admitted operation.
+
+    The AF3 process pool admits complete evaluator RPCs, not pure model infer.
+    Only native child gpu_start/gpu_end events measure the latter.
+    """
 
     def __init__(self, settings, *, device="cuda:0", sampler=None, emit=None,
                  clock=time.monotonic):
@@ -75,6 +95,7 @@ class EvaluatorInferController:
         self.enabled = self.settings.enabled
         self.limit = 1
         self.ready = self.active = self.completed = 0
+        self.warming = 0
         self.quarantined = False
         self._window_at = clock()
         self._window_completed = 0
@@ -82,6 +103,7 @@ class EvaluatorInferController:
         self._previous_rate = None
         self._previous_limit = 1
         self._last_decision = None
+        self._window_loaded = True
 
     def start(self):
         if self._thread is None:
@@ -98,7 +120,7 @@ class EvaluatorInferController:
     def snapshot(self):
         with self._cv:
             return dict(enabled=self.enabled, limit=self.limit, ready=self.ready,
-                        active=self.active, completed=self.completed,
+                        active=self.active, completed=self.completed, warming=self.warming,
                         quarantined=self.quarantined, settings=asdict(self.settings),
                         last_decision=None if self._last_decision is None else dict(self._last_decision))
 
@@ -120,6 +142,7 @@ class EvaluatorInferController:
             self._samples.clear()
             self._previous_rate = None
             self._previous_limit = self.limit
+            self._window_loaded = True
             self._emit("adaptive_control", enabled=enabled, reset=reset, **self._counts())
             return self.snapshot()
 
@@ -132,16 +155,32 @@ class EvaluatorInferController:
     @contextmanager
     def inference_slot(self):
         with self._cv:
+            waiters = getattr(self, "_inference_waiters", None)
+            if waiters is None:
+                self._inference_waiters = waiters = []
+            if not self.ready and not self.active:
+                self._reset_idle_window()
+            ticket = object()
+            waiters.append(ticket)
             self.ready += 1
             self._cv.notify_all()
             try:
-                while self.active >= self.limit and not self.quarantined and not self._stop.is_set():
+                # A notification does not reserve a slot: the oldest prepared
+                # request keeps priority even if a later thread wakes first.
+                while ((waiters[0] is not ticket or self.active >= self.limit)
+                       and not self.quarantined and not self._stop.is_set()):
                     self._cv.wait()
                 if self.quarantined or self._stop.is_set():
                     raise RuntimeError("Evaluator owner is quarantined or stopping")
                 self.active += 1
             finally:
+                waiters.remove(ticket)
                 self.ready -= 1
+                if not self.ready and not self.active:
+                    self._reset_idle_window()
+                # Admit the next head into any remaining capacity, or release
+                # it after this waiter was cancelled by close/quarantine.
+                self._cv.notify_all()
         ok = False
         try:
             yield
@@ -156,7 +195,17 @@ class EvaluatorInferController:
                         self._window_at = self._clock()
                         self._window_completed = 1
                         self._samples.clear()
+                if not self.ready and not self.active:
+                    self._reset_idle_window()
                 self._cv.notify_all()
+
+    def _reset_idle_window(self):
+        self._window_at = self._clock()
+        self._window_completed = self.completed
+        self._samples.clear()
+        self._window_loaded = True
+        self._previous_rate = None
+        self._previous_limit = self.limit
 
     def _counts(self):
         return dict(ready=self.ready, active=self.active, completed=self.completed, limit=self.limit)
@@ -184,10 +233,14 @@ class EvaluatorInferController:
         except (ValueError, TypeError, KeyError, IndexError):
             row = None
         with self._cv:
+            self._window_loaded = self._window_loaded and bool(self.ready) and not self.warming
             if row is None:
                 self._samples.clear()
             else:
                 self._samples.append((sampled_at, row["utilization"], row["free_bytes"]))
+                self._emit("adaptive_sample", gpu_uuid=row["uuid"],
+                           utilization=row["utilization"], free_bytes=row["free_bytes"],
+                           process_ids=sorted(row["processes"]), sampled_at=sampled_at)
             elapsed = now - self._window_at
             if elapsed < self.settings.observation_window_s:
                 return
@@ -207,35 +260,49 @@ class EvaluatorInferController:
             elif free < self.settings.memory_per_request_bytes + self.settings.memory_reserve_bytes:
                 self.limit = max(1, self.limit - 1)
                 reason = "memory_pressure"
-            elif (self.ready and self.completed > self._window_completed
+            elif not self.ready:
+                reason = "starved"
+            elif not self.completed or self.warming:
+                reason = "warming_up"
+            elif utilization < self.settings.target_utilization and not self._window_loaded:
+                reason = "supply_limited_window"
+            elif utilization < self.settings.target_utilization and self.limit < self.settings.max_concurrency:
+                self.limit += 1
+                reason = "increase"
+            elif (utilization >= self.settings.target_utilization and self._window_loaded
+                  and self.completed - self._window_completed >= 2 * before
                   and self._previous_rate is not None and self._previous_limit == before
                   and rate < self._previous_rate * (1 - self.settings.throughput_drop_fraction)):
                 self.limit = max(1, self.limit - 1)
                 reason = "throughput_drop"
-            elif not self.ready:
-                reason = "starved"
-            elif not self.completed:
-                reason = "warming_up"
-            elif utilization < self.settings.target_utilization and self.limit < self.settings.max_concurrency:
-                self.limit += 1
-                reason = "increase"
             decision = dict(reason=reason, enabled=self.enabled, previous_limit=before,
                             utilization=utilization, free_bytes=free, telemetry_fresh=fresh,
                             throughput_per_s=rate, window_s=elapsed, starved=not bool(self.ready),
+                            window_loaded=self._window_loaded,
                             window_completed=self.completed - self._window_completed,
                             **self._counts())
             self._last_decision = decision
             self._emit("adaptive_window_decision", **decision)
-            # Compare only loaded windows. A starved tail is not a capacity regression.
-            self._previous_rate = rate if fresh and self.ready and rate > 0 else None
-            self._previous_limit = self.limit
+            # A rate belongs to the capacity that produced it, not a new limit.
+            # Require two completed waves and continuous observed demand so a
+            # single completion or a startup/tail window cannot drive backoff.
+            self._previous_rate = rate if (
+                fresh and self._window_loaded and not self.warming
+                and self.completed - self._window_completed >= 2 * before
+                and self.limit == before) else None
+            self._previous_limit = before
+            self._window_loaded = True
             self._window_at = now
             self._window_completed = self.completed
             self._samples.clear()
             self._cv.notify_all()
 
     def _monitor(self):
-        while not self._stop.is_set():
+        while True:
+            with self._cv:
+                self._cv.wait_for(lambda: self._stop.is_set() or self.active or self.ready)
+                if self._stop.is_set():
+                    return
             sampled_at = self._clock()
             try:
                 raw = self._sampler()

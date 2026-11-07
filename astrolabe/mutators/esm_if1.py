@@ -13,9 +13,11 @@ from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.model_execution import (
+    host_result,
     ExecutionMode,
     execution_mode as resolve_execution_mode,
 )
+from astrolabe.mutators.runtime_stages import device_guard
 from astrolabe.mutators.base import Mutator
 from astrolabe.mutators.capabilities import PROTEIN_ONLY, MutatorCapabilities
 from astrolabe.mutators.utils import (
@@ -60,16 +62,25 @@ def load_structure(fpath, chain=None):
     return structure
 
 
+def prepare_if1_coords(model, coords, confidence=None):
+    converter = CoordBatchConverter(model.decoder.dictionary)
+    batch_coords, confidence, _, _, padding_mask = converter(
+        [(coords, confidence, None)], device="cpu"
+    )
+    return batch_coords, confidence, padding_mask
+
+
 def esm_extract_probs(
-    model, coords, partial_seq=None, temperature=1.0, confidence=None
+    model, coords, partial_seq=None, temperature=1.0, confidence=None, prepared=None
 ):
     with torch.no_grad():
         L = len(coords)
         # Convert to batch format
         device = next(model.parameters()).device
-        batch_converter = CoordBatchConverter(model.decoder.dictionary)
-        batch_coords, confidence, _, _, padding_mask = batch_converter(
-            [(coords, confidence, None)], device=device
+        if prepared is None:
+            prepared = prepare_if1_coords(model, coords, confidence)
+        batch_coords, confidence, padding_mask = (
+            value.to(device) for value in prepared
         )
         # Start with prepend token
         mask_idx = model.decoder.dictionary.get_idx("<mask>")
@@ -129,10 +140,11 @@ class ESMIF1Mutator(Mutator):
             )
             self.alphabet = self.runner.alphabet
         else:
-            model, self.alphabet = esm2.pretrained.esm_if1_gvp4_t16_142M_UR50()
-            # use eval mode for deterministic mutation_output e.g. without random dropout
-            model.eval()
-            self.runner = model.cuda()
+            with device_guard("esm_if1", phase="load"):
+                model, self.alphabet = esm2.pretrained.esm_if1_gvp4_t16_142M_UR50()
+                # use eval mode for deterministic mutation_output e.g. without random dropout
+                model.eval()
+                self.runner = model.cuda()
         self.predocker = predocker
         self.position_selector = position_selector
         self.aa_order = self.alphabet.all_toks[4:24]
@@ -140,6 +152,10 @@ class ESMIF1Mutator(Mutator):
     def compute_mutation(self, mutation_input_features: Tuple[Any, Any]):
         if self.execution_mode is ExecutionMode.DAEMON:
             return self.runner.compute_mutation(mutation_input_features)
+        with device_guard("esm_if1", device=getattr(self, "device", getattr(self.runner, "device", None))):
+            return host_result(self._compute_device(mutation_input_features))
+
+    def _compute_device(self, mutation_input_features):
         mutation_output = {}
         for oligo_name, input_feat in mutation_input_features.items():
             oligo_output = esm_extract_probs(model=self.runner, **input_feat)

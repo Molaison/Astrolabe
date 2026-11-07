@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import argparse
-from contextlib import redirect_stderr, redirect_stdout
-from dataclasses import dataclass
+from contextlib import contextmanager, nullcontext, redirect_stderr, redirect_stdout
+from dataclasses import dataclass, field
 from io import StringIO
 import json
 import os
@@ -11,6 +11,11 @@ import shutil
 import subprocess
 import sys
 from typing import Any
+
+
+from astrolabe.evaluators.runtime_stages import (
+    DirectKernel,
+)
 
 
 _DAEMON_FACTORY = "astrolabe.evaluators.wrappers.esmfold2:daemon_factory"
@@ -175,16 +180,15 @@ def _model_identity(payload: dict[str, Any]) -> dict[str, Any]:
 
 
 def _fold_request(payload: dict[str, Any], identity: dict[str, Any]) -> dict[str, Any]:
+    _validate_scientific_knobs(payload)
     fold_kwargs = {
         "num_loops": int(payload.get("num_loops", 3)),
         "num_sampling_steps": int(payload.get("num_sampling_steps", 50)),
         "num_diffusion_samples": int(payload.get("num_diffusion_samples", 1)),
         "seed": payload.get("seed"),
-        "lm_dropout": payload.get("lm_dropout"),
-        "msa_max_depth": payload.get("msa_max_depth"),
-        "msa_column_mask_rate": float(payload.get("msa_column_mask_rate", 0.1)),
+        "early_exit": bool(payload.get("early_exit", False)),
     }
-    for key in ("noise_scale", "step_scale", "max_inference_sigma", "lm_mask_pct"):
+    for key in ("noise_scale", "step_scale", "max_inference_sigma"):
         if payload.get(key) is not None:
             fold_kwargs[key] = payload[key]
     return {
@@ -195,53 +199,64 @@ def _fold_request(payload: dict[str, Any], identity: dict[str, Any]) -> dict[str
     }
 
 
-def _fold_jobs(
-    model: Any,
-    builder: Any,
-    request: dict[str, Any],
-) -> dict[str, Any]:
-    from esm.models.esmfold2 import ProteinInput, StructurePredictionInput
-
-    output_dir = Path(request["output_dir"]).expanduser().resolve()
-    output_dir.mkdir(parents=True, exist_ok=True)
-    results: list[dict[str, Any]] = []
-    for job in request["jobs"]:
-        name = str(job["name"])
-        chains = [
-            ProteinInput(id=str(chain["id"]), sequence=str(chain["sequence"]))
-            for chain in job["chains"]
-        ]
-        prediction_input = StructurePredictionInput(sequences=chains)
-        result = builder.fold(
-            model,
-            prediction_input,
-            complex_id=name,
-            **request["fold_kwargs"],
-        )
-        if isinstance(result, list):
-            result = result[0]
-
-        structure_path = output_dir / f"{name}_model.cif"
-        structure_path.write_text(result.complex.to_mmcif(), encoding="utf-8")
-        results.append(
-            {
-                "name": name,
-                "structure_path": str(structure_path),
-                "plddt": _to_python(result.plddt),
-                "plddt_mean": _mean_float(result.plddt),
-                "ptm": _mean_float(result.ptm),
-                "iptm": _mean_float(result.iptm),
-                "pae": _to_python(getattr(result, "pae", None)),
-                "pde": _to_python(getattr(result, "pde", None)),
-            }
+def _validate_scientific_knobs(options: dict[str, Any]) -> None:
+    # The previous wrapper passed lm_dropout/MSA kwargs to builder.fold, whose
+    # installed signature rejects them with TypeError. There is no successful
+    # legacy behavior for those arguments to preserve. Null selects native
+    # Biohub semantics; explicit values require a separately approved mapping.
+    unsupported = [key for key in (
+        "lm_dropout", "msa_max_depth", "msa_column_mask_rate", "lm_mask_pct",
+        # Released ESMFold2Model.forward takes **kwargs but does not consume
+        # these builder.fold overrides or pass them to structure_head.sample.
+        "noise_scale", "step_scale", "max_inference_sigma",
+    ) if options.get(key) is not None]
+    if options.get("early_exit"):
+        unsupported.append("early_exit")
+    if unsupported:
+        raise ValueError(
+            "Installed Biohub ESMFold2 does not support these request knobs: "
+            + ", ".join(unsupported)
+            + ". Set them to null to use native Biohub behavior; no values "
+            "are silently ignored or mapped to different scientific controls."
         )
 
-    identity = request["model_identity"]
+
+def _job_result(result: Any, *, name: str, output_dir: str) -> dict[str, Any]:
+    if isinstance(result, list):
+        result = result[0]
+    directory = Path(output_dir).expanduser().resolve()
+    directory.mkdir(parents=True, exist_ok=True)
+    structure_path = directory / f"{name}_model.cif"
+    structure_path.write_text(result.complex.to_mmcif(), encoding="utf-8")
     return {
-        "model_name": identity["model_name"],
-        "device": identity.get("device"),
-        "jobs": results,
+        "name": name,
+        "structure_path": str(structure_path),
+        "plddt": _to_python(result.plddt),
+        "plddt_mean": _mean_float(result.plddt),
+        "ptm": _mean_float(result.ptm),
+        "iptm": _mean_float(result.iptm),
+        "pae": _to_python(getattr(result, "pae", None)),
+        "pde": _to_python(getattr(result, "pde", None)),
     }
+
+
+@dataclass
+class _PreparedESMFold2:
+    request: dict[str, Any]
+    features: Any
+    chain_infos: Any
+    capture_logs: bool
+    stdout: StringIO = field(default_factory=StringIO)
+    stderr: StringIO = field(default_factory=StringIO)
+    output: Any = None
+
+    @contextmanager
+    def logs(self):
+        if not self.capture_logs:
+            yield
+        else:
+            with redirect_stdout(self.stdout), redirect_stderr(self.stderr):
+                yield
 
 
 @dataclass(frozen=True)
@@ -250,8 +265,15 @@ class _ESMFold2Worker:
     builder: Any
     identity: dict[str, Any]
     device: str
+    _kernel: Any = field(default=None, repr=False, compare=False)
+
+    @property
+    def metadata(self):
+        return self._kernel.metadata
 
     def __call__(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if payload.get("operation") == "describe":
+            return self._kernel.handle(payload)
         return self.infer(payload)
 
     def infer(
@@ -261,24 +283,127 @@ class _ESMFold2Worker:
             raise ValueError(
                 "ESMFold2 request model settings do not match the loaded model owner"
             )
+        if self._kernel is None:
+            raise RuntimeError("ESMFold2 inference requires the staged runtime")
+        result = {"model_name": self.identity["model_name"],
+                  "device": self.device, "jobs": []}
+        stdout, stderr = [], []
+        # Native fold interleaves prep/model/decode per job. Preparing the whole
+        # batch first would change the unseeded random stream and peak memory.
+        for job in payload["jobs"]:
+            fold_kwargs = dict(payload["fold_kwargs"])
+            if fold_kwargs.get("seed") is None and job.get("seed") is not None:
+                fold_kwargs["seed"] = int(job["seed"])
+            response = self._kernel((
+                {**payload, "jobs": [job], "fold_kwargs": fold_kwargs}, capture_logs,
+            ))
+            if capture_logs:
+                stdout.append(response["stdout"])
+                stderr.append(response["stderr"])
+                response = response["result"]
+            result["jobs"].append(response)
         if not capture_logs:
-            result = _fold_jobs(self.model, self.builder, payload)
-            result["device"] = self.device
             return result
-
-        stdout = StringIO()
-        stderr = StringIO()
-        with redirect_stdout(stdout), redirect_stderr(stderr):
-            result = _fold_jobs(self.model, self.builder, payload)
-        result["device"] = self.device
         return {
             "result": result,
-            "stdout": stdout.getvalue(),
-            "stderr": stderr.getvalue(),
+            "stdout": "".join(stdout),
+            "stderr": "".join(stderr),
         }
 
+    def stages(self):
+        from astrolabe.model_execution import EvaluatorStages
 
-def daemon_factory(settings: dict[str, Any]) -> _ESMFold2Worker:
+        resource = "cpu" if self.device == "cpu" else "gpu"
+        return EvaluatorStages(
+            prepare=self._prepare_native,
+            execute=self._execute_native,
+            finalize=self._finalize_native,
+            resource=resource,
+            prepare_resource=resource,
+            finalize_resource=resource,
+            pipeline_slots=1,
+        )
+
+    def _prepare_native(self, value):
+        from esm.models.esmfold2 import ProteinInput, StructurePredictionInput
+        from astrolabe.model_execution import preserve_remote_cuda_state
+
+        request, capture_logs = value
+        if request.get("model_identity") != self.identity:
+            raise ValueError("ESMFold2 request model settings do not match the loaded model owner")
+        if len(request["jobs"]) != 1:
+            raise ValueError("ESMFold2 stages require exactly one job per request")
+        options = request["fold_kwargs"]
+        _validate_scientific_knobs(options)
+        supported = {"seed", "num_loops", "num_sampling_steps", "num_diffusion_samples",
+                     "early_exit", "noise_scale", "step_scale", "max_inference_sigma"}
+        unknown = options.keys() - supported
+        if unknown:
+            raise ValueError(f"Unsupported Biohub ESMFold2 fold options: {sorted(unknown)}")
+        job = request["jobs"][0]
+        prepared = _PreparedESMFold2(request, None, None, capture_logs)
+        with prepared.logs():
+            chains = [ProteinInput(id=str(chain["id"]), sequence=str(chain["sequence"]))
+                      for chain in job["chains"]]
+            seed = options.get("seed")
+            # Native preparation restores actual RNG state when explicitly
+            # seeded. Preserve only the runtime's virtual CUDA receipt around it.
+            with preserve_remote_cuda_state() if seed is not None else nullcontext():
+                prepared.features, prepared.chain_infos = self.builder.prepare_input(
+                    StructurePredictionInput(sequences=chains),
+                    seed=seed, device=self.model.device,
+                )
+        return self._pending(prepared, keepalive=prepared)
+
+    def _execute_native(self, prepared):
+        import torch
+        from esm.models.esmfold2.processor import _seed_context
+        from astrolabe.model_execution import preserve_remote_cuda_state
+
+        options = dict(prepared.request["fold_kwargs"])
+        seed = options.pop("seed", None)
+        with prepared.logs(), torch.no_grad():
+            with preserve_remote_cuda_state() if seed is not None else nullcontext():
+                with _seed_context(seed) if seed is not None else nullcontext():
+                    # One complete Biohub forward: ESMC, all recycles, diffusion,
+                    # and prediction heads. No decoding, scoring, or D2H here.
+                    prepared.output = self.model(**prepared.features, **options)
+        return self._pending(prepared, keepalive=prepared)
+
+    def _pending(self, value, *, keepalive):
+        """Fence this request's work on the model stream at every boundary."""
+        import torch
+        from astrolabe.inference_pipeline import Pending
+
+        if self.device == "cpu":
+            completion = lambda: None
+            event = None
+        else:
+            with torch.cuda.device(self.model.device):
+                event = torch.cuda.Event()
+                event.record(torch.cuda.current_stream(self.model.device))
+            completion = event.synchronize
+        return Pending(value, completion, keepalive=(self.model, keepalive, event))
+
+    def _finalize_native(self, prepared):
+        request = prepared.request
+        job = request["jobs"][0]
+        with prepared.logs():
+            decoded = self.builder.decode(
+                prepared.output, prepared.features, prepared.chain_infos,
+                num_diffusion_samples=request["fold_kwargs"]["num_diffusion_samples"],
+                complex_id=str(job["name"]),
+            )
+            result = _job_result(decoded, name=str(job["name"]), output_dir=request["output_dir"])
+        if prepared.capture_logs:
+            result = {"result": result, "stdout": prepared.stdout.getvalue(),
+                      "stderr": prepared.stderr.getvalue()}
+        # Decode may launch device work unrelated to the exported CPU fields.
+        # Retain native outputs and wait for that work before releasing capacity.
+        return self._pending(result, keepalive=(prepared, decoded))
+
+
+def _load_worker(settings: dict[str, Any]) -> _ESMFold2Worker:
     identity = dict(settings["identity"])
     _prepend_path(_path_with_optional_src(identity["transformers_repo_path"]))
     _prepend_path(_path_with_optional_src(identity["esm_repo_path"]))
@@ -318,10 +443,33 @@ def daemon_factory(settings: dict[str, Any]) -> _ESMFold2Worker:
     )
 
 
+def daemon_factory(settings: dict[str, Any]) -> _ESMFold2Worker:
+    loaded = []
+
+    def loader(raw_settings):
+        worker = _load_worker(raw_settings)
+        loaded.append(worker)
+        return worker.stages(), {"backend": "esmfold2", "device": worker.device,
+            "residency": raw_settings.get("residency", "resident_model"),
+            "weights_loaded": True}
+
+    kernel = DirectKernel(
+        settings, loader,
+        torch_device=str(settings["identity"].get("device") or "auto"),
+        lifecycle={"backend": "esmfold2", "residency": settings.get("residency", "resident_model"),
+                   "weights_loaded": True, "staging": "biohub_prepare_model_decode"},
+    )
+    worker = loaded[0]
+    object.__setattr__(worker, "_kernel", kernel)
+    return worker
+
+
 def _worker_run(payload: dict[str, Any]) -> dict[str, Any]:
     identity = _model_identity(payload)
-    worker = daemon_factory({"identity": identity})
-    return worker.infer(_fold_request(payload, identity), capture_logs=False)
+    request = _fold_request(payload, identity)
+    settings = {"identity": identity, "residency": "one_shot"}
+    worker = daemon_factory(settings)
+    return worker.infer(request, capture_logs=False)
 
 
 def _main(argv: list[str] | None = None) -> int:
@@ -353,9 +501,13 @@ class ESMFold2Runner:
         num_sampling_steps: int = 50,
         num_diffusion_samples: int = 1,
         seed: int | None = None,
-        lm_dropout: float | None = 0.0,
-        msa_max_depth: int | None = 1024,
-        msa_column_mask_rate: float = 0.1,
+        lm_dropout: float | None = None,
+        msa_max_depth: int | None = None,
+        msa_column_mask_rate: float | None = None,
+        noise_scale: float | None = None,
+        step_scale: float | None = None,
+        max_inference_sigma: int | None = None,
+        early_exit: bool = False,
         chunk_size: int | None = 64,
         local_files_only: bool = False,
         timeout_seconds: float | None = None,
@@ -379,6 +531,10 @@ class ESMFold2Runner:
         self.lm_dropout = lm_dropout
         self.msa_max_depth = msa_max_depth
         self.msa_column_mask_rate = msa_column_mask_rate
+        self.noise_scale = noise_scale
+        self.step_scale = step_scale
+        self.max_inference_sigma = max_inference_sigma
+        self.early_exit = early_exit
         self.chunk_size = chunk_size
         self.local_files_only = local_files_only
         self.timeout_seconds = timeout_seconds
@@ -396,6 +552,7 @@ class ESMFold2Runner:
             container = OmegaConf.to_container(config, resolve=True)
         if not isinstance(container, dict):
             raise TypeError("ESMFold2 config must resolve to a mapping")
+        _validate_scientific_knobs(container)
         allowed = {
             "python_bin",
             "esm_repo_path",
@@ -411,6 +568,10 @@ class ESMFold2Runner:
             "lm_dropout",
             "msa_max_depth",
             "msa_column_mask_rate",
+            "noise_scale",
+            "step_scale",
+            "max_inference_sigma",
+            "early_exit",
             "chunk_size",
             "local_files_only",
             "timeout_seconds",
@@ -436,6 +597,10 @@ class ESMFold2Runner:
             "lm_dropout": self.lm_dropout,
             "msa_max_depth": self.msa_max_depth,
             "msa_column_mask_rate": self.msa_column_mask_rate,
+            "noise_scale": self.noise_scale,
+            "step_scale": self.step_scale,
+            "max_inference_sigma": self.max_inference_sigma,
+            "early_exit": self.early_exit,
             "chunk_size": self.chunk_size,
             "output_dir": str(output_dir / "structures"),
             "jobs": jobs,
@@ -444,10 +609,10 @@ class ESMFold2Runner:
     def _daemon_spec(self, identity: dict[str, Any]) -> Any:
         from astrolabe.model_daemon import DaemonSpec
 
-        env = os.environ.copy()
+        env = {}
         import_roots = [str(_repo_root())]
-        if env.get("PYTHONPATH"):
-            import_roots.append(env["PYTHONPATH"])
+        if os.environ.get("PYTHONPATH"):
+            import_roots.append(os.environ["PYTHONPATH"])
         env["PYTHONPATH"] = os.pathsep.join(import_roots)
         return DaemonSpec(
             backend="esmfold2",
@@ -463,17 +628,25 @@ class ESMFold2Runner:
             return self._daemon
         self.shutdown()
 
-        from astrolabe.model_daemon import OwnedModelDaemon
+        from astrolabe.model_execution import NativeModelClient
 
-        self._daemon = OwnedModelDaemon(
-            self._daemon_spec(identity),
-            startup_timeout=300,
+        spec = self._daemon_spec(identity)
+        self._daemon = NativeModelClient(
+            spec.backend, spec.factory, spec.settings,
+            python_bin=spec.python_bin, cwd=spec.cwd, env=spec.env,
+            startup_timeout=max(300, self.timeout_seconds or 300),
             request_timeout=self.timeout_seconds,
             shutdown_timeout=30,
             max_pending=4,
+            direct_payload=True,
         )
         self._daemon_settings = identity
         return self._daemon
+
+    def prepare_shared_model(self):
+        if self.execution_mode != "daemon":
+            return None
+        return self._ensure_daemon(_model_identity(self._payload([], Path("."))))
 
     @property
     def pid(self) -> int | None:
@@ -514,6 +687,16 @@ class ESMFold2Runner:
         return result
 
     def _run_subprocess(
+        self, payload, *, input_json, output_json, stdout_log, stderr_log,
+    ):
+        # The child owns loading, stage admission and request memory. An outer
+        # CLI bridge lease would hide the strict boundary and deadlock its child.
+        return self._run_subprocess_native(payload,
+            input_json=input_json, output_json=output_json,
+            stdout_log=stdout_log, stderr_log=stderr_log,
+        )
+
+    def _run_subprocess_native(
         self,
         payload: dict[str, Any],
         *,
@@ -564,6 +747,7 @@ class ESMFold2Runner:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
         payload = self._payload(jobs, output_dir)
+        _validate_scientific_knobs(payload)
         identity = _model_identity(payload)
         input_json = output_dir / "esmfold2_input.json"
         output_json = output_dir / "esmfold2_output.json"

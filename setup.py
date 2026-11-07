@@ -43,6 +43,7 @@ setup(
             "pytest>=7.0",
             "build>=1",
             "setuptools>=70.1",
+            "scipy==1.17.0",
         ],
     },
     entry_points={

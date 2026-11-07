@@ -13,6 +13,7 @@ import numpy as np
 
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import Ligand, ProteinChain
+from astrolabe.evaluators.runtime_stages import local_evaluator_guard
 from astrolabe.evaluators.base import Evaluator
 from astrolabe.evaluators.structure_output import project_structure, structure_directory
 from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
@@ -385,6 +386,7 @@ class Chai1Evaluator(Evaluator):
     def shutdown(self) -> None:
         shutdown_model_handles(self.model_runner)
 
+    @local_evaluator_guard("chai1", "model_runner")
     def run_function(self, input_feat):
         output = {}
         start = time.time()

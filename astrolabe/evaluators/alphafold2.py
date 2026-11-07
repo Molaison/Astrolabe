@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import threading
 from collections import defaultdict
 from copy import deepcopy
 from pathlib import Path
@@ -16,6 +17,7 @@ from alphafold.common import protein
 from astrolabe.core import global_config
 from astrolabe.core.cyclization import build_cyclic_offset_matrix
 from astrolabe.core.protomer_config_parser import ProtomerTypes
+from astrolabe.evaluators.runtime_stages import local_evaluator_guard
 from astrolabe.evaluators.base import Evaluator
 from astrolabe.evaluators.structure_output import project_structure, structure_directory
 from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
@@ -27,10 +29,10 @@ from astrolabe.utils.constant import DEFAULT_SEEDS
 
 logger = logging.getLogger(__name__)
 
-
-
 class AlphaFold2Evaluator(Evaluator):
     """AlphaFold2 evaluator using the same prepare/run/output interface as AF3."""
+
+    _staged_evaluation = True
 
     def __init__(
         self,
@@ -38,6 +40,7 @@ class AlphaFold2Evaluator(Evaluator):
         output_dir: str | Path | None = None,
     ) -> None:
         self.model_runners = model_runners
+        self._evaluation_lock = threading.RLock()
         self.output_dir = Path(output_dir) if output_dir is not None else None
         if self.output_dir is not None:
             self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -48,7 +51,15 @@ class AlphaFold2Evaluator(Evaluator):
         self._inputs: Dict[str, Any] = {}
 
     def shutdown(self) -> None:
+        for runner in self.model_runners.values():
+            kernel = getattr(runner, "_astrolabe_staged_kernel", None)
+            if kernel is not None:
+                kernel.close()
         shutdown_model_handles(self.model_runners)
+
+    def evaluate(self, inputs=None, runtime_config=None):
+        with self._evaluation_lock:
+            return super().evaluate(inputs, runtime_config)
 
     @staticmethod
     def _resolve_initial_guess_cfg(
@@ -715,10 +726,17 @@ class AlphaFold2Evaluator(Evaluator):
                 if not templates and str(chain.id) in initial_guess_templates:
                     chain_data["template_features"] = initial_guess_templates[str(chain.id)]
                 chain_homology[chain.id] = chain_data
+            pair_and_merge_fn = getattr(runner, "pair_and_merge", None)
+            if pair_and_merge_fn is None:
+                from functools import partial
+                from astrolabe.evaluators.af2_stages import staged_pair_and_merge
+
+                pair_and_merge_fn = partial(staged_pair_and_merge, runner)
             feature_dict = make_AFM_features(
                 chain_id_map=chain_id_map,
                 is_homomer_or_monomer=len(unique_sequences) == 1,
                 chain_homology=chain_homology,
+                pair_and_merge_fn=pair_and_merge_fn,
             )
         else:
             query_sequence = "".join(chain.sequence for chain in protein_chains)
@@ -872,6 +890,7 @@ class AlphaFold2Evaluator(Evaluator):
             ),
         ).astype(np.int32, copy=False)
 
+    @local_evaluator_guard("alphafold2", "model_runners")
     def run_function(self, input_feat):
         """Execute AlphaFold2 inference for each oligomer."""
         outputs = {}
@@ -910,7 +929,9 @@ class AlphaFold2Evaluator(Evaluator):
                     oligo_name=oligo_name,
                     input_obj=self._inputs[oligo_name],
                 )
-                prediction = runner.predict(processed_features, random_seed=seed)
+                from astrolabe.evaluators.af2_stages import staged_predict
+
+                prediction = staged_predict(runner, processed_features, random_seed=seed)
                 b_factors = np.tile(
                     prediction["plddt"][:, None],
                     (1, protein.residue_constants.atom_type_num),

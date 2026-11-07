@@ -617,6 +617,7 @@ def build_mutator_operation(
         invoke=invoke,
         invoke_identity=invoke_identity,
         mutation_context=mutation_context,
+        prepare_native=bool(getattr(factory, "requires_native_preparation", False)),
     )
     operation.resume_assets_verified = asset_record["complete"]
     return operation

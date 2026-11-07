@@ -81,6 +81,11 @@ loss 注册顺序、归约或表达式。成员提交核对 Score 的请求、ra
 | worker 的 raw 完整、私有 CPU Score 失败 | 核对 raw、sidecar、请求与进程锁后，允许只恢复 Score |
 | 任一身份、blob 或 sidecar 不匹配 | 拒绝消费，不将其当作成功结果 |
 
+worker 的“不重复评分”以完整 `.score.json` 发布为界。发布前中断时，既有
+恢复路径从完整 raw、原预测 RNG 和冻结评分上下文重新计算私有 CPU Score，
+不会重推模型。这不同于串行 Runtime 对已发出 Score 的 unknown 围栏；
+不支持带外部副作用的评分回调，也不能声称每次 CPU 计算在所有故障窗口内至多一次。
+
 本批 durable owner 版本为 `astrolabe.native-refinement-recovery/v2`。
 旧 codec 内容仍由既有读取器解释，但旧运行不能跳过 owner/protocol 核对而直接续跑。
 历史科学输出和失败回执保持原身份。

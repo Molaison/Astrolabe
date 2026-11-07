@@ -156,19 +156,24 @@ def _split_pose_metric_by_proto(
     chain2proto = _chain2proto_for_oligo(oligo_name)
     out: dict[str, list[np.ndarray]] = defaultdict(list)
     values = np.asarray(values, dtype=float)
+    pdb_info = pose.pdb_info() if hasattr(pose, "pdb_info") else None
     for chain_index in range(1, pose.num_chains() + 1):
-        chain_id = int_id_to_str_id(chain_index)
+        begin = int(pose.chain_begin(chain_index)) - 1
+        end = int(pose.chain_end(chain_index))
+        # Native ligand CIFs can store target B before protein A. Pose order is
+        # not physical-chain identity; retain the loaded chain mapping.
+        chain_id = pdb_info.chain(begin + 1) if pdb_info is not None else int_id_to_str_id(chain_index)
         proto_name = chain2proto.get(chain_id)
         protomer = global_config.protomers.get(proto_name)
         if protomer is None or protomer.type != ProtomerTypes.PROTEIN:
             continue
-        begin = int(pose.chain_begin(chain_index)) - 1
-        end = int(pose.chain_end(chain_index))
         arr = np.asarray(values[begin:end], dtype=float)
-        if arr.shape[-1] != int(protomer.length):
+        working_sequence = getattr(protomer, "mutated_sequence", None)
+        expected_length = len(working_sequence) if isinstance(working_sequence, str) else int(protomer.length)
+        if arr.shape[-1] != expected_length:
             raise ValueError(
                 f"Per-residue score length mismatch for protomer {proto_name!r} in oligo {oligo_name!r}: "
-                f"got {arr.shape[-1]}, expected {protomer.length}."
+                f"got {arr.shape[-1]}, expected {expected_length}."
             )
         out[str(proto_name)].append(arr)
     return out
@@ -221,6 +226,34 @@ def _metric_buried_sasa(pose, context: PerResidueMetricContext) -> np.ndarray:
             f"{bound.shape} vs {unbound.shape}."
         )
     return np.maximum(0.0, unbound - bound)
+
+
+def _interface_feedback_metric(pose, context, metric):
+    from astrolabe.mutators.rfd4_feedback import analyze_pose_interface
+
+    config = context.config
+    feedback = analyze_pose_interface(
+        pose, config["binder_chains"], config["target_chains"],
+        **{key: config[key] for key in (
+            "hbond_energy_cutoff", "interface_distance", "buried_sasa_cutoff", "sasa_probe_radius",
+        ) if key in config},
+    )
+    return np.asarray([getattr(residue, metric) for residue in feedback.residues], dtype=float)
+
+
+@PerResidueScoreRegistry.register("interface_hbond_count")
+def _metric_interface_hbond_count(pose, context):
+    return _interface_feedback_metric(pose, context, "interface_hbond_count")
+
+
+@PerResidueScoreRegistry.register("short_range_interface_pair_energy")
+def _metric_short_range_interface_pair_energy(pose, context):
+    return _interface_feedback_metric(pose, context, "short_range_interface_pair_energy")
+
+
+@PerResidueScoreRegistry.register("unsatisfied_interface_polar_count")
+def _metric_unsatisfied_interface_polar_count(pose, context):
+    return _interface_feedback_metric(pose, context, "unsatisfied_interface_polar_count")
 
 
 @PerResidueScoreRegistry.register("sap", "rosetta_sap")
@@ -280,11 +313,21 @@ def _metric_packstat(pose, context: PerResidueMetricContext) -> np.ndarray:
     )
 
 
+def _protein_score_protomer(proto_name: str) -> bool:
+    try:
+        protomers = global_config.protomers
+    except RuntimeError:
+        # Preserve standalone, protein-only scoring without runtime config.
+        return True
+    protomer = protomers.get(proto_name)
+    return protomer is not None and protomer.type == ProtomerTypes.PROTEIN
+
+
 def _normalized_terms_from_scores(eval_result) -> dict[str, dict[str, list[np.ndarray]]]:
     terms: dict[str, dict[str, list[np.ndarray]]] = {}
     existing_terms = getattr(eval_result, "per_proto_score_terms", None) or {}
     for proto_name, metric_map in existing_terms.items():
-        if not isinstance(metric_map, Mapping):
+        if not _protein_score_protomer(proto_name) or not isinstance(metric_map, Mapping):
             continue
         terms[str(proto_name)] = {
             str(metric_name): [np.asarray(v, dtype=float) for v in (values if isinstance(values, list) else [values])]
@@ -292,6 +335,8 @@ def _normalized_terms_from_scores(eval_result) -> dict[str, dict[str, list[np.nd
         }
 
     for proto_name, values in (getattr(eval_result, "per_proto_scores", None) or {}).items():
+        if not _protein_score_protomer(proto_name):
+            continue
         wrapped = values if isinstance(values, list) else [values]
         terms.setdefault(str(proto_name), {}).setdefault(
             "plddt",

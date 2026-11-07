@@ -48,6 +48,9 @@ astrolabe paper prepare-inputs --out-dir data/paper
 | 示例选择与适用范围 | [examples](../examples/README.md) |
 | 输入、环境、预期结果与论文复现范围 | [复现说明](reproducibility.md) |
 | 软件检查与科学验收状态 | [发布验证](release_acceptance.md) |
+| 显式 Beam、常驻预测与 CPU Score | [Beam refinement](beam_refinement.md) |
+| RFD4 联合生成与产物来源 | [RFD4 接入](rfd4_codesign.md) |
+| BioEmu2 代表构象及适用范围 | [BioEmu2 接入](bioemu2.md) |
 
 原有 CPU 坐标例子保留为安装诊断，数值及输出见[复现说明](reproducibility.md)。
 

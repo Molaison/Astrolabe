@@ -9,6 +9,8 @@ import sys
 import threading
 from typing import Dict, List, Sequence
 
+from astrolabe.mutators.runtime_stages import guarded_device
+
 import numpy as np
 
 
@@ -46,6 +48,7 @@ class NAMPNNRunner:
         )
         self.shutdown_timeout = float(self._get("shutdown_timeout", 30))
         self.max_pending = int(self._get("max_pending", 4))
+        self.lifecycle = {"backend": "na_mpnn", "residency": "resident_model" if self.execution_mode == "daemon" else "one_shot", "device": "unknown"}
         self._owned_daemon = None
         self._daemon_lock = threading.Lock()
         self.output_root = pathlib.Path(output_root).expanduser().resolve()
@@ -94,6 +97,7 @@ class NAMPNNRunner:
         best_entry["probabilities"] = self._load_specificity_matrix(job_dir, structure_path)
         return best_entry
 
+    @guarded_device("na_mpnn")
     def _run_subprocess(self, payload) -> None:
         cmd = [
             self.python,
@@ -191,7 +195,11 @@ class NAMPNNRunner:
                     max_pending=self.max_pending,
                 )
             daemon = self._owned_daemon
-        daemon.request(payload)
+        response = daemon.request({**payload, "_runtime_report": True})
+        if isinstance(response, dict) and "metadata" in response:
+            self.model_metadata = response["metadata"]
+            self.last_runtime = response.get("runtime")
+            self.lifecycle = self.model_metadata["runtime_lifecycle"]
 
     def shutdown(self) -> None:
         with self._daemon_lock:

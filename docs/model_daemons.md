@@ -11,6 +11,39 @@ and mutators launch isolated children. The backend catalog is the source of
 this metadata. A catalog entry does not by itself prove that every backend has
 a supported standalone foreground factory.
 
+## Shared owner host pipeline
+
+`ASTROLABE_MODEL_PIPELINE=1` enables an opt-in pipeline for a backend that
+explicitly declares RNG-free, request-local host stages. The default is `0`.
+The effective setting is part of model identity, so a consumer cannot silently
+attach to an owner with another scheduling contract.
+
+For the syntax-verified native ESMFold encoding implementation, at most two
+requests can enter one loaded owner. CPU sequence encoding for the next request
+can overlap the current request's execution. The transport queue, active
+requests, request IDs, failures and shutdown are tracked independently. Shutdown
+stops admission, drains all accepted requests, and joins every owner thread.
+Unrecognized vendor implementations and other backends retain serial execution.
+
+Execution that owns Python, NumPy or Torch default generators still runs inside
+one process-wide RNG critical section. Its response captures the advanced RNG
+state before releasing that section. An OOM quarantines the owner and prevents
+an already-prepared request from executing. This pipeline does not certify
+simultaneous GPU kernels, tensor batching, or any throughput improvement.
+Resource broker admission remains authoritative for every stage.
+
+Transport `model_load_count` counts factory initialization. Actual weight
+loading must be established separately, for example by ESMFold's
+`ASTROLABE_MODEL_LIFECYCLE_PATH` events associated with the daemon PID, model
+identity, placement and the same physical device. Two worker PIDs sharing an
+endpoint prove neither a successful weight load nor GPU residency by themselves.
+`ASTROLABE_MODEL_REQUEST_TRACE_PATH` optionally records client/model PIDs and
+Linux start ticks, exact owner/model identities, shared broker, and per-request
+native stage timestamps. These host records associate both consumers with the
+actual loader trace and expose host/device overlap. They do not contain RNG
+states, model inputs, or scientific arrays, and add no CUDA probe or device
+synchronization.
+
 ## Inspect backends
 
 Use `daemon backends` to read the same catalog that execution policy uses:

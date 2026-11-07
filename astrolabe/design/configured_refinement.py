@@ -80,6 +80,7 @@ _ASSET_DIRECTORY_KEYS = frozenset(
         "data_dir",
         "model_dir",
         "opendde_root_dir",
+        "source_dir",
         "weights_dir",
     }
 )

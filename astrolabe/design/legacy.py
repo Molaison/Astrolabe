@@ -21,6 +21,7 @@ from dataclasses import dataclass, fields
 import hashlib
 import json
 import math
+import re
 from pathlib import Path
 import threading
 from typing import Any, Literal
@@ -745,6 +746,60 @@ def _deduplicated_variables(
     return tuple(variables)
 
 
+def _validate_variable_topology(protomers, segments, variables, assemblies) -> bool:
+    declared = [variable for variable in variables
+                if getattr(segments[variable.segment_name], "length_bounds", None) is not None]
+    if not declared:
+        return False
+    if len(declared) != 1 or len(variables) != 2 or len(protomers) != 2:
+        raise UnsupportedLegacyState("variable length requires one protein and one fixed single-CCD ligand")
+    variable = declared[0]
+    segment = segments[variable.segment_name]
+    owners = [protomer for protomer in protomers.values()
+              for name in protomer.components if segments[name] is segment]
+    if (variable.kind != "protein" or segment.is_fixed or segment.ptm_dict
+            or len(owners) != 1 or len(owners[0].components) != 1
+            or getattr(owners[0], "_locked_positions", ())
+            or getattr(owners[0], "_homology", {})
+            or not set(segment.sequence) <= set("ACDEFGHIKLMNPQRSTVWY")):
+        raise UnsupportedLegacyState("variable length requires one unshared, unlocked, unmodified canonical protein segment without homology")
+    ligand = next(item for item in variables if item is not variable)
+    ligand_segment = segments[ligand.segment_name]
+    if (ligand.kind != "chemical" or getattr(ligand_segment.type, "name", "") != "CCD"
+            or not ligand_segment.is_fixed
+            or re.fullmatch(r"[A-Za-z0-9]+", ligand_segment.sequence) is None
+            or any(len(protomer.components) != 1 for protomer in protomers.values())):
+        raise UnsupportedLegacyState("variable length requires a fixed single-CCD ligand target")
+    if (len(assemblies) != 1 or len(assemblies[0]) != 2
+            or set(assemblies[0]) != set(protomers)):
+        raise UnsupportedLegacyState("variable length requires exactly one physical occurrence of protein and ligand")
+    if (_require_initialized("covalent_bonds", None)
+            or _require_initialized("cyclization", None)):
+        raise UnsupportedLegacyState("variable length does not support covalent bonds or cyclization")
+    return True
+
+
+def resolve_legacy_index_map(occurrence: Occurrence, candidate: Candidate, data: DataStore) -> dict[str, Any]:
+    """Resolve a logical occurrence against this candidate, never accepted globals."""
+    payload = data.get(occurrence.index_map, _INDEX_MAP_CODEC)
+    if payload.get("schema") != "astrolabe.legacy.index-map/v2":
+        return payload
+    assignments = {assignment.variable: assignment.value for assignment in candidate.assignments}
+
+    def resolve(value):
+        if type(value) is int:
+            return value
+        if not isinstance(value, dict) or set(value) != {"variables"}:
+            raise ValueError("invalid logical occurrence offset")
+        return sum(len(assignments[name].tokens) if isinstance(assignments[name], Polymer) else 1
+                   for name in value["variables"])
+
+    resolved = dict(payload)
+    for key in ("variable_range", "protomer_range", "assembly_range"):
+        resolved[key] = [resolve(value) for value in payload[key]]
+    return resolved
+
+
 def translate_legacy_state(
     *,
     assemblies: Sequence[str] | None = None,
@@ -769,6 +824,7 @@ def translate_legacy_state(
 
     assembly_names = _protomerize_assemblies(assemblies, protomers)
     variables = _deduplicated_variables(protomers, segments, manager)
+    variable_topology = _validate_variable_topology(protomers, segments, variables, assembly_names)
     variable_by_segment_id = {
         id(segments[variable.segment_name]): variable for variable in variables
     }
@@ -792,13 +848,15 @@ def translate_legacy_state(
             Polymer(variable.kind, tuple(str(segment.sequence)), modifications),
         )
         assignments.append(assignment)
-        if bool(getattr(segment, "is_fixed", False)):
+        if bool(getattr(segment, "is_fixed", False)) or getattr(segment, "length_bounds", None) is not None:
             domains.append(
                 Domain(
                     variable=variable.identity,
-                    fixed_tokens=tuple(range(len(assignment.value.tokens))),
+                    fixed_tokens=(tuple(range(len(assignment.value.tokens)))
+                                  if segment.is_fixed else ()),
                     fixed_atoms=(),
                     allowed_values=None,
+                    length_bounds=getattr(segment, "length_bounds", None),
                 )
             )
 
@@ -809,10 +867,12 @@ def translate_legacy_state(
         chain_ids = chain_ids_for_oligo(assembly_name)
         chain_entries: list[dict[str, Any]] = []
         assembly_offset = 0
+        assembly_variables = []
         for chain_id, protomer_name in zip(chain_ids, assembly_name):
             protomer = protomers[protomer_name]
             component_entries: list[dict[str, Any]] = []
             protomer_offset = 0
+            protomer_variables = []
             for component_index, component_name in enumerate(protomer.components):
                 segment = segments[component_name]
                 variable = variable_by_segment_id[id(segment)]
@@ -844,6 +904,15 @@ def translate_legacy_state(
                         if protomer_offset <= int(position) < protomer_offset + variable_length
                     )
                     index_payload["locked_positions"] = locked
+                if variable_topology:
+                    index_payload.update({
+                        "schema": "astrolabe.legacy.index-map/v2",
+                        "variable_range": [0, {"variables": [variable.identity]}],
+                        "protomer_range": [{"variables": list(protomer_variables)},
+                                           {"variables": protomer_variables + [variable.identity]}],
+                        "assembly_range": [{"variables": list(assembly_variables)},
+                                           {"variables": assembly_variables + [variable.identity]}],
+                    })
                 index_map = data.put(index_payload, _INDEX_MAP_CODEC)
                 occurrence_identity = key_for(
                     (
@@ -877,6 +946,14 @@ def translate_legacy_state(
                         "index_map": _blob_record(index_map),
                     }
                 )
+                if variable_topology:
+                    component_entries[-1].update({
+                        "variable_length": {"variables": [variable.identity]},
+                        "protomer_offset": {"variables": list(protomer_variables)},
+                        "assembly_offset": {"variables": list(assembly_variables)},
+                    })
+                protomer_variables.append(variable.identity)
+                assembly_variables.append(variable.identity)
                 assembly_offset += variable_length
                 protomer_offset += variable_length
             chain_entries.append(
@@ -887,7 +964,8 @@ def translate_legacy_state(
                 }
             )
         assembly_payloads.append(
-            {"name": assembly_name, "chains": chain_entries, "residue_length": assembly_offset}
+            {"name": assembly_name, "chains": chain_entries,
+             "residue_length": ({"variables": assembly_variables} if variable_topology else assembly_offset)}
         )
         legacy_assemblies.append(
             LegacyAssembly(
@@ -1049,8 +1127,8 @@ class LegacyContext:
     ) -> None:
         if candidate.system != translation.system.identity:
             raise ValueError("candidate belongs to a different system")
-        if candidate.identity == translation.candidate.identity:
-            return
+        if translation.system.edit(translation.candidate, candidate.assignments, data=data) != candidate:
+            raise ValueError("candidate identity differs from validated assignments")
 
         segments = _require_initialized("segments", None)
         protomers = _require_initialized("protomers", None)
@@ -1059,9 +1137,6 @@ class LegacyContext:
             raise UnsupportedLegacyState("legacy segment/protomer globals are unavailable")
 
         variables = {variable.identity: variable for variable in translation.variables}
-        old_assignments = {
-            assignment.variable: assignment for assignment in translation.candidate.assignments
-        }
         new_assignments = {
             assignment.variable: assignment for assignment in candidate.assignments
         }
@@ -1069,10 +1144,7 @@ class LegacyContext:
         changed_segments: list[Any] = []
 
         for variable_id in translation.system.variables:
-            old = old_assignments[variable_id]
             new = new_assignments[variable_id]
-            if old.value == new.value:
-                continue
             variable = variables[variable_id]
             segment = segments[variable.segment_name]
             if variable.kind == "chemical":
@@ -1107,24 +1179,13 @@ class LegacyContext:
             segment.probs = None
             segment.scores = None
             segment.mutations = []
+            segment.pending_sequence = None
             changed_segments.append(segment)
 
         if not changed_segments:
             return
         manager._pre_update_snapshot = None
-        changed_ids = {id(segment) for segment in changed_segments}
-        for protomer in protomers.values():
-            if not any(id(segments[name]) in changed_ids for name in protomer.components):
-                continue
-            protomer._ptm_dict = {}
-            for attribute in (
-                "_mutable_mask",
-                "_homology_seq",
-                "_tied_positions",
-                "_tied_positions_dict",
-            ):
-                if hasattr(protomer, attribute):
-                    delattr(protomer, attribute)
+        manager.refresh_protomers()
 
     def capture_state(self) -> LegacyStateSnapshot:
         """Capture all bridge-owned scientific state for exact in-place restore."""
@@ -1636,7 +1697,7 @@ def _verified_oligo_axes(
             continue
         if occurrence.index_map.codec != _INDEX_MAP_CODEC.identity:
             return None
-        payload = data.get(occurrence.index_map, _INDEX_MAP_CODEC)
+        payload = resolve_legacy_index_map(occurrence, candidate, data)
         if not isinstance(payload, dict):
             return None
         value_range = payload.get("assembly_range")
@@ -2133,6 +2194,14 @@ def candidate_for_mutation(
 
 def restore_native_sequence(sequence: str, protomer, segments) -> None:
     """Restore the unique shared sequence; repeated segment references update once."""
+    if (len(protomer.components) == 1
+            and getattr(segments[protomer.components[0]], "length_bounds", None) is not None):
+        segment = segments[protomer.components[0]]
+        segment.clear_mutations()
+        segment.stage_sequence(sequence)
+        segment.apply_mutations()
+        _require_initialized("segment_manager").refresh_protomers()
+        return
     offset = 0
     restored = set()
     for name in protomer.components:
@@ -2173,6 +2242,7 @@ def finalize_pending_mutations(manager=None) -> None:
 
 
 __all__ = [
+    "resolve_legacy_index_map",
     "restore_native_sequence",
     "native_sequence_key",
     "finalize_pending_mutations",

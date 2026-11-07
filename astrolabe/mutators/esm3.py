@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from astrolabe.mutators.runtime_stages import device_guard
+
 import os
 import sys
+from contextlib import contextmanager
 from pathlib import Path
+from threading import RLock
 from typing import Any, Dict, List
 
 import numpy as np
@@ -12,6 +16,7 @@ from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.model_execution import (
+    host_result,
     ExecutionMode,
     execution_mode as resolve_execution_mode,
 )
@@ -22,6 +27,54 @@ from astrolabe.mutators.utils import (
     sample_mutations_by_aa_probs,
 )
 from astrolabe.utils.constant import aa_order as default_aa_order
+
+
+_SNAPSHOT_LOCK = RLock()
+
+
+@contextmanager
+def _pinned_esm3_data_root(snapshot):
+    """Resolve tokenizers and lazy components from one local snapshot.
+
+    Vendor modules use both constants.data_root and imported aliases. Keep the
+    override within this call, including aliases imported during it, and restore
+    the original functions on success or failure. No vendor file is modified.
+    """
+    if snapshot is None:
+        yield
+        return
+    import esm3.pretrained as pretrained
+    import esm3.utils.constants.esm3 as constants
+
+    with _SNAPSHOT_LOCK:
+        original_root = constants.data_root
+        roots = (original_root, pretrained.data_root)
+        originals = []
+
+        def pinned_data_root(model: str):
+            if model.startswith("esm3"):
+                return snapshot
+            return original_root(model)
+
+        def modules():
+            return [module for name, module in list(sys.modules.items())
+                    if module is not None and (name == "esm3" or name.startswith("esm3."))]
+
+        for module in modules():
+            for name, value in list(vars(module).items()):
+                if any(value is root for root in roots):
+                    originals.append((module, name, value))
+                    setattr(module, name, pinned_data_root)
+        try:
+            yield
+        finally:
+            # A lazily imported module may have bound the scoped alias too.
+            for module in modules():
+                for name, value in list(vars(module).items()):
+                    if value is pinned_data_root:
+                        setattr(module, name, original_root)
+            for module, name, value in reversed(originals):
+                setattr(module, name, value)
 
 
 def _ensure_vendored_esm3_on_path() -> None:
@@ -84,52 +137,43 @@ class ESM3Mutator(Mutator):
         )
 
         pinned_snapshot = os.environ.get("GH_ESM3_MODEL_SNAPSHOT")
+        self._model_snapshot = None
         if pinned_snapshot:
             snapshot = Path(pinned_snapshot).expanduser().resolve()
             if not snapshot.is_dir():
                 raise FileNotFoundError(f"Pinned ESM3 snapshot does not exist: {snapshot}")
-            if self.execution_mode is ExecutionMode.IN_PROCESS:
-                import esm3.pretrained as esm3_pretrained
-                import esm3.utils.constants.esm3 as esm3_constants
+            self._model_snapshot = snapshot
 
-                original_data_root = esm3_constants.data_root
+        with _pinned_esm3_data_root(self._model_snapshot):
+            tokenizers = get_esm3_model_tokenizers(model_name)
+            self.sequence_tokenizer = tokenizers.sequence
+            self.aa_order = list(default_aa_order)
+            if self.execution_mode is ExecutionMode.DAEMON:
+                from astrolabe.mutators.native_daemons import NativeESM3Runner
 
-                def pinned_data_root(model: str):
-                    if model.startswith("esm3"):
-                        return snapshot
-                    return original_data_root(model)
-
-                esm3_constants.data_root = pinned_data_root
-                esm3_pretrained.data_root = pinned_data_root
-
-        tokenizers = get_esm3_model_tokenizers(model_name)
-        self.sequence_tokenizer = tokenizers.sequence
-        self.aa_order = list(default_aa_order)
-        if self.execution_mode is ExecutionMode.DAEMON:
-            from astrolabe.mutators.native_daemons import NativeESM3Runner
-
-            self.runner = NativeESM3Runner(
-                model_name=model_name,
-                device=str(self.device),
-                temperature=temperature,
-            )
-            self.aa_order = list(self.runner.aa_order)
-            self._aa_token_ids = None
-        else:
-            self._esm3_cls = ESM3
-            self._logits_config = LogitsConfig(sequence=True)
-            self.runner = self._esm3_cls.from_pretrained(
-                model_name, device=self.device
-            )
-            self.runner.eval()
-            self.runner = self.runner.to(self.device)
-            self._aa_token_ids = torch.tensor(
-                [
-                    self.sequence_tokenizer.convert_tokens_to_ids(aa)
-                    for aa in self.aa_order
-                ],
-                device=self.device,
-            )
+                self.runner = NativeESM3Runner(
+                    model_name=model_name,
+                    device=str(self.device),
+                    temperature=temperature,
+                )
+                self.aa_order = list(self.runner.aa_order)
+                self._aa_token_ids = None
+            else:
+                with device_guard("esm3", device=self.device, phase="load"):
+                    self._esm3_cls = ESM3
+                    self._logits_config = LogitsConfig(sequence=True)
+                    self.runner = self._esm3_cls.from_pretrained(
+                        model_name, device=self.device
+                    )
+                    self.runner.eval()
+                    self.runner = self.runner.to(self.device)
+                    self._aa_token_ids = torch.tensor(
+                        [
+                            self.sequence_tokenizer.convert_tokens_to_ids(aa)
+                            for aa in self.aa_order
+                        ],
+                        device=self.device,
+                    )
 
     def _build_protein_prompt(self, sequence: str) -> "ESMProtein":
         return self._esm_protein_cls(sequence=sequence)
@@ -180,7 +224,21 @@ class ESM3Mutator(Mutator):
     def compute_mutation(self, mutation_input_features: Dict[str, Dict[str, Any]]):
         if self.execution_mode is ExecutionMode.DAEMON:
             return self.runner.compute_mutation(mutation_input_features)
-        mutation_output = {}
+        with device_guard("esm3", device=getattr(self, "device", getattr(self.runner, "device", None))):
+            return host_result(self._compute_device(mutation_input_features))
+
+    def _compute_device(self, mutation_input_features):
+        return {name: {**output, "name": name, "feature_dict": features}
+                for name, features, output in self._execute_prompts(mutation_input_features)}
+
+    def _execute_prompts(self, mutation_input_features):
+        # ESM3 defers learned component construction until encode/logits. Keep
+        # those reads pinned after the constructor's scoped override is gone.
+        with _pinned_esm3_data_root(self._model_snapshot):
+            return self._execute_pinned_prompts(mutation_input_features)
+
+    def _execute_pinned_prompts(self, mutation_input_features):
+        mutation_output = []
         logits_config = self._logits_config
 
         for oligo_name, input_feat in mutation_input_features.items():
@@ -197,11 +255,7 @@ class ESM3Mutator(Mutator):
             aa_logits = seq_logits.index_select(-1, self._aa_token_ids)
             probs = torch.softmax(aa_logits / self.temperature, dim=-1)
 
-            mutation_output[oligo_name] = {
-                "sampling_probs": probs,
-                "name": oligo_name,
-                "feature_dict": input_feat,
-            }
+            mutation_output.append((oligo_name, input_feat, {"sampling_probs": probs}))
 
         return mutation_output
 

@@ -1,3 +1,4 @@
+import inspect
 import json
 import logging
 import math
@@ -8,6 +9,8 @@ import sys
 import numpy as np
 import torch
 from omegaconf import OmegaConf
+
+from astrolabe.mutators.runtime_stages import guarded_device, to_device
 
 from astrolabe.mutators.wrappers.ligandmpnn_utils import (
     ProteinMPNN,
@@ -23,6 +26,7 @@ from astrolabe.mutators.wrappers.ligandmpnn_utils import (
 
 
 class LigandMPNN:
+    @guarded_device("ligandmpnn", phase="load")
     def __init__(self, args):
 
         # persistent parameters
@@ -147,7 +151,42 @@ class LigandMPNN:
             return float(self.temperature) * math.log(value)
         raise ValueError(f"Unsupported LigandMPNN bias_mode: {self.bias_mode!r}")
 
-    def design_sequences(
+    def prepare_design(self, *args, **features):
+        bound = inspect.signature(self._design_device).bind(*args, **features)
+        bound.apply_defaults()
+        arguments = dict(bound.arguments)
+        multi = arguments["pdb_path_multi"]
+        if multi:
+            with open(multi, "r") as handle:
+                paths = list(json.load(handle))
+        else:
+            paths = [arguments["pdb_path"]]
+        parsed = {}
+        for path in paths:
+            parsed[path] = parse_PDB(
+                path, device=torch.device("cpu"),
+                chains=arguments["parse_these_chains_only"],
+                parse_all_atoms=self.ligand_mpnn_use_side_chain_context,
+                parse_atoms_with_zero_occupancy=self.parse_atoms_with_zero_occupancy,
+            )
+        arguments["_parsed"] = parsed
+        return arguments
+
+    @guarded_device("ligandmpnn")
+    def execute_design(self, prepared):
+        return self._design_device(**prepared)
+
+    @staticmethod
+    def finalize_design(result):
+        outputs = result["multi_outputs"].values() if "multi_outputs" in result else [result]
+        for output in outputs:
+            output["chain_letters"] = tuple(str(chain) for chain in output.pop("_runtime_chain_letters"))
+        return result
+
+    def design_sequences(self, *args, **features):
+        return self.finalize_design(self.execute_design(self.prepare_design(*args, **features)))
+
+    def _design_device(
         self,
         pdb_path=None,
         fixed_residues=None,
@@ -170,6 +209,7 @@ class LigandMPNN:
         chains_to_design=None,
         homo_oligomer="",
         batch_size=1,
+        _parsed=None,
     ):
         """
         Inference function
@@ -277,13 +317,16 @@ class LigandMPNN:
             redesigned_residues = redesigned_residues_multi[pdb]
             transmembrane_buried = transmembrane_buried_multi[pdb]
             transmembrane_interface = transmembrane_interface_multi[pdb]
-            protein_dict, backbone, other_atoms, icodes, _ = parse_PDB(
-                pdb,
-                device=device,
-                chains=parse_these_chains_only,
-                parse_all_atoms=self.ligand_mpnn_use_side_chain_context,
-                parse_atoms_with_zero_occupancy=self.parse_atoms_with_zero_occupancy,
-            )
+            if _parsed is None:
+                parsed = parse_PDB(
+                    pdb, device=device, chains=parse_these_chains_only,
+                    parse_all_atoms=self.ligand_mpnn_use_side_chain_context,
+                    parse_atoms_with_zero_occupancy=self.parse_atoms_with_zero_occupancy,
+                )
+            else:
+                parsed = _parsed[pdb]
+            protein_dict, backbone, other_atoms, icodes, _ = parsed
+            protein_dict = to_device(protein_dict, device)
             # make chain_letter + residue_idx + insertion_code mapping to integers
             R_idx_list = list(protein_dict["R_idx"].cpu().numpy())  # residue indices
             chain_letters_list = list(protein_dict["chain_letters"])  # chain letters
@@ -569,9 +612,7 @@ class LigandMPNN:
                 out_dict["chain_mask"] = feature_dict["chain_mask"][0].cpu()
                 out_dict["seed"] = self.seed
                 out_dict["temperature"] = self.temperature
-                output_dict["chain_letters"] = tuple(
-                    str(chain) for chain in chain_letters_list
-                )
+                output_dict["_runtime_chain_letters"] = chain_letters_list
                 outputs_by_path[str(pdb)] = output_dict
 
         if multi_mode:

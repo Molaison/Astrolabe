@@ -17,6 +17,16 @@ from pathlib import Path
 from typing import Any
 
 
+# These scripts run in the vendor interpreter from the vendor checkout.
+_ASTROLABE_ROOT = Path(__file__).resolve().parents[3]
+if str(_ASTROLABE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ASTROLABE_ROOT))
+from astrolabe.model_execution import KernelStages
+from astrolabe.mutators.runtime_stages import (
+    mutator_kernel_handler, protocol_infer, device_resource, guarded_device,
+)
+
+
 AA_ORDER = "ACDEFGHIKLMNPQRSTVWY"
 AA3 = {
     "ALA",
@@ -86,6 +96,7 @@ def _seed_everything(seed: int) -> None:
         torch.cuda.manual_seed_all(seed)
 
 
+@guarded_device("surfdesign", phase="load")
 def _load_runtime(args: argparse.Namespace) -> Runtime:
     repo_path = Path(args.repo_path).resolve()
     sys.path.insert(0, str(repo_path))
@@ -260,7 +271,7 @@ def _fixed_flat_indices(
     return flat_indices
 
 
-def _infer(
+def _prepare(
     runtime: Runtime,
     surface_builder: SurfaceBuilder,
     pdb_path: Path,
@@ -282,6 +293,14 @@ def _infer(
 
     featurizer.get_surface = get_surface
     batch = runtime.alphabet.featurize(raw_batch=[structure])
+    fixed_indices = _fixed_flat_indices(fixed_residues, chain_order, chain_lengths)
+    return batch, sum(chain_lengths.values()), fixed_indices
+
+
+@guarded_device("surfdesign")
+def _execute(runtime, prepared):
+    torch = runtime.torch
+    batch, expected_length, fixed_indices = prepared
     batch = {
         key: value.to(runtime.device) if hasattr(value, "to") else value
         for key, value in batch.items()
@@ -291,14 +310,12 @@ def _infer(
     )
     batch["prev_tokens"] = prev_tokens
     residue_token_indices = torch.where(batch["coord_mask"][0])[0].tolist()
-    expected_length = sum(chain_lengths.values())
     if len(residue_token_indices) != expected_length:
         raise RuntimeError(
             "SurfDesign PDB/token length mismatch: "
             f"surface PDB has {expected_length} residues, featurizer has "
             f"{len(residue_token_indices)}."
         )
-    fixed_indices = _fixed_flat_indices(fixed_residues, chain_order, chain_lengths)
     for flat_index in fixed_indices:
         token_index = residue_token_indices[flat_index]
         batch["prev_tokens"][0, token_index] = batch["tokens"][0, token_index]
@@ -327,55 +344,87 @@ def _infer(
     probabilities = torch.softmax(
         residue_logits.float() / runtime.logit_temperature, dim=-1
     )
+    return probabilities.cpu(), output_tokens.cpu()
+
+
+def _finalize(runtime, result):
+    probabilities, output_tokens = result
     sequence = runtime.alphabet.decode(output_tokens, remove_special=True)[0]
-    return probabilities.cpu().tolist(), sequence
+    return probabilities.tolist(), sequence
+
+
+def _infer(runtime, surface_builder, pdb_path, fixed_residues):
+    return _finalize(runtime, _execute(runtime, _prepare(
+        runtime, surface_builder, pdb_path, fixed_residues
+    )))
+
+
+def create_handler(settings):
+    builder = None
+    def load(config):
+        nonlocal builder
+        args = argparse.Namespace(**config)
+        runtime = _load_runtime(args)
+        builder = SurfaceBuilder(Path(args.work_dir).resolve(), args.surface_mode)
+        return KernelStages(
+            lambda msg: _prepare(runtime, builder, Path(msg["pdb_path"]).resolve(),
+                                 str(msg.get("fixed_residues") or "")),
+            lambda prepared: _execute(runtime, prepared),
+            lambda result: _finalize(runtime, result),
+            resource=device_resource(runtime.device),
+        ), {"device": runtime.device, "weights_loaded": True}
+    try:
+        handler = mutator_kernel_handler(settings, load, backend="surfdesign",
+                                         torch_device=settings.get("device", "cuda"))
+    except BaseException:
+        if builder is not None:
+            builder.close()
+        raise
+    handler.close = builder.close
+    return handler
 
 
 def main() -> int:
     args = _parse_args()
     protocol_out = sys.stdout
     with contextlib.redirect_stdout(sys.stderr):
-        runtime = _load_runtime(args)
-        surface_builder = SurfaceBuilder(Path(args.work_dir).resolve(), args.surface_mode)
-    _write(
-        protocol_out,
-        {"type": "ready", "pid": os.getpid(), "model_load_count": 1},
-    )
+        handler = create_handler(vars(args))
+    metadata = handler({"operation": "describe"})["metadata"]
+    _write(protocol_out, {"type": "ready", "pid": os.getpid(),
+                          "model_load_count": 1, "metadata": metadata})
 
-    request_count = 0
-    for raw in sys.stdin:
-        message = json.loads(raw)
-        message_type = message.get("type")
-        if message_type == "shutdown":
+    try:
+        request_count = 0
+        for raw in sys.stdin:
+            message = json.loads(raw)
+            message_type = message.get("type")
+            if message_type == "shutdown":
+                _write(protocol_out, {"type": "ok", "message": "bye"})
+                return 0
+            if message_type != "infer":
+                raise ValueError(f"Unknown SurfDesign daemon message type: {message_type!r}")
+
+            request_count += 1
+            _seed_everything(int(message.get("seed", 0)))
             with contextlib.redirect_stdout(sys.stderr):
-                surface_builder.close()
-            _write(protocol_out, {"type": "ok", "message": "bye"})
-            return 0
-        if message_type != "infer":
-            raise ValueError(f"Unknown SurfDesign daemon message type: {message_type!r}")
-
-        request_count += 1
-        _seed_everything(int(message.get("seed", 0)))
-        with contextlib.redirect_stdout(sys.stderr):
-            probabilities, sequence = _infer(
-                runtime,
-                surface_builder,
-                Path(message["pdb_path"]).resolve(),
-                str(message.get("fixed_residues") or ""),
+                probabilities, sequence = protocol_infer(handler, message)
+            _write(
+                protocol_out,
+                {
+                    "type": "result",
+                    "id": message.get("id"),
+                    "pid": os.getpid(),
+                    "model_load_count": 1,
+                    "request_count": request_count,
+                    "runtime": handler.last_runtime,
+                    "probabilities": probabilities,
+                    "sequence": sequence,
+                },
             )
-        _write(
-            protocol_out,
-            {
-                "type": "result",
-                "id": message.get("id"),
-                "pid": os.getpid(),
-                "model_load_count": 1,
-                "request_count": request_count,
-                "probabilities": probabilities,
-                "sequence": sequence,
-            },
-        )
-    return 0
+        return 0
+    finally:
+        with contextlib.redirect_stdout(sys.stderr):
+            handler.close()
 
 
 if __name__ == "__main__":

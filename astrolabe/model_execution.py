@@ -6,17 +6,20 @@ from contextlib import contextmanager, nullcontext
 from contextvars import ContextVar
 from dataclasses import dataclass, fields, is_dataclass, replace
 from enum import Enum
+import logging
 import hashlib
 import json
-import logging
+import importlib.metadata
+import importlib.util
 import os
 import random
 import sys
-import threading
 import traceback
+import threading
 import time
 import uuid
 from pathlib import Path
+import subprocess
 from typing import Any, Callable
 
 
@@ -26,6 +29,11 @@ _REMOTE_CUDA_STATE = None
 _INITIALIZATION_RANDOM_STATE = ContextVar("astrolabe_initialization_random_state", default=None)
 _STARTUP_SCOPE = ContextVar("astrolabe_startup_scope", default=None)
 _CALLER_RANDOM_LOCK = threading.RLock()
+_KERNEL_CONTEXT = ContextVar("astrolabe_kernel_context", default=None)
+_ACTIVE_DEVICE_LEASE = ContextVar("astrolabe_active_device_lease", default=None)
+# Python, NumPy and Torch default generators are process global. A transport
+# worker is not an independent RNG owner.
+_KERNEL_RANDOM_LOCK = threading.RLock()
 
 
 class StartupScope:
@@ -73,15 +81,43 @@ def startup_scope():
         yield scope
     finally:
         _STARTUP_SCOPE.reset(token)
-_KERNEL_CONTEXT = ContextVar("astrolabe_kernel_context", default=None)
-_ACTIVE_DEVICE_LEASE = ContextVar("astrolabe_active_device_lease", default=None)
-# Python, NumPy and Torch default generators are process global. A transport
-# worker is not an independent RNG owner.
-_KERNEL_RANDOM_LOCK = threading.RLock()
 
 
 def _identity(value):
     return value
+
+
+def _process_epoch(pid):
+    """Linux start ticks distinguish a retained model PID from later reuse."""
+    try:
+        return Path(f"/proc/{pid}/stat").read_text().rsplit(")", 1)[1].split()[19]
+    except (OSError, IndexError):
+        return None
+
+
+def _request_evidence(event, owner, metadata, **fields):
+    """Optional host-only association of consumers, owners and native stages."""
+    target = os.environ.get("ASTROLABE_MODEL_REQUEST_TRACE_PATH")
+    if not target:
+        return
+    lifecycle = metadata.get("runtime_lifecycle", {})
+    record = {
+        "schema": "astrolabe.model-request-evidence/v1", "event": event,
+        "time": time.time(), "client_pid": os.getpid(),
+        "client_epoch": _process_epoch(os.getpid()),
+        "model_pid": owner.pid, "model_epoch": _process_epoch(owner.pid),
+        "identity": owner.identity, "model_id": lifecycle.get("model_id"),
+        "attached": bool(getattr(owner, "attached", False)),
+        "broker_socket": os.environ.get("ASTROLABE_RESOURCE_SOCKET"),
+        **fields,
+    }
+    data = (json.dumps(record, sort_keys=True, allow_nan=False) + "\n").encode()
+    descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW, 0o600)
+    try:
+        if os.write(descriptor, data) != len(data):
+            raise OSError("Incomplete model request evidence")
+    finally:
+        os.close(descriptor)
 
 
 def resource_shape(value):
@@ -117,6 +153,143 @@ def resource_shape(value):
     raw = json.dumps(describe(value), sort_keys=True, allow_nan=False,
                      separators=(",", ":")).encode()
     return hashlib.sha256(raw).hexdigest()
+
+
+def _verify_asset_hashes(values):
+    for path, expected in values.items():
+        digest = hashlib.sha256()
+        with open(path, "rb") as handle:
+            for block in iter(lambda: handle.read(1024 * 1024), b""):
+                digest.update(block)
+        if digest.hexdigest() != expected:
+            raise ValueError(f"Resource profile asset changed: {path}")
+
+
+def _profile_device(settings):
+    """Resolve only unambiguous device declarations for production evidence."""
+    def normalize(value):
+        if value is None or str(value).lower() in {"auto", "none"}:
+            return None
+        if isinstance(value, bool):
+            raise ValueError("Resource profile GPU device cannot be boolean")
+        value = str(value).lower().replace("gpu:", "cuda:")
+        if value in {"cuda", "gpu"}:
+            return "cuda:0"
+        if value.isdigit():
+            return f"cuda:{int(value)}"
+        if value.startswith("cuda:") and value[5:].isdigit():
+            return f"cuda:{int(value[5:])}"
+        raise ValueError("Resource profile cannot resolve selected model device")
+
+    declarations = []
+    scopes = [settings] + [settings.get(key) for key in (
+        "runner_config", "model_config", "config", "factory_kwargs", "constructor")]
+    for scope in scopes:
+        if not isinstance(scope, Mapping):
+            continue
+        # Adapters prefer a non-None gpu_device. Refuse conflicting declarations
+        # rather than certifying a different adapter's field precedence.
+        gpu_device, device = scope.get("gpu_device"), scope.get("device")
+        if gpu_device is not None:
+            # A non-None "auto"/"none" still takes precedence in adapters and
+            # selects their default card; it does not expose the device field.
+            selected = normalize(gpu_device) or "cuda:0"
+            other = normalize(device)
+            if other is not None and other != selected:
+                raise ValueError("Resource profile has conflicting configured GPU devices")
+            declarations.append(selected)
+        elif device is not None:
+            declarations.append(normalize(device) or "cuda:0")
+    if len(set(declarations)) > 1:
+        raise ValueError("Resource profile has conflicting configured GPU devices")
+    return declarations[0] if declarations else "cuda:0"
+
+
+def _validate_production_profile(profile, backend, settings, factory, cwd=None):
+    """Reject incomplete certificates before loading any scientific model."""
+    if profile.get("verified") is not True:
+        raise ValueError("Automatic resource profiles require verified evidence")
+    assets = profile.get("asset_sha256")
+    weights = profile.get("weights_sha256")
+    shapes = profile.get("shapes")
+    hardware = profile.get("hardware")
+    environment = profile.get("environment")
+    if (not isinstance(assets, dict) or not assets
+            or not isinstance(weights, dict) or not weights
+            or not isinstance(shapes, list) or not shapes
+            or any(not isinstance(shape, str) or len(shape) != 64 for shape in shapes)
+            or not isinstance(hardware, dict)
+            or not isinstance(environment, dict)):
+        raise ValueError("Verified resource profile needs source, weight, shape and hardware evidence")
+    configured_weights = set()
+
+    def collect(value, key=""):
+        if isinstance(value, Mapping):
+            for name, item in value.items():
+                collect(item, str(name).lower())
+        elif isinstance(value, (list, tuple)):
+            for item in value:
+                collect(item, key)
+        elif isinstance(value, str) and any(
+                token in key for token in ("checkpoint", "ckpt", "weight", "model_path")):
+            path = Path(value).expanduser()
+            if not path.is_absolute():
+                path = Path(cwd or os.getcwd()) / path
+            if path.is_file():
+                configured_weights.add(str(path.resolve()))
+    collect(settings)
+    certified_weights = {str(Path(path).expanduser().resolve()) for path in weights}
+    if not configured_weights or not configured_weights <= certified_weights:
+        raise ValueError("Verified resource profile does not identify the selected weight contents")
+    factory_module = factory.split(":", 1)[0]
+    module_spec = importlib.util.find_spec(factory_module)
+    required_source = {Path(__file__).resolve(),
+                       Path(__file__).with_name("model_daemon.py").resolve(),
+                       Path(__file__).parent / "runtime/admission.py",
+                       Path(__file__).parent / "runtime/session.py"}
+    if module_spec is None or not module_spec.origin:
+        raise ValueError("Cannot resolve selected model factory implementation")
+    required_source.add(Path(module_spec.origin).resolve())
+    if not required_source <= {Path(path).resolve() for path in assets}:
+        raise ValueError("Resource profile lacks the actual selected source evidence")
+    _verify_asset_hashes(assets)
+    _verify_asset_hashes(weights)
+    if environment.get("python_abi") != sys.implementation.cache_tag:
+        raise ValueError("Resource profile Python runtime changed")
+    distributions = environment.get("distributions", {})
+    framework = "jax" if backend in {"alphafold2", "alphafold3"} else "torch"
+    if not isinstance(distributions, dict) or framework not in distributions:
+        raise ValueError("Resource profile lacks the selected framework runtime")
+    for name, expected in distributions.items():
+        if importlib.metadata.version(name) != expected:
+            raise ValueError(f"Resource profile runtime changed: {name}")
+    visible = os.environ.get("CUDA_VISIBLE_DEVICES")
+    if visible is not None and not visible.strip():
+        raise ValueError("Resource profile has no visible GPU allocation")
+    rows = subprocess.check_output(
+        ["nvidia-smi", "--query-gpu=index,uuid,driver_version",
+         "--format=csv,noheader,nounits"], text=True, timeout=5,
+    )
+    devices = [tuple(part.strip() for part in row.split(",")) for row in rows.splitlines()]
+    matched = [row for row in devices if row[1] == hardware.get("gpu_uuid")
+               and row[2] == hardware.get("driver_version")]
+    if len(matched) != 1:
+        raise ValueError("Resource profile hardware or driver changed")
+    if visible is not None:
+        tokens = [token.strip() for token in visible.split(",")]
+        if not any(token == matched[0][0] or matched[0][1].startswith(token)
+                   for token in tokens if token):
+            raise ValueError("Resource profile GPU is outside this allocation")
+    # A certificate for another visible GPU must not authorize this model.
+    logical = _profile_device(settings)
+    ordinal = int(logical[5:])
+    selected = ([token.strip() for token in visible.split(",")]
+                if visible is not None else [row[0] for row in devices])
+    if ordinal >= len(selected):
+        raise ValueError("Resource profile model device is outside this allocation")
+    token = selected[ordinal]
+    if token != matched[0][0] and not matched[0][1].startswith(token):
+        raise ValueError("Resource profile does not match the model's selected GPU")
 
 
 @dataclass(frozen=True)
@@ -256,6 +429,9 @@ def preserve_remote_cuda_state():
 
 
 def register_model_owner(owner) -> None:
+    from astrolabe.runtime.model_pool import pool_owns_registration
+    if pool_owns_registration(owner):
+        return
     scope = _STARTUP_SCOPE.get()
     if scope is not None and not getattr(owner, "attached", False):
         scope.add(owner)
@@ -306,8 +482,6 @@ def execution_mode(value=None) -> ExecutionMode:
 
 
 def execution_directory(cwd=None) -> str:
-    from pathlib import Path
-
     return str(Path(cwd).expanduser().resolve() if cwd else Path(__file__).resolve().parents[1])
 
 
@@ -466,7 +640,10 @@ def kernel_handler(settings: dict, loader, *, torch_device=None, lifecycle=None)
         declaration["concurrency_certified"] = certified
     loader_settings = {key: value for key, value in settings.items()
                        if key != "_runtime_profile"}
+    from astrolabe.runtime.evaluation import require_private_evaluator_owner
+    require_private_evaluator_owner(declaration.get("request_local_rng", False))
     client = _resource_client()
+    require_private_evaluator_owner(declaration.get("request_local_rng", False), broker=client)
     model_id = f"{identity}:{os.getpid()}:{uuid.uuid4().hex}"
     initial_state = settings.get("_initial_random_state") or capture_random_state()
     cpu_only = torch_device == "cpu" or declaration.get("resource") == "cpu"
@@ -608,12 +785,13 @@ def kernel_handler(settings: dict, loader, *, torch_device=None, lifecycle=None)
     if isinstance(infer, EvaluatorStages) and type(infer.request_local_rng) is not bool:
         raise ValueError("request_local_rng must be boolean")
     request_local_rng = isinstance(infer, EvaluatorStages) and infer.request_local_rng
+    require_private_evaluator_owner(request_local_rng, broker=client)
     controller = None
     if request_local_rng:
         from astrolabe.runtime.evaluation import EvaluatorInferController, adaptive_settings
         adaptive = adaptive_settings(infer.adaptive)
-        if backend != "alphafold3" or torch_device is not None or not adaptive.enabled:
-            raise ValueError("Request-local RNG requires the explicitly enabled immutable AF3 owner")
+        if backend != "alphafold3" or torch_device is not None:
+            raise ValueError("Request-local RNG requires an immutable AF3 owner")
         from astrolabe.evaluators.inference_service import mark
         controller = EvaluatorInferController(adaptive, device=device_hint or "cuda:0", emit=mark)
     pipeline_slots = 1
@@ -698,7 +876,10 @@ def kernel_handler(settings: dict, loader, *, torch_device=None, lifecycle=None)
                        evaluator_inference=strict and name == "infer"):
                 admitted = time.perf_counter()
                 wall_admitted = time.time() if evidence else None
-                invoked = True
+                with status_lock:
+                    if request_local_rng and resource == "gpu" and status["state"] == "quarantined":
+                        raise RuntimeError("Kernel is quarantined; refusing a new device stage")
+                    invoked = True
                 if device_state is not None and resource == "gpu":
                     device_state["uncertain"] = True
                 result = function(value)
@@ -1006,13 +1187,73 @@ def kernel_handler(settings: dict, loader, *, torch_device=None, lifecycle=None)
     return handle
 
 
+def _resident_model_endpoint(spec, identity, socket_path):
+    """Resolve an explicit registry entry; never authorize a replacement load."""
+    registry_path = os.environ.get("ASTROLABE_RESIDENT_MODEL_REGISTRY")
+    if registry_path is None:
+        return None
+    if not registry_path:
+        raise ValueError("Resident model registry path must be nonempty")
+    with Path(registry_path).expanduser().open(encoding="utf-8") as handle:
+        registry = json.load(handle)
+    if (not isinstance(registry, dict)
+            or registry.get("schema") != "astrolabe.resident-model-registry/v1"):
+        raise ValueError("Invalid resident model registry schema")
+    broker = os.environ.get("ASTROLABE_RESOURCE_SOCKET")
+    broker = str(Path(broker).expanduser().resolve()) if broker else None
+    if "broker_socket" not in registry or registry["broker_socket"] != broker:
+        raise ValueError("Resident model registry broker_socket does not match current broker")
+    models = registry.get("models")
+    if not isinstance(models, dict) or identity not in models:
+        raise ValueError(f"Resident model registry has no exact identity: {identity}")
+    entry = models[identity]
+    if not isinstance(entry, dict) or entry.get("backend") != spec.backend:
+        raise ValueError("Resident model registry backend does not match selected model")
+    endpoint = entry.get("socket")
+    if not isinstance(endpoint, str) or not endpoint or not Path(endpoint).is_absolute():
+        raise ValueError("Resident model registry socket must be an absolute private socket path")
+    endpoint = Path(endpoint).resolve()
+    if socket_path is not None and Path(socket_path).expanduser().resolve() != endpoint:
+        raise ValueError("Explicit socket_path conflicts with resident model registry socket")
+    return endpoint, broker
+
+
+def _shared_model_metadata(metadata, owner, spec, identity, broker):
+    """Bind describe to this broker's existing ledger without registering anew."""
+    lifecycle = metadata.get("runtime_lifecycle", {})
+    if (not isinstance(lifecycle, Mapping)
+            or lifecycle.get("identity") != identity
+            or lifecycle.get("backend") != spec.backend
+            or lifecycle.get("pid") != owner.pid
+            or not lifecycle.get("model_id")):
+        raise ValueError("Shared model describe does not match the attached owner identity/backend/PID")
+    lifecycle = dict(lifecycle)
+    resources = {"broker_socket": broker}
+    metadata = dict(metadata)
+    if broker is not None:
+        from astrolabe.runtime.admission import ResourceClient
+
+        snapshot = ResourceClient(broker).snapshot()
+        records = [record for record in snapshot["models"]
+                   if record["model_id"] == lifecycle["model_id"]]
+        if len(records) != 1 or records[0]["pid"] != owner.pid:
+            raise ValueError("Shared model owner is not registered with the current broker")
+        record = records[0]
+        device = record["device"]
+        if device is not None and device not in snapshot["devices"]:
+            raise ValueError("Shared model ledger device is not a physical device of this broker")
+        resources.update(record)
+        # The consumer's CUDA visibility may differ from the GPU owner's.
+        # Preserve physical ledger identity instead of relabeling its cuda:0.
+        metadata["device"] = lifecycle["device"] = device if device is not None else "cpu"
+    lifecycle["resources"] = resources
+    metadata["runtime_lifecycle"] = lifecycle
+    return metadata
+
+
 @contextmanager
 def independent_initialization(seed: int):
-    """Give an explicitly seeded model load a private random stream.
-
-    This applies only to NativeModelClient construction. Inference retains its
-    existing caller RNG transfer protocol.
-    """
+    """Give an explicitly seeded model load a private random stream."""
     import numpy as np
 
     algorithm, keys, position, has_gauss, cached = np.random.RandomState(seed).get_state()
@@ -1030,6 +1271,7 @@ def independent_initialization(seed: int):
         yield
     finally:
         _INITIALIZATION_RANDOM_STATE.reset(token)
+
 
 @contextmanager
 def model_construction_scope():
@@ -1059,58 +1301,184 @@ def model_construction_scope():
     finally:
         _RUN_OWNERS.reset(token)
 
+
 class NativeModelClient:
     """One typed backend kernel behind a private resident model owner."""
     def __init__(self, backend, factory, settings, *, python_bin=None, cwd=None,
                  env=None, request_timeout=None,
                  max_frame_bytes=DEFAULT_MODEL_FRAME_BYTES, socket_path=None,
                  startup_timeout=300, shutdown_timeout=30, max_pending=4,
-                 provider=None):
-        from astrolabe.model_daemon import DaemonSpec, OwnedModelDaemon
-        settings = dict(settings)
+                 provider=None, resource_profile=None, direct_payload=False):
         independent_state = _INITIALIZATION_RANDOM_STATE.get()
-        if independent_state is None:
-            _CALLER_RANDOM_LOCK.acquire()
-        try:
+        guard = (_CALLER_RANDOM_LOCK if independent_state is None and not direct_payload
+                 else nullcontext())
+        with guard:
+            self._initialize(
+                backend, factory, settings, python_bin=python_bin, cwd=cwd, env=env,
+                request_timeout=request_timeout, max_frame_bytes=max_frame_bytes,
+                socket_path=socket_path, startup_timeout=startup_timeout,
+                shutdown_timeout=shutdown_timeout, max_pending=max_pending,
+                provider=provider, resource_profile=resource_profile,
+                direct_payload=direct_payload, independent_state=independent_state,
+            )
+
+    def _initialize(self, backend, factory, settings, *, python_bin, cwd, env,
+                    request_timeout, max_frame_bytes, socket_path, startup_timeout,
+                    shutdown_timeout, max_pending, provider, resource_profile,
+                    direct_payload, independent_state):
+        from astrolabe.model_daemon import (
+            DaemonSpec, LocalModelOwner, OwnedModelDaemon,
+            model_identity, _prepare_provider_spec,
+        )
+        self._request_lock = threading.RLock()
+        self.last_runtime_receipt = None
+        self.direct_payload = direct_payload
+        settings = dict(settings)
+        if not direct_payload:
             settings["_initial_random_state"] = (
                 capture_random_state() if independent_state is None else independent_state
             )
-            spec = DaemonSpec(backend=backend, factory=factory, settings=settings,
-                              python_bin=python_bin or sys.executable, cwd=cwd, env=env,
-                              max_frame_bytes=max_frame_bytes, provider=provider)
-            self.owner = OwnedModelDaemon(spec, request_timeout=request_timeout,
-                                          socket_path=socket_path,
-                                          startup_timeout=startup_timeout,
-                                          shutdown_timeout=shutdown_timeout,
-                                          max_pending=max_pending)
+        spec = DaemonSpec(backend=backend, factory=factory, settings=settings,
+                          python_bin=python_bin or sys.executable, cwd=cwd, env=env,
+                          max_frame_bytes=max_frame_bytes, provider=provider)
+        spec = _prepare_provider_spec(spec)
+        identity = model_identity(spec, max_pending=max_pending)
+        shared_endpoint = _resident_model_endpoint(spec, identity, socket_path)
+        if shared_endpoint is not None:
+            socket_path, shared_broker = shared_endpoint
+        profiles_path = os.environ.get("ASTROLABE_RESOURCE_PROFILES")
+        automatic_profile = resource_profile is None and bool(profiles_path)
+        if resource_profile is None and profiles_path:
+            with open(profiles_path) as handle:
+                resource_profile = json.load(handle).get("profiles", {}).get(identity)
+            if resource_profile and resource_profile.get("verified") is not True:
+                raise ValueError("Automatic resource profiles require verified evidence")
+        if resource_profile is not None:
+            resource_profile = dict(resource_profile)
+            if resource_profile.get("identity", identity) != identity:
+                raise ValueError("Resource profile does not match the selected model")
+            if automatic_profile or resource_profile.get("qualification") is not True:
+                if (Path(spec.python_bin).resolve() != Path(sys.executable).resolve()
+                        or spec.provider is not None
+                        or any(str(value) != os.environ.get(str(key))
+                               for key, value in (spec.env or {}).items())):
+                    raise ValueError(
+                        "Production resource profiles require attestation in the "
+                        "actual child runtime; cross-environment qualification "
+                        "must use an explicit bounded trial"
+                    )
+                _validate_production_profile(
+                    resource_profile, backend, spec.settings, spec.factory, spec.cwd)
+            else:
+                _verify_asset_hashes(resource_profile.get("asset_sha256", {}))
+            resource_profile["identity"] = identity
+            spec.settings["_runtime_profile"] = resource_profile
+        self._resource_profile = resource_profile
+        owner_type = (LocalModelOwner if not direct_payload and shared_endpoint is None
+                      and os.environ.get("ASTROLABE_MODEL_OWNER") == "trajectory"
+                      else OwnedModelDaemon)
+        owner_kwargs = dict(request_timeout=request_timeout,
+                            socket_path=socket_path,
+                            startup_timeout=startup_timeout,
+                            shutdown_timeout=shutdown_timeout,
+                            max_pending=max_pending)
+        from astrolabe.runtime.model_pool import get_local_model_pool
+        # Direct drivers own their job/seed loops in the isolated daemon; they
+        # are not typed infer kernels eligible for trajectory-local pooling.
+        pool = get_local_model_pool() if shared_endpoint is None and not direct_payload else None
+        self.owner = None
+        try:
+            self.owner = (pool.acquire(spec, owner_type, owner_kwargs, identity)
+                          if pool is not None and socket_path is None else None)
+            if self.owner is None:
+                self.owner = owner_type(spec, **owner_kwargs)
             description = self.owner.request({"operation": "describe"})
             self.metadata = description["metadata"]
-            if independent_state is None:
-                restore_random_state(description["random_state"])
-            else:
-                _INITIALIZATION_RANDOM_STATE.set(description["random_state"])
+            if shared_endpoint is not None:
+                self.metadata = _shared_model_metadata(
+                    self.metadata, self.owner, spec, identity, shared_broker)
+            if not direct_payload:
+                if independent_state is None:
+                    restore_random_state(description["random_state"])
+                else:
+                    _INITIALIZATION_RANDOM_STATE.set(description["random_state"])
+            _request_evidence("client_ready", self.owner, self.metadata)
         except BaseException as error:
-            if hasattr(self, "owner"):
+            if self.owner is not None:
+                quarantine = getattr(self.owner, "quarantine", None)
+                if callable(quarantine):
+                    quarantine()
                 try:
                     self.owner.shutdown()
                 except BaseException as cleanup_error:
                     error.add_note(f"native owner cleanup failed: {cleanup_error!r}")
             raise
-        finally:
-            if independent_state is None:
-                _CALLER_RANDOM_LOCK.release()
 
     def request(self, payload):
-        with _CALLER_RANDOM_LOCK:
-            response = self.owner.request({"operation": "infer", "payload": host_result(payload),
-                                           "random_state": capture_random_state()})
-            restore_random_state(response["random_state"])
-        if not response["ok"]:
-            raise RuntimeError(f"{response['error_type']}: {response['error']}")
-        return response["result"]
+        guard = nullcontext() if getattr(self, "direct_payload", False) else _CALLER_RANDOM_LOCK
+        with guard:
+            return self._request(payload)
+
+    def _request(self, payload):
+        with self._request_lock:
+            request_id = uuid.uuid4().hex
+            payload = host_result(payload)
+            try:
+                _request_evidence("request_started", self.owner, self.metadata,
+                                  request_id=request_id)
+                if getattr(self, "direct_payload", False):
+                    # The native driver dispatches its own per-sample stages.
+                    # Do not wrap the call or replace the owner's RNG stream.
+                    result = self.owner.request(payload)
+                    _request_evidence("request_finished", self.owner, self.metadata,
+                                      request_id=request_id, ok=True, runtime=None)
+                    return result
+                response = self.owner.request({
+                    "operation": "infer", "payload": payload,
+                    "random_state": capture_random_state(),
+                    "runtime_request_id": request_id,
+                    "concurrency_certified": (
+                        os.environ.get("ASTROLABE_REQUEST_CONCURRENCY") != "0"),
+                })
+                runtime = response.get("runtime")
+                if runtime is not None and runtime["request_id"] != request_id:
+                    raise RuntimeError("Kernel result belongs to a different runtime request")
+                if callable(getattr(self.owner, "quarantine", None)):
+                    expected_model = self.metadata["runtime_lifecycle"]["model_id"]
+                    if runtime is None or runtime.get("model_id") != expected_model:
+                        raise RuntimeError("Pooled kernel result has no matching model identity")
+                self.last_runtime_receipt = runtime
+                restore_random_state(response["random_state"])
+                _request_evidence("request_finished", self.owner, self.metadata,
+                                  request_id=request_id, ok=response["ok"],
+                                  runtime=runtime)
+                if not response["ok"]:
+                    raise RuntimeError(f"{response['error_type']}: {response['error']}")
+                return response["result"]
+            except BaseException as error:
+                try:
+                    _request_evidence(
+                        "request_error", self.owner, self.metadata, request_id=request_id,
+                        error_type=type(error).__name__,
+                        outcome_unknown=bool(getattr(error, "outcome_unknown", False)),
+                    )
+                except Exception:
+                    logging.getLogger(__name__).exception("Failed to persist model request error")
+                quarantine = getattr(self.owner, "quarantine", None)
+                if callable(quarantine):
+                    quarantine()
+                raise
 
     def shutdown(self):
         self.owner.shutdown()
+        # An allocator can retain VRAM after del/offload. Only acknowledge
+        # resident release after the private worker has actually exited.
+        lifecycle = self.metadata.get("runtime_lifecycle", {})
+        client = _resource_client()
+        if (client is not None and lifecycle.get("model_id")
+                and not getattr(self.owner, "attached", False)):
+            if not getattr(self.owner, "release_requires_process_exit", False):
+                client.unregister_model(lifecycle["model_id"])
 
     @property
     def pid(self):

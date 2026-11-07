@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+from astrolabe.model_execution import KernelStages
+from astrolabe.mutators.runtime_stages import (guarded_device, mutator_kernel_handler, device_resource, protocol_infer, torch_load_device)
+
 import argparse
 import hashlib
 import importlib
@@ -301,6 +304,7 @@ def apply_vendor_patch(
 
 
 class NAMPNNHandler:
+    @guarded_device("na_mpnn", phase="load")
     def __init__(
         self,
         settings: Mapping[str, Any],
@@ -317,22 +321,55 @@ class NAMPNNHandler:
             {"job_dir": self._initial_output.name},
         )
         self.resident = self.upstream.load_model(load_args)
+        self.device = "unknown"
+        if isinstance(self.resident, Mapping) and self.resident.get("model") is not None:
+            parameter = next(iter(self.resident["model"].parameters()), None)
+            if parameter is not None:
+                self.device = str(parameter.device)
 
     def _load_upstream(self) -> Any:
         verify_vendor(self.settings["repo_path"])
         return importlib.import_module("inference.run")
 
-    def __call__(self, payload: Mapping[str, Any]) -> dict[str, str]:
-        args = build_upstream_args(self.settings, payload)
+    def prepare_design(self, payload):
+        return build_upstream_args(self.settings, payload)
+
+    @guarded_device("na_mpnn")
+    def execute_design(self, args):
+        # The vendor run_design includes device featurization and seeded native
+        # decoding. Its initializer RNG draws are intentional and unchanged.
         self.upstream.run_design(args, self.resident)
-        return {
-            "job_dir": args.out_folder,
-            "structure_path": args.pdb_path,
-        }
+        return args
+
+    @staticmethod
+    def finalize_design(args):
+        return {"job_dir": args.out_folder, "structure_path": args.pdb_path}
+
+    def __call__(self, payload: Mapping[str, Any]) -> dict[str, str]:
+        return self.finalize_design(self.execute_design(self.prepare_design(payload)))
 
 
-def create_handler(settings: Mapping[str, Any]) -> NAMPNNHandler:
-    return NAMPNNHandler(settings)
+def _load_handler(settings):
+    runner = NAMPNNHandler(settings)
+    return KernelStages(runner.prepare_design, runner.execute_design, runner.finalize_design,
+                        resource=device_resource(runner.device)), {
+        "backend": "na_mpnn", "device": runner.device,
+        "checkpoint": str(settings.get("checkpoint", "")),
+    }
+
+
+def create_handler(settings: Mapping[str, Any]):
+    handler = mutator_kernel_handler(dict(settings), _load_handler,
+                                     backend="na_mpnn", torch_device=torch_load_device(cpu_fallback=True))
+    def infer(payload):
+        if payload.get("operation") in {"describe", "infer"}:
+            return handler(payload)
+        result = protocol_infer(handler, payload)
+        if payload.get("_runtime_report"):
+            return {**result, "runtime": handler.last_runtime,
+                    "metadata": handler({"operation": "describe"})["metadata"]}
+        return result
+    return infer
 
 
 def _main() -> None:

@@ -25,6 +25,14 @@ class SoftwareSpec:
 
 
 SOFTWARE: dict[str, SoftwareSpec] = {
+    "rfd4": SoftwareSpec(
+        "rfd4", "RFD4 native sequence/structure mutator", "manual",
+        "Supply the accepted RFD4 source, model.safetensors/config.json and isolated interpreter; no geometry guide",
+    ),
+    "bioemu2": SoftwareSpec(
+        "bioemu2", "BioEmu2 per-request subprocess evaluator", "manual",
+        "Supply an independently installed BioEmu2 interpreter and populated bioemu2-preview cache; not resident staged inference",
+    ),
     **{
         name: SoftwareSpec(
             name,

@@ -328,10 +328,15 @@ def _suppress_external_logging() -> None:
     os.environ["GLOG_minloglevel"] = "3"
 
     # Optional: make ProDy quiet if available (used by some docking utilities).
+    from astrolabe.runtime.model_pool import (
+        LifecycleDependencyError, import_lifecycle_dependency,
+    )
     try:
-        import prody  # type: ignore
+        prody = import_lifecycle_dependency("prody")
 
         prody.utilities.logger.PackageLogger.verbosity = None
+    except LifecycleDependencyError:
+        raise
     except Exception:
         pass
 
@@ -1645,7 +1650,10 @@ def _apply_post_eval_hooks(
     *,
     runtime_config: Dict,
     loss_computer: LossEngine | None = None,
+    evaluator=None,
 ):
+    if getattr(evaluator, "preserves_generated_coordinates", False):
+        return evaluation_result
     hook_config = _post_eval_hook_config(args, loss_computer)
     if hook_config is None:
         return evaluation_result
@@ -1947,6 +1955,8 @@ class LazyEvaluatorMap(Mapping):
 def load_pipeline_components(
     args,
     prepared: PreparedPipelineState,
+    *,
+    evaluator_factory=None,
 ) -> Tuple[Any, Any, Any, Dict[str, "Input"]]:
     """Construct the remaining pipeline components in the legacy order."""
 
@@ -1965,7 +1975,7 @@ def load_pipeline_components(
         mutators = build_mutators(args.mutator, args.raw_model_results_dir)
         global_config.init_const("mutators", mutators)
     loss_computer, stage_manager = _initialize_pipeline_math(args, prepared)
-    evaluators = LazyEvaluatorMap(
+    evaluators = (evaluator_factory or LazyEvaluatorMap)(
         args.evaluator,
         args.raw_model_results_dir,
         stage_manager.all_oligos,
@@ -2127,6 +2137,7 @@ def _finalize_evaluation_result_item(
         result_item.evaluation_result,
         runtime_config=result_item.work_item.runtime_config,
         loss_computer=loss_computer,
+        evaluator=result_item.work_item.evaluator,
     )
     evaluation_result = _finalize_evaluation_result(
         args,
@@ -2340,7 +2351,8 @@ def load_or_evaluate_initial(
     is_debug = os.getenv("DEBUG") == "1"
 
     # Load from cache if in debug mode and file exists
-    if is_debug and os.path.exists(eval_file):
+    generated_coordinates = getattr(evaluator, "preserves_generated_coordinates", False)
+    if is_debug and not generated_coordinates and os.path.exists(eval_file):
         logging.info(f"Loading cached evaluation results from {eval_file}")
         log_event(
             logger=logger,
@@ -2376,10 +2388,11 @@ def load_or_evaluate_initial(
             evaluation_result,
             runtime_config=runtime_config,
             loss_computer=loss_computer,
+            evaluator=evaluator,
         )
 
         # Cache results if in debug mode
-        if "DEBUG" in os.environ:
+        if "DEBUG" in os.environ and not generated_coordinates:
             with open(eval_file, "wb") as f:
                 pickle.dump(evaluation_result, f)
             logging.info(f"Cached evaluation results to {eval_file}")
@@ -2480,6 +2493,12 @@ def execute_mutation_step(
     mutators, evaluation_result, runtime_config: Dict, step: int
 ) -> None:
     """Execute mutation for all mutators."""
+    # Never carry a prior proposal forward, including sequence-identical proposals.
+    runtime_config["generated_structure_records"] = {}
+    if len(mutators) > 1 and any(
+        getattr(mutator, "requires_exclusive_mutation", False) for mutator in mutators
+    ):
+        raise ValueError("The selected joint mutator cannot run in a mutation stack")
     secondary_structure_by_proto = extract_secondary_structure_by_proto(evaluation_result)
     runtime_config["mutator_selector_score_contexts"] = []
     pre_update = bool(runtime_config.get("mutator_stack_pre_update", False))
@@ -2510,9 +2529,24 @@ def execute_mutation_step(
             step=step,
             detail=getattr(mutator, "name", mutator.__class__.__name__),
         ) as span:
-            native_call("mutation", mutator.mutate,
+            mutation_result = native_call("mutation", mutator.mutate,
                 global_config.mutable_protomers, evaluation_result, runtime_config
             )
+            from astrolabe.design.generated_structure import publish_generated_structure
+
+            attempt = f"{step}:{runtime_config['current_mutator_alias']}"
+            generated_index = publish_generated_structure(
+                mutation_result, pathlib.Path(global_config.out_dir) / "generated_structures",
+                attempt=attempt,
+            )
+            if generated_index is not None:
+                runtime_config["generated_structure_records"][mutation_result.assembly] = {
+                    "step": int(step),
+                    "attempt": attempt,
+                    "index_path": str(generated_index.resolve()),
+                    "request_digest": mutation_result.generated.request_digest,
+                    "structure_digest": mutation_result.generated.structure_digest,
+                }
             after_sequences = {
                 name: protomer.mutated_sequence
                 for name, protomer in global_config.protomers.items()
@@ -3113,6 +3147,19 @@ def _run_pipeline(cfg) -> None:
             else getattr(cfg, "recovery", None)
         )
         if recovery is not None:
+            evaluator_conf = _config_get(cfg, "evaluator", None)
+            terms = _config_get(evaluator_conf, "evaluator_terms", {}) or {}
+            if any(str(_config_get(term, "_type", "")).strip().lower() == "generated_structure"
+                   for term in terms.values()):
+                raise ValueError(
+                    "generated_structure evaluator does not support recovery; "
+                    "use the ordinary run path with explicit initial_structures"
+                )
+            mutator_conf = _config_get(cfg, "mutator", None)
+            mutator_terms = _config_get(mutator_conf, "mutator_terms", {}) or {}
+            if any(str(_config_get(term, "_type", "")).strip().lower() == "rfd4"
+                   for term in mutator_terms.values()):
+                raise ValueError("RFD4 CLI recovery is unsupported")
             from astrolabe.design.portable_native_builder import build_portable_native_recipe
             from astrolabe.design.portable_native_math import build_portable_native_math
             import sys
@@ -3238,10 +3285,24 @@ def run_repeats(
     *,
     on_stop_requested: Callable[[int, int], None] | None = None,
 ) -> None:
-    """Run `_run_pipeline` for configured repeats with unified seed/reset semantics."""
+    """Validate first, then own resources around the scientific repeat lifecycle."""
     from astrolabe.startup_validation import validate_startup_config
+    from astrolabe.runtime.session import resource_session
 
     validate_startup_config(base_cfg, require_inputs=True)
+    execution = base_cfg.get("execution") if hasattr(base_cfg, "get") else None
+    if OmegaConf.is_config(execution):
+        execution = OmegaConf.to_container(execution, resolve=True)
+    with resource_session(execution):
+        _run_repeats_owned(base_cfg, on_stop_requested=on_stop_requested)
+
+
+def _run_repeats_owned(
+    base_cfg: Any,
+    *,
+    on_stop_requested: Callable[[int, int], None] | None = None,
+) -> None:
+    """Preserve configured repeats, seeds and graceful-stop boundaries."""
     search = base_cfg.get("search") if hasattr(base_cfg, "get") else None
     if search is not None:
         resume = search.get("resume", False)

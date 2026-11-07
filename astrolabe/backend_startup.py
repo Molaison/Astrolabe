@@ -107,7 +107,17 @@ def _validate_common_options(family, kind, cfg, root, *, allow_unresolved=False)
     numeric('execution_max_frame_bytes', 1)
 
     if family == 'evaluator':
-        if kind == 'alphafold2':
+        if kind == 'bioemu2':
+            for field in ('num_samples', 'batch_size', 'propagation_steps'):
+                numeric(field, 1)
+            numeric('lag_time_ns', integer=False, positive=True)
+            seed()
+            enum('mode', {'equilibrium', 'structure', 'propagation'})
+            enum('sampler', {'edm', 'edm_gd', 'edm_fk', 'edm_fkc'})
+            enum('matmul_precision', {'highest', 'high', 'medium'})
+            for field in ('device', 'precision'):
+                text(field)
+        elif kind == 'alphafold2':
             numeric('model_id', 1, high=5)
             enum('suffix', {'ptm', 'multimer', 'multimer_v2', 'multimer_v3'})
             numeric('recycles')
@@ -209,6 +219,10 @@ def _validate_common_options(family, kind, cfg, root, *, allow_unresolved=False)
                     boolean(field)
     elif family == 'mutator':
         normalized = str(kind).lower()
+        if normalized == 'rfd4':
+            numeric('max_fixed_atom_rmsd', integer=False)
+            numeric('request_timeout', integer=False, positive=True)
+            seed(nullable=False)
         if mpnn:
             numeric('number_of_batches', 1)
             numeric('temperature', integer=False, positive=True)
@@ -454,7 +468,31 @@ def validate_backend_settings(family, kind, options, *, path, check_paths,
                 fail(field, 'must map string names to string values')
 
     if family == 'evaluator':
-        if kind == 'alphafold3':
+        if kind == 'bioemu2':
+            asset('python_bin', required=True, executable=True)
+            asset('cache_dir', required=True, kind='dir')
+            choice('mode', {'equilibrium', 'structure', 'propagation'}, 'equilibrium')
+            if value('mode') == 'propagation':
+                asset('initial_cif', required=True)
+            elif value('initial_cif') not in _MISSING and not (
+                allow_unresolved and isinstance(value('mode'), str) and '${' in value('mode')
+            ):
+                fail('initial_cif', 'is supported only in propagation mode')
+            for field in ('execution_mode', 'execution'):
+                if value(field) not in _MISSING and value(field) != 'subprocess':
+                    fail(field, 'BioEmu2 loads in a subprocess for every request, not a staged daemon')
+        elif kind == 'generated_structure':
+            structures = value('initial_structures')
+            if not (allow_unresolved and isinstance(structures, str) and '${' in structures):
+                if not isinstance(structures, Mapping) or not structures:
+                    fail('initial_structures', 'must map assembly names to initial generated coordinate files')
+                else:
+                    for name, filename in structures.items():
+                        if not isinstance(filename, (str, os.PathLike)) or not str(filename).strip():
+                            fail('initial_structures', f'invalid path for {name!r}')
+                        elif check_paths and not Path(filename).expanduser().is_file():
+                            fail('initial_structures', f'file does not exist: {filename}')
+        elif kind == 'alphafold3':
             if not value('service_socket') and value('model_dir') not in _MISSING:
                 asset('model_dir', kind='dir', base=child_base)
             if value('flash_attention_implementation') not in _MISSING:
@@ -612,7 +650,35 @@ def validate_backend_settings(family, kind, options, *, path, check_paths,
     elif family == 'mutator':
         # MutatorRegistry.get lowercases names; honor that native behavior.
         normalized_kind = str(kind).strip().lower()
-        if normalized_kind in {name.lower() for name in _MPNN}:
+        if normalized_kind == 'rfd4':
+            asset('python_bin', required=True, executable=True)
+            source = asset('source_dir', required=True, kind='dir')
+            model = asset('model_dir', required=True, kind='dir')
+            cache = value('cache_dir')
+            if not (allow_unresolved and isinstance(cache, str) and '${' in cache):
+                if not isinstance(cache, (str, os.PathLike)) or not str(cache).strip():
+                    fail('cache_dir', 'is required as a directory path')
+                elif check_paths and Path(cache).exists() and not Path(cache).is_dir():
+                    fail('cache_dir', 'existing path is not a directory')
+            if check_paths:
+                for directory, field, files in (
+                    (source, 'source_dir', ('src/rfproteina/generate.py', 'configs/inference.yaml')),
+                    (model, 'model_dir', ('model.safetensors', 'config.json')),
+                ):
+                    if directory is not None and directory.is_dir():
+                        for filename in files:
+                            if not (directory / filename).is_file():
+                                fail(field, f'missing {filename}')
+            number('max_fixed_atom_rmsd', 0.5, 0)
+            number('request_timeout', 1800, 0.000000001)
+            generation = cfg.get('generation')
+            if not (allow_unresolved and '${' in str(generation)):
+                from astrolabe.mutators.rfd4_backend import validate_generation
+                try:
+                    validate_generation(generation)
+                except (TypeError, ValueError) as error:
+                    fail('generation', str(error))
+        elif normalized_kind in {name.lower() for name in _MPNN}:
             if allow_unresolved and isinstance(value('model_type'), str) and '${' in value('model_type'):
                 return errors  # The selected checkpoint cannot yet be determined.
             subtype = str(cfg.get('model_type') or 'protein_mpnn').lower()

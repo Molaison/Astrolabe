@@ -1,62 +1,9 @@
-"""AF3 assembly using the existing GH stage chain and one immutable model owner."""
-from concurrent.futures import Future,ThreadPoolExecutor
+"""One immutable AF3 owner and the native prepare / model / finalize boundary."""
+from concurrent.futures import Future, ThreadPoolExecutor
 from contextlib import ExitStack
-from astrolabe.inference_pipeline import Pending,PipelineExecutor,Stage
-from astrolabe.evaluators.inference_service import mark,serve_staged
 
-
-def stage_factory(runner, config):
-    from astrolabe.evaluators.wrappers.alphafold3 import service_model_settings
-    settings = service_model_settings(config)
-    global_config = runner._model_config.global_config
-    cyclic_ids = tuple(int(x) for x in getattr(global_config,'cyclic_asym_ids',()))
-    cyclic_patches = tuple(tuple(int(y) for y in x) for x in getattr(global_config,'cyclic_relative_patches',()))
-
-    def stages(request):
-        if request.get('model') != 'alphafold3':
-            raise ValueError('Wrong model for this AlphaFold3 service')
-        if request['settings'] != settings:
-            raise ValueError('Shared AlphaFold3 model settings differ from owner')
-        if tuple(request['cyclic_asym_ids']) != cyclic_ids or tuple(tuple(x) for x in request['cyclic_relative_patches']) != cyclic_patches:
-            raise ValueError('Staged AF3 requires the immutable owner cyclic configuration')
-        native = runner.inference_stages(request['rng_key'])
-        result = [Stage('af3_request','cpu',lambda item: dict(item,value=request['features']))]
-        for native_stage in native:
-            def run(item, stage=native_stage):
-                fields = dict(request_id=item['request_id'],identity=item['payload'].get('identity'))
-                is_model = stage.name == 'af3_model'
-                if is_model:mark('gpu_start',**fields)
-                try:
-                    output = stage.run(item['value'])
-                except BaseException:
-                    if is_model:mark('gpu_end',ok=False,**fields)
-                    raise
-                if isinstance(output,Pending):
-                    item['value'] = output.value
-                    def complete(pending=output):
-                        ok = False
-                        try:
-                            if isinstance(pending.completion,Future):pending.completion.result()
-                            else:pending.completion()
-                            ok = True
-                        finally:
-                            if is_model:mark('gpu_end',ok=ok,**fields)
-                    return Pending(item,complete,output.keepalive)
-                item['value'] = output
-                if is_model:mark('gpu_end',ok=True,**fields)
-                return item
-            result.append(Stage(native_stage.name,native_stage.executor,run))
-        return tuple(result)
-    return stages
-
-
-def serve_pipeline(runner, config, socket_path, max_pending=4):
-    with ExitStack() as stack:
-        pools = {name:stack.enter_context(ThreadPoolExecutor(max_workers=count,
-                    thread_name_prefix='af3-'+name))
-                 for name,count in [('cpu',2),('transfer',1),('gpu',1),('io',2)]}
-        pipeline = stack.enter_context(PipelineExecutor(pools,max_pending=max_pending))
-        serve_staged(stage_factory(runner,config),socket_path,pipeline,max_pending=max_pending)
+from astrolabe.inference_pipeline import Pending, PipelineExecutor, Stage
+from astrolabe.evaluators.inference_service import mark, serve_staged
 
 
 def validate_request(runner, request, settings=None):
@@ -118,6 +65,10 @@ def evaluator_stages(runner, config=None, *, allow_extraction=False, adaptive=No
     from astrolabe.runtime.evaluation import adaptive_settings
 
     adaptive = adaptive_settings(adaptive)
+    resident = (hasattr(config, "get")
+                and config.get("_service_settings", {}).get("concurrency_mode") == "resident")
+    if adaptive.enabled and not resident:
+        raise RuntimeError("Shared-runner AF3 adaptive concurrency is disabled; use OwnedAF3 process isolation")
 
     if config is not None:
         from astrolabe.evaluators.wrappers.alphafold3 import service_model_settings
@@ -136,7 +87,7 @@ def evaluator_stages(runner, config=None, *, allow_extraction=False, adaptive=No
         if allow_extraction and request.get("operation") == "extract_structures":
             return {"extract": request}
         validate_request(runner, request, settings)
-        if adaptive.enabled and "rng_seed" not in request and "rng_key" not in request:
+        if (adaptive.enabled or resident) and "rng_seed" not in request and "rng_key" not in request:
             raise ValueError("Concurrent AF3 requires an explicit per-request RNG seed/key")
         if "rng_seed" in request:
             import jax
@@ -152,7 +103,7 @@ def evaluator_stages(runner, config=None, *, allow_extraction=False, adaptive=No
         if "extract" in item:
             # Compatibility RPC: extraction is finalize work, not inference.
             return item
-        fields = item["fields"]
+        fields = dict(item["fields"], stage="infer")
         mark("gpu_start", **fields)
         try:
             output = item["stages"][1].run(item["value"])
@@ -190,4 +141,34 @@ def evaluator_stages(runner, config=None, *, allow_extraction=False, adaptive=No
                 else device_resource) if allow_extraction else device_resource
     return EvaluatorStages(prepare, execute, finalize, resource=resource,
                            prepare_resource=device_resource, finalize_resource=device_resource, pipeline_slots=1,
-                           request_local_rng=adaptive.enabled, adaptive=adaptive)
+                           request_local_rng=adaptive.enabled or resident, adaptive=adaptive)
+
+
+def stage_factory(runner, config, *, admit_device=True, device_kernel=None):
+    """RPC envelope only; the shared kernel owns all three admitted stages."""
+    if not admit_device:
+        raise ValueError("Use evaluator_stages inside an existing native owner")
+    if device_kernel is None:
+        from astrolabe.evaluators.af3_service import inference_handler
+        device_kernel = inference_handler(runner, config)
+    from astrolabe.evaluators.wrappers.alphafold3 import service_model_settings
+    settings = service_model_settings(config)
+
+    def stages(request):
+        validate_request(runner, request, settings)
+        def run(item):
+            return dict(item, value=device_kernel(dict(request, request_id=item.get("request_id"))))
+        # Waiting for the owner is not GPU dispatch work. Do not collapse the
+        # native upload/model/materialize chain into an af3_device GPU stage.
+        return (Stage("af3_evaluate", "cpu", run),)
+    return stages
+
+
+def serve_pipeline(runner, config, socket_path, max_pending=4, *, device_kernel=None):
+    with ExitStack() as stack:
+        pools = {name: stack.enter_context(ThreadPoolExecutor(
+            max_workers=count, thread_name_prefix="af3-" + name))
+            for name, count in [("cpu", 2), ("io", 2)]}
+        pipeline = stack.enter_context(PipelineExecutor(pools, max_pending=max_pending))
+        serve_staged(stage_factory(runner, config, device_kernel=device_kernel),
+                     socket_path, pipeline, max_pending=max_pending)

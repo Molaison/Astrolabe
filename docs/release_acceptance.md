@@ -120,5 +120,12 @@ Python 3.11/3.12 checks through the shared
 [release CPU entrypoint](../scripts/validation/release_cpu.py).
 Run `python scripts/validation/release_cpu.py -q` locally with the same declared
 development dependencies; `--collect-only -q` lists its selection.
+The same workflow runs the retained daily configuration corpus through the real
+CLI and the bounded recovery self-test. Score spatial-search tests use the
+SciPy version declared in the development extra and runtime lock.
+The scientific-runtime integration gate is
+`python scripts/validation/release_cpu.py --suite execution -q`; it also exercises
+the real CLI with Dummy through shared and replicated workers and completed-run
+recovery. Dummy checks control flow only and does not predict a structure.
 GPU inference and manuscript experiments retain their own inputs and acceptance
 conditions and are not run by that workflow.

@@ -12,6 +12,7 @@ from typing import Any
 
 from astrolabe.model_execution import (
     ExecutionMode,
+    KernelStages,
     NativeModelClient,
     capture_random_state,
     execution_mode,
@@ -68,7 +69,20 @@ def _load_placer(settings: dict[str, Any]):
         if weights_path
         else origin.parent / "weights" / "PLACER_model_1.pt"
     )
+    if os.environ.get("ASTROLABE_RESOURCE_SOCKET"):
+        # The audited upstream constructor hardcodes cuda:0; it has no device
+        # argument. Do not reserve cuda:N (or CPU) and then load on cuda:0.
+        import torch
+        actual_device = "cuda:0" if torch.cuda.is_available() else "cpu"
+        requested_device = settings.get("torch_device", "auto")
+        if requested_device not in ("auto", "cuda", actual_device):
+            raise ValueError(
+                f"PLACER selects {actual_device}; requested {requested_device}. "
+                "Use a matching CUDA_VISIBLE_DEVICES mapping for this upstream."
+            )
     placer = placer_type(str(configured_weights)) if weights_path else placer_type()
+    device_getter = getattr(placer, "device", None)
+    device = str(device_getter()) if callable(device_getter) else None
     metadata = {
         "backend": "chemnet_placer",
         "implementation": "PLACER",
@@ -84,9 +98,10 @@ def _load_placer(settings: dict[str, Any]):
         "torch_device": settings.get("torch_device", "auto"),
         "weights_path": str(configured_weights),
         "weights_exists": configured_weights.is_file(),
+        "device": device,
     }
 
-    def infer(request: Mapping[str, Any]):
+    def prepare(request: Mapping[str, Any]):
         if set(request) != {"input_file", "num_samples"}:
             raise ValueError(
                 "PLACER daemon request must contain only input_file and num_samples."
@@ -104,7 +119,12 @@ def _load_placer(settings: dict[str, Any]):
                 f"PLACER supports .pdb and .cif inputs, got {input_file.suffix!r}."
             )
         pl_input.name(input_file.name)
-        outputs = placer.run(pl_input, int(request["num_samples"]))
+        return pl_input, int(request["num_samples"])
+
+    def execute(prepared):
+        return placer.run(*prepared)
+
+    def finalize(outputs):
         ordered = []
         for key, value in outputs.items():
             ordered.append(
@@ -116,14 +136,17 @@ def _load_placer(settings: dict[str, Any]):
             )
         return {"outputs": ordered}
 
-    return infer, metadata
+    resource = "cpu" if settings.get("torch_device") == "cpu" or device == "cpu" else "gpu"
+    return KernelStages(prepare, execute, finalize, resource=resource), metadata
 
 
 def create_handler(settings: dict[str, Any]):
     return kernel_handler(
         settings,
         _load_placer,
-        torch_device=settings.get("torch_device", "auto"),
+        torch_device=settings.get("torch_device") or "auto",
+        lifecycle={"backend": "chemnet_placer", "residency": "resident_model",
+                   "weights_loaded": True, "gpu_resident": None},
     )
 
 

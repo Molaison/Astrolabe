@@ -346,6 +346,62 @@ def test_sidecar_change_prevents_measurement_without_repeating_prediction(tmp_pa
         case.close()
 
 
+@pytest.mark.parametrize("damage", ["request_identity", "scoring_identity", "raw_scores", "score_sidecar"])
+def test_foreign_score_evidence_cannot_cross_durable_member_boundary(tmp_path, damage):
+    from astrolabe.design.refinement_worker import _blob, _sidecars
+
+    case = _case(tmp_path)
+    after_rng = case.runtime._capture_rng()
+    case.data.persist((after_rng,))
+    calls, rejected = [], []
+
+    def remote_prediction(task):
+        calls.append(task["id"])
+        raw_dir = tmp_path / "workers" / "root" / "raw"
+        raw_dir.mkdir(parents=True)
+        reference = snapshot_scores(StandardScores(names=["A"], plddt={"A": [0.9]}, complex_paths={}), case.data)
+        case.data.persist((reference,))
+        result = _scored_result(case, task, {
+            **task, "raw_scores": asdict(reference), "worker_pid": 100,
+            "constructor_count": 1, "prediction_wall_s": 0.0,
+            "prediction_after_rng": asdict(after_rng),
+            "job_raw_dir": str(raw_dir), "sidecars": _sidecars(raw_dir),
+        })
+        if damage == "score_sidecar":
+            (Path(result["score_raw_dir"]) / "derived.txt").write_text("changed")
+        else:
+            receipt = case.data.get(_blob(result["score_receipt"]), _SCORE_RECEIPT_CODEC)
+            foreign = (snapshot_scores(StandardScores(names=["A"], plddt={"A": [0.1]}, complex_paths={}), case.data)
+                       if damage == "raw_scores" else key_for("foreign-score"))
+            changed = case.data.put(replace(receipt, **{damage: foreign}), _SCORE_RECEIPT_CODEC)
+            case.data.persist((changed,))
+            result["score_receipt"] = asdict(changed)
+        return result
+
+    try:
+        with ThreadPoolExecutor(1) as pool:
+            owner = _owner(case, pool, remote_prediction)
+
+            def checked_result(job, raw):
+                before = case.runtime._capture_rng()
+                with pytest.raises(ContractConflict) as error:
+                    owner._result(job, raw)
+                assert case.runtime._capture_rng() == before
+                rejected.append(job.id)
+                raise error.value
+
+            owner.trial.result_factory = checked_result
+            with pytest.raises(ContractConflict):
+                _run(owner)
+            assert calls == rejected == [0]
+            assert not any(item.key.named_round.endswith("/measurement")
+                           for item in case.runtime.attempts())
+            assert all(row[0] != "measure" for row in case.recorder.calls)
+            owner.shutdown()
+    finally:
+        case.close()
+
+
 def test_admitted_unissued_proposal_recovers_under_valid_runtime_binding(tmp_path):
     case = _case(tmp_path, max_evaluations=3)
     after_rng = case.runtime._capture_rng()

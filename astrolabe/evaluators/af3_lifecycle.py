@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from contextlib import contextmanager
-from dataclasses import dataclass
+from contextlib import ExitStack, contextmanager
+from dataclasses import asdict, dataclass, replace
 import math
 import os
 from pathlib import Path
@@ -18,6 +18,10 @@ import threading
 import time
 import uuid
 
+from astrolabe.runtime.evaluation import (
+    AdaptiveEvaluationSettings, adaptive_settings, require_private_evaluator_owner,
+)
+
 
 @dataclass(frozen=True)
 class AF3ServiceSettings:
@@ -25,6 +29,8 @@ class AF3ServiceSettings:
     shutdown_timeout_s: float = 120.0
     terminate_timeout_s: float = 10.0
     max_pending: int = 4
+    concurrency_mode: str = "process_pool"
+    adaptive: AdaptiveEvaluationSettings = AdaptiveEvaluationSettings()
 
 
 @dataclass(frozen=True)
@@ -84,7 +90,12 @@ def service_settings(cfg, explicit_settings=None):
         raise ValueError("max_pending must be a positive integer")
     if max_pending <= 0:
         raise ValueError("max_pending must be a positive integer")
-    return AF3ServiceSettings(max_pending=max_pending, **timeout_values)
+    concurrency_mode = values.get("concurrency_mode", "process_pool")
+    if concurrency_mode not in {"process_pool", "resident"}:
+        raise ValueError("concurrency_mode must be process_pool or resident")
+    return AF3ServiceSettings(max_pending=max_pending,
+                              concurrency_mode=concurrency_mode,
+                              adaptive=adaptive_settings(values.get("adaptive")), **timeout_values)
 
 
 def guard_owner_parent():
@@ -273,21 +284,36 @@ def recover_owned_services(output):
                 (state.get('socket_inode') is not None and info.st_ino != state['socket_inode']) or
                 stat.S_IMODE(parent_info.st_mode) != 0o700 or not stat.S_ISSOCK(info.st_mode)):
             raise RuntimeError(f'Old AF3 socket ownership changed; retained: {socket_path}')
+        from astrolabe.evaluators.af3_buffers import cleanup_namespace
+        retained = cleanup_namespace(socket_path)
         socket_path.unlink()
-        directory.rmdir()
+        buffers = directory / 'buffers'
+        if buffers.exists():
+            # Recovery proves owner death, not that every client has consumed
+            # its output. Leave retained data discoverable, never replay it.
+            try:
+                buffers.rmdir()
+            except OSError:
+                pass
+        if not buffers.exists():
+            directory.rmdir()
         recovery = path.parent / 'recovery.json'
         if not recovery.exists():
             atomic_json(recovery, dict(owner_verified_ended=True, recovered_at=time.time(),
                                       lifecycle=str(path), removed_socket=str(socket_path),
+                                      **({"retained_buffer_root": retained} if retained is not None else {}),
                                       original_lifecycle_preserved=True, predictions_replayed=0))
 
 
 class OwnedAF3:
-    """One model across all cases; only the child created here may be stopped."""
+    """A serial model or process-pool owner; stop only the process created here."""
     def __init__(self, cfg, output, gpu_environment, *, settings=None):
         from omegaconf import OmegaConf
         from astrolabe.design.io import atomic_json
         self.service_settings = service_settings(cfg, explicit_settings=settings)
+        require_private_evaluator_owner(self.service_settings.adaptive.enabled
+                                        or self.service_settings.concurrency_mode == "resident",
+                                        environment=gpu_environment)
         self.startup_timeout = self.service_settings.startup_timeout_s
         self.shutdown_timeout = self.service_settings.shutdown_timeout_s
         self.terminate_timeout = self.service_settings.terminate_timeout_s
@@ -300,9 +326,16 @@ class OwnedAF3:
         self.state_path = self.directory / 'lifecycle.json'
         owner = OmegaConf.create(OmegaConf.to_container(cfg.evaluator.alphafold3, resolve=True))
         owner.service_socket = None
+        self.transport = str(owner.get('service_transport', 'pickle'))
+        if self.transport not in {'pickle', 'buffers'}:
+            raise ValueError('AF3 service_transport must be pickle or buffers')
+        owner._service_adaptive = asdict(self.service_settings.adaptive)
+        owner._service_settings = asdict(self.service_settings)
         self.config_path.write_text(OmegaConf.to_yaml(owner))
         self.environment = dict(gpu_environment)
-        self.environment.update(JAX_PLATFORMS='cuda', GH_CUDA_PREINITIALIZE='0',
+        # Native request preparation constructs RNG keys on CPU. Keep CUDA
+        # first; load_runner still explicitly requires a real GPU device.
+        self.environment.update(JAX_PLATFORMS='cuda,cpu', GH_CUDA_PREINITIALIZE='0',
                                 PYTHONUNBUFFERED='1', ASTROLABE_AF3_PARENT_PID=str(os.getpid()))
         self.environment.pop('JAX_PLATFORM_NAME', None)
         self.python_bin = str(Path(sys.executable).resolve())
@@ -317,10 +350,20 @@ class OwnedAF3:
                           stdout_path=str(self.log_path), stderr_path=str(self.diagnostics_path),
                           started_at=time.time(), cuda_visible=self.environment.get('CUDA_VISIBLE_DEVICES'),
                           jax_platforms=self.environment['JAX_PLATFORMS'])
+        self.state['adaptive'] = asdict(self.service_settings.adaptive)
+        self.state['execution_mode'] = ('resident_model' if self.service_settings.concurrency_mode == 'resident'
+                                        else 'independent_process_pool' if self.service_settings.adaptive.enabled
+                                        else 'serial_model')
+        if self.service_settings.adaptive.enabled:
+            self.state.update(max_owner_count=self.service_settings.adaptive.max_concurrency,
+                              pool_manifest_path=str(self.directory / 'process_pool.json'))
         self._write = lambda: atomic_json(self.state_path, self.state)
         self._write()
 
-    def __enter__(self):
+    def start(self):
+        """Start this owner without blocking independent CPU initialization."""
+        if self.process is not None or self.stopped:
+            raise RuntimeError("Owned AF3 can only be started once")
         try:
             # Always short, private, unique; old-owner sockets remain distinguishable
             # on interrupted resume, even for very long project output paths.
@@ -346,7 +389,21 @@ class OwnedAF3:
                               directory_inode=Path(self.socket_directory).stat().st_ino, uid=os.getuid(),
                               pid_namespace=Path('/proc/self/ns/pid').stat().st_ino)
             self._write()
-            deadline = time.monotonic() + self.startup_timeout
+            self._startup_deadline = time.monotonic() + self.startup_timeout
+            return str(self.socket_path)
+        except BaseException as error:
+            self.state.update(status='startup_failed', error=repr(error))
+            self._stop(graceful=False)
+            raise
+
+    def wait_ready(self):
+        """Barrier before scientific work; never issue inference as a probe."""
+        if self.process is None or self.stopped:
+            raise RuntimeError("Owned AF3 is not starting")
+        if self.ready:
+            return str(self.socket_path)
+        try:
+            deadline = self._startup_deadline
             while time.monotonic() < deadline:
                 code = self.process.poll()
                 if code is not None:
@@ -364,7 +421,9 @@ class OwnedAF3:
                     if (event.get('event') == 'service_ready' and event.get('pid') == self.process.pid
                             and event.get('socket') == str(self.socket_path) and self.socket_path.is_socket()):
                         self.ready = True
-                        self.state.update(status='ready', ready_at=time.time(), socket_inode=self.socket_path.stat().st_ino)
+                        self.state.update(status='ready', ready_at=event['ts'],
+                                          ready_observed_at=time.time(),
+                                          socket_inode=self.socket_path.stat().st_ino)
                         self._write()
                         return str(self.socket_path)
                 time.sleep(.1)
@@ -376,6 +435,22 @@ class OwnedAF3:
             self.state.update(status='startup_failed', error=repr(error))
             self._stop(graceful=False)
             raise
+
+    def __enter__(self):
+        self.start()
+        return self.wait_ready()
+
+    @contextmanager
+    def starting(self):
+        """Own startup/cleanup while the caller prepares independent CPU work."""
+        socket_path = self.start()
+        try:
+            yield socket_path
+        except BaseException:
+            self.__exit__(*sys.exc_info())
+            raise
+        else:
+            self.__exit__(None, None, None)
 
     def _force_reap(self):
         if self.process is None or self.process.poll() is not None:
@@ -407,8 +482,9 @@ class OwnedAF3:
                         result = {}
                         def shutdown():
                             try:
-                                from astrolabe.evaluators.inference_service import call
-                                call(self.socket_path, {'type': 'shutdown'})
+                                from astrolabe.evaluators.inference_service import call, json_call
+                                invoke = json_call if self.transport == 'buffers' else call
+                                invoke(self.socket_path, {'type': 'shutdown'})
                                 result['acknowledged'] = True
                             except BaseException as error:
                                 result['error'] = repr(error)
@@ -448,8 +524,24 @@ class OwnedAF3:
                             errors.append(f'{name} close failed: {error!r}')
                 if ended and self.socket_directory is not None:
                     try:
+                        if self.transport == 'buffers':
+                            from astrolabe.evaluators.af3_buffers import cleanup_namespace
+                            retained = cleanup_namespace(self.socket_path)
+                            if retained is not None:
+                                self.state['retained_buffer_root'] = retained
                         self.socket_path.unlink(missing_ok=True)
-                        Path(self.socket_directory).rmdir()
+                        directory = Path(self.socket_directory)
+                        buffers = directory / 'buffers'
+                        if buffers.exists():
+                            try:
+                                buffers.rmdir()
+                            except OSError:
+                                # Completed replies may not yet be mapped by a
+                                # caller; EOF may be ambiguous. Never reap data
+                                # merely because the service process exited.
+                                self.state['retained_buffer_root'] = str(buffers)
+                        if not buffers.exists():
+                            directory.rmdir()
                     except OSError as error:
                         errors.append(f'Socket cleanup: {error!r}')
                 self.state.update(shutdown_acknowledged=acknowledged, cleanup_errors=errors)
@@ -476,3 +568,91 @@ class OwnedAF3:
                 raise RuntimeError(message)
             error.add_note(message)
         return False
+
+
+class AF3ChildGroup(list):
+    """Serial child lifetimes, started only when a real request needs a slot."""
+
+    def ensure(self, index):
+        # Linux PDEATHSIG follows the thread that spawned the process, not
+        # merely its TGID. RPC threads end before child drain, so every spawn
+        # must belong to a launcher thread that outlives the child ExitStack.
+        return self.launcher.submit(self._start, index).result()
+
+    def _start(self, index):
+        with self.start_lock:
+            child = self[index]
+            if not child.ready:
+                self.stack.enter_context(child)
+                self.record()
+            return dict(index=index, pid=child.process.pid, socket=str(child.socket_path),
+                        lifecycle=str(child.state_path), config=str(child.config_path),
+                        log=str(child.log_path), stderr=str(child.diagnostics_path))
+
+
+@contextmanager
+def owned_af3_children(config, directory, *, gpu_environment=None, lazy=False):
+    """Own serial children without adding predictions or scientific work.
+
+    Lazy mode loads owner0 before serving. Expansion is started by a real
+    request in its forwarding thread, while owner0 continues useful work.
+    Layout beside parent owner.yaml: process_pool.json and
+    children/NN/services/UUID/{owner.yaml,owner.jsonl,owner.stderr.log,lifecycle.json}.
+    """
+    from omegaconf import OmegaConf
+    from astrolabe.design.io import atomic_json
+    settings = service_settings({}, explicit_settings=config.get('_service_settings'))
+    adaptive = adaptive_settings(config.get('_service_adaptive'))
+    environment = dict(os.environ if gpu_environment is None else gpu_environment)
+    require_private_evaluator_owner(adaptive.enabled, environment=environment)
+    if not adaptive.enabled:
+        raise ValueError('Independent AF3 children require an adaptive pool owner')
+    directory = Path(directory)
+    manifest_path = directory / 'process_pool.json'
+    metadata = dict(parent_pid=os.getpid(), parent_config=str(directory / 'owner.yaml'),
+                    execution_mode='independent_process_pool', capacity_per_owner=1,
+                    max_owner_count=adaptive.max_concurrency,
+                    startup_policy='on_demand' if lazy else 'eager',
+                    admission_scope='complete_evaluator_request', status='starting', children=[])
+    children = AF3ChildGroup()
+    children.start_lock = threading.Lock()
+    def record():
+        metadata['resident_owner_count'] = sum(child.ready and not child.stopped for child in children)
+        metadata['children'] = [dict(index=i, pid=child.state.get('pid'),
+                                     socket=child.state.get('socket'), config=str(child.config_path),
+                                     log=str(child.log_path), stderr=str(child.diagnostics_path),
+                                     lifecycle=str(child.state_path), status=child.state['status'])
+                                for i, child in enumerate(children)]
+        atomic_json(manifest_path, metadata)
+    record()
+    # Child OwnedAF3 copies the exact same AF3 mapping/cache, overriding only
+    # transport metadata. max_pending=1 plus the serial kernel forbids overlap.
+    cfg = OmegaConf.create({'evaluator': {'alphafold3': OmegaConf.to_container(config, resolve=True)}})
+    serial = replace(settings, max_pending=1,
+                     adaptive=replace(adaptive, enabled=False, max_concurrency=1))
+    try:
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix='af3-owner-launch') as launcher, ExitStack() as stack:
+            children.launcher = launcher
+            children.stack, children.record = stack, record
+            for index in range(adaptive.max_concurrency):
+                child = OwnedAF3(cfg, directory / 'children' / f'{index:02d}', environment, settings=serial)
+                child.state.update(pool_index=index, pool_parent_pid=os.getpid(),
+                                   pool_parent_config=str(directory / 'owner.yaml'))
+                child._write()
+                children.append(child)
+            for index in range(1 if lazy else len(children)):
+                children.ensure(index)
+            metadata['status'] = 'ready'
+            record()
+            try:
+                yield children
+            finally:
+                metadata['status'] = 'draining'
+                record()
+        metadata['status'] = 'drained'
+    except BaseException as error:
+        metadata.update(status='failed', error=repr(error))
+        raise
+    finally:
+        record()

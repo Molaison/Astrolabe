@@ -7,9 +7,60 @@ from omegaconf import OmegaConf
 import pytest
 
 import astrolabe.protein_beam as beam
+from branching_test_support import native_branch_config, native_control_assets
 
 
 ROOT = Path('/case/config/001_binder_interface/01_astrolabe_beam')
+
+
+@pytest.mark.parametrize('fail_ready', [False, True])
+def test_native_control_starts_only_after_priming_and_readiness(
+        native_control_assets, tmp_path, monkeypatch, fail_ready):
+    from test_protein_beam_dispatch import _fake_pool
+    cfg = native_branch_config()
+    output = tmp_path / 'beam'
+    calls, order, submissions = [], [], []
+    base_pool = _fake_pool(output, calls, submissions=submissions)
+
+    class Pool(base_pool):
+        def submit(self, worker, task=None):
+            if worker is beam._worker_ready:
+                order.append('prime')
+            else:
+                assert 'ready' in order, 'Scientific submission crossed the readiness barrier'
+                order.append('native')
+            return super().submit(worker, task)
+
+    monkeypatch.setattr(beam, 'ProcessPoolExecutor', Pool)
+
+    def wait_ready():
+        assert order == ['prime'] * 3
+        assert submissions == [(beam._worker_ready, None)] * 3
+        assert not calls and not (output / 'af3_calls.json').exists()
+        assert not (output / 'candidates').exists()
+        if fail_ready:
+            raise TimeoutError('injected readiness failure')
+        order.append('ready')
+
+    def run():
+        return beam.run_beam(cfg, output, 'unused', workers=3, in_flight=3,
+                             before_root=wait_ready, on_abort=lambda: order.append('abort'))
+
+    if fail_ready:
+        with pytest.raises(TimeoutError, match='injected readiness failure'):
+            run()
+        assert order == ['prime'] * 3 + ['abort']
+        assert not calls and not (output / 'af3_calls.json').exists()
+        assert not (output / 'candidates').exists()
+    else:
+        state = run()
+        assert state['status'] == 'complete' and state['budget_complete']
+        assert len(calls) == len(set(calls)) == 7 and calls[0] == 0
+        assert order[:5] == ['prime'] * 3 + ['ready', 'native']
+        assert order.count('prime') == 3 and 'abort' not in order
+        # The mock intentionally leaves noop futures unresolved. Native work
+        # must not consume them as observations or wait for their completion.
+        assert submissions[3][0] is beam.worker_task and submissions[3][1]['id'] == 0
 
 
 @pytest.mark.parametrize('case', ['D6998_D19', 'D6542_D32', 'D5056_D15'])
@@ -63,11 +114,18 @@ protein_beam:
 
 
 def test_owner_and_client_read_same_task_defaults():
+    from dataclasses import asdict
+    from astrolabe.evaluators.af3_lifecycle import service_settings
     from astrolabe.evaluators.af3_service import load_service_config
     path = ROOT/'12_config_hierarchy/03_D5056_D15.yaml'
-    client = beam.load_config(path).evaluator.alphafold3
+    task = beam.load_config(path)
+    client = task.evaluator.alphafold3
     owner = load_service_config(path)
-    assert OmegaConf.to_container(owner) == OmegaConf.to_container(client, resolve=True)
+    owner_values = OmegaConf.to_container(owner, resolve=True)
+    settings = service_settings(task)
+    assert owner_values.pop('_service_adaptive') == asdict(settings.adaptive)
+    assert owner_values.pop('_service_settings') == asdict(settings)
+    assert owner_values == OmegaConf.to_container(client, resolve=True)
     legacy = load_service_config(ROOT/'11_mpnn_pose_comparison/03_af3_owner.yaml')
     assert legacy.num_recycles == owner.num_recycles == 3
     assert legacy.num_samples == owner.num_samples == 1
@@ -109,18 +167,38 @@ evaluator:
 
 
 def test_native_owner_cli_loads_inherited_config_without_an_extra_owner_yaml(monkeypatch):
+    from types import SimpleNamespace
     import astrolabe.evaluators.af3_service as service
+    import astrolabe.evaluators.af3_pipeline as pipeline
+    import astrolabe.evaluators.runtime_stages as runtime
     calls = []
-    runner = object()
+    runner = SimpleNamespace(_device='cpu')
     def load(config):
         calls.append(('load', config.num_recycles, config.num_samples))
         return runner
     handler = object()
+    stages = object()
+    kernel = SimpleNamespace(close=lambda: calls.append(('closed',)))
+    def prepare(value, config, *, allow_extraction, adaptive):
+        assert value is runner and allow_extraction and not adaptive.enabled
+        calls.append(('stages', config.num_recycles, config.num_samples))
+        return stages
+    def direct(settings, loader, *, lifecycle):
+        value, metadata = loader(settings)
+        assert value is stages and metadata['device'] == 'cpu'
+        assert lifecycle['backend'] == metadata['backend'] == 'alphafold3'
+        return kernel
+    def inference(value, config, *, device_kernel):
+        assert value is runner and device_kernel is kernel
+        return handler
     monkeypatch.setattr(service, 'load_runner', load)
-    monkeypatch.setattr(service, 'inference_handler', lambda value, config: handler)
+    monkeypatch.setattr(pipeline, 'evaluator_stages', prepare)
+    monkeypatch.setattr(runtime, 'DirectKernel', direct)
+    monkeypatch.setattr(service, 'inference_handler', inference)
     monkeypatch.setattr(service, 'serve', lambda value, socket, pending: calls.append(('serve', value, socket, pending)))
     service.main(['--config', str(ROOT/'12_config_hierarchy/03_D5056_D15.yaml'), '--socket', '/tmp/owned.sock'])
-    assert calls == [('load', 3, 1), ('serve', handler, '/tmp/owned.sock', 4)]
+    assert calls == [('load', 3, 1), ('stages', 3, 1),
+                     ('serve', handler, '/tmp/owned.sock', 4), ('closed',)]
 
 
 @pytest.mark.parametrize('overrides,expected', [([], (2, 2)), (['--workers', '4', '--in-flight', '3'], (4, 3))])

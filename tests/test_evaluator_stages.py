@@ -333,6 +333,124 @@ def test_request_local_infer_gate_completion_and_busy_lifetime(monkeypatch, adap
     handle.close()
 
 
+@pytest.mark.parametrize("limit", [1, 3])
+def test_infer_gate_fifo_prevents_barging_past_slow_head(monkeypatch, limit):
+    from astrolabe.runtime.evaluation import EvaluatorInferController
+
+    controller = EvaluatorInferController(dict(max_concurrency=3))
+    slow_head = threading.Event()
+    resume_head = threading.Event()
+    older_ident = []
+    names = ["older"] + [f"later{i}" for i in range(max(1, limit - 1))]
+    entered = {name: threading.Event() for name in names}
+    release = {name: threading.Event() for name in names}
+    original_wait = controller._cv.wait
+
+    def delayed_wait(timeout=None):
+        result = original_wait(timeout)
+        if older_ident == [threading.get_ident()] and not slow_head.is_set():
+            # Model an awakened head that is slow to reacquire the gate lock.
+            controller._cv.release()
+            try:
+                slow_head.set()
+                assert resume_head.wait(5)
+            finally:
+                controller._cv.acquire()
+        return result
+
+    monkeypatch.setattr(controller._cv, "wait", delayed_wait)
+
+    def request(name):
+        if name == "older":
+            older_ident.append(threading.get_ident())
+        with controller.inference_slot():
+            entered[name].set()
+            with controller._cv:
+                controller._cv.notify_all()
+            assert release[name].wait(5)
+
+    with ThreadPoolExecutor(len(names)) as pool:
+        try:
+            with controller.inference_slot():
+                older = pool.submit(request, "older")
+                with controller._cv:
+                    assert controller._cv.wait_for(lambda: controller.ready == 1, timeout=5)
+            assert slow_head.wait(5)
+            with controller._cv:
+                controller.limit = limit
+                controller._cv.notify_all()
+            later = [pool.submit(request, name) for name in names[1:]]
+            with controller._cv:
+                assert controller._cv.wait_for(
+                    lambda: controller.ready == len(names)
+                    or any(entered[name].is_set() for name in names[1:]), timeout=5)
+                assert not any(event.is_set() for event in entered.values()), "later arrival barged"
+                assert (controller.ready, controller.active, controller.completed) == (len(names), 0, 1)
+            resume_head.set()
+            assert entered["older"].wait(5)
+            if limit == 1:
+                assert not entered[names[1]].is_set()
+                release["older"].set()
+            for name in names[1:]:
+                assert entered[name].wait(5), "free capacity was not filled"
+            if limit > 1:
+                assert (controller.ready, controller.active, controller.completed) == (0, limit, 1)
+            for event in release.values():
+                event.set()
+            for future in [older, *later]:
+                future.result(5)
+            assert (controller.ready, controller.active, controller.completed) == (0, 0, len(names) + 1)
+            assert not controller._inference_waiters
+            controller.control(enabled=True, reset=True)
+            assert controller.limit == 1 and controller.completed == 0
+            with controller.inference_slot():
+                pass
+            assert controller.completed == 1
+        finally:
+            resume_head.set()
+            for event in release.values():
+                event.set()
+            controller.close()
+
+
+@pytest.mark.parametrize("stop", ["close", "quarantine"])
+def test_infer_gate_fifo_stop_releases_waiters_but_retains_active(stop):
+    from astrolabe.runtime.evaluation import EvaluatorInferController
+
+    controller = EvaluatorInferController({})
+
+    def waiter():
+        with controller.inference_slot():
+            pytest.fail("stopped waiter entered inference")
+
+    with ThreadPoolExecutor(2) as pool:
+        try:
+            with pytest.raises(ValueError, match="active failure"):
+                with controller.inference_slot():
+                    waiting = [pool.submit(waiter) for _ in range(2)]
+                    with controller._cv:
+                        assert controller._cv.wait_for(lambda: controller.ready == 2, timeout=5)
+                    with pytest.raises(RuntimeError, match="drained"):
+                        controller.control(enabled=True, reset=True)
+                    getattr(controller, stop)()
+                    for future in waiting:
+                        with pytest.raises(RuntimeError, match="quarantined or stopping"):
+                            future.result(5)
+                    assert (controller.ready, controller.active, controller.completed) == (0, 1, 0)
+                    assert not controller._inference_waiters
+                    with pytest.raises(RuntimeError, match="quarantined or stopping"):
+                        with controller.inference_slot():
+                            pytest.fail("stopped owner accepted a new arrival")
+                    assert not controller._inference_waiters and controller.ready == 0
+                    raise ValueError("active failure")
+            assert (controller.ready, controller.active, controller.completed) == (0, 0, 0)
+            if stop == "quarantine":
+                with pytest.raises(RuntimeError, match="quarantined"):
+                    controller.control(enabled=True, reset=True)
+        finally:
+            controller.close()
+
+
 def test_adaptive_decisions_require_backlog_freshness_and_memory(monkeypatch):
     from astrolabe.runtime.evaluation import EvaluatorInferController
 
@@ -369,11 +487,94 @@ def test_adaptive_decisions_require_backlog_freshness_and_memory(monkeypatch):
     controller.completed += 10
     assert window() == "hold"
     controller.completed += 1
-    assert window() == "throughput_drop" and controller.limit == 2
+    assert window(utilization=95) == "hold" and controller.limit == 3
+    controller.completed += 12
+    assert window(utilization=95) == "hold"
+    controller.completed += 6
+    assert window(utilization=95) == "throughput_drop" and controller.limit == 2
+    # Low utilization with prepared work takes precedence over a rate backoff.
+    assert window() == "increase" and controller.limit == 3
     controller.ready = 0
     assert window() == "starved"
-    assert events and all({"utilization", "free_bytes", "ready", "active", "completed", "limit"} <= set(e[1])
-                          for e in events)
+    decisions = [fields for event, fields in events if event == "adaptive_window_decision"]
+    assert decisions and all({"utilization", "free_bytes", "ready", "active", "completed", "limit"} <= set(fields)
+                             for fields in decisions)
+    samples = [fields for event, fields in events if event == "adaptive_sample"]
+    assert samples and all({"gpu_uuid", "process_ids"} <= set(fields) for fields in samples)
+
+
+def test_adaptive_mixed_window_does_not_expand_on_starvation_sm(monkeypatch):
+    from astrolabe.runtime.evaluation import EvaluatorInferController
+
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+    now = [0.0]
+    controller = EvaluatorInferController(
+        dict(enabled=True, max_concurrency=3, observation_window_s=8,
+             sample_interval_s=1, memory_per_request_bytes=100,
+             memory_reserve_bytes=10), clock=lambda: now[0])
+    controller.completed = 1
+    row = dict(index=0, uuid="GPU-mixed-window", total_bytes=1000,
+               free_bytes=900, processes=[])
+    for second, (sm, ready) in enumerate(
+            zip([66, 99, 0, 0, 0, 100, 99, 99],
+                [0, 0, 0, 0, 0, 4, 4, 3]), start=1):
+        now[0] = float(second)
+        controller.ready = ready
+        controller.observe([dict(row, utilization=sm)], sampled_at=now[0])
+    decision = controller.snapshot()["last_decision"]
+    assert decision["utilization"] == 57.875
+    assert decision["ready"] == 3
+    assert decision["window_loaded"] is False
+    assert decision["reason"] == "supply_limited_window"
+    assert controller.limit == 1
+
+    for second in range(9, 17):
+        now[0] = float(second)
+        controller.observe([dict(row, utilization=20)], sampled_at=now[0])
+    decision = controller.snapshot()["last_decision"]
+    assert decision["window_loaded"] is True
+    assert decision["reason"] == "increase" and controller.limit == 2
+
+
+def test_adaptive_monitor_sleeps_when_idle_and_closes(monkeypatch):
+    from astrolabe.runtime.evaluation import EvaluatorInferController
+
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+    sampled = threading.Event()
+    release = threading.Event()
+    queries = []
+    row = dict(index=0, uuid="GPU-idle-monitor", total_bytes=1000,
+               free_bytes=900, utilization=20, processes=[])
+
+    def sampler():
+        queries.append(1)
+        sampled.set()
+        return [row]
+
+    controller = EvaluatorInferController(
+        dict(enabled=True, sample_interval_s=.2, observation_window_s=1),
+        sampler=sampler)
+    controller.start()
+    try:
+        assert not sampled.wait(.05)
+
+        def run_slot():
+            with controller.inference_slot():
+                assert release.wait(2)
+
+        with ThreadPoolExecutor(1) as pool:
+            future = pool.submit(run_slot)
+            assert sampled.wait(2)
+            release.set()
+            future.result(2)
+        count = len(queries)
+        assert not controller.active and not controller.ready
+        threading.Event().wait(.25)
+        assert len(queries) == count
+    finally:
+        release.set()
+        controller.close()
+    assert not controller._thread.is_alive()
 
 
 def test_adaptive_oom_quarantines_owner_without_retry(monkeypatch):
@@ -399,56 +600,90 @@ def test_adaptive_oom_quarantines_owner_without_retry(monkeypatch):
     handle.close()
 
 
-def test_adaptive_owner_does_not_override_uncertified_broker_gate(broker, monkeypatch):
-    from astrolabe.runtime import evaluation
+def test_quarantined_owner_rejects_accepted_request_before_gpu_prepare(monkeypatch):
+    """Request acceptance is not permission to upload after quarantine."""
+    from astrolabe.runtime.evaluation import EvaluatorInferController
+
+    monkeypatch.delenv("ASTROLABE_RESOURCE_SOCKET", raising=False)
+    monkeypatch.setattr(execution, "_resource_client", lambda: None)
+    monkeypatch.setattr(EvaluatorInferController, "start", lambda self: None)
+    accepted = threading.Event()
+    resume = threading.Event()
+    prepared, executed, finalized = [], [], []
+
+    def resource_shape(payload):
+        if payload == "B":
+            accepted.set()  # request_local_handle has already accepted B.
+            assert resume.wait(5)
+        return "unclassified"
+
+    def prepare(payload):
+        prepared.append(payload)
+        return payload
+
+    def execute(payload):
+        executed.append(payload)
+        raise RuntimeError("synthetic GPU failure")
+
+    monkeypatch.setattr(execution, "resource_shape", resource_shape)
+    handle = execution.kernel_handler({}, lambda _: (
+        execution.EvaluatorStages(prepare, execute, finalized.append,
+                                  request_local_rng=True), {}),
+        lifecycle=dict(backend="alphafold3", device="cuda:0"))
+
+    def request(payload):
+        return dict(operation="infer", payload=payload, random_state={})
+
+    try:
+        with ThreadPoolExecutor(1) as pool:
+            delayed = pool.submit(handle, request("B"))
+            try:
+                assert accepted.wait(5)
+                assert handle.describe_snapshot()["runtime_lifecycle"]["active_requests"] == 1
+                assert prepared == []
+                failed = handle(request("A"))
+                assert not failed["ok"] and failed["error"] == "synthetic GPU failure"
+                snapshot = handle.describe_snapshot()
+                assert snapshot["runtime_lifecycle"]["state"] == "quarantined"
+                assert snapshot["runtime_lifecycle"]["active_requests"] == 1
+                assert snapshot["adaptive"]["quarantined"]
+            finally:
+                resume.set()
+            rejected = delayed.result(5)
+        assert not rejected["ok"]
+        assert "quarantined; refusing a new device stage" in rejected["error"]
+        assert prepared == ["A"] and executed == ["A"] and finalized == []
+        snapshot = handle.describe_snapshot()["runtime_lifecycle"]
+        assert snapshot["state"] == "quarantined" and snapshot["active_requests"] == 0
+    finally:
+        handle.close()
+
+
+@pytest.mark.parametrize("declared_request_local_rng", [True, False])
+def test_adaptive_owner_rejects_broker_before_inference(broker, monkeypatch, declared_request_local_rng):
+    from astrolabe.runtime.evaluation import EvaluatorInferController
 
     owner, client = broker
     monkeypatch.setattr(execution, "_resource_client", lambda: client)
-    now = [0.0]
-    controller = evaluation.EvaluatorInferController(
-        dict(enabled=True, max_concurrency=2, memory_per_request_bytes=100,
-             memory_reserve_bytes=10), clock=lambda: now[0])
-    monkeypatch.setattr(controller, "start", lambda: None)
-    monkeypatch.setattr(evaluation, "EvaluatorInferController", lambda *a, **kw: controller)
-    dispatched = {i: threading.Event() for i in (1, 2)}
-    completions = {i: Future() for i in (1, 2)}
-    def execute(value):
-        if value == 0:
-            return value
-        dispatched[value].set()
-        return Pending(value, completions[value])
-    handle = execution.kernel_handler({}, lambda _: (
-        execution.EvaluatorStages(lambda x: x, execute, prepare_resource="cpu",
-                                  finalize_resource="cpu", request_local_rng=True,
-                                  adaptive=dict(enabled=True)), {}),
-        lifecycle=dict(backend="alphafold3", device="cuda:0", resident_bytes=100,
-                       scratch_bytes=200, concurrency_certified=False))
-    def request(value):
-        return dict(operation="infer", payload=value, random_state={})
-    assert handle(request(0))["ok"]
-    with ThreadPoolExecutor(2) as pool:
-        first = pool.submit(handle, request(1))
-        second = None
-        try:
-            assert dispatched[1].wait(5)
-            second = pool.submit(handle, request(2))
-            with controller._cv:
-                assert controller._cv.wait_for(lambda: controller.ready == 1, timeout=5)
-            now[0] = 10
-            controller.observe([dict(index=0, uuid="GPU-test", total_bytes=1000,
-                                     free_bytes=900, utilization=10, processes=[])], sampled_at=10)
-            assert controller.limit == 2
-            with owner._cv:
-                assert owner._cv.wait_for(
-                    lambda: any(r.get("evaluator_inference") for r in owner._pending), timeout=5)
-            assert not dispatched[2].is_set()
-            assert sum(r.get("evaluator_inference", False) for r in records(owner)) == 1
-            completions[1].set_result(None)
-            assert first.result(5)["ok"]
-            assert dispatched[2].wait(5)
-        finally:
-            for completion in completions.values():
-                if not completion.done():
-                    completion.set_result(None)
-        assert second.result(5)["ok"]
-    handle.close()
+    monkeypatch.setattr(EvaluatorInferController, "start",
+                        lambda self: pytest.fail("Rejected owner must not start a monitor"))
+    loaded = []
+    executed = []
+    def loader(settings):
+        loaded.append(True)
+        return execution.EvaluatorStages(
+            lambda x: x, lambda x: executed.append(x),
+            request_local_rng=True, adaptive=dict(enabled=True)), {}
+
+    with pytest.raises(RuntimeError, match="resource broker.*not qualified"):
+        execution.kernel_handler({}, loader,
+            lifecycle=dict(backend="alphafold3", device="cuda:0", resident_bytes=100,
+                           scratch_bytes=200, concurrency_certified=False,
+                           request_local_rng=declared_request_local_rng))
+    # Known declarations reject before loading; unclassified legacy loaders
+    # reject as soon as their returned stages reveal request-local execution.
+    assert loaded == ([] if declared_request_local_rng else [True])
+    assert executed == []
+    assert records(owner) == []
+    with owner._cv:
+        assert not owner._pending
