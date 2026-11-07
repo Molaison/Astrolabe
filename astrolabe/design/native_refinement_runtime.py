@@ -63,10 +63,11 @@ from .types import (
 )
 
 
-_CODE_VERSION = "astrolabe.native-refinement-recovery/v1"
+_CODE_VERSION = "astrolabe.native-refinement-recovery/v2"
 _BOOTSTRAP_WORK = "native-refinement/bootstrap/v1"
 _PROPOSAL_ALIAS = "native-refinement/propose"
 _PREDICTION_ALIAS = "native-refinement/predict"
+_SCORING_ALIAS = "native-refinement/score"
 _MEASUREMENT_ALIAS = "native-refinement/measure"
 
 
@@ -95,11 +96,22 @@ class RawPredictionReceipt:
 
 
 @dataclass(frozen=True)
+class ScoreReceipt:
+    request_identity: Key
+    raw_scores: Blob
+    scoring_identity: Key
+    measured_scores: Blob
+    measurement: NativeMeasurement
+    after_rng: Blob
+
+
+@dataclass(frozen=True)
 class DurableMeasurementRequest:
     job: BranchJob
     prediction: Blob
     protocol: Key
     output: str
+    score: Blob | None = None
 
 
 @dataclass(frozen=True)
@@ -166,6 +178,11 @@ _MEASUREMENT_REQUEST_CODEC = DataclassCodec(
     "astrolabe.design.native-refinement.measurement-request/v1",
     nested_types=(BranchJob, BranchMember, BranchProposal, Blob, Key),
 )
+_SCORE_RECEIPT_CODEC = DataclassCodec(
+    ScoreReceipt,
+    "astrolabe.design.native-refinement.score-receipt/v1",
+    nested_types=(Blob, Key, NativeMeasurement),
+)
 _JSON = JSONCodec()
 _TERMINAL_BUFFER_NAME = "native-refinement/terminal-buffer"
 
@@ -190,6 +207,7 @@ _REFERENCE_CODECS = _unique_codecs(
         _PREDICTION_REQUEST_CODEC,
         _RAW_PREDICTION_CODEC,
         _MEASUREMENT_REQUEST_CODEC,
+        _SCORE_RECEIPT_CODEC,
         _BRANCH_MEMBER_RESULT_CODEC,
         _BRANCH_PROPOSAL_RESULT_CODEC,
         _TERMINAL_BUFFER_CODEC,
@@ -331,10 +349,21 @@ class DurableNativeRefinementOwner:
             paid_boundary="measure",
             **common,
         )
+        self.scoring_operation = operation(
+            _SCORING_ALIAS,
+            DurableMeasurementRequest,
+            ScoreReceipt,
+            self._score,
+            request_codec=_MEASUREMENT_REQUEST_CODEC,
+            result_codec=_SCORE_RECEIPT_CODEC,
+            paid_boundary="score",
+            **common,
+        )
         self.operations = (
             self.initialization,
             self.proposal_operation,
             self.prediction_operation,
+            self.scoring_operation,
             self.measurement_operation,
         )
         self.identity = key_for(
@@ -606,6 +635,50 @@ class DurableNativeRefinementOwner:
             scores=scores_blob,
         )
 
+    def _scoring_identity(self, request: DurableMeasurementRequest) -> Key:
+        return key_for((request.job, request.prediction, request.protocol, request.output))
+
+    def _score(self, request: DurableMeasurementRequest) -> ScoreReceipt:
+        """Measure a private restored raw result, without committing a member."""
+        if request.protocol != self.protocol or request.score is not None:
+            raise ContractConflict("Score request differs from its prediction contract")
+        prediction = self.data.get(request.prediction, _RAW_PREDICTION_CODEC)
+        if prediction.job != request.job:
+            raise ContractConflict("Score request belongs to another prediction job")
+        proposal = self.data.get(prediction.proposal, _PROPOSAL_CODEC)
+        scores = restore_scores(
+            prediction.scores, self.data,
+            self._score_destination(request.job, "measurement-input"),
+        )
+        self.models.get()
+        try:
+            with self._activate(prediction.candidate):
+                measurement = self.spec.measure(prediction.candidate, scores, request.job)
+            if not isinstance(measurement, NativeMeasurement):
+                raise TypeError("measure callback must return NativeMeasurement")
+            measurement = NativeMeasurement(
+                score=_finite_score(measurement.score),
+                metrics=_json_metric(dict(measurement.metrics)),
+                structure_path=str(measurement.structure_path),
+            )
+            measured_scores = snapshot_scores(scores, self.data)
+            after_rng = self.runtime._capture_rng()
+            self.data.persist((measured_scores, after_rng))
+            return ScoreReceipt(
+                self._scoring_identity(request), prediction.scores, self.protocol,
+                measured_scores, measurement, after_rng,
+            )
+        except BaseException as error:
+            self.spec.event(
+                "evaluation_failed", evaluation_id=request.job.id,
+                generation=proposal.generation,
+                parent_id=None if proposal.parent_id < 0 else proposal.parent_id,
+                proposal_index=proposal.proposal_index,
+                proposal_step=proposal.proposal_step, sequence=proposal.label,
+                seed=self.spec.seed, stage="measurement", error=repr(error),
+            )
+            raise
+
     def _measure(self, request: DurableMeasurementRequest) -> BranchMember:
         if request.protocol != self.protocol:
             raise ValueError("measurement request protocol differs from the owner contract")
@@ -617,19 +690,19 @@ class DurableNativeRefinementOwner:
         proposal = self.data.get(prediction.proposal, _PROPOSAL_CODEC)
         if not isinstance(proposal, RefinementProposalRecord):
             raise TypeError("raw prediction proposal did not decode")
-        scores = restore_scores(
-            prediction.scores,
-            self.data,
-            self._score_destination(request.job, "measurement-input"),
-        )
-        self.models.get()
         try:
-            with self._activate(prediction.candidate):
-                measurement = self.spec.measure(
-                    prediction.candidate,
-                    scores,
-                    request.job,
-                )
+            if request.score is not None:
+                receipt = self.data.get(request.score, _SCORE_RECEIPT_CODEC)
+                if (receipt.scoring_identity != self.protocol
+                        or receipt.raw_scores != prediction.scores
+                        or receipt.request_identity != self._scoring_identity(request)):
+                    raise ContractConflict("Score receipt differs from its prediction contract")
+                measurement = receipt.measurement
+                measured_scores_blob = receipt.measured_scores
+                self.runtime._restore_rng(receipt.after_rng)
+            else:
+                receipt = self._score(request)
+                measurement, measured_scores_blob = receipt.measurement, receipt.measured_scores
             if not isinstance(measurement, NativeMeasurement):
                 raise TypeError("measure callback must return NativeMeasurement")
         except BaseException as error:
@@ -651,7 +724,6 @@ class DurableNativeRefinementOwner:
             _json_metric(dict(measurement.metrics)),
             _METRICS_CODEC,
         )
-        measured_scores_blob = snapshot_scores(scores, self.data)
         self.data.persist((measured_scores_blob,))
         record = RefinementMemberRecord(
             candidate=prediction.candidate,
@@ -771,6 +843,7 @@ class DurableNativeRefinementOwner:
             return ((base + "/proposal", self.proposal_operation),)
         return (
             (base + "/prediction", self.prediction_operation),
+            (base + "/score", self.scoring_operation),
             (base + "/measurement", self.measurement_operation),
         )
 
@@ -791,6 +864,15 @@ class DurableNativeRefinementOwner:
             work_id=self._job_work_id(job),
         )
         prediction_ref = self.data.put(prediction, _RAW_PREDICTION_CODEC)
+        score = self.runtime.call(
+            base + "/score",
+            self.scoring_operation,
+            DurableMeasurementRequest(
+                job, prediction_ref, self.protocol, self.spec.output.as_posix(),
+            ),
+            work_id=self._job_work_id(job),
+        )
+        score_ref = self.data.put(score, _SCORE_RECEIPT_CODEC)
         member = self.runtime.call(
             base + "/measurement",
             self.measurement_operation,
@@ -799,6 +881,7 @@ class DurableNativeRefinementOwner:
                 prediction_ref,
                 self.protocol,
                 self.spec.output.as_posix(),
+                score_ref,
             ),
             work_id=self._job_work_id(job),
         )

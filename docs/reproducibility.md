@@ -5,6 +5,15 @@ accompanying Astrolabe manuscript and the optional installation diagnostic. The 
 is 0.1.0. Save the exact source commit, resolved configuration and run provenance
 with any results.
 
+`provenance.json` keeps the byte digest of the saved YAML in `config.sha256`.
+New records also include `config.resolved`: a digest of the retained configuration
+resolved at collection time, with unused backend defaults excluded. This detects
+changes such as a different environment interpolation even when the YAML bytes
+stay the same. Operational paths are included, so this is not a cross-run
+scientific equivalence key. An unavailable digest carries a `reason`; older
+records may omit the field. Source, weights and input identities still require
+their own evidence. See the [developer contract](developer_guide.md#validation-evidence).
+
 ## System requirements and installation
 
 | Workflow | Requirements |

@@ -93,6 +93,7 @@ python examples/01_cpu_reproduce.py --out-dir "$demo_root/result"
 ## 选择验证并保存证据
 
 按[验证阶梯](docs/developer_guide.md#validation)选择检查。
+先按该节的“配置本项目的验收”表确定本次必须通过的检查。
 先运行相关文件中的具体用例，再检查直接受影响的公共行为。
 共享核心修改仍须满足该节的完整测试要求。
 
@@ -101,15 +102,47 @@ python -m pytest -q tests/test_run_provenance.py
 ```
 
 上面是修改 provenance 时的实际入口，不是所有改动都必须运行的固定清单。
-其他修改使用对应测试。发布 CPU 检查的当前选择以
-[release-cpu.yml](.github/workflows/release-cpu.yml)为准。
-`just test` 运行完整 pytest，不是轻量检查别名。
+其他修改使用对应测试。发布 CPU 清单由
+[release_cpu.py](scripts/validation/release_cpu.py)维护，
+[CI](.github/workflows/release-cpu.yml)和本地使用同一入口。
+
+```bash
+python scripts/validation/release_cpu.py -q
+python scripts/validation/release_cpu.py --collect-only -q
+```
+
+脚本使用当前解释器，在所属 checkout 中调用 pytest，并透传 pytest 参数和退出码。
+`just test-cpu` 调用同一清单；`just test` 仍运行完整 pytest。
+CPU 清单包含打包和结果流转检查，需要完整 `.[dev]` 环境及 CI 声明的
+`vendor/sru`、`vendor/protein_sequence_models` 源码和 Bash/Zsh。
+检查缺依赖时修复独立测试环境，保留失败，不删减清单来取得通过。
+发布清单还覆盖无需模型依赖的 evaluator 阶段、AF3 协议 doubles 和资源生命周期。
+修改模型执行、Score 或恢复时，另运行 `just test-execution`，等价于
+`python scripts/validation/release_cpu.py --suite execution -q`。该清单包含整个发布清单，
+再覆盖 kernel、实际 spawn worker、评分回执恢复、原生 daemon 和 AF3 wrapper。
+它需要已配置的科学运行时（包括 Torch、AF3 及其依赖）；不要求 GPU 或模型权重。
+缺少可选后端造成的 skip 必须记录，不能视为该后端已验收。
+这些检查中的设备完成与模型输出可以由 fixture 提供；真实后端仍按
+[evaluator/Score 验收合同](docs/development/08_evaluator_score_execution.md)记录科学证据。
+
+修改持久调用、预算或恢复覆盖依赖时，另运行：
+
+```bash
+python scripts/validation/verify_runtime_recovery.py --self-test
+```
+
+该入口与 `just verify-recovery`、CI 共用，检查源码同步、有界模型、真实进程中断
+及故意破坏真实代码后的检错能力。首次运行下载并核对固定版本 TLC，需要 Java。
+完整范围与维护方法见[项目验证技能](.agents/skills/verify-runtime-recovery/SKILL.md)。
+形式检查通过不能替代 execution、全仓回归或真实模型验收。
 
 后端加载、真实输出正确、恢复正确和性能改善分别记录。
 需要真实模型时，先固定共同科学配置、输入、权重、seed 和预算，
 再通过公共 `astrolabe run` 入口执行。
 每项结论附实际命令、源码身份、环境和产物位置。
 缺依赖、未运行及结果不确定分别说明。
+`provenance.json` 同时记录落盘配置的字节哈希，以及采集时已解析的保留配置哈希；
+二者的范围和不可用情形见[验证证据](docs/developer_guide.md#validation-evidence)。
 
 ## 同步文档并提交
 

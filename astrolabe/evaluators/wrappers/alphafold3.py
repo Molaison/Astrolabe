@@ -79,6 +79,8 @@ class ModelRunner:
         )
         if current == ids:
             return
+        if hasattr(self, "_inference_owner_settings"):
+            raise ValueError("Staged AF3 requires the immutable owner cyclic configuration")
         self._model_config.global_config.cyclic_asym_ids = ids
         self.__dict__.pop("_model", None)
 
@@ -96,6 +98,8 @@ class ModelRunner:
         )
         if current == patches:
             return
+        if hasattr(self, "_inference_owner_settings"):
+            raise ValueError("Staged AF3 requires the immutable owner cyclic configuration")
         self._model_config.global_config.cyclic_relative_patches = patches
         self.__dict__.pop("_model", None)
 
@@ -114,8 +118,12 @@ class ModelRunner:
         def forward_fn(batch):
             return model.Model(self._model_config)(batch)
 
+        # Place weights during owner readiness. Passing host NumPy parameters
+        # into the JIT would otherwise hide their H2D transfer inside infer.
+        device_params = jax.device_put(self.model_params, self._device)
+        jax.block_until_ready(device_params)
         return functools.partial(
-            jax.jit(forward_fn.apply, device=self._device), self.model_params
+            jax.jit(forward_fn.apply, device=self._device), device_params
         )
 
     def run_inference(
@@ -169,12 +177,14 @@ class ModelRunner:
 
         def upload(item):
             item['device_features'] = self.upload_features(item.pop('cleaned'))
-            return jax_pending(item, wait_for=item['device_features'], keepalive=item['batch'])
+            item['rng_key'] = jax.device_put(rng_key, self._device)
+            return jax_pending(item, wait_for=(item['device_features'], item['rng_key']),
+                               keepalive=(item['batch'], rng_key))
 
         def dispatch(item):
-            item['device_result'] = self.run_model(item['device_features'], rng_key)
+            item['device_result'] = self.run_model(item['device_features'], item['rng_key'])
             return jax_pending(item, wait_for=item['device_result'],
-                               keepalive=(item['device_features'], rng_key))
+                               keepalive=(item['device_features'], item['rng_key']))
 
         def materialize(item):
             result = self.materialize_result(item.pop('device_result'))
@@ -589,18 +599,26 @@ from astrolabe.af3_featurisation_settings import (
 
 
 def alphafold3_setup(config):
+    from astrolabe.evaluators.runtime_stages import configured_device_hint
+
     _configure_refstructure_env(config)
     _configure_msa_env(config)
     if getattr(config, "service_socket", None):
         return RemoteModelRunner(config)
+    device_hint = configured_device_hint(config)
     try:
-        devices = jax.local_devices(backend="gpu")
+        devices = jax.local_devices(backend="cpu" if device_hint == "cpu" else "gpu")
     except Exception as exc:
+        if device_hint is not None and device_hint != "cpu":
+            raise RuntimeError(f"Configured AF3 device {device_hint} is unavailable") from exc
         logging.warning(
             "JAX GPU backend unavailable (%s); falling back to CPU for AlphaFold3.",
             exc,
         )
         devices = jax.local_devices(backend="cpu")
+    device_index = int(device_hint.split(":", 1)[1]) if device_hint and device_hint.startswith("cuda:") else 0
+    if device_index >= len(devices):
+        raise ValueError(f"Configured AF3 device {device_hint} is not visible to JAX")
     cache_dir = getattr(config, "jax_compilation_cache_dir", None)
     if cache_dir:
         cache_dir_path = pathlib.Path(os.path.expanduser(str(cache_dir)))
@@ -636,9 +654,13 @@ def alphafold3_setup(config):
             num_recycles=config.num_recycles,
             return_embeddings=config.save_embeddings,
         ),
-        device=devices[0],
+        device=devices[device_index],
         model_dir=pathlib.Path(config.model_dir),
     )
+    if getattr(config, "cyclic_asym_ids", ()):
+        model_runner.set_cyclic_asym_ids(config.cyclic_asym_ids)
+    if getattr(config, "cyclic_relative_patches", ()):
+        model_runner.set_cyclic_relative_patches(config.cyclic_relative_patches)
     return model_runner
 
 

@@ -49,8 +49,8 @@
 | 源码范围 | 本文适用内容 |
 | --- | --- |
 | 发布 `main@2a8b72a` | CLI、组件、配置、默认轨迹、posthoc 和发布 CPU 检查；该提交没有本地 `design/` 统一控制模块 |
-| 本开发树 | 同时包含 `DesignRun`、`ControlRun`、共享 coordinator、native registry 和持久 candidate batch |
-| `generic-evaluator-pipeline`、`evaluator-stages` 开发副本 | 各自承载 evaluator 三阶段、spawn Score 或自适应执行增量；本节不将它们认证为已合入本开发树或发布 main |
+| 本开发树 | 包含 `DesignRun`、`ControlRun`、共享 coordinator、native registry、持久 candidate batch，以及下述 evaluator/Score 执行合同 |
+| `generic-evaluator-pipeline`、`evaluator-stages` 开发副本 | 已按来源文件迁入通用阶段执行、AF3 native daemon adapter、Score worker 和回执合同；并行搜索 owner、runtime CLI/session/model pool 和动态供给仍未迁入本树，不能将整个副本视为已集成 |
 
 Git HEAD 不标识 untracked 文件或未提交改动。
 无 Git 的副本使用冻结源码清单及补丁标识。
@@ -581,8 +581,9 @@ metric 按缺失合同处理，不能填零伪装成功。输入体系、支持�
 
 #### 4.5.1 evaluator 执行与并行的开发合同
 
-本节约束相关开发副本的迁移。先确认目标源码是否具有
-`model_execution.EvaluatorStages`，不能用现有 evaluator 外层的
+本树以 `model_execution.EvaluatorStages` 声明实际模型边界。
+`kernel_handler` 在同一 owner 中解释阶段；AF3 native daemon 已接入该路径。
+未迁移的 callable 仍按完整调用处理，不能用 evaluator 外层的
 `prepare_input/run_function/prepare_output` 名称推断纯模型边界。
 
 `EvaluatorStages` 的 prepare 包含特征处理和输入转移，
@@ -591,16 +592,22 @@ execute 包含完整模型算法，finalize 保持原生归约和输出物化。
 prepare/finalize 使用 GPU 时仍需容量，不占模型推理槽。
 声明 stages 不代表该后端已证明可以并发推理。
 
-`generic-evaluator-pipeline` 的 `design/refinement_worker.py`
-以 candidate 为单位执行 Score。worker 读取原始预测回执，构造私有目录、
-评分上下文、Pose 和 RNG，再写独立 ScoreReceipt。
-父进程拥有 proposal、搜索状态和提交。
+`design/native_refinement_runtime.py` 的串行持久路径分开保存 raw prediction、
+ScoreReceipt 和 member commit。ScoreReceipt 绑定请求、raw scores、评分 protocol、
+测量结果与 after-RNG；提交前核对身份，已完成评分不重复执行。
+`design/refinement_worker.py` 从已有副本迁入，以 candidate 为单位执行预测和 Score，
+使用私有目录、评分上下文、Pose 和 RNG。当前配置 CLI 尚未接入并行 worker pool；
+worker 的进程合同已有独立回归，不能据此声称搜索已经并行化。
+父控制流程拥有 proposal、搜索状态和提交。
 独立 loss 可以在状态隔离后并行，不能让多个线程共用可变 Pose 或 loss cache。
 
-迁移时连同 `tests/test_evaluator_stages.py`、
-`tests/test_evaluator_runtime_stages.py` 和 `tests/test_refinement_worker.py`
-一起接入目标源码。这些文件属于对应开发副本，不是本树已有 CI 的覆盖声明。
+对应阶段、AF3 工厂 doubles 与资源准入回归已进入发布 CPU 清单。
+worker、持久恢复、kernel 和实际 AF3 wrapper 的 CPU 回归由同一脚本的
+`--suite execution` / `just test-execution` 执行，需配置科学运行时。
+CPU 测试使用受控设备完成信号或 vendor doubles；它们不证明真实模型数值一致或性能。
 原生归约设备、dtype、计算顺序和随机流的变化需要独立科学验收。
+逐文件职责、验收标准和恢复边界见
+[evaluator/Score 执行合同](development/08_evaluator_score_execution.md)。
 
 ### 4.6 Score snapshot 与 contribution
 
@@ -952,6 +959,37 @@ primary backend failed
 
 ## 9. 最小验证阶梯
 
+### 配置本项目的验收
+
+验收按改动涉及的行为选取。开发者先确定本次适用行，交付时逐行给出结果。
+以下命令均在目标 checkout 根目录、同一已配置的开发环境执行。
+
+| 触发条件 | 必须执行 | 通过条件 |
+| --- | --- | --- |
+| 每个 PR 的公共软件接口与分发 | `python scripts/validation/release_cpu.py -q`，沿用现有 CI | 命令正常退出且退出码为 0；所声明能力没有因缺依赖跳过 |
+| 修改 `Runtime.call`、日志写入、预算，或形式验证覆盖记录中的依赖 | `python scripts/validation/verify_runtime_recovery.py --self-test` | 源码同步检查通过；正常模型与真实代码通过；故障变体被检出；恢复后的原代码再次通过 |
+| 修改 evaluator 阶段、Score、daemon 或恢复 wiring | `python scripts/validation/release_cpu.py --suite execution -q` | 生命周期、错误传播和恢复合同通过；适用后端缺失或跳过仍是未验收 |
+| 修改核心 evaluator、mutator、decision、loss 或 `StandardScores` 共享抽象 | `python -m pytest -q` | 完整回归正常结束；新增失败修复，既有失败由同环境基线对照证明并保留，不把它们记为通过 |
+| 修改实际模型算法、设备放置、RNG 或声称性能改善 | 复用该后端现有 acceptance 脚本，经公共 `astrolabe run` 执行固定输入与共同配置 | 在运行前固定比较器、科学容差或严格一致要求；检查预测、评分、选择和恢复，性能另测完整流程 |
+
+纯文档本地检查仍用 V0。CI 对所有 PR 运行发布 CPU 和恢复形式验证，
+本地无需为未涉及的后端运行真实模型。execution、全仓回归与 GPU 验收仍由对应
+开发环境执行，不能用公共 CI 的 CPU 结果替代。
+
+形式验证工具、范围、源码 SHA256 和同步提交在
+[`verification/runtime_recovery/coverage.json`](../verification/runtime_recovery/coverage.json)
+配置；覆盖源码变更会让检查失败，要求重新确认模型与代码的对应关系。
+[`verify-runtime-recovery` 技能](../.agents/skills/verify-runtime-recovery/SKILL.md)
+说明运行与维护方式。该检查证明有界模型中的性质；真实代码的进程中断测试和
+故障变体负责检查模型对应关系，不等于证明整个 Python 程序。
+
+一次验收记录包含适用检查、源码内容身份、环境、实际命令、退出码和产物位置。
+结果区分通过、失败、阻塞和不适用。超时或被终止的命令没有通过结论，即使用例
+已打印通过摘要。缺依赖不是不适用；只有改动不涉及该边界时才记不适用并说明原因。
+日志和 JUnit 作为证据保留，不能用测试总数替代行为标准。
+新增 workflow 随分支推送后才在远端生效；仓库的分支保护另须选择对应成功检查，
+本地新增配置不表示已经启用远端合并限制。
+
 ### V0：静态/文档边界
 
 适用于纯文档、小型 schema 文案或机械路径修正：
@@ -1014,18 +1052,28 @@ posthoc collect/filter/refold smoke。只有修改覆盖该边界时才运行；
 | 搜索与预算 | `tests/test_design_coordinator.py`、`tests/test_default_coordinator.py`、`tests/test_design_branching.py` | 候选、次序、选择、预算、RNG 与失败传播 |
 | 持久恢复 | `tests/test_native_refinement_recovery.py`、`tests/test_candidate_recovery.py` | 已完成工作不重复、unknown 不重发、回执与控制状态对齐 |
 | 包与公共 CLI | `tests/test_distribution.py`、`tests/test_release_cli.py`、`tests/test_cli_run_dry_configs.py` | 安装产物、仓库外入口、配置解析和错误输出 |
+| 验证入口与依赖锁定 | `tests/test_release_validation.py`、`tests/test_install.py` | 实际 pytest 选择与退出码、声明依赖和关键运行时版本、逐项哈希 |
 | CPU 结果流转 | `tests/test_cpu_release_example.py` | 独立坐标计算、CSV、SQLite、筛选与报告 |
 
 共享行为优先在已有参数化测试中增加 case。
 后端特有输入处理和数值语义使用针对性的测试。
 上述文件存在不代表发布 CI 已执行它们。
 实际发布 CPU 清单由
-[release-cpu.yml](../.github/workflows/release-cpu.yml)维护；
-本地 `just test` 执行完整 pytest。
+[release_cpu.py](../scripts/validation/release_cpu.py)维护。
+[release-cpu.yml](../.github/workflows/release-cpu.yml) 与本地
+`python scripts/validation/release_cpu.py -q` 使用同一入口。
+`--collect-only -q` 可列出实际选择；其他 pytest 参数和退出码原样传递。
+`just test-cpu` 调用发布清单；`just test-execution` 使用
+`--suite execution`，执行发布清单加 evaluator/Score 执行层回归，
+需要 Torch 和 AF3 等科学依赖，但不进行 GPU 或真实模型推理。
+`just test` 仍执行完整 pytest。
 
 公式正确性使用独立 oracle。执行方式对照使用同一科学配置下的原生与候选路径。
 模型可以构造、结构文件存在、总分相等，均不能单独证明完整数值一致。
 静态断言可以检查静态架构合同；输入、输出和恢复行为需要实际调用验证。
+实现从 shell 迁到 Python 时，保留解释器选择、参数、环境传递和错误输出的行为检查，
+不继续要求旧 shell 语句出现。依赖锁文件按声明的依赖、版本和哈希检查，
+不以包的总数或哈希总数作为完整性标准。
 
 <a id="validation-evidence"></a>
 
@@ -1043,9 +1091,23 @@ posthoc collect/filter/refold smoke。只有修改覆盖该边界时才运行；
 | 比较 | 比较器版本、预先规定的指标和标准、允许忽略的非科学字段 |
 | 结果 | 实际调用量、产物、失败与未完成范围 |
 
-当前 `run_config_lifecycle.py` 的 `provenance.json` 哈希的是落盘
-`config.yaml`，不是完整解析后的配置。Git dirty 范围不含 untracked 文件
-和 submodule 工作树。显式输入记录也不覆盖后端随后读取的所有资产。
+`run_config_lifecycle.py` 在 `provenance.json` 中记录两种配置身份：
+
+- `config.sha256`：落盘 `config.yaml` 的原始字节，保持已有读取合同。
+- `config.resolved.sha256`：复用 `build_persisted_run_config(..., resolve=True)`，
+  在原配置上下文中解析裁剪后保留的字段，以键排序、紧凑分隔符、UTF-8、
+  非转义 Unicode 且拒绝非有限数值的 JSON 计算哈希。路径按字符串编码，
+  字典键须为字符串，避免 JSON 将不同类型的键编码为同一身份。
+
+解析只访问保留字段及其插值依赖；未启用后端的无关默认值保持未解析。
+原参数和落盘 YAML 不被修改。保留字段不可解析、缺少必填值或无法编码时，
+新增哈希为 `null`，`reason` 说明失败，其他 provenance 和真实运行终态仍保留。
+该字段是 schema 1 的可选增量；旧记录没有它不代表旧运行失败。
+
+解析哈希通常在 run 开始时采集，表示当时的保留视图，包含输出目录等运行路径。
+它不保存完整配置内容，不代表后续动态状态，也不作为跨目录科学等价或缓存复用键。
+Git dirty 范围仍不含 untracked 文件和 submodule 工作树。
+显式输入记录也不覆盖后端随后读取的所有资产。
 验收须补齐相关身份，可复用 native registry 的组件源码和资产记录。
 不能仅凭相同 HEAD 或相同权重路径复用结论。
 

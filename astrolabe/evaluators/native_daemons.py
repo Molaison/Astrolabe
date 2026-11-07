@@ -134,22 +134,56 @@ def build_af2_daemon_runners(
 
 def _af3_factory(settings: dict[str, Any]) -> Callable[[dict[str, Any]], Any]:
     from astrolabe.model_execution import kernel_handler
+    from astrolabe.evaluators.af3_pipeline import validate_request
+
+    from astrolabe.evaluators.runtime_stages import configured_device_hint
+
+    loaded = []
+
+    # AF3 has not been qualified for concurrent scientific execution.
+    profile = settings.get("_runtime_profile")
+    if isinstance(profile, Mapping) and profile.get("concurrency_certified") is True:
+        settings = dict(settings, _runtime_profile=dict(profile, concurrency_certified=False))
 
     def loader(raw_settings: dict[str, Any]):
         clean = _factory_settings(raw_settings)
         from omegaconf import OmegaConf
-        from astrolabe.evaluators.af3_service import inference_handler, load_runner
+        from astrolabe.evaluators.af3_service import load_runner
+        from astrolabe.evaluators.af3_pipeline import evaluator_stages
+        from astrolabe.evaluators.wrappers.alphafold3 import service_model_settings
 
         config = OmegaConf.create(clean["config"])
         config.service_socket = None
         runner = load_runner(config)
-        infer = inference_handler(runner, config)
-        return infer, {
-            "device": str(runner._device),
+        loaded.append((runner, service_model_settings(config)))
+        return evaluator_stages(runner, config, allow_extraction=True), {
+            "backend": "alphafold3", "device": str(runner._device),
             "settings": _plain(clean["service_settings"]),
+            "residency": "resident_model", "owner_configuration": "immutable_cyclic",
+            "inference_concurrency": "fixed1",
+            "cold_shape_jit": "inside_native_model_call",
         }
 
-    return kernel_handler(settings, loader, torch_device=None)
+    handler = kernel_handler(settings, loader, torch_device=None, lifecycle={
+        "backend": "alphafold3", "residency": "resident_model",
+        "device": configured_device_hint(settings["config"], default="cuda:0"),
+        "weights_loaded": True, "concurrency_certified": False,
+    })
+
+    def handle(request):
+        if request.get("operation") == "infer":
+            try:
+                validate_request(loaded[0][0], request["payload"], loaded[0][1])
+            except (ValueError, KeyError, TypeError) as error:
+                # Bad protocol/configuration is not a failed device operation
+                # and must not quarantine a healthy resident model.
+                return {"ok": False, "error": str(error),
+                        "error_type": type(error).__name__, "random_state": request["random_state"]}
+        return handler(request)
+
+    handle.close = handler.close
+    handle.max_concurrency = handler.max_concurrency
+    return handle
 
 
 class NativeAF3Runner:
@@ -173,8 +207,9 @@ class NativeAF3Runner:
         if not isinstance(container, dict):
             raise TypeError("AlphaFold3 config must resolve to a mapping")
         self._settings = service_model_settings(config)
-        self._cyclic_asym_ids: tuple[int, ...] = ()
-        self._cyclic_relative_patches: tuple[tuple[int, ...], ...] = ()
+        self._cyclic_asym_ids = tuple(int(x) for x in getattr(config, "cyclic_asym_ids", ()))
+        self._cyclic_relative_patches = tuple(tuple(int(y) for y in x) for x in
+                                             getattr(config, "cyclic_relative_patches", ()))
         self._client = _KernelClient(
             "alphafold3",
             "astrolabe.evaluators.native_daemons:_af3_factory",
@@ -209,10 +244,37 @@ class NativeAF3Runner:
             }
         )
 
-    def extract_structures(self, batch, result, target_name):
-        from astrolabe.evaluators.wrappers.alphafold3 import ModelRunner
+    def run_inference_for_seed(self, featurised_example, seed):
+        import jax
+        import numpy as np
 
-        return ModelRunner.extract_structures(self, batch, result, target_name)
+        return self._client.request({
+            "model": "alphafold3", "settings": self._settings,
+            "features": jax.tree.map(np.asarray, featurised_example),
+            "rng_seed": int(seed),
+            "cyclic_asym_ids": self._cyclic_asym_ids,
+            "cyclic_relative_patches": self._cyclic_relative_patches,
+        })
+
+    def run_inference_and_extract_for_seed(self, batch, seed, target_name):
+        import jax
+        import numpy as np
+
+        return self._client.request({
+            "model": "alphafold3", "settings": dict(self._settings),
+            "features": jax.tree.map(np.asarray, batch), "rng_seed": int(seed),
+            "target_name": target_name,
+            "cyclic_asym_ids": self._cyclic_asym_ids,
+            "cyclic_relative_patches": self._cyclic_relative_patches,
+        })
+
+    def extract_structures(self, batch, result, target_name):
+        # Native extraction may initialize a JAX context. Keep the original
+        # function in the device owner, so the scientific coordinator stays CPU.
+        return self._client.request({
+            "operation": "extract_structures", "batch": batch, "result": result,
+            "target_name": target_name,
+        })
 
     def extract_embeddings(self, result):
         from astrolabe.evaluators.wrappers.alphafold3 import ModelRunner

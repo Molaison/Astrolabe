@@ -640,11 +640,26 @@ class AlphaFold3Evaluator(Evaluator):
         for seed, example in zip(fold_input.rng_seeds, featurised_examples):
             logging.debug(f"Running model inference for seed {seed}...")
             inference_start_time = time.time()
-            rng_key = jax.random.PRNGKey(seed)
-            result = model_runner.run_inference(example, rng_key)
-            inference_results = model_runner.extract_structures(
-                batch=example, result=result, target_name=fold_input.name
-            )
+            staged_extract = getattr(model_runner, "run_inference_and_extract_for_seed", None)
+            seeded_remote = getattr(model_runner, "run_inference_for_seed", None)
+            if callable(staged_extract):
+                inference_results = staged_extract(example, seed, fold_input.name)
+            elif callable(seeded_remote):
+                result = seeded_remote(example, seed)
+            elif (getattr(model_runner, "_client", None) is not None
+                    or getattr(model_runner, "_socket", None) is not None):
+                # RPC clients only assemble host requests. Even creating a
+                # PRNG key on JAX's default GPU would bypass owner admission.
+                with jax.default_device(jax.local_devices(backend="cpu")[0]):
+                    rng_key = jax.random.PRNGKey(seed)
+                result = model_runner.run_inference(example, rng_key)
+            else:
+                rng_key = jax.random.PRNGKey(seed)
+                result = model_runner.run_inference(example, rng_key)
+            if not callable(staged_extract):
+                inference_results = model_runner.extract_structures(
+                    batch=example, result=result, target_name=fold_input.name
+                )
             all_inference_results.append(
                 ResultsForSeed(
                     seed=seed,

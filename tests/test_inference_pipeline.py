@@ -183,9 +183,19 @@ def test_errors_finalize_and_shutdown_drains(asynchronous):
             pipeline.submit([], None)
 
 
-def test_staged_rpc_preserves_response_and_error_protocol(tmp_path):
+def test_staged_rpc_preserves_response_and_error_protocol(tmp_path, monkeypatch):
+    from astrolabe.evaluators import inference_service
     from astrolabe.evaluators.inference_service import call, serve_staged
     socket = tmp_path / 'service.sock'
+    ready = threading.Event()
+    original_mark = inference_service.mark
+
+    def observe(event, **fields):
+        original_mark(event, **fields)
+        if event == 'service_ready':
+            ready.set()
+
+    monkeypatch.setattr(inference_service, 'mark', observe)
 
     def calculate(item):
         item['value'] = sum(item['payload']['values'])
@@ -197,10 +207,9 @@ def test_staged_rpc_preserves_response_and_error_protocol(tmp_path):
         pipeline = PipelineExecutor(pools, max_pending=2)
         future = service.submit(serve_staged, lambda request: [Stage('calculate', 'cpu', calculate)],
                                 socket, pipeline, max_pending=2)
-        deadline = time.monotonic() + 3
-        while not socket.exists() and not future.done() and time.monotonic() < deadline:
-            time.sleep(0.005)
-        assert socket.exists()
+        # Listener creates its socket before serve_staged sets owner-only mode.
+        # The existing readiness event follows that setup; existence alone races.
+        assert ready.wait(3)
         try:
             assert call(socket, dict(values=[2, 3], identity='good')) == 5
             with pytest.raises(RuntimeError, match='TypeError'):

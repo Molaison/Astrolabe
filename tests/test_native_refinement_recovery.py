@@ -33,11 +33,13 @@ from astrolabe.design.native_refinement import (
     run_native_refinement,
 )
 from astrolabe.design.native_refinement_runtime import (
+    DurableMeasurementRequest,
     DurableNativeRefinementOwner,
     RawPredictionReceipt,
+    _SCORE_RECEIPT_CODEC,
 )
 from astrolabe.design.native_scores import restore_scores
-from astrolabe.design.runtime import OutcomeUnknown, Runtime
+from astrolabe.design.runtime import ContractConflict, OutcomeUnknown, Runtime
 from astrolabe.design.store import DataStore, design_codec
 from astrolabe.design.types import Blob, History, Key, key_for
 from astrolabe.evaluators.utils import StandardScores
@@ -49,6 +51,7 @@ CONTRACT = Key("b" * 64)
 ROOT_MEASUREMENT = "native-refinement/evaluate/0/measurement"
 PROPOSAL = "native-refinement/propose/1/proposal"
 CHILD_PREDICTION = "native-refinement/evaluate/1/prediction"
+CHILD_SCORE = "native-refinement/evaluate/1/score"
 CHILD_MEASUREMENT = "native-refinement/evaluate/1/measurement"
 
 
@@ -408,7 +411,7 @@ def _summary(result, root: Path):
 
 @pytest.mark.parametrize(
     "boundary",
-    (ROOT_MEASUREMENT, PROPOSAL, CHILD_PREDICTION, CHILD_MEASUREMENT),
+    (ROOT_MEASUREMENT, PROPOSAL, CHILD_PREDICTION, CHILD_SCORE, CHILD_MEASUREMENT),
 )
 def test_real_control_recovers_each_native_refinement_boundary(
     tmp_path: Path,
@@ -486,7 +489,11 @@ def test_wait_none_reuses_job_receipts_and_rng_under_next_control_action(
     assert split_rng == baseline_rng
     assert split_calls == baseline_calls
     assert split_attempts == baseline_attempts
-    assert len(split_attempts) == 5
+    assert {name for name, _, _ in split_attempts} == {
+        "native-refinement/evaluate/0/prediction",
+        "native-refinement/evaluate/0/score",
+        ROOT_MEASUREMENT, PROPOSAL, CHILD_PREDICTION, CHILD_SCORE, CHILD_MEASUREMENT,
+    }
     assert {status for _, _, status in split_attempts} == {"completed"}
     assert {
         work_id
@@ -839,13 +846,16 @@ def test_mixed_outstanding_collection_does_not_rewind_rng(
     } == {
         ROOT_MEASUREMENT,
         "native-refinement/evaluate/0/prediction",
+        "native-refinement/evaluate/0/score",
         "native-refinement/propose/1/proposal",
         "native-refinement/propose/2/proposal",
         "native-refinement/propose/3/proposal",
         "native-refinement/propose/4/proposal",
         CHILD_PREDICTION,
+        CHILD_SCORE,
         CHILD_MEASUREMENT,
         "native-refinement/evaluate/2/prediction",
+        "native-refinement/evaluate/2/score",
         "native-refinement/evaluate/2/measurement",
     }
 
@@ -911,6 +921,69 @@ def test_raw_prediction_receipt_survives_before_measurement(
     assert plddt.dtype == np.float32
     assert restored.complex_paths["A"].read_text() == "data_1\n# GC\n"
     assert sum(item[0] == "measure" for item in recorder.calls) == 1
+    case.close()
+
+
+@pytest.mark.parametrize("field", ["request_identity", "raw_scores", "scoring_identity"])
+def test_score_receipt_wrong_identity_cannot_commit_or_advance_rng(tmp_path, field):
+    case = _case(tmp_path / "run")
+    result, _ = _run(case)
+    attempts = {item.key.named_round: item for item in case.runtime.attempts()}
+    raw_ref = attempts[CHILD_PREDICTION].result
+    prediction = case.data.get(raw_ref)
+    receipt = case.data.get(attempts[CHILD_SCORE].result, _SCORE_RECEIPT_CODEC)
+    wrong = Key("c" * 64)
+    if field == "raw_scores":
+        wrong = Blob(wrong, receipt.raw_scores.codec)
+    corrupted = case.data.put(replace(receipt, **{field: wrong}), _SCORE_RECEIPT_CODEC)
+    request = DurableMeasurementRequest(
+        prediction.job, raw_ref, PROTOCOL, case.spec.output.as_posix(), corrupted,
+    )
+    before_rng, before_calls = capture_random_state(), list(case.recorder.calls)
+    with pytest.raises(ContractConflict, match="Score receipt"):
+        result.owner._measure(request)
+    assert capture_random_state() == before_rng
+    assert case.recorder.calls == before_calls
+    result.owner.shutdown()
+    case.close()
+
+
+def test_completed_score_commits_without_loading_or_measuring_again(tmp_path, monkeypatch):
+    case = _case(tmp_path / "run")
+    result, _ = _run(case)
+    attempts = {item.key.named_round: item for item in case.runtime.attempts()}
+    raw_ref = attempts[CHILD_PREDICTION].result
+    prediction = case.data.get(raw_ref)
+    score_ref = attempts[CHILD_SCORE].result
+    def forbidden():
+        pytest.fail("completed Score must not reload models")
+    monkeypatch.setattr(result.owner.models, "get", forbidden)
+    before_calls = list(case.recorder.calls)
+    member = result.owner._measure(DurableMeasurementRequest(
+        prediction.job, raw_ref, PROTOCOL, case.spec.output.as_posix(), score_ref,
+    ))
+    assert member.id == prediction.job.id
+    assert case.recorder.calls == before_calls
+    result.owner.shutdown()
+    case.close()
+
+
+def test_score_receipt_preserves_native_scalar_and_path_metric_contract(tmp_path):
+    case = _case(tmp_path / "run")
+    original = case.spec.measure
+    def measure(candidate, scores, job):
+        value = original(candidate, scores, job)
+        return replace(value, score=np.float32(value.score), metrics={
+            **value.metrics, "native_scalar": np.float32(1.5), "path": Path("relative.cif"),
+        })
+    case = replace(case, spec=replace(case.spec, measure=measure))
+    result, _ = _run(case)
+    attempt = next(item for item in case.runtime.attempts() if item.key.named_round == CHILD_SCORE)
+    receipt = case.data.get(attempt.result, _SCORE_RECEIPT_CODEC)
+    assert type(receipt.measurement.score) is float
+    assert receipt.measurement.metrics["native_scalar"] == 1.5
+    assert receipt.measurement.metrics["path"] == "relative.cif"
+    result.owner.shutdown()
     case.close()
 
 

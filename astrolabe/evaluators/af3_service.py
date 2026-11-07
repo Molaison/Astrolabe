@@ -70,6 +70,7 @@ def load_runner(config):
          gpu_plugin_module=getattr(sys.modules.get("jax_plugins.xla_cuda12"), "__file__", None),
          cache_dir=str(getattr(config, "jax_compilation_cache_dir", None)))
     runner.model_params
+    runner._model
     mark("model_load_end", device=str(runner._device))
     return runner
 

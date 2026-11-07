@@ -1010,6 +1010,49 @@ def _loss_context(
     }
 
 
+def measure_configured_scores(loss_computer, scores, runtime_config, assemblies) -> NativeMeasurement:
+    """Keep registry order, reductions and the configured expression unchanged."""
+    from .native_refinement import NativeMeasurement
+
+    weighted_score, terms = loss_computer.compute_loss(scores, runtime_config)
+    score = float(weighted_score)
+    if not math.isfinite(score):
+        raise ValueError(f"configured refinement score is not finite: {score!r}")
+    score_paths = _structure_paths(scores, assemblies)
+    return NativeMeasurement(
+        score=score,
+        metrics={
+            "structure_paths": score_paths,
+            "loss": _loss_context(loss_computer, terms, assemblies),
+        },
+        structure_path=next(iter(score_paths.values()), ""),
+    )
+
+
+def snapshot_score_context(runtime_config, data) -> Blob:
+    """Reuse the exact native value codec, including structured contributions."""
+    from omegaconf import OmegaConf
+    from astrolabe.evaluators.utils import StandardScores
+    from .native_scores import snapshot_scores
+
+    def plain(value):
+        if OmegaConf.is_config(value):
+            value = OmegaConf.to_container(value, resolve=True)
+        if type(value) is dict:
+            return {key: plain(item) for key, item in value.items()}
+        if type(value) is list:
+            return [plain(item) for item in value]
+        if type(value) is tuple:
+            return tuple(plain(item) for item in value)
+        return value
+
+    envelope = StandardScores(names=[], plddt={}, complex_paths={})
+    envelope.configured_runtime_config = plain(runtime_config)
+    reference = snapshot_scores(envelope, data)
+    data.persist((reference,))
+    return reference
+
+
 def _canonical_config(cfg: Any, repeat: RepeatRun, search: _SearchSettings) -> Any:
     from omegaconf import OmegaConf, open_dict
 
@@ -1702,26 +1745,8 @@ def _run_configured_refinement_locked(
             active_assemblies = tuple(session.stage_manager.current_oligo or ())
             if active_assemblies != assemblies:
                 raise ValueError("measurement callback stage assemblies changed")
-            weighted_score, terms = session.loss_computer.compute_loss(
-                scores,
-                runtime_config,
-            )
-            score = float(weighted_score)
-            if not math.isfinite(score):
-                raise ValueError(f"configured refinement score is not finite: {score!r}")
-            score_paths = _structure_paths(scores, active_assemblies)
-            first_path = next(iter(score_paths.values()), "")
-            return NativeMeasurement(
-                score=score,
-                metrics={
-                    "structure_paths": score_paths,
-                    "loss": _loss_context(
-                        session.loss_computer,
-                        terms,
-                        active_assemblies,
-                    ),
-                },
-                structure_path=first_path,
+            return measure_configured_scores(
+                session.loss_computer, scores, runtime_config, active_assemblies,
             )
 
         policy = BranchingPolicy(

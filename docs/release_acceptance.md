@@ -115,6 +115,10 @@ new designs, experimental activity measurements or a paper-level success rate.
   recorded in the README; `CITATION.cff` identifies the software and repository.
   A version tag and an archived software DOI should identify the final paper release.
 
-The CPU workflow in `.github/workflows/release-cpu.yml` defines the portable
-Python 3.11/3.12 checks. GPU inference and manuscript experiments have their own
-inputs and acceptance conditions; they are not run by that workflow.
+The CPU workflow in `.github/workflows/release-cpu.yml` runs the portable
+Python 3.11/3.12 checks through the shared
+[release CPU entrypoint](../scripts/validation/release_cpu.py).
+Run `python scripts/validation/release_cpu.py -q` locally with the same declared
+development dependencies; `--collect-only -q` lists its selection.
+GPU inference and manuscript experiments retain their own inputs and acceptance
+conditions and are not run by that workflow.

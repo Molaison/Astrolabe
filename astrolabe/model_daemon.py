@@ -705,17 +705,25 @@ def serve(
     if max_frame_bytes <= 0:
         raise ValueError("max_frame_bytes must be positive")
     _event("model_load_start", backend=backend)
-    handler = _handler_from(factory(settings))
+    from astrolabe.model_execution import model_kernel_context
+
+    with model_kernel_context(backend, identity):
+        handler = _handler_from(factory(settings))
     _event("model_load_end", backend=backend, model_load_count=1)
-    _Server(
-        handler,
-        socket_path=Path(socket_path),
-        identity=identity,
-        backend=backend,
-        max_pending=max_pending,
-        max_frame_bytes=max_frame_bytes,
-        parent_pid=parent_pid,
-    ).run()
+    try:
+        _Server(
+            handler,
+            socket_path=Path(socket_path),
+            identity=identity,
+            backend=backend,
+            max_pending=max_pending,
+            max_frame_bytes=max_frame_bytes,
+            parent_pid=parent_pid,
+        ).run()
+    finally:
+        close = getattr(handler, "close", None)
+        if close is not None:
+            close()
 
 
 class OwnedModelDaemon:

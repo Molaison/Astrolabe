@@ -386,12 +386,13 @@ def test_parse_arguments_prunes_persisted_config_but_keeps_live_args(tmp_path: P
             "loss": {
                 "loss_terms": {
                     "used_loss": {"_type": "ptm"},
-                    "unused_loss": {"_type": "ptm"},
+                    "report_loss": {"_type": "ptm"},
+                    "disabled_loss": None,
                 },
                 "expression_terms": {
                     "helper_expr": "used_loss",
                     "enter_expr": "helper_expr > 0",
-                    "unused_expr": "unused_loss",
+                    "unused_expr": "report_loss",
                 },
             },
         }
@@ -402,7 +403,7 @@ def test_parse_arguments_prunes_persisted_config_but_keeps_live_args(tmp_path: P
 
     assert "EUnused" in resolved.evaluator.evaluator_terms
     assert "MUnused" in resolved.mutator.mutator_terms
-    assert "unused_loss" in resolved.loss.loss_terms
+    assert "report_loss" in resolved.loss.loss_terms
     assert resolved.evaluator.scheduling.overlap_cpu_postprocess is True
     assert set(saved_cfg.evaluator.evaluator_terms.keys()) == {"EUsed"}
     assert saved_cfg.evaluator.scheduling.overlap_cpu_postprocess is True
@@ -413,7 +414,7 @@ def test_parse_arguments_prunes_persisted_config_but_keeps_live_args(tmp_path: P
     assert hasattr(saved_cfg.mutator, "MCMC")
     assert not hasattr(saved_cfg.mutator, "NAMPNN")
     assert set(saved_cfg.mutator.selectors.keys()) == {"MUsed"}
-    assert set(saved_cfg.loss.loss_terms.keys()) == {"used_loss"}
+    assert set(saved_cfg.loss.loss_terms.keys()) == {"used_loss", "report_loss"}
     assert set(saved_cfg.loss.expression_terms.keys()) == {"helper_expr", "enter_expr"}
     assert "unused_expr" not in saved_cfg.loss.expression_terms
 

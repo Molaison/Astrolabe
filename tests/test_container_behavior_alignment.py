@@ -43,11 +43,26 @@ def test_gh_dev_does_not_shadow_installed_vendor_packages() -> None:
     assert '\"$REPO_ROOT\" \"$@\"' in text
 
 
-def test_gh_dev_auto_resolved_runtime_binds_current_checkout() -> None:
-    text = (SCRIPTS_DIR / "astrolabe").read_text(encoding="utf-8")
+def test_gh_dev_auto_resolved_runtime_binds_current_checkout(monkeypatch, tmp_path) -> None:
+    from astrolabe import dev_wrapper, launcher
 
-    assert 'GH_HOST_REPO_MAP_ROOT="${GH_HOST_REPO_MAP_ROOT:-$ASTROLABE_HOST_REPO_MAP_ROOT}"' in text
-    assert 'GH_HOST_REPO_ROOT="${GH_HOST_REPO_ROOT:-$ASTROLABE_HOST_REPO_ROOT}"' in text
+    for key in (
+        "GH_PY", "ASTROLABE_PY", "GH_HOST_REPO_ROOT", "GH_HOST_REPO_MAP_ROOT",
+        "ASTROLABE_HOST_REPO_ROOT", "ASTROLABE_HOST_REPO_MAP_ROOT",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("ASTROLABE_RUNTIME_ACTIVE", "1")
+    monkeypatch.setattr(dev_wrapper, "resolve_default_astrolabe_python", lambda root: sys.executable)
+    executed = []
+    monkeypatch.setattr(launcher.os, "execvpe", lambda *args: executed.append(args))
+
+    launcher.checkout_main(tmp_path, ["run", "--task", "example"])
+
+    executable, command, env = executed[0]
+    assert executable == sys.executable
+    assert command[-4:] == [str(tmp_path), "run", "--task", "example"]
+    assert env["GH_HOST_REPO_ROOT"] == env["ASTROLABE_HOST_REPO_ROOT"] == str(tmp_path)
+    assert env["GH_HOST_REPO_MAP_ROOT"] == env["ASTROLABE_HOST_REPO_MAP_ROOT"] == str(tmp_path)
 
 
 @pytest.mark.parametrize(

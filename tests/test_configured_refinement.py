@@ -113,6 +113,7 @@ class _FakeLoss:
         acceptance_gate=None,
         validate_config=True,
         prefix_early_stopping=None,
+        active_loss_terms=None,
     ) -> None:
         del validate_config
         self.weighted_score_expression = weighted_score_expression
@@ -120,6 +121,7 @@ class _FakeLoss:
         self.acceptance_threshold = acceptance_threshold
         self.acceptance_gate = acceptance_gate
         self.prefix_early_stopping = prefix_early_stopping
+        self.active_loss_terms = active_loss_terms
 
     def compute_loss(self, eval_result, runtime_config):
         del runtime_config

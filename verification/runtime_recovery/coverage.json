@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "sync_commit": "138c5d79ab298c74769eff6c9e7a9d232873460a",
+  "tool": {
+    "name": "TLC",
+    "version": "2.19 / TLA+ 1.7.4",
+    "url": "https://github.com/tlaplus/tlaplus/releases/download/v1.7.4/tla2tools.jar",
+    "sha256": "936a262061c914694dfd669a543be24573c45d5aa0ff20a8b96b23d01e050e88"
+  },
+  "bounds": {
+    "slots": 2,
+    "budgets": [
+      1,
+      2
+    ],
+    "owners": 1,
+    "crashes": "arbitrary finite sequences at modeled boundaries"
+  },
+  "files": {
+    "astrolabe/design/runtime.py": "41a0bc01489bf04fcbabefcbb11ff6783367547ed637c18e471a64c6732fb9fc",
+    "astrolabe/design/operations.py": "3ef8ce48fc2147507b9d799228c4e50fa54e55ba1892a83e154b790a7fa8e2a5",
+    "astrolabe/design/store.py": "f46325db6c21638a0cacab2a83b814a98ae82d04a5fe0323f9f8658d58f187a7",
+    "astrolabe/design/types.py": "e17109cfa182bee1b758603fd0bdf72d34ebb5cef19fb53a678e3483d74f8d4b",
+    "astrolabe/model_execution.py": "de6ac1ac39d37db663cff3adf6aa00035c1df114cf32774d2842e9f854846f19"
+  }
+}
