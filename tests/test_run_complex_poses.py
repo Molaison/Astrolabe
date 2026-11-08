@@ -17,7 +17,10 @@ from astrolabe.score_contributions import ScoreContribution
 
 
 @pytest.fixture(autouse=True)
-def _reset_global_config():
+def _reset_global_config(monkeypatch):
+    from astrolabe.utils import pyrosetta_init
+
+    monkeypatch.setattr(pyrosetta_init, "_OWNER", pyrosetta_init.PyRosettaInitializationOwner())
     global_config.reset()
     yield
     global_config.reset()

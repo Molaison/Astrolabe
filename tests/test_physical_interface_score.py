@@ -13,7 +13,9 @@ from astrolabe.losses.base import loss_registry
 
 @pytest.fixture(autouse=True)
 def _reset_design_screening_pyrosetta_flag(monkeypatch):
-    monkeypatch.setattr(design_screening, "_PYROSETTA_INITED", False)
+    from astrolabe.utils import pyrosetta_init
+
+    monkeypatch.setattr(pyrosetta_init, "_OWNER", pyrosetta_init.PyRosettaInitializationOwner())
 
 
 def _install_fake_pyrosetta(monkeypatch):
@@ -160,8 +162,8 @@ def test_physical_interface_score_formula_rewards_higher_sc_and_lower_dg(
     assert scores["worse"] == pytest.approx(-1.5)
     assert scores["better"] > scores["worse"]
     assert calls == [
-        (better_path, "A", "BCD", "-ignore_unrecognized_res -ignore_zero_occupancy -mute all"),
-        (worse_path, "A", "BCD", "-ignore_unrecognized_res -ignore_zero_occupancy -mute all"),
+        (better_path, "A", "BCD", None),
+        (worse_path, "A", "BCD", None),
     ]
 
 

@@ -61,6 +61,10 @@ class UnsupportedActivationError(OptimizedBackendError):
     """The provider cannot be activated in the current Astrolabe process."""
 
 
+class ProviderPoisonedError(OptimizedBackendError):
+    """A hook may have changed this process; only a fresh process is safe."""
+
+
 class ActivationConflictError(OptimizedBackendError):
     """A second, incompatible activation was requested for one provider."""
 
@@ -267,6 +271,8 @@ _PROVIDER_RULES: dict[str, _ProviderRule] = {
 _ACTIVATION_LOCK = threading.RLock()
 _ACTIVATION_CACHE: dict[tuple[Any, ...], ActivationReport] = {}
 _PROCESS_ACTIVE: dict[str, tuple[Any, ...]] = {}
+_PROCESS_STATES: dict[str, str] = {}
+_PROCESS_FAILURES: dict[str, BaseException] = {}
 
 
 def load_manifest(path: str | Path | None = None) -> dict[str, Any]:
@@ -520,23 +526,39 @@ def activate_provider(selection: KitSelection) -> ActivationReport:
     """Call one validated provider library hook once in the current process."""
     if not isinstance(selection, KitSelection):
         raise TypeError("selection must be a KitSelection")
-    if selection.mode == "off":
-        return ActivationReport(
-            active=False,
-            state="upstream-stock",
-            kit=selection.spec.name,
-            model_identity=selection.model_identity,
-            mode=selection.mode,
-            revision=selection.revision,
-            activation_api="off",
-            provider_report={},
-        )
     api = selection.activation_api
+    # Even stock/off cannot assert a clean module after an irreversible hook.
+    with _ACTIVATION_LOCK:
+        phase = _PROCESS_STATES.get(api.module)
+        if phase == "POISONED":
+            raise ProviderPoisonedError(
+                f"{api.module} is POISONED; use a fresh process"
+            ) from _PROCESS_FAILURES.get(api.module)
+        if phase in {"APPLYING", "VERIFYING"}:
+            raise ActivationConflictError(f"{api.module} activation is {phase}")
+        if selection.mode == "off" and api.module in _PROCESS_ACTIVE:
+            raise ActivationConflictError(f"{api.module} is already active; off cannot undo it")
+        if selection.mode == "off":
+            return ActivationReport(
+                active=False,
+                state="upstream-stock",
+                kit=selection.spec.name,
+                model_identity=selection.model_identity,
+                mode=selection.mode,
+                revision=selection.revision,
+                activation_api="off",
+                provider_report={},
+            )
     if api.kind != "library" or not api.module or not api.function:
         raise UnsupportedActivationError(api.note)
 
     key = _selection_key(selection)
     with _ACTIVATION_LOCK:
+        phase = _PROCESS_STATES.get(api.module)
+        if phase == "POISONED":
+            raise ProviderPoisonedError(f"{api.module} is POISONED; use a fresh process") from _PROCESS_FAILURES.get(api.module)
+        if phase in {"APPLYING", "VERIFYING"}:
+            raise ActivationConflictError(f"{api.module} activation is {phase}")
         cached = _ACTIVATION_CACHE.get(key)
         if cached is not None:
             return cached
@@ -545,6 +567,7 @@ def activate_provider(selection: KitSelection) -> ActivationReport:
             raise ActivationConflictError(
                 f"{api.module} is already active with a different mode, model, or variant"
             )
+        _PROCESS_STATES[api.module] = "PREPARING"
         try:
             module = importlib.import_module(api.module)
         except ImportError as exc:
@@ -563,45 +586,53 @@ def activate_provider(selection: KitSelection) -> ActivationReport:
             if variant:
                 kwargs["variant"] = variant
         try:
-            provider_report = hook(selection.mode, **kwargs)
-        except Exception as exc:
-            raise ActivationNotActiveError(
-                f"{api.module}.{api.function} refused {selection.mode}: {exc}"
-            ) from exc
-        if not isinstance(provider_report, Mapping):
-            raise ActivationNotActiveError(
-                f"{api.module}.{api.function} returned no activation mapping"
+            _PROCESS_STATES[api.module] = "APPLYING"
+            try:
+                provider_report = hook(selection.mode, **kwargs)
+            except Exception as exc:
+                raise ActivationNotActiveError(
+                    f"{api.module}.{api.function} refused {selection.mode}: {exc}"
+                ) from exc
+            _PROCESS_STATES[api.module] = "VERIFYING"
+            if not isinstance(provider_report, Mapping):
+                raise ActivationNotActiveError(
+                    f"{api.module}.{api.function} returned no activation mapping"
+                )
+            report = dict(provider_report)
+            if (
+                report.get("active") is not True
+                or report.get("apply_failed") is True
+                or report.get("refused") is True
+            ):
+                reason = report.get("reason") or "provider did not set active=True"
+                raise ActivationNotActiveError(
+                    f"{api.module}.{api.function} did not activate {selection.mode}: {reason}"
+                )
+            reported_mode = report.get("mode")
+            if reported_mode is not None and str(reported_mode).lower() != selection.mode:
+                raise ActivationNotActiveError(
+                    f"{api.module}.{api.function} activated {reported_mode!r}, "
+                    f"not the requested {selection.mode!r}"
+                )
+            state = _qualified_activation_state(selection, report, api)
+            result = ActivationReport(
+                active=True,
+                state=state,
+                kit=selection.spec.name,
+                model_identity=selection.model_identity,
+                mode=selection.mode,
+                revision=selection.revision,
+                activation_api=f"{api.module}.{api.function}",
+                provider_report=report,
             )
-        report = dict(provider_report)
-        if (
-            report.get("active") is not True
-            or report.get("apply_failed") is True
-            or report.get("refused") is True
-        ):
-            reason = report.get("reason") or "provider did not set active=True"
-            raise ActivationNotActiveError(
-                f"{api.module}.{api.function} did not activate {selection.mode}: {reason}"
-            )
-        reported_mode = report.get("mode")
-        if reported_mode is not None and str(reported_mode).lower() != selection.mode:
-            raise ActivationNotActiveError(
-                f"{api.module}.{api.function} activated {reported_mode!r}, "
-                f"not the requested {selection.mode!r}"
-            )
-        state = _qualified_activation_state(selection, report, api)
-        result = ActivationReport(
-            active=True,
-            state=state,
-            kit=selection.spec.name,
-            model_identity=selection.model_identity,
-            mode=selection.mode,
-            revision=selection.revision,
-            activation_api=f"{api.module}.{api.function}",
-            provider_report=report,
-        )
-        _PROCESS_ACTIVE[api.module] = key
-        _ACTIVATION_CACHE[key] = result
-        return result
+            _PROCESS_STATES[api.module] = "ACTIVE"
+            _PROCESS_ACTIVE[api.module] = key
+            _ACTIVATION_CACHE[key] = result
+            return result
+        except BaseException as exc:
+            _PROCESS_STATES[api.module] = "POISONED"
+            _PROCESS_FAILURES[api.module] = exc
+            raise
 
 
 def _qualified_activation_state(
@@ -689,10 +720,15 @@ def _require_chai_byte_pin(report: Mapping[str, Any], api: ActivationAPI) -> Non
 
 
 def reset_activation_state() -> None:
-    """Clear process-local activation bookkeeping, for tests and worker restarts."""
+    """Discard only pre-apply bookkeeping. This is NOT a module undo contract.
+
+    Active receipts and poisoned/in-flight fences survive reset. A real worker
+    restart gets a fresh interpreter; tests must isolate their fake registries.
+    """
     with _ACTIVATION_LOCK:
-        _ACTIVATION_CACHE.clear()
-        _PROCESS_ACTIVE.clear()
+        for module, state in list(_PROCESS_STATES.items()):
+            if state == "PREPARING":
+                del _PROCESS_STATES[module]
 
 
 def _selection_key(selection: KitSelection) -> tuple[Any, ...]:

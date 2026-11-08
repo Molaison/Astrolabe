@@ -230,8 +230,9 @@ def analyze_interface(
                 or not residues[0].id[0].startswith("H_")):
             raise ValueError("Feedback requires canonical protein binders and protein or single nonpolymeric ligand targets")
         ligand_chains.append(cid)
-    if not pyrosetta.rosetta.basic.was_init_called():
-        pyrosetta.init("-mute all")
+    from astrolabe.utils.pyrosetta_init import ensure_pyrosetta_initialized
+
+    ensure_pyrosetta_initialized(pyrosetta, "-mute all")
     if extra_residue_params is None:
         try:
             extra_residue_params = sorted(Path(global_config.out_dir).glob("raw_model_results/*.params"))

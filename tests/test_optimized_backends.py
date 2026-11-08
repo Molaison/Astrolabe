@@ -36,7 +36,8 @@ def fake_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
         raise AssertionError(f"unexpected git arguments: {args}")
 
     monkeypatch.setattr(optimized, "_git_output", fake_git)
-    optimized.reset_activation_state()
+    for name in ("_ACTIVATION_CACHE", "_PROCESS_ACTIVE", "_PROCESS_STATES", "_PROCESS_FAILURES"):
+        monkeypatch.setattr(optimized, name, {})
     return manifest, source
 
 

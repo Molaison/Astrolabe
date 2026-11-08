@@ -1487,10 +1487,7 @@ def _init_pyrosetta_runtime(structure_files=None) -> None:
         from contextlib import redirect_stderr, redirect_stdout
 
         import pyrosetta  # type: ignore
-        from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
-
-        if pyrosetta_was_initialized(pyrosetta):
-            return
+        from astrolabe.utils.pyrosetta_init import ensure_pyrosetta_initialized
 
         with open(os.devnull, "w") as fnull:
             with redirect_stdout(fnull), redirect_stderr(fnull):
@@ -1508,7 +1505,7 @@ def _init_pyrosetta_runtime(structure_files=None) -> None:
 
                 init_opts = dalphaball_init_options(init_opts)
 
-                pyrosetta.init(init_opts)
+                ensure_pyrosetta_initialized(pyrosetta, init_opts, params=param_files)
     except Exception as exc:
         raise RuntimeError(f"PyRosetta init failed: {type(exc).__name__}: {exc}") from exc
 

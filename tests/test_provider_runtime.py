@@ -55,7 +55,8 @@ def _fake_source(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         raise AssertionError(f"unexpected git arguments: {args}")
 
     monkeypatch.setattr(optimized, "_git_output", fake_git)
-    optimized.reset_activation_state()
+    for name in ("_ACTIVATION_CACHE", "_PROCESS_ACTIVE", "_PROCESS_STATES", "_PROCESS_FAILURES"):
+        monkeypatch.setattr(optimized, name, {})
     return root
 
 
@@ -377,7 +378,7 @@ def test_inactive_report_fails_without_fallback(
 
     with pytest.raises(optimized.ActivationNotActiveError, match=expected):
         optimized.activate_provider(selection)
-    with pytest.raises(optimized.ActivationNotActiveError, match=expected):
+    with pytest.raises(optimized.ProviderPoisonedError, match="POISONED"):
         runtime.activate_child_provider(prepared)
 
 

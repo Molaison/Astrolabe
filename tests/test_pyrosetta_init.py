@@ -1,11 +1,19 @@
 from __future__ import annotations
 
 import sys
+
+import pytest
 from types import SimpleNamespace
 
 import run as run_mod
 from astrolabe.post_eval_hooks import rosetta_minimize
+from astrolabe.utils import pyrosetta_init
 from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
+
+
+@pytest.fixture(autouse=True)
+def _isolated_native_owner(monkeypatch):
+    monkeypatch.setattr(pyrosetta_init, "_OWNER", pyrosetta_init.PyRosettaInitializationOwner())
 
 
 class _FakeBasic:
@@ -38,7 +46,6 @@ def test_pyrosetta_was_initialized_uses_rosetta_basic_fallback() -> None:
 def test_rosetta_minimize_does_not_reinitialize_existing_pyrosetta(monkeypatch) -> None:
     module, calls = _fake_pyrosetta(initialized=True)
     monkeypatch.setitem(sys.modules, "pyrosetta", module)
-    monkeypatch.setattr(rosetta_minimize, "_PYROSETTA_INITED", False)
 
     got = rosetta_minimize._ensure_pyrosetta_initialized()
 
@@ -47,8 +54,9 @@ def test_rosetta_minimize_does_not_reinitialize_existing_pyrosetta(monkeypatch) 
 
 
 def test_run_pyrosetta_runtime_does_not_reinitialize_existing_pyrosetta(
-    monkeypatch,
+    monkeypatch, tmp_path,
 ) -> None:
+    run_mod.global_config.init_const("out_dir", tmp_path)
     module, calls = _fake_pyrosetta(initialized=True)
     monkeypatch.setitem(sys.modules, "pyrosetta", module)
     monkeypatch.setattr(run_mod, "setup_extra_residues", lambda structure_files=None: None)

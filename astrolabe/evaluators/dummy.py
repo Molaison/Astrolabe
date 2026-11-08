@@ -39,9 +39,6 @@ class DummyEvaluator(Evaluator):
 
         import pyrosetta  # type: ignore
 
-        if hasattr(pyrosetta, "is_initialized") and pyrosetta.is_initialized():
-            return pyrosetta
-
         opts = "-ignore_zero_occupancy false -mute all -beta"
         dalpha = (
             pathlib.Path(__file__).resolve().parents[1]
@@ -52,7 +49,9 @@ class DummyEvaluator(Evaluator):
             opts = f"{opts} -holes:dalphaball {dalpha}"
         with open(os.devnull, "w") as fnull:
             with redirect_stdout(fnull), redirect_stderr(fnull):
-                pyrosetta.init(opts)
+                from astrolabe.utils.pyrosetta_init import ensure_pyrosetta_initialized
+
+                ensure_pyrosetta_initialized(pyrosetta, opts)
         return pyrosetta
 
     def _write_input_structure(
