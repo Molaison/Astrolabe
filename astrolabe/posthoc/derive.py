@@ -391,8 +391,10 @@ def derive_af3(
         if summary_path.exists():
             try:
                 summary = json.loads(summary_path.read_text(encoding="utf-8"))
-            except Exception:
-                summary = None
+            except Exception as exc:
+                raise ValueError(f"Cannot derive AF3 summary: {summary_path}") from exc
+            if not isinstance(summary, dict):
+                raise ValueError(f"AF3 summary must be an object: {summary_path}")
             if isinstance(summary, dict):
                 metrics: Dict[str, Any] = {}
                 # Scalars we commonly want.
@@ -420,8 +422,8 @@ def derive_af3(
                 if conf_path.exists():
                     try:
                         conf = json.loads(conf_path.read_text(encoding="utf-8"))
-                    except Exception:
-                        conf = None
+                    except Exception as exc:
+                        raise ValueError(f"Cannot derive AF3 confidence: {conf_path}") from exc
                     if isinstance(conf, dict):
                         token_chain_ids = conf.get("token_chain_ids")
                         if isinstance(token_chain_ids, list) and token_chain_ids:
@@ -496,8 +498,8 @@ def derive_af3(
                 if conf_path.exists():
                     try:
                         conf = json.loads(conf_path.read_text(encoding="utf-8"))
-                    except Exception:
-                        conf = None
+                    except Exception as exc:
+                        raise ValueError(f"Cannot derive AF3 confidence: {conf_path}") from exc
                     if isinstance(conf, dict):
                         metrics.update(
                             _chain_plddt_mean(
@@ -559,8 +561,8 @@ def derive_protenix(
             for p in oligo_dir.glob("seed_*/predictions/*_summary_confidence_sample_*.json"):
                 try:
                     d = json.loads(p.read_text(encoding="utf-8"))
-                except Exception:
-                    continue
+                except Exception as exc:
+                    raise ValueError(f"Cannot derive Protenix summary: {p}") from exc
                 rs = d.get("ranking_score")
                 try:
                     score = float(rs)
@@ -572,10 +574,10 @@ def derive_protenix(
                 continue
             try:
                 summary = json.loads(best[1].read_text(encoding="utf-8"))
-            except Exception:
-                continue
+            except Exception as exc:
+                raise ValueError(f"Cannot derive Protenix summary: {best[1]}") from exc
             if not isinstance(summary, dict):
-                continue
+                raise ValueError(f"Protenix summary must be an object: {best[1]}")
             metrics: Dict[str, Any] = {}
             for k in ["plddt", "gpde", "ptm", "iptm", "ranking_score", "disorder"]:
                 if k in summary:
@@ -645,10 +647,10 @@ def derive_boltz(
         p = candidates[0]
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
-            continue
+        except Exception as exc:
+            raise ValueError(f"Cannot derive Boltz summary: {p}") from exc
         if not isinstance(d, dict):
-            continue
+            raise ValueError(f"Boltz summary must be an object: {p}")
         metrics: Dict[str, Any] = {}
         for k in ["complex_plddt", "ptm", "iptm", "complex_pde"]:
             if k in d:
@@ -704,8 +706,8 @@ def derive_channel_hole(run_dir: Path) -> Dict[tuple[int, str], Dict[str, Any]]:
         oligo = m.group(2)
         try:
             rows = load_channel_scan_summary(scan_summary_path)
-        except Exception:
-            continue
+        except Exception as exc:
+            raise ValueError(f"Cannot derive channel scan: {scan_summary_path}") from exc
         out[(step, oligo)] = channel_hole_metrics_from_scan_rows(rows)
     return out
 

@@ -12,12 +12,10 @@ from typing import Any, Dict, Iterable, List
 from omegaconf import OmegaConf
 
 from astrolabe.posthoc.db import (
-    get_run_metadata,
-    get_run_signature,
+    commit_collection,
+    get_collection_receipt,
     merge_out_roots,
     open_db,
-    upsert_records,
-    upsert_run_signature,
 )
 from astrolabe.posthoc.derive import (
     derive_af3,
@@ -34,6 +32,7 @@ from astrolabe.posthoc.io_utils import (
     scan_run_dirs,
 )
 from astrolabe.posthoc.refold_backends import canonical_refold_backend_name
+from astrolabe.posthoc.publication import Publication, content_digest, input_identity
 
 
 class MissingRequiredMetricsError(RuntimeError):
@@ -172,6 +171,18 @@ def _collection_context(*, binder_chain: str, target_chain: str) -> Dict[str, An
     }
 
 
+def _collection_input_identity(run_dir: Path, context: Dict[str, Any]) -> str:
+    # These are the actual sources consumed by collection/derivation, including
+    # external source-run alias configuration and symlinked structures' bytes.
+    paths = [run_dir / "scores.csv", run_dir / "config.yaml",
+             run_dir / "structures", run_dir / "raw_model_results"]
+    for metrics in parse_scores_csv(run_dir / "scores.csv").values():
+        source = str(metrics.get("src_run_dir") or "").strip()
+        if source:
+            paths.append(Path(source).expanduser() / "config.yaml")
+    return input_identity(paths, {"receipt_version": 1, **context})
+
+
 def _archive_relpath_for_run(*, run_dir: Path) -> Path:
     digest = hashlib.sha256(str(run_dir).encode("utf-8")).hexdigest()[:8]
     task = run_dir.parent.name
@@ -194,18 +205,31 @@ def _archive_run_raw_model_results(
             "archive_path": str(archive_path),
             "status": "missing_raw_model_results",
         }
-    if archive_path.exists() and not overwrite:
-        return {
-            "run_dir": str(run_dir),
-            "archive_path": str(archive_path),
-            "status": "exists",
-        }
-    tmp = archive_path.with_suffix(archive_path.suffix + f".{os.getpid()}.tmp")
-    if tmp.exists():
-        tmp.unlink()
-    with tarfile.open(tmp, "w:gz") as tf:
-        tf.add(raw_dir, arcname="raw_model_results")
-    os.replace(str(tmp), str(archive_path))
+    identity = input_identity([raw_dir], {"archive_version": 1})
+    manifest = archive_path.with_name(archive_path.name + ".manifest.json")
+    if archive_path.is_file() and manifest.is_file() and not overwrite:
+        try:
+            receipt = json.loads(manifest.read_text())
+        except (OSError, ValueError):
+            receipt = {}
+        if (receipt.get("status") == "COMPLETE"
+                and receipt.get("input_identity") == identity
+                and receipt.get("outputs") == [{"path": str(archive_path),
+                                               "sha256": content_digest(archive_path)}]):
+            return {"run_dir": str(run_dir), "archive_path": str(archive_path),
+                    "status": "exists"}
+    bundle = Publication(manifest)
+    try:
+        with tarfile.open(bundle.path(archive_path), "w:gz") as tf:
+            tf.add(raw_dir, arcname="raw_model_results")
+        if input_identity([raw_dir], {"archive_version": 1}) != identity:
+            raise RuntimeError("Archive inputs changed during collection")
+        bundle.publish(input_identity=identity)
+    except BaseException as exc:
+        bundle.failed(exc)
+        raise
+    finally:
+        bundle.close()
     return {
         "run_dir": str(run_dir),
         "archive_path": str(archive_path),
@@ -445,16 +469,22 @@ def collect_scores(
         target_chain=target_chain,
     )
     to_process: List[Path] = []
+    identities: Dict[Path, str] = {}
+    prior_receipts: Dict[Path, Dict[str, Any]] = {}
+    identity_context = {**collection_context, "required_metrics": sorted(required_keys)}
     skipped = 0
     for run_dir in run_dirs:
-        sig = file_signature(run_dir / "scores.csv")
-        existing = get_run_signature(conn, str(run_dir))
-        existing_metadata = get_run_metadata(conn, run_dir=run_dir)
+        identity = _collection_input_identity(run_dir, identity_context)
+        identities[run_dir] = identity
+        existing = get_collection_receipt(conn, str(run_dir))
+        prior_receipts[run_dir] = existing
         if (
-            existing is not None
-            and existing == sig
-            and existing_metadata.get("posthoc_collection_context")
-            == collection_context
+            existing.get("status") == "COMPLETE"
+            and existing.get("input_identity") == identity
+            and set(existing.get("derivations", {}))
+            == {"af3", "protenix", "boltz", "chai1", "channel_hole"}
+            and all(item.get("status") == "SUCCESS" and item.get("input_identity") == identity
+                    for item in existing["derivations"].values())
         ):
             skipped += 1
             continue
@@ -475,6 +505,7 @@ def collect_scores(
         Dict[str, int],
         Dict[str, int],
         int,
+        Dict[str, Any],
     ]:
         scores_path = run_dir / "scores.csv"
         scores_sig = file_signature(scores_path)
@@ -492,24 +523,38 @@ def collect_scores(
         run_evaluator_context["posthoc_collection_context"] = collection_context
         source_evaluator_context_cache: Dict[str, Dict[str, Any]] = {}
 
-        # Derived metrics (best-effort).
+        # Successful independent derivations are durable; retry only failures
+        # with this same content/config identity. No inference is invoked here.
         derived: Dict[tuple[int, str], Dict[str, Any]] = {}
-        for derive_fn in (
-            lambda: derive_af3(run_dir, binder_chain=binder_chain, target_chain=target_chain),
-            lambda: derive_protenix(
+        outcomes: Dict[str, Any] = {}
+        prior = prior_receipts[run_dir].get("derivations", {})
+        for name, derive_fn in (
+            ("af3", lambda: derive_af3(run_dir, binder_chain=binder_chain, target_chain=target_chain)),
+            ("protenix", lambda: derive_protenix(
                 run_dir,
                 binder_chain=binder_chain,
                 target_chain=target_chain,
-            ),
-            lambda: derive_boltz(run_dir, binder_chain=binder_chain, target_chain=target_chain),
-            lambda: derive_chai1(run_dir),
-            lambda: derive_channel_hole(run_dir),
+            )),
+            ("boltz", lambda: derive_boltz(run_dir, binder_chain=binder_chain, target_chain=target_chain)),
+            ("chai1", lambda: derive_chai1(run_dir)),
+            ("channel_hole", lambda: derive_channel_hole(run_dir)),
         ):
+            previous = prior.get(name, {})
             try:
-                d = derive_fn()
+                if (previous.get("status") == "SUCCESS"
+                        and previous.get("input_identity") == identities[run_dir]):
+                    d = {(int(s), o): m for s, o, m in previous["outcome"]["metrics"]}
+                else:
+                    d = derive_fn()
+                outcomes[name] = {
+                    "status": "FAILED" if any(v.get("__parse_errors__") for v in d.values()) else "SUCCESS",
+                    "outcome": {"metrics": [[s, o, m] for (s, o), m in d.items()]},
+                }
             except Exception as exc:
                 run_parse_errors += 1
                 d = {}
+                outcomes[name] = {"status": "FAILED", "outcome": {
+                    "metrics": [], "error": f"{type(exc).__name__}: {exc}"}}
                 if not step_rows:
                     key = (0, "__step__")
                     derived.setdefault(key, {}).setdefault("__parse_errors__", []).append(
@@ -692,6 +737,7 @@ def collect_scores(
             run_missing_required_counts,
             run_invalid_required_counts,
             run_required_failed_records,
+            outcomes,
         )
 
     max_workers = int(workers) if int(workers) > 0 else max(1, (os.cpu_count() or 1) // 2)
@@ -716,9 +762,13 @@ def collect_scores(
                 run_missing_required_counts,
                 run_invalid_required_counts,
                 run_required_failed_records,
+                outcomes,
             ) = fut.result()
-            upsert_records(conn, recs)
-            upsert_run_signature(
+            if _collection_input_identity(run_dir, identity_context) != identities[run_dir]:
+                raise RuntimeError(f"Collection inputs changed during derivation: {run_dir}")
+            complete = (not run_parse_errors and not run_required_failed_records
+                        and all(item["status"] == "SUCCESS" for item in outcomes.values()))
+            commit_collection(
                 conn,
                 run_dir=str(run_dir),
                 task=task,
@@ -726,6 +776,10 @@ def collect_scores(
                 metadata=evaluator_context,
                 scores_mtime_ns=scores_sig[0],
                 scores_size=scores_sig[1],
+                records=recs,
+                input_identity=identities[run_dir],
+                derivations=outcomes,
+                complete=complete,
             )
             results.append(
                 {
@@ -735,6 +789,8 @@ def collect_scores(
                     "records": len(recs),
                     "parse_error_count": int(run_parse_errors),
                     "required_failed_records": int(run_required_failed_records),
+                    "status": "COMPLETE" if complete else "PARTIAL",
+                    "derivations": {name: item["status"] for name, item in outcomes.items()},
                 }
             )
             required_failed_records_total += int(run_required_failed_records)
@@ -763,7 +819,7 @@ def collect_scores(
                     archive_dir=archive_dir,
                     overwrite=bool(archive_overwrite),
                 ): item
-                for item in results
+                for item in ({"run_dir": str(rd)} for rd in run_dirs)
             }
             for fut in as_completed(futs):
                 try:
@@ -790,6 +846,7 @@ def collect_scores(
         "runs_processed": len(to_process),
         "workers": max_workers,
         "processed": results,
+        "status": "PARTIAL" if any(r["status"] == "PARTIAL" for r in results) or archive_failed else "COMPLETE",
         "parse_error_total": int(sum(int(r.get("parse_error_count", 0)) for r in results)),
         "required_metrics": list(required_keys),
         "required_failed_records_total": int(required_failed_records_total),
@@ -810,12 +867,6 @@ def collect_scores(
                 "archive_paths": sorted(archive_paths),
             }
         )
-
-    if export_csv is not None:
-        export_csv = Path(export_csv).expanduser().resolve()
-        export_csv.parent.mkdir(parents=True, exist_ok=True)
-        export_records_to_csv(db_path=db_path, csv_path=export_csv)
-        summary["export_csv"] = str(export_csv)
 
     if (
         fail_on_missing_required
@@ -843,19 +894,43 @@ def collect_scores(
         )
         raise MissingRequiredMetricsError(msg)
 
+    if export_csv is not None:
+        export_csv = Path(export_csv).expanduser().resolve()
+        export_records_to_csv(db_path=db_path, csv_path=export_csv)
+        summary["export_csv"] = str(export_csv)
+    conn.close()
     return summary
 
 
 def export_records_to_csv(*, db_path: Path, csv_path: Path, oligo: str | None = None) -> None:
+    csv_path = Path(csv_path).expanduser().resolve()
+    bundle = Publication(csv_path.with_name(csv_path.name + ".manifest.json"))
+    conn = open_db(db_path)
+    try:
+        # Export one DB snapshot, not two unrelated passes over live rows.
+        conn.execute("BEGIN")
+        partial = conn.execute(
+            "SELECT 1 FROM runs WHERE collection_status != 'COMPLETE' LIMIT 1"
+        ).fetchone() is not None
+        _export_records_to_csv(conn=conn, csv_path=bundle.path(csv_path), oligo=oligo)
+        bundle.publish(status="PARTIAL" if partial else "COMPLETE", source_db=str(db_path))
+    except BaseException as exc:
+        bundle.failed(exc)
+        raise
+    finally:
+        conn.close()
+        bundle.close()
+
+
+def _export_records_to_csv(*, conn: Any, csv_path: Path, oligo: str | None = None) -> None:
     """
     Export all records to a wide CSV for human inspection.
     """
     import csv
     import json
 
-    from astrolabe.posthoc.db import iter_records, open_db
+    from astrolabe.posthoc.db import iter_records
 
-    conn = open_db(db_path)
     # First pass: union keys
     keys: set[str] = set()
     for row in iter_records(conn, oligo=oligo):

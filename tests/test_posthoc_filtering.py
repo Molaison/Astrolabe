@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 from pathlib import Path
 
 import pytest
@@ -818,7 +819,8 @@ def test_filter_structures_expression_missing_metric_fails_fast(tmp_path: Path) 
             dst_dir=dst_dir,
         )
 
-    assert (dst_dir / "filter_report.csv").exists()
+    assert not (dst_dir / "filter_report.csv").exists()
+    assert json.loads((dst_dir / "bundle_manifest.json").read_text())["status"] == "PARTIAL"
     assert not (dst_dir / "filtered.sqlite").exists()
 
 

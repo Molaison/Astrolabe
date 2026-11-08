@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, Optional
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 _RECORD_IDENTITY_KEYS = frozenset({"task", "run", "step", "oligo"})
 
@@ -208,6 +208,22 @@ def _init_schema(conn: sqlite3.Connection) -> None:
     }
     if "metadata_json" not in run_columns:
         cur.execute("ALTER TABLE runs ADD COLUMN metadata_json TEXT NOT NULL DEFAULT '{}';")
+    for name, definition in (
+        ("collection_identity", "TEXT"),
+        ("collection_status", "TEXT NOT NULL DEFAULT 'UNATTESTED'"),
+    ):
+        if name not in run_columns:
+            cur.execute(f"ALTER TABLE runs ADD COLUMN {name} {definition};")
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS collection_derivations (
+            run_dir TEXT NOT NULL,
+            name TEXT NOT NULL,
+            input_identity TEXT NOT NULL,
+            status TEXT NOT NULL,
+            outcome_json TEXT NOT NULL,
+            PRIMARY KEY (run_dir, name)
+        );
+    """)
     cur.execute(
         "INSERT OR IGNORE INTO meta(key, value) VALUES(?, ?)",
         ("schema_version", str(SCHEMA_VERSION)),
@@ -242,6 +258,7 @@ def upsert_run_signature(
     metadata: Dict[str, Any] | None = None,
     scores_mtime_ns: int,
     scores_size: int,
+    commit: bool = True,
 ) -> None:
     conn.execute(
         """
@@ -253,6 +270,8 @@ def upsert_run_signature(
           metadata_json=excluded.metadata_json,
           scores_mtime_ns=excluded.scores_mtime_ns,
           scores_size=excluded.scores_size,
+          collection_identity=NULL,
+          collection_status='UNATTESTED',
           updated_at=excluded.updated_at;
         """,
         (
@@ -265,7 +284,8 @@ def upsert_run_signature(
             time.time(),
         ),
     )
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def get_run_metadata(conn: sqlite3.Connection, *, run_dir: str | Path) -> Dict[str, Any]:
@@ -282,7 +302,9 @@ def get_run_metadata(conn: sqlite3.Connection, *, run_dir: str | Path) -> Dict[s
     return raw if isinstance(raw, dict) else {}
 
 
-def upsert_records(conn: sqlite3.Connection, records: Iterable[Dict[str, Any]]) -> int:
+def upsert_records(
+    conn: sqlite3.Connection, records: Iterable[Dict[str, Any]], *, commit: bool = True
+) -> int:
     rows = []
     now = time.time()
     for r in records:
@@ -321,8 +343,55 @@ def upsert_records(conn: sqlite3.Connection, records: Iterable[Dict[str, Any]]) 
         """,
         rows,
     )
-    conn.commit()
+    if commit:
+        conn.commit()
     return len(rows)
+
+
+def get_collection_receipt(conn: sqlite3.Connection, run_dir: str) -> Dict[str, Any]:
+    row = conn.execute(
+        "SELECT collection_identity, collection_status FROM runs WHERE run_dir = ?",
+        (run_dir,),
+    ).fetchone()
+    if row is None:
+        return {}
+    derivations = {}
+    for item in conn.execute(
+        "SELECT * FROM collection_derivations WHERE run_dir = ?", (run_dir,)
+    ):
+        derivations[item["name"]] = {
+            "input_identity": item["input_identity"],
+            "status": item["status"],
+            "outcome": json.loads(item["outcome_json"]),
+        }
+    return {"input_identity": row["collection_identity"],
+            "status": row["collection_status"], "derivations": derivations}
+
+
+def commit_collection(
+    conn: sqlite3.Connection, *, run_dir: str, task: str, run: str,
+    metadata: Dict[str, Any], scores_mtime_ns: int, scores_size: int,
+    records: list[Dict[str, Any]], input_identity: str,
+    derivations: Dict[str, Any], complete: bool,
+) -> None:
+    """Publish replacement records and their completeness proof in one transaction."""
+    with conn:
+        conn.execute("DELETE FROM records WHERE run_dir = ?", (run_dir,))
+        upsert_records(conn, records, commit=False)
+        upsert_run_signature(
+            conn, run_dir=run_dir, task=task, run=run, metadata=metadata,
+            scores_mtime_ns=scores_mtime_ns, scores_size=scores_size, commit=False,
+        )
+        conn.execute("DELETE FROM collection_derivations WHERE run_dir = ?", (run_dir,))
+        conn.executemany(
+            "INSERT INTO collection_derivations VALUES (?, ?, ?, ?, ?)",
+            [(run_dir, name, input_identity, item["status"],
+              _json_dumps_compact(item["outcome"])) for name, item in derivations.items()],
+        )
+        conn.execute(
+            "UPDATE runs SET collection_identity = ?, collection_status = ? WHERE run_dir = ?",
+            (input_identity, "COMPLETE" if complete else "PARTIAL", run_dir),
+        )
 
 
 def iter_records(
