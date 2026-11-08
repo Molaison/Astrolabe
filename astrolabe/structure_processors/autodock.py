@@ -2228,9 +2228,14 @@ class AutoDockVinaLigandPoseRescue(AutoDockProcessorBase):
             return merged_pdb_path
 
         except DockingPenaltyError as e:
+            from astrolabe.design.runtime import outcome_is_unknown
+            if outcome_is_unknown(e):
+                raise
             if self.fail_on_error:
                 raise
             logging.warning("Treating docking issue as score penalty: %s", str(e))
+            self._known_scientific_failure = {"reason": e.reason, "message": str(e),
+                                              "details": e.details}
             self._write_penalty_metadata(
                 input_file_path=input_file_path,
                 penalty_active=True,
@@ -2335,6 +2340,9 @@ class AutoDockVinaLigandPoseRescue(AutoDockProcessorBase):
                 inverse_transform=inverse_transform,
             )
         except DockingPenaltyError as exc:
+            from astrolabe.design.runtime import outcome_is_unknown
+            if outcome_is_unknown(exc):
+                raise
             if not self._should_retry_alpha_shape_filter(exc):
                 raise
 

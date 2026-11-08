@@ -37,6 +37,7 @@ Conventions (unify the Potts energy head and the decoder log-prob field):
 import copy
 import multiprocessing as mp
 import random
+import threading
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Sequence
 
@@ -723,6 +724,8 @@ _POOL_ENGINE = None
 _POOL_CRITERIA = None
 _POOL_SEED = 0
 _POOL_THREADLIMIT = None   # holds the threadpoolctl limiter so it isn't GC'd (which would restore threads)
+_POOL_OWNER = None
+_POOL_LOCK = threading.Lock()
 
 
 def _pool_init():
@@ -1176,15 +1179,37 @@ class PottsMPNNPHEngine(MPNNInferenceEngine):
     def _run_tasks_parallel(self, ctx, criteria_list, seed, tasks, n_jobs) -> PHDesignSet:
         """Fork a pool over the (criteria × seed) tasks, sharing ctx read-only via COW (set as module
         globals before the fork). Returns all designs (order-independent; run_ph_redesign re-sorts)."""
-        global _POOL_CTX, _POOL_ENGINE, _POOL_CRITERIA, _POOL_SEED
+        global _POOL_CTX, _POOL_ENGINE, _POOL_CRITERIA, _POOL_SEED, _POOL_OWNER
+        if not _POOL_LOCK.acquire(blocking=False):
+            raise RuntimeError("Proton fork pool is busy or cleanup is unresolved; context retained")
         _POOL_CTX, _POOL_ENGINE, _POOL_CRITERIA, _POOL_SEED = ctx, self, criteria_list, seed
         out = PHDesignSet()
+        error = None
         try:
-            with mp.get_context("fork").Pool(min(n_jobs, len(tasks)), initializer=_pool_init) as pool:
-                for sub in pool.imap_unordered(_pool_task, tasks):
-                    out.extend(sub)
+            _POOL_OWNER = mp.get_context("fork").Pool(min(n_jobs, len(tasks)), initializer=_pool_init)
+            for sub in _POOL_OWNER.imap_unordered(_pool_task, tasks):
+                out.extend(sub)
+        except BaseException as exc:
+            error = exc
+            raise
         finally:
-            _POOL_CTX = _POOL_ENGINE = _POOL_CRITERIA = None
+            # A failed join is not proof of worker exit. Retain the pool and
+            # inherited context, and fence future calls in this process.
+            if _POOL_OWNER is not None:
+                try:
+                    if error is None:
+                        _POOL_OWNER.close()
+                    else:
+                        _POOL_OWNER.terminate()
+                    _POOL_OWNER.join()
+                except BaseException as cleanup_error:
+                    if error is None:
+                        raise
+                    error.add_note(f"Proton fork cleanup unresolved: {cleanup_error!r}")
+                else:
+                    _POOL_CTX = _POOL_ENGINE = _POOL_CRITERIA = _POOL_OWNER = None
+                    _POOL_SEED = 0
+                    _POOL_LOCK.release()
         return out
 
     # ------------------------------------------------------------------ #

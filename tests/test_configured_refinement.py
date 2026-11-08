@@ -339,6 +339,68 @@ def _events(path: Path) -> list[dict]:
     ]
 
 
+def test_stateful_mutator_resume_restores_next_proposal_without_reconsumption(tmp_path, monkeypatch):
+    from astrolabe.design.native_refinement_runtime import DurableNativeRefinementOwner
+
+    original_mutate = _FakeMutator.mutate
+    def mutate(self, protomers, scores, runtime_config):
+        self.cursor = getattr(self, "cursor", 0) + 1
+        original_mutate(self, protomers, scores, runtime_config)
+        self.probe.mutator_calls[-1]["cursor"] = self.cursor
+        # Make subsequent proposals depend on the restored cursor.
+        name = "A" if self.alias == "first" else "B"
+        segment = global_config.segments[protomers[name].components[0]]
+        old = segment.mutations[0]
+        segment.mutations[0] = (old[0], old[1], "ACDEFGHIK"[self.cursor], old[3], old[4])
+    monkeypatch.setattr(_FakeMutator, "mutate", mutate)
+    monkeypatch.setattr(_FakeMutator, "export_state",
+                        lambda self: {"cursor": getattr(self, "cursor", 0)}, raising=False)
+    monkeypatch.setattr(_FakeMutator, "restore_state",
+                        lambda self, state: setattr(self, "cursor", state["cursor"]), raising=False)
+
+    def config(root):
+        raw = _base_config(root)
+        raw["search"]["max_evaluations"] = 4
+        for term in raw["mutator"]["mutator_terms"].values():
+            term["_type"] = "pore_blocker_mcmc"
+        return _cfg(raw)
+
+    baseline_root = tmp_path / "baseline"
+    baseline_probe = _Probe(baseline_root / "raw/models")
+    _install_probe(monkeypatch, baseline_probe)
+    baseline = run_configured_refinement(config(baseline_root),
+        RepeatRun(index=0, total=1, seed=71, output=baseline_root / "outputs"))
+    original_terminal = DurableNativeRefinementOwner._terminal
+    def cut(owner, job):
+        terminal = original_terminal(owner, job)
+        if job.phase == "propose" and job.id == 1:
+            raise RuntimeError("cut after proposal receipt")
+        return terminal
+    monkeypatch.setattr(DurableNativeRefinementOwner, "_terminal", cut)
+    broken_root = tmp_path / "interrupted"
+    before_probe = _Probe(broken_root / "raw/models")
+    _install_probe(monkeypatch, before_probe)
+    with pytest.raises(RuntimeError, match="cut after proposal receipt"):
+        run_configured_refinement(config(broken_root),
+            RepeatRun(index=0, total=1, seed=71, output=broken_root / "outputs"))
+    [output] = (broken_root / "outputs").glob("*/001_run")
+    resume_cfg = OmegaConf.load(output / "config.yaml")
+    with open_dict(resume_cfg):
+        resume_cfg.out_dir = str(output)
+        resume_cfg.search.resume = True
+    monkeypatch.setattr(DurableNativeRefinementOwner, "_terminal", original_terminal)
+    after_probe = _Probe(broken_root / "raw/models")
+    _install_probe(monkeypatch, after_probe)
+    resumed = run_configured_refinement(resume_cfg,
+        RepeatRun(index=0, total=1, seed=71, output=output))
+    expected = [(call["alias"], call["cursor"]) for call in baseline_probe.mutator_calls]
+    observed = [(call["alias"], call["cursor"]) for call in before_probe.mutator_calls + after_probe.mutator_calls]
+    assert observed == expected
+    assert after_probe.mutator_calls[0]["cursor"] == 2
+    assert [item["candidate_identity"] for item in resumed["evaluations"]] == [
+        item["candidate_identity"] for item in baseline["evaluations"]]
+
+
 def test_generic_builder_reuses_stack_and_evaluator_across_complete_assignments(
     tmp_path,
     monkeypatch,

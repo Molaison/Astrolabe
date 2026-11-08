@@ -7,6 +7,7 @@ from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import MutableTypes, ProtomerTypes
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.mutators.base import Mutator
+from astrolabe.mutators.state_protocol import ScientificState, fields, natural
 from astrolabe.mutators.capabilities import MUTABLE_TYPE_SET, MutatorCapabilities
 from astrolabe.mutators.utils import (
     prepare_exclude_sites,
@@ -247,6 +248,32 @@ class RandomSubstitutionMutator(Mutator):
 
 class PoreBlockingSubstitutionMutator(RandomSubstitutionMutator):
     name: str = "PoreBlockerMCMC"
+
+    def _state_identity(self, binding):
+        return {"binding": binding, "config": {
+            key: getattr(self, key) for key in
+            ("position_selector", "mutation_method", "select_positions", "allowed_residues",
+             "disallowed_residues", "max_mutations", "avoid_current_residue",
+             "active_step_interval", "active_step_offset")},
+            "active_steps": sorted(self.active_steps) if self.active_steps is not None else None}
+
+    def snapshot_state(self, *, binding):
+        return ScientificState.create("pore-activation", self._state_identity(binding), {
+            "active_invocations": self._active_invocations,
+            "telemetry": self.last_mutation_telemetry})
+
+    def export_state(self):
+        return self.snapshot_state(binding={}).to_dict()
+
+    def restore_state(self, state, *, binding=None):
+        binding = {} if binding is None else binding
+        payload = ScientificState.validate(state, "pore-activation", self._state_identity(binding))
+        fields(payload, ("active_invocations", "telemetry"))
+        cursor = natural(payload["active_invocations"])
+        if not isinstance(payload["telemetry"], dict):
+            raise ValueError("Invalid pore telemetry")
+        self._active_invocations = cursor
+        self.last_mutation_telemetry = payload["telemetry"]
 
     def __init__(
         self,

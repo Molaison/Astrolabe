@@ -1596,7 +1596,8 @@ codes = json.loads(sys.stdin.read() or "[]")
 import pyrosetta
 with open(os.devnull, "w") as fnull:
     with contextlib.redirect_stdout(fnull), contextlib.redirect_stderr(fnull):
-        pyrosetta.init("-mute all")
+        from astrolabe.utils.pyrosetta_init import ensure_pyrosetta_initialized
+        ensure_pyrosetta_initialized(pyrosetta, "-mute all")
 residue_type_set = pyrosetta.rosetta.core.chemical.ChemicalManager.get_instance().residue_type_set("fa_standard")
 found = []
 for code in codes:

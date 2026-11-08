@@ -17,7 +17,10 @@ from astrolabe.score_contributions import ScoreContribution
 
 
 @pytest.fixture(autouse=True)
-def _reset_global_config():
+def _reset_global_config(monkeypatch):
+    from astrolabe.utils import pyrosetta_init
+
+    monkeypatch.setattr(pyrosetta_init, "_OWNER", pyrosetta_init.PyRosettaInitializationOwner())
     global_config.reset()
     yield
     global_config.reset()
@@ -304,10 +307,12 @@ def test_pyrosetta_runtime_adds_generated_extra_residue_params(
         assert structure_files == structure_files_arg
 
     structure_files_arg = structure_files
-    fake_pyrosetta = SimpleNamespace(
-        is_initialized=lambda: False,
-        init=lambda opts: init_options.append(opts),
-    )
+    def fake_init(opts):
+        init_options.append(opts)
+        fake_pyrosetta.initialized = True
+
+    fake_pyrosetta = SimpleNamespace(initialized=False, init=fake_init)
+    fake_pyrosetta.is_initialized = lambda: fake_pyrosetta.initialized
 
     monkeypatch.setattr(run, "setup_extra_residues", fake_setup_extra_residues)
     monkeypatch.setitem(sys.modules, "pyrosetta", fake_pyrosetta)

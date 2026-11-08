@@ -128,7 +128,9 @@ class EvaluatorInferController:
         if type(enabled) is not bool or type(reset) is not bool:
             raise ValueError("adaptive_control enabled/reset must be boolean")
         with self._cv:
-            if self.active or self.ready:
+            if self._stop.is_set():
+                raise RuntimeError("stopped owner cannot be reset; rebuild its owner")
+            if self.active or self.ready or self.warming:
                 raise RuntimeError("adaptive_control requires a completely drained owner")
             if self.quarantined:
                 raise RuntimeError("quarantined owner cannot be reset; rebuild its owner")

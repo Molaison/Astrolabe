@@ -117,8 +117,8 @@
     },
     {
       "path": "foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py",
-      "size": 181260,
-      "sha256": "7d387e3ebee8b8c37329c13f0ecae09c5769330f27a07676f10e2650c10d7344",
+      "size": 182329,
+      "sha256": "da856ab86b8eec85210422211d764fdd536c75acef87093f4eb9c97d6c8ba3c1",
       "upstream_git_blob": "b6684182892aa7d16936ffb51e26c805992d0134"
     },
     {
@@ -633,8 +633,8 @@
     },
     {
       "path": "foundry/src/foundry/utils/squashfs.py",
-      "size": 5234,
-      "sha256": "425730b89c957be4157c8392ee8d507cb85a0903cdcf3a31ee59f89fc75c6048",
+      "size": 5670,
+      "sha256": "b7c4301ba254848e75a69a66ff861b53896f6a143155a72a7abba83ea1dd2877",
       "upstream_git_blob": "b2bc5a7b1aeb30fcbbc3009ce4fdad0d07ab9342"
     },
     {
@@ -690,13 +690,14 @@
     "root": "MIT (LICENSE)",
     "foundry": "BSD-3-Clause (foundry/LICENSE.md, included in this snapshot)"
   },
-  "notes": "Pinned upstream source plus the five explicit, byte-reconstructed local patches. The checkpoint and ten EV6 pickle weights are runtime assets and are not distributed in Git or source archives. Numerical model weights and the source scientific algorithms are unchanged from the retained Proton worktree. Patched proposal modes are extensions, not claims of calibrated pH, pKa or binding free energy.",
+  "notes": "Pinned upstream source plus the six explicit, byte-reconstructed local patches. The checkpoint and ten EV6 pickle weights are runtime assets and are not distributed in Git or source archives. Numerical model weights and the source scientific algorithms are unchanged from the retained Proton worktree. Patched proposal modes are extensions, not claims of calibrated pH, pKa or binding free energy.",
   "local_patches": [
     "patches/vendor/proton_pottsmpnn/01_preserve_design_mask.patch",
     "patches/vendor/proton_pottsmpnn/02_automatic_histidine_bias.patch",
     "patches/vendor/proton_pottsmpnn/03_geometry_joint_network.patch",
     "patches/vendor/proton_pottsmpnn/04_network_only_proposals.patch",
-    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch"
+    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch",
+    "patches/vendor/proton_pottsmpnn/06_lifecycle_boundaries.patch"
   ],
   "runtime_assets": [
     {
@@ -782,21 +783,24 @@
     "patches/vendor/proton_pottsmpnn/02_automatic_histidine_bias.patch": "7c3a3f7ceb949da8b28f74086bd174c23def1c8148ba0bdd198ec94bbf9160b6",
     "patches/vendor/proton_pottsmpnn/03_geometry_joint_network.patch": "7c7e5d337b68c99789145ccea2be7cc3ec6bd8917940a57e22b53251232db0c5",
     "patches/vendor/proton_pottsmpnn/04_network_only_proposals.patch": "c4301a87d1bd3d1c9ac71100c70a8d83c4f202904c1a6ecb2920e5940e520cad",
-    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch": "f0808ed53206a33f317f0d4c3ca199c05ede168194213ddd66a9f0cde7717c80"
+    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch": "f0808ed53206a33f317f0d4c3ca199c05ede168194213ddd66a9f0cde7717c80",
+    "patches/vendor/proton_pottsmpnn/06_lifecycle_boundaries.patch": "5603ecac51c950d9c77db0083e5292daa5540d0df784d1d6aa0b1c046cd5ede1"
   },
   "local_patch_workdirs": {
     "patches/vendor/proton_pottsmpnn/01_preserve_design_mask.patch": ".",
     "patches/vendor/proton_pottsmpnn/02_automatic_histidine_bias.patch": ".",
     "patches/vendor/proton_pottsmpnn/03_geometry_joint_network.patch": "vendor/proton_pottsmpnn",
     "patches/vendor/proton_pottsmpnn/04_network_only_proposals.patch": ".",
-    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch": "."
+    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch": ".",
+    "patches/vendor/proton_pottsmpnn/06_lifecycle_boundaries.patch": "."
   },
   "patch_chain_verified": {
-    "method": "Reverse patches 5..1 with zero fuzz, match upstream Git blobs, apply 1..5 and match original bytes",
+    "method": "Reverse patches 6..1 with zero fuzz, match upstream Git blobs, apply 1..6 and match original bytes",
     "upstream_commit": "09682abfa7d20e0abcdeea0490b7a4b1c190aee3",
     "changed_paths": [
       "foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py",
-      "foundry/models/mpnn/src/mpnn/utils/inference.py"
+      "foundry/models/mpnn/src/mpnn/utils/inference.py",
+      "foundry/src/foundry/utils/squashfs.py"
     ]
   }
 }

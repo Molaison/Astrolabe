@@ -5,11 +5,9 @@ import os
 from pathlib import Path
 from typing import Any
 
-from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
+from astrolabe.utils.pyrosetta_init import ensure_pyrosetta_initialized
 from astrolabe.evaluators.evidence import DerivedStructure
 
-
-_PYROSETTA_INITED = False
 
 
 def _to_plain_mapping(value: Any) -> dict[str, Any]:
@@ -43,16 +41,9 @@ def _pyrosetta_init_options() -> str:
 
 
 def _ensure_pyrosetta_initialized():
-    global _PYROSETTA_INITED
     import pyrosetta  # type: ignore
 
-    if _PYROSETTA_INITED:
-        return pyrosetta
-    if pyrosetta_was_initialized(pyrosetta):
-        _PYROSETTA_INITED = True
-        return pyrosetta
-    pyrosetta.init(_pyrosetta_init_options())
-    _PYROSETTA_INITED = True
+    ensure_pyrosetta_initialized(pyrosetta, _pyrosetta_init_options())
     return pyrosetta
 
 

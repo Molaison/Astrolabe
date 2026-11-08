@@ -24,6 +24,7 @@ from astrolabe.posthoc.db import (
     upsert_run_signature,
 )
 from astrolabe.posthoc.io_utils import sanitize_token
+from astrolabe.posthoc.publication import Publication, content_digest
 
 
 _MISSING = object()
@@ -849,6 +850,55 @@ def filter_structures(
     run_selection: str = _RUN_SELECTION_ALL,
     dry_run: bool = False,
 ) -> dict[str, Any]:
+    arguments = dict(locals())
+    db_path = Path(db_path).expanduser().resolve()
+    if not db_path.is_file():
+        raise FileNotFoundError(f"Scores database not found: {db_path}. Run posthoc collect first.")
+    intended_db = Path(out_db) if out_db is not None else Path(dst_dir) / "filtered.sqlite"
+    if not dry_run and intended_db.expanduser().resolve() == db_path:
+        raise ValueError("--out-db must not overwrite the source --db")
+    bundle = None if dry_run else Publication(
+        Path(dst_dir).expanduser().resolve() / "bundle_manifest.json"
+    )
+    conn = open_db(db_path)
+    try:
+        # Validation, selection and export all see the same source snapshot.
+        conn.execute("BEGIN")
+        result = _filter_structures(**arguments, _bundle=bundle, _conn=conn)
+        status = "PARTIAL" if result["structure_missing"] or result["required_metrics_failed"] else "COMPLETE"
+        if bundle is not None:
+            bundle.publish(status=status, selector=result["selector"], source_db=str(db_path))
+        result["status"] = status
+        result["bundle_manifest"] = str(bundle.manifest) if bundle is not None else ""
+        return result
+    except BaseException as exc:
+        if bundle is not None:
+            bundle.failed(exc)
+        raise
+    finally:
+        conn.close()
+        if bundle is not None:
+            bundle.close()
+
+
+def _filter_structures(
+    *,
+    db_path: Path,
+    dst_dir: Path,
+    preset_path: Path | None = None,
+    filter_expr: str | None = None,
+    prefer_oligo: str = "AB",
+    hardlink: bool = True,
+    overwrite: bool = False,
+    flat: bool = False,
+    report_csv: Path | None = None,
+    out_db: Path | None = None,
+    fail_on_missing_required: bool = True,
+    run_selection: str = _RUN_SELECTION_ALL,
+    dry_run: bool = False,
+    _bundle: Publication | None = None,
+    _conn: Any = None,
+) -> dict[str, Any]:
     if bool(preset_path) == bool(filter_expr):
         raise ValueError("Exactly one of preset_path or filter_expr must be provided")
 
@@ -859,7 +909,7 @@ def filter_structures(
             "Run gh posthoc collect --out-root <outputs> --db <scores.sqlite> first."
         )
     dst_dir = Path(dst_dir).expanduser().resolve()
-    conn = open_db(db_path)
+    conn = _conn
 
     preset: Preset | None = None
     compiled_expr: CompiledFilterExpression | None = None
@@ -910,7 +960,7 @@ def filter_structures(
 
     missing_required_counts: Dict[str, int] = {}
     invalid_required_counts: Dict[str, int] = {}
-    if fail_on_missing_required and required_keys:
+    if required_keys:
         for row in source_rows():
             metrics = load_metrics_json(row)
             context = build_filter_context(row, metrics)
@@ -929,14 +979,16 @@ def filter_structures(
             for key in prepared.required_invalid:
                 invalid_required_counts[key] = invalid_required_counts.get(key, 0) + 1
 
-    strict_missing = bool(missing_required_counts or invalid_required_counts)
+    required_failed = bool(missing_required_counts or invalid_required_counts)
+    strict_missing = fail_on_missing_required and required_failed
     do_link = not strict_missing
 
-    tmp = report_csv.with_suffix(report_csv.suffix + f".{os.getpid()}.tmp") if report_csv else None
+    if report_csv is not None:
+        report_csv = Path(report_csv).expanduser().resolve()
+    tmp = _bundle.path(report_csv) if report_csv is not None and _bundle is not None else None
     writer = None
     handle = None
-    if report_csv is not None:
-        dst_dir.mkdir(parents=True, exist_ok=True)
+    if tmp is not None:
         handle = tmp.open("w", encoding="utf-8", newline="")
         writer = csv.DictWriter(
             handle,
@@ -992,26 +1044,25 @@ def filter_structures(
                         ext = src_path.suffix
                         fname = f"{task}__{run}__step_{step:03d}__{oligo}_model{ext}"
                         out_dir = dst_dir if flat else (dst_dir / task)
-                        out_dir.mkdir(parents=True, exist_ok=True)
                         dst_path = out_dir / fname
+                        assert _bundle is not None
                         if dst_path.exists() and not overwrite:
-                            dst = str(dst_path)
+                            if content_digest(dst_path) != content_digest(src_path):
+                                raise FileExistsError(f"Existing structure differs from source: {dst_path}; use overwrite")
+                        staged_path = _bundle.path(dst_path)
+                        if staged_path.exists():
+                            raise ValueError(f"Multiple selected structures map to the same output: {dst_path}")
+                        if hardlink:
+                            try:
+                                os.link(src_path, staged_path)
+                            except OSError as exc:
+                                raise OSError(
+                                    f"Hardlink failed ({exc}). Use a destination on the same filesystem, "
+                                    "or rerun with hardlink disabled (explicit copy mode is not enabled by default)."
+                                ) from exc
                         else:
-                            if dst_path.exists():
-                                dst_path.unlink()
-                            if hardlink:
-                                try:
-                                    os.link(src_path, dst_path)
-                                except OSError as exc:
-                                    raise OSError(
-                                        f"Hardlink failed ({exc}). Use a destination on the same filesystem, "
-                                        "or rerun with hardlink disabled (explicit copy mode is not enabled by default)."
-                                    ) from exc
-                            else:
-                                import shutil
-
-                                shutil.copy2(src_path, dst_path)
-                            dst = str(dst_path)
+                            shutil.copy2(src_path, staged_path)
+                        dst = str(dst_path)
                         linked += 1
             elif do_link and not src:
                 link_issue = "structure_missing"
@@ -1071,9 +1122,6 @@ def filter_structures(
         if handle is not None:
             handle.close()
 
-    if report_csv is not None and tmp is not None:
-        os.replace(str(tmp), str(report_csv))
-
     if strict_missing:
         def _fmt_counts(counts: Dict[str, int]) -> str:
             parts = [f"{key}({value})" for key, value in sorted(counts.items(), key=lambda item: (-item[1], item[0]))]
@@ -1115,9 +1163,10 @@ def filter_structures(
 
     out_db_written = ""
     if out_db is not None and not dry_run:
-        out_db_written = _write_filtered_db_snapshot(
+        assert _bundle is not None
+        _write_filtered_db_snapshot(
             source_db_path=db_path,
-            out_db_path=out_db,
+            out_db_path=_bundle.path(out_db),
             dst_dir=dst_dir,
             report_csv=report_csv,
             selector_kind=selector_kind,
@@ -1128,6 +1177,7 @@ def filter_structures(
             run_selection=run_selection,
             records=filtered_records,
         )
+        out_db_written = str(out_db)
 
     return {
         "db_path": str(db_path),
@@ -1145,6 +1195,7 @@ def filter_structures(
         "linked": linked,
         "linkable": linkable,
         "structure_missing": structure_missing,
+        "required_metrics_failed": required_failed,
         "report_csv": str(report_csv) if report_csv is not None else "",
         "out_db": out_db_written,
     }

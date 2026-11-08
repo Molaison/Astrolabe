@@ -519,16 +519,17 @@ def _import_pyrosetta():
 
 
 def init_pyrosetta_once(
-    init_options: str = "-ignore_zero_occupancy false -mute all",
+    init_options: str | None = None,
 ):
     pyrosetta = _import_pyrosetta()
-    if hasattr(pyrosetta, "is_initialized") and pyrosetta.is_initialized():
-        return pyrosetta
-    pyrosetta.init(str(init_options))
+    from astrolabe.utils.pyrosetta_init import ensure_pyrosetta_initialized
+
+    options = "-ignore_zero_occupancy false -mute all" if init_options is None else str(init_options)
+    ensure_pyrosetta_initialized(pyrosetta, options, explicit=init_options is not None)
     return pyrosetta
 
 
-def load_pose(structure_path: str | Path, *, init_options: str = "-ignore_zero_occupancy false -mute all"):
+def load_pose(structure_path: str | Path, *, init_options: str | None = None):
     pyrosetta = init_pyrosetta_once(init_options)
     return pyrosetta.pose_from_file(str(Path(structure_path).expanduser().resolve()))
 
@@ -785,7 +786,7 @@ def mutate_structure_to_sequence(
     target_sequence: str,
     output_path: str | Path,
     template_structure_path: str | Path | None = None,
-    init_options: str = "-ignore_zero_occupancy false -mute all",
+    init_options: str | None = None,
     preserve_atom_coords: bool = True,
 ) -> tuple[Path, tuple[PlannedMutation, ...]]:
     pose = load_pose(structure_path, init_options=init_options)

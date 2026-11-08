@@ -32,6 +32,15 @@ class ModelReady:
     constructor_rng: Blob
 
 
+@dataclass(frozen=True)
+class NativeInitializationStatus:
+    """Initialization proof and residency are independent facts."""
+
+    init_proven: bool
+    residency: str
+    error: str | None = None
+
+
 class LazyNativeOwner:
     """A restartable resident model owner, separate from inference replay.
 
@@ -52,6 +61,8 @@ class LazyNativeOwner:
         self._cleanup_error = None
         self._cleanup_lock = threading.RLock()
         self._constructor_rng = None
+        self._constructing = False
+        self._initialization_error = None
         self.initialization_request = ModelInitializationRequest(identity)
         self.initialization = operation(alias + "/initialize", ModelInitializationRequest,
             ModelReady, self._initialize, version="native-model-initialization/v1",
@@ -61,9 +72,27 @@ class LazyNativeOwner:
     def ready(self):
         return self._constructor_rng is not None
 
+    @property
+    def initialization_status(self):
+        with self._cleanup_lock:
+            residency = (
+                "cleanup_pending" if self._cleanup_pending else
+                "failed" if self._initialization_error is not None else
+                "constructing" if self._constructing else
+                "resident" if self._value is not None else "absent"
+            )
+            return NativeInitializationStatus(
+                self.ready, residency,
+                None if self._initialization_error is None else repr(self._initialization_error),
+            )
+
     def _bind_ready(self, ready: ModelReady):
         if ready.model != self.identity:
             raise ValueError("Model initialization belongs to another implementation")
+        # A receipt with an unavailable RNG closure cannot authorize a reload.
+        self.data.get(ready.constructor_rng, design_codec)
+        if self._constructor_rng is not None and self._constructor_rng != ready.constructor_rng:
+            raise ValueError("Model initialization receipt conflicts with the bound receipt")
         self._constructor_rng = ready.constructor_rng
 
     def _prepare_rng(self):
@@ -71,36 +100,66 @@ class LazyNativeOwner:
             importlib.import_module(module)
 
     def _initialize(self, request: ModelInitializationRequest):
-        if self._cleanup_pending:
-            raise RuntimeError("Native model cleanup is unresolved")
         if request.model != self.identity:
             raise ValueError("Initialization request belongs to another model")
-        self._prepare_rng()
-        before = self.data.put(capture_random_state(), design_codec)
-        self._value = self.factory()
-        register_model_owner(self)
-        return ModelReady(self.identity, before)
+        self._claim_construction()
+        try:
+            self._prepare_rng()
+            before = self.data.put(capture_random_state(), design_codec)
+            self._value = self.factory()
+            register_model_owner(self)
+            return ModelReady(self.identity, before)
+        except BaseException as error:
+            self._initialization_error = error
+            raise
+        finally:
+            with self._cleanup_lock:
+                self._constructing = False
+
+    def _claim_construction(self):
+        with self._cleanup_lock:
+            if self._cleanup_pending:
+                raise RuntimeError("Native model cleanup is unresolved")
+            if self._initialization_error is not None:
+                raise RuntimeError("Native model initialization failed; use a new owner") from self._initialization_error
+            if self._constructing:
+                raise RuntimeError("Native model construction is already in progress")
+            if self._value is not None:
+                raise RuntimeError("Native model is already resident")
+            self._constructing = True
 
     def get(self):
         if self._cleanup_pending:
             raise RuntimeError("Native model cleanup is unresolved")
+        if self._initialization_error is not None:
+            raise RuntimeError("Native model initialization failed; use a new owner") from self._initialization_error
         if self._value is not None:
             return self._value
         if self._constructor_rng is None:
             raise RuntimeError("Native model initialization must run before inference")
-        self._prepare_rng()
-        active = capture_random_state()
+        self._claim_construction()
         try:
-            restore_random_state(self.data.get(self._constructor_rng, design_codec))
-            self._value = self.factory()
+            self._prepare_rng()
+            active = capture_random_state()
+            try:
+                restore_random_state(self.data.get(self._constructor_rng, design_codec))
+                self._value = self.factory()
+            finally:
+                restore_random_state(active)
+            register_model_owner(self)
+        except BaseException as error:
+            self._initialization_error = error
+            raise
         finally:
-            restore_random_state(active)
-        register_model_owner(self)
+            with self._cleanup_lock:
+                self._constructing = False
         return self._value
 
     def shutdown(self):
         from astrolabe.runtime_support import cleanup_retry_allowed
         with self._cleanup_lock:
+            if self._constructing:
+                raise RuntimeError("Native model construction is still in progress")
             value = self._value
             if value is None:
                 return

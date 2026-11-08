@@ -273,9 +273,7 @@ class AntibodyMsaCache:
     def load(self) -> None:
         if self._loaded:
             return
-        self._loaded = True
-        if not self.cache_dir.exists():
-            return
+        entries = dict(self._entries)
         for path in sorted(self.cache_dir.glob("*.json")):
             payload = json.loads(path.read_text(encoding="utf-8"))
             sequence = str(payload["sequence"])
@@ -294,7 +292,9 @@ class AntibodyMsaCache:
                 ),
                 path=path,
             )
-            self._entries[(entry.chain_id, entry.sequence)] = entry
+            entries[(entry.chain_id, entry.sequence)] = entry
+        self._entries = entries
+        self._loaded = True
 
     def add_from_chain(self, *, chain_id: str, chain: Any) -> MsaCacheEntry | None:
         if not _has_payload(chain):

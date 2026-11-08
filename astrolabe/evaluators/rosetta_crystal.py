@@ -102,8 +102,6 @@ class RosettaCrystalEvaluator(Evaluator):
         self._reference_metrics: dict[tuple[str, str], dict[str, Any]] = {}
 
     def _ensure_pyrosetta(self):
-        if self._pyrosetta is not None:
-            return self._pyrosetta
         import pyrosetta  # type: ignore
 
         params = []
@@ -112,16 +110,14 @@ class RosettaCrystalEvaluator(Evaluator):
             if not path.is_file():
                 raise FileNotFoundError(f"rosetta_crystal state {state} params missing: {path}")
             params.append(path)
-        initialized = bool(
-            hasattr(pyrosetta, "is_initialized") and pyrosetta.is_initialized()
+        opts = (
+            "-ignore_zero_occupancy false -mute all -constant_seed "
+            f"-jran {self.random_seed} -extra_res_fa "
+            + " ".join(str(path) for path in params)
         )
-        if not initialized:
-            opts = (
-                "-ignore_zero_occupancy false -mute all -constant_seed "
-                f"-jran {self.random_seed} -extra_res_fa "
-                + " ".join(str(path) for path in params)
-            )
-            pyrosetta.init(opts)
+        from astrolabe.utils.pyrosetta_init import ensure_pyrosetta_initialized
+
+        ensure_pyrosetta_initialized(pyrosetta, opts, explicit=True, params=params)
         self._pyrosetta = pyrosetta
         return pyrosetta
 

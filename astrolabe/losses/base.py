@@ -4,6 +4,7 @@ import functools
 import logging
 import math
 from collections import defaultdict
+from dataclasses import dataclass
 from typing import Dict, List, Any
 
 import numpy as np
@@ -26,6 +27,15 @@ from astrolabe.utils.log_events import event_span, summarize_event_items
 loss_registry = LossRegistry()
 logger = logging.getLogger(__name__)
 DYNAMIC_BINDING_SITE_LOSS = "dynamic_binding_site_allowed_min_dist"
+
+@dataclass(frozen=True)
+class ScoreBinding:
+    """Process-local extraction identity; never a durable Score receipt."""
+
+    run_id: str
+    configuration: Any
+    working_sequences: Any
+    dynamic_binding_site: Any
 
 
 def extract_loss_terms(
@@ -700,6 +710,8 @@ class LossEngine:
 
     def _extract_scores_with_registry(self, eval_result) -> tuple:
         """Extract scores using registered loss functions."""
+        # Native loss functions still include process-global consumers.
+        self.runtime_context.require_current()
         return self._extract_scores_with_registry_cached(
             eval_result,
             self._score_cache_token(),
@@ -713,26 +725,27 @@ class LossEngine:
         # than the scores object, which may intentionally be reused while a
         # mutation stack proposes a new sequence.
         try:
-            protomers = getattr(global_config, "protomers", {}) or {}
+            protomers = self.runtime_context.protomers
             sequences = tuple(sorted(
                 (str(name), _freeze_cache_value(getattr(protomer, "mutated_sequence", None)))
                 for name, protomer in protomers.items()
             ))
         except RuntimeError:
             sequences = ()
-        if not any(
+        uses_dynamic_binding = any(
             spec == DYNAMIC_BINDING_SITE_LOSS
             for spec, _loss_func, _params in getattr(self, "loss_specs", {}).values()
-        ):
-            return ("working-sequences", sequences)
-        try:
-            dynamic_binding_site = getattr(global_config, "dynamic_binding_site", None)
-        except RuntimeError:
-            dynamic_binding_site = None
-        return (
-            DYNAMIC_BINDING_SITE_LOSS,
-            _freeze_cache_value(dynamic_binding_site),
-            sequences,
+        )
+        return ScoreBinding(
+            run_id=self.runtime_context.run_id,
+            configuration=tuple(
+                (name, spec, id(function), _freeze_cache_value(params))
+                for name, (spec, function, params) in getattr(self, "loss_specs", {}).items()
+            ),
+            working_sequences=sequences,
+            dynamic_binding_site=_freeze_cache_value(
+                self.runtime_context.get_const("dynamic_binding_site", None)
+            ) if uses_dynamic_binding else None,
         )
 
     @functools.lru_cache(maxsize=4)

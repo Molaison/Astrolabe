@@ -45,7 +45,11 @@ def _register_runtime_owner(runner) -> None:
     except RuntimeError:
         return  # Standalone posthoc callers own and close their runner.
     if owner is not None:
+        previous = getattr(runner, "_runtime_owner", None)
+        if previous is not None and previous is not owner:
+            raise RuntimeError("Shared Proton runner already belongs to another resource owner")
         owner.add(runner, "proton_pottsmpnn")
+        runner._runtime_owner = owner
 
 
 def _config_fingerprint(config: Mapping[str, Any]) -> str:
@@ -78,10 +82,8 @@ def _unregister_shared_runner(runner: "ProtonPottsMPNNRunner") -> None:
 def _close_shared_runners_at_exit() -> None:
     with _SHARED_RUNNER_LOCK:
         runners = [entry[1] for entry in _SHARED_RUNNERS.values()]
-        _SHARED_RUNNERS.clear()
     for runner in runners:
         try:
-            runner._shared_registry_key = None
             runner.close()
         except Exception:
             pass
@@ -107,6 +109,8 @@ def get_shared_proton_runner(
         existing = _SHARED_RUNNERS.get(registry_key)
         if existing is not None:
             fingerprint, runner = existing
+            if getattr(runner, "_cleanup_pending", False):
+                raise RuntimeError("Shared Proton runner cleanup is unresolved; registration retained")
             if _runner_is_alive(runner):
                 if config is None:
                     _register_runtime_owner(runner)
@@ -120,6 +124,8 @@ def get_shared_proton_runner(
                     )
                 _register_runtime_owner(runner)
                 return runner
+            if not runner._closed:
+                raise RuntimeError("Shared Proton runner exited; close its original owner before replacement")
             _SHARED_RUNNERS.pop(registry_key, None)
         if config is None:
             raise RuntimeError(
@@ -376,6 +382,8 @@ class ProtonPottsMPNNRunner:
         return env
 
     def _ensure_daemon(self) -> subprocess.Popen[str]:
+        if getattr(self, "_cleanup_pending", False):
+            raise RuntimeError("Proton-PottsMPNNRunner cleanup is unresolved.")
         if self._closed:
             raise RuntimeError("Proton-PottsMPNNRunner is closed.")
         if self._proc is not None:
@@ -784,10 +792,10 @@ class ProtonPottsMPNNRunner:
         proc = None
         try:
             with self._lock:
+                self._cleanup_pending = True
                 proc = self._proc
                 if proc is not None:
                     if proc.poll() is not None:
-                        self._closed = True
                         raise RuntimeError(
                             "Proton-PottsMPNN daemon exited before shutdown; "
                             f"return code {proc.returncode}."
@@ -807,7 +815,7 @@ class ProtonPottsMPNNRunner:
                         )
                 self._closed = True
         finally:
-            if self._closed or proc is None or proc.poll() is not None:
+            if self._closed:
                 _unregister_shared_runner(self)
 
     shutdown = close

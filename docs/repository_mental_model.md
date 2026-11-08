@@ -82,6 +82,48 @@ The release CPU suite includes protocol fault injection, raw-only Score
 recovery and child-owner cleanup checks. Native scientific qualification and
 deployment evidence are recorded for the exact release separately.
 
+## Scientific restoration and initialization protocols
+
+Runtime contexts retain an immutable run identity. Old explicit stores remain
+readable; pipeline/legacy-global operations reject an inactive store. Legacy
+snapshots remain live-object projections and now validate their run/topology and
+materialize the entire restore before writing any scientific field. Failed
+capture does not leave an active context behind. The existing typed decision
+state retains attempt, accepted revision, assessments and rejection history;
+mutation acceptance and stage entry still commit separately.
+
+Configured refinement checkpoints DPLM prefetch, pore activation and RFD4
+feedback state in its original Runtime at proposal boundaries, including
+consumption by rejected proposals. Recovery validates prior proposal receipts
+before initialization and restores all selected projections before new mutation.
+Missing/stale state cannot authorize continuation; unknown stays unknown.
+DPLM requires `response_cache=false` for this durable profile. Predocker bank
+projections alone do not cover dynamic-site/sidecar state, so configured durable
+refinement rejects predockers before initialization. The legacy trajectory,
+pre-update stacks, dynamic stages and live poses retain their existing live-only
+or explicitly qualified portable boundaries. No arbitrary checkpoint migration
+is provided.
+
+Initialization proof and current residency are separately observable.
+Partially failed pipeline/model initialization cannot be retried by ordinary
+access. A process-level PyRosetta owner verifies actual native readiness and
+binds options, params contents, version and database location. Conflicting
+explicit requirements fail; external initialization is unattested. Provider
+activation/reset cannot erase applied patches or a poisoned process.
+MSA entries publish only after complete loading. Score extraction binds working
+sequences, dynamic sites and actual loss parameters to its run; its cache is not
+a durable Score receipt. DEBUG writes require `DEBUG=1` and remain debug-only,
+with no RNG/recovery guarantee.
+
+Posthoc collection binds input contents and derivation configuration. Records,
+per-derivation outcomes and run completeness commit in one DB transaction;
+PARTIAL is retried and successful independent derivations are reused.
+Filter/export/archive completion is defined by the final content manifest;
+multi-file promotion can remain PARTIAL. Original errors survive cleanup/proof
+write errors. Backend adapters retain failed cleanup handles; shared Proton
+requires one resource scope. Vendor training recovery is unchanged; only
+reachable Proton fork-pool and Squashfs lifecycle boundaries were repaired.
+
 ## Proton integration boundary
 
 `proton_pottsmpnn` / `Proton-PottsMPNN` are lazy, protein-only joint sequence

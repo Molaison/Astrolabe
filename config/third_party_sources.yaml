@@ -27,7 +27,7 @@ components:
     patch_group: null
     fork_candidate: false
     migration_status: patch_owned
-    reason: Pinned source with five explicit proposal/mask patches and verified SHA256 records; checkpoint and EV6 weights are separately acquired runtime assets.
+    reason: Pinned source with explicit proposal/mask and lifecycle patches and verified SHA256 records; checkpoint and EV6 weights are separately acquired runtime assets.
 
   abseil_cpp_source:
     path: vendor/abseil-cpp-source

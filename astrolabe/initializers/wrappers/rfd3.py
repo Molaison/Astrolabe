@@ -110,6 +110,8 @@ class RFD3Runner:
         )
 
     def _ensure_daemon(self, settings: dict[str, Any]) -> Any:
+        if getattr(self, "_cleanup_pending", False):
+            raise RuntimeError("RFD3 daemon cleanup is unresolved")
         if self._daemon is not None and self._daemon_settings == settings:
             return self._daemon
         self.shutdown()
@@ -132,10 +134,12 @@ class RFD3Runner:
 
     def shutdown(self) -> None:
         daemon = self._daemon
-        self._daemon = None
-        self._daemon_settings = None
+        self._cleanup_pending = True
         if daemon is not None:
             daemon.shutdown()
+        self._daemon = None
+        self._daemon_settings = None
+        self._cleanup_pending = False
 
     def _parse_response(self, response_path: Path) -> list[RFD3StructureOutput]:
         response = json.loads(response_path.read_text(encoding="utf-8"))

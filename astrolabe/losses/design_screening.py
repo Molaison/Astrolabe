@@ -13,7 +13,7 @@ from typing import Iterable, Optional
 import numpy as np
 
 from astrolabe.losses.base import loss_registry
-from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
+from astrolabe.utils.pyrosetta_init import ensure_pyrosetta_initialized
 
 
 try:
@@ -828,7 +828,7 @@ def bindcraft_hotspot_rmsd(
     eval_result,
     bindcraft_trajectory_pdb: str,
     binder_chain: str,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     traj = Path(bindcraft_trajectory_pdb)
     scores: dict[str, float] = {}
@@ -857,7 +857,7 @@ def bindcraft_binder_rmsd(
     bindcraft_binder_alone_pdb: str,
     binder_chain: str,
     bindcraft_binder_alone_chain: str = "A",
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     traj = Path(bindcraft_trajectory_pdb)
     binder_alone = Path(bindcraft_binder_alone_pdb)
@@ -1099,8 +1099,6 @@ def halludesign_af3_ipae(eval_result):
 # ---------------------------------------------------------------------------
 
 
-_PYROSETTA_INITED = False
-
 
 def _maybe_add_dalphaball(init_opts: str) -> str:
     from astrolabe.startup_dependencies import dalphaball_init_options
@@ -1109,18 +1107,14 @@ def _maybe_add_dalphaball(init_opts: str) -> str:
 
 
 def _ensure_pyrosetta(
-    init_opts: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    init_opts: str | None = None,
 ) -> None:
-    global _PYROSETTA_INITED
-    if _PYROSETTA_INITED:
-        return
     import pyrosetta  # type: ignore
 
-    if pyrosetta_was_initialized(pyrosetta):
-        _PYROSETTA_INITED = True
-        return
-    pyrosetta.init(_maybe_add_dalphaball(init_opts))
-    _PYROSETTA_INITED = True
+    options = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all" if init_opts is None else init_opts
+    ensure_pyrosetta_initialized(
+        pyrosetta, _maybe_add_dalphaball(options), explicit=init_opts is not None,
+    )
 
 
 def physical_interface_scores(
@@ -1128,7 +1122,7 @@ def physical_interface_scores(
     *,
     chain_a: str,
     chain_b: str,
-    init_opts: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    init_opts: str | None = None,
 ) -> dict[str, float]:
     """
     Minimal InterfaceAnalyzer metrics for physical interface optimization.
@@ -1163,7 +1157,7 @@ def _bindcraft_interface_scores(
     *,
     chain_a: str,
     chain_b: str,
-    init_opts: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    init_opts: str | None = None,
 ) -> dict[str, float]:
     """
     Minimal subset of BindCraft `score_interface` outputs used for filtering.
@@ -1287,7 +1281,7 @@ def physical_interface_score(
     baseline_dg: float,
     sc_scale: float,
     dg_scale: float,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ) -> dict[str, float]:
     baseline_sc_f = float(baseline_sc)
     baseline_dg_f = float(baseline_dg)
@@ -1317,7 +1311,7 @@ def _sap_score_single(
     *,
     included_protomers: str | None,
     oligo_name: str,
-    init_opts: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    init_opts: str | None = None,
 ) -> float:
     _ensure_pyrosetta(init_opts)
     import pyrosetta as pr  # type: ignore
@@ -1409,7 +1403,7 @@ def _sap_score_single(
 def sap_score(
     eval_result,
     included_protomers: str | None = None,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ) -> dict[str, float]:
     scores: dict[str, float] = {}
     for oligo_name in eval_result.names:
@@ -1439,7 +1433,7 @@ def bindcraft_interface_sc(
     eval_result,
     chain_a: str,
     chain_b: str,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     return _bindcraft_interface_field(eval_result, field="bindcraft_interface_sc", chain_a=chain_a, chain_b=chain_b, init_opts=pyrosetta_init)
 
@@ -1455,7 +1449,7 @@ def bindcraft_interface_dG(
     eval_result,
     chain_a: str,
     chain_b: str,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     return _bindcraft_interface_field(eval_result, field="bindcraft_interface_dG", chain_a=chain_a, chain_b=chain_b, init_opts=pyrosetta_init)
 
@@ -1471,7 +1465,7 @@ def bindcraft_interface_dSASA(
     eval_result,
     chain_a: str,
     chain_b: str,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     return _bindcraft_interface_field(eval_result, field="bindcraft_interface_dSASA", chain_a=chain_a, chain_b=chain_b, init_opts=pyrosetta_init)
 
@@ -1504,7 +1498,7 @@ def bindcraft_interface_interface_hbonds(
     eval_result,
     chain_a: str,
     chain_b: str,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     return _bindcraft_interface_field(eval_result, field="bindcraft_interface_interface_hbonds", chain_a=chain_a, chain_b=chain_b, init_opts=pyrosetta_init)
 
@@ -1520,7 +1514,7 @@ def bindcraft_interface_delta_unsat_hbonds(
     eval_result,
     chain_a: str,
     chain_b: str,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     return _bindcraft_interface_field(eval_result, field="bindcraft_interface_delta_unsat_hbonds", chain_a=chain_a, chain_b=chain_b, init_opts=pyrosetta_init)
 
@@ -1536,7 +1530,7 @@ def bindcraft_binder_score(
     eval_result,
     chain_a: str,
     chain_b: str,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     return _bindcraft_interface_field(eval_result, field="bindcraft_binder_score", chain_a=chain_a, chain_b=chain_b, init_opts=pyrosetta_init)
 
@@ -1552,7 +1546,7 @@ def bindcraft_surface_hydrophobicity(
     eval_result,
     chain_a: str,
     chain_b: str,
-    pyrosetta_init: str = "-ignore_unrecognized_res -ignore_zero_occupancy -mute all",
+    pyrosetta_init: str | None = None,
 ):
     return _bindcraft_interface_field(eval_result, field="bindcraft_surface_hydrophobicity", chain_a=chain_a, chain_b=chain_b, init_opts=pyrosetta_init)
 

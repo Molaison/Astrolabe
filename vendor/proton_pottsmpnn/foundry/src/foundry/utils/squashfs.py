@@ -131,7 +131,8 @@ class SquashfsManager:
             logger.info(f"Unmounted {sqfs_file}")
         except (subprocess.CalledProcessError, OSError) as e:
             logger.warning(f"Failed to unmount {sqfs_file}: {e}")
-        finally:
+            raise RuntimeError(f"Failed to unmount {sqfs_file}; registration retained") from e
+        else:
             del cls._mounts[sqfs_file]
 
     @classmethod
@@ -162,11 +163,20 @@ class SquashfsManager:
         """
         with cls._lock:
             sqfs_files = list(cls._mounts.keys())
+            errors = []
             for sqfs_file in sqfs_files:
-                cls._unmount(sqfs_file)
+                try:
+                    cls._unmount(sqfs_file)
+                except RuntimeError as error:
+                    errors.append(str(error))
+            if errors:
+                raise RuntimeError("; ".join(errors))
 
     @classmethod
     def _cleanup_on_exit(cls) -> None:
         """Cleanup hook called on program exit via atexit."""
         logger.debug("Cleaning up squashfs mounts on exit")
-        cls.unmount_all()
+        try:
+            cls.unmount_all()
+        except RuntimeError:
+            logger.exception("Squashfs cleanup failed; registrations retained")

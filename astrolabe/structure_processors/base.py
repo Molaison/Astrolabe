@@ -16,6 +16,9 @@ from astrolabe.runtime_support import ResourceOwner
 from astrolabe.design.operations import OperationOwner
 from astrolabe.utils.log_events import event_span, log_event
 from astrolabe.component_config import merge_component_config
+from astrolabe.mutators.state_protocol import (
+    ScientificState, fields, natural, file_reference, validate_reference,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -244,6 +247,11 @@ class StructureProcessor(ABC):
         self._cache: Dict[str, Any] = {}
         self._cache_candidate_bank: Dict[str, list[Any]] = {}
         self._cache_rng = random.Random()
+        self._cache_consumptions = {}
+        self._cache_outcomes = {}
+        self._last_operation = None
+        self._scientific_unknown = None
+        self._known_scientific_failure = None
         self._condition = kwargs.get("_condition", None)
         self._condition_missing_defaults = dict(
             kwargs.get("_condition_missing_defaults", {}) or {}
@@ -315,6 +323,13 @@ class StructureProcessor(ABC):
         Returns:
             Processing results
         """
+        # Even a ready cache must not bypass the transport owner's P0 fence.
+        runner = getattr(self, "runner", None)
+        unknown = getattr(runner, "_unknown", None)
+        if self._scientific_unknown is not None:
+            raise self._scientific_unknown
+        if unknown is not None:
+            raise unknown
         span = event_span(
             logger=logger,
             component="predocker",
@@ -340,6 +355,7 @@ class StructureProcessor(ABC):
                     input=input_file,
                 )
                 if not condition_met:
+                    self._last_operation = {"status": "skipped", "input": str(input_file)}
                     span.skip(artifact=input_file, detail="condition_false")
                     return input_file
             input_file = self.preprocess(input_file)
@@ -356,7 +372,7 @@ class StructureProcessor(ABC):
                 artifact=input_file,
             )
             if not self.cache_enabled:
-                result = self._run_impl(input_file)
+                result = self._execute_scientific(input_file)
                 span.finish(artifact=result)
                 return result
 
@@ -366,6 +382,9 @@ class StructureProcessor(ABC):
             # Check cache
             if cache_key in self._cache:
                 result = self.take_cache(cache_key)
+                self._last_operation = {"status": self._cache_outcomes.get(cache_key, "bank"),
+                                        "bank": cache_key,
+                                        "consume": self._cache_consumptions.get(cache_key, 0)}
                 log_event(
                     logger=logger,
                     level=logging.DEBUG,
@@ -396,10 +415,11 @@ class StructureProcessor(ABC):
             )
 
             # Run implementation and cache result
-            result = self._run_impl(input_file)
+            result = self._execute_scientific(input_file)
             cached_result = self._prepare_cached_result(cache_key, input_file, result)
 
             self._cache[cache_key] = cached_result
+            self._cache_outcomes[cache_key] = self._last_operation["status"]
             self._after_cache_store(cache_key, input_file, cached_result)
             log_event(
                 logger=logger,
@@ -418,12 +438,32 @@ class StructureProcessor(ABC):
             span.finish(artifact=result)
             return result
 
+    def _execute_scientific(self, input_file):
+        self._known_scientific_failure = None
+        try:
+            result = self._run_impl(input_file)
+        except Exception as error:
+            from astrolabe.design.runtime import outcome_is_unknown
+            if outcome_is_unknown(error):
+                self._scientific_unknown = error
+                self._last_operation = {"status": "outcome_unknown", "input": str(input_file)}
+            raise
+        self._last_operation = {
+            "status": "known_scientific_failure" if self._known_scientific_failure else "bank",
+            "input": str(input_file), "failure": self._known_scientific_failure}
+        return result
+
     def _set_cache_candidates(self, cache_key, candidates):
         bank = [candidate for candidate in candidates if candidate is not None]
         if bank:
             self._cache_candidate_bank[cache_key] = bank
 
     def take_cache(self, cache_key):
+        result = self._take_cache(cache_key)
+        self._cache_consumptions[cache_key] = self._cache_consumptions.get(cache_key, 0) + 1
+        return result
+
+    def _take_cache(self, cache_key):
         bank = self._cache_candidate_bank.get(cache_key)
         if bank:
             if len(bank) == 1:
@@ -436,6 +476,63 @@ class StructureProcessor(ABC):
             )
             return choice
         return self._cache[cache_key]
+
+    def snapshot_bank_state(self, *, binding):
+        """Project only this cache owner, NOT subclass/native/dynamic-site state.
+
+        The caller must separately support the processor's other scientific
+        state or reject the mode. Selection RNG is local and included here.
+        """
+        runner = getattr(self, "runner", None)
+        if self._scientific_unknown is not None:
+            raise self._scientific_unknown
+        if getattr(runner, "_unknown", None) is not None:
+            raise runner._unknown
+        return ScientificState.create("predocker-bank", {"binding": binding,
+            "class": f"{type(self).__module__}.{type(self).__qualname__}",
+            "cache_enabled": self.cache_enabled}, {
+                "cache": {key: file_reference(path) for key, path in self._cache.items()},
+                "banks": {key: [file_reference(path) for path in bank]
+                          for key, bank in self._cache_candidate_bank.items()},
+                "consumptions": self._cache_consumptions,
+                "outcomes": self._cache_outcomes, "last_operation": self._last_operation,
+                "rng": self._cache_rng.getstate()})
+
+    def restore_bank_state(self, state, *, binding):
+        runner = getattr(self, "runner", None)
+        if self._scientific_unknown is not None:
+            raise self._scientific_unknown
+        if getattr(runner, "_unknown", None) is not None:
+            raise runner._unknown
+        payload = ScientificState.validate(state, "predocker-bank", {"binding": binding,
+            "class": f"{type(self).__module__}.{type(self).__qualname__}",
+            "cache_enabled": self.cache_enabled})
+        fields(payload, ("cache", "banks", "consumptions", "rng", "outcomes", "last_operation"))
+        if not all(isinstance(payload[k], dict) for k in ("cache", "banks", "consumptions")):
+            raise ValueError("Invalid predocker bank maps")
+        cache = {key: validate_reference(ref) for key, ref in payload["cache"].items()}
+        banks = {}
+        for key, refs in payload["banks"].items():
+            if key not in cache or not isinstance(refs, list) or not refs:
+                raise ValueError("Invalid predocker bank binding")
+            banks[key] = [validate_reference(ref) for ref in refs]
+        consumptions = {key: natural(value) for key, value in payload["consumptions"].items()}
+        if set(consumptions) - set(cache):
+            raise ValueError("Invalid predocker consumption identity")
+        outcomes = payload["outcomes"]
+        if (not isinstance(outcomes, dict) or set(outcomes) - set(cache)
+                or any(v not in ("bank", "known_scientific_failure") for v in outcomes.values())
+                or (payload["last_operation"] is not None
+                    and (not isinstance(payload["last_operation"], dict)
+                         or payload["last_operation"].get("status") not in
+                         ("skipped", "bank", "known_scientific_failure")))):
+            raise ValueError("Invalid predocker scientific outcome")
+        rng = random.Random()
+        version, values, gaussian = payload["rng"]
+        rng.setstate((version, tuple(values), gaussian))
+        self._cache, self._cache_candidate_bank = cache, banks
+        self._cache_consumptions, self._cache_rng = consumptions, rng
+        self._cache_outcomes, self._last_operation = outcomes, payload["last_operation"]
 
     def _after_cache_store(self, cache_key, input_file, result):
         """Hook for subclasses to capture metadata after caching a result."""
@@ -480,6 +577,8 @@ class StructureProcessor(ABC):
         """Clear the cache."""
         self._cache.clear()
         self._cache_candidate_bank.clear()
+        self._cache_consumptions.clear()
+        self._cache_outcomes.clear()
         logging.info(f"Cache cleared for {self.__class__.__name__}")
 
     def get_cache_stats(self) -> Dict[str, Any]:

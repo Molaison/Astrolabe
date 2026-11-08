@@ -954,6 +954,21 @@ def _validate_static_preflight(run_module: Any, args: Any) -> None:
         )
 
     mutator = getattr(args, "mutator", None)
+    # Stateful adapters below restore their private scientific projection.
+    # Shared disk queues and predocker sidecars lack that exclusive contract.
+    terms = _plain_mapping(_plain_mapping(mutator).get("mutator_terms"))
+    for alias in stage.get("mutators") or ():
+        term = _plain_mapping(terms.get(alias))
+        kind = str(term.get("_type", "")).lower()
+        if kind == "dplm":
+            from astrolabe.component_config import merge_component_config
+            effective = merge_component_config(mutator, ("DPLM",), terms[alias])
+            if effective.get("response_cache", True):
+                raise ValueError("durable DPLM requires response_cache=false; shared disk queue is live-only")
+    if any(value is not None for value in _plain_mapping(
+        _plain_mapping(getattr(args, "predocker", None)).get("predocker_terms")
+    ).values()):
+        raise ValueError("configured refinement cannot restore predocker scientific sidecars; use the trajectory pipeline")
     if bool(getattr(mutator, "stack_pre_update", False)):
         raise ValueError(
             "configured refinement does not support mutator.stack_pre_update"
@@ -1726,6 +1741,13 @@ def _run_configured_refinement_locked(
             ),
         }
         session_holder: dict[str, _PipelineSession] = {}
+        from .mutator_state import MutatorStateJournal, STATEFUL_MUTATORS
+        mutator_terms = _plain_mapping(_plain_mapping(getattr(args, "mutator", None)).get("mutator_terms"))
+        stateful_aliases = tuple(
+            alias for alias in mutator_aliases
+            if str(_plain_mapping(mutator_terms[alias]).get("_type", "")).lower() in STATEFUL_MUTATORS
+        )
+        mutator_state = MutatorStateJournal(runtime, protocol, stateful_aliases)
         translated_assembly_names = tuple(
             str(item.identity) for item in translation.assemblies
         )
@@ -1779,6 +1801,7 @@ def _run_configured_refinement_locked(
                 raise ValueError(
                     "loaded stage evaluator differs from the prepared configuration"
                 )
+            mutator_state.restore(global_config.mutators)
             session_holder["session"] = session
             return _OwnedComponent(session.stage_manager.current_mutators)
 
@@ -1818,12 +1841,25 @@ def _run_configured_refinement_locked(
             run_module._ensure_evaluation_complex_poses(
                 args, scores, session.loss_computer,
             )
-            run_module.execute_mutation_step(
-                session.stage_manager.current_mutators,
-                scores,
-                runtime_config,
-                int(step),
-            )
+            try:
+                run_module.execute_mutation_step(
+                    session.stage_manager.current_mutators,
+                    scores,
+                    runtime_config,
+                    int(step),
+                )
+            except BaseException as error:
+                try:
+                    mutator_state.commit(global_config.mutators, step=int(step))
+                except BaseException as state_error:
+                    error.outcome_unknown = True
+                    error.scientific_state_error = state_error
+                    error.add_note(f"Mutator state publication also failed: {state_error}")
+                raise
+            else:
+                # Consumption belongs to the proposal call, including a
+                # rejected proposal; mutation acceptance must not rewind it.
+                mutator_state.commit(global_config.mutators, step=int(step))
             # Mutators queue whole-step changes.  Apply them before translating
             # the child Candidate; pre-update stacks remain explicitly rejected.
             global_config.segment_manager.apply_mutations()

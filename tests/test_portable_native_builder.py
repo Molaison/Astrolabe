@@ -248,7 +248,7 @@ def _install_run_module(
         )
         if apply_initialization:
             global_config.init_const("initializer_result", result)
-        return SimpleNamespace(
+        return run_module.PreparedPipelineState(
             runtime_context=global_config.build_runtime_context(),
             initializer_mode="random",
             initializer_result=result,

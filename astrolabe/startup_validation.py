@@ -10,6 +10,7 @@ from pathlib import Path
 import math
 import os
 import sys
+from copy import deepcopy
 
 from omegaconf import OmegaConf
 from astrolabe.backend_startup import validate_backend_settings
@@ -110,16 +111,22 @@ class StartupValidationError(ValueError):
 
 _VALIDATED_CONFIG = ContextVar("astrolabe_validated_startup_config", default=None)
 
+def _config_revision(cfg):
+    return deepcopy(OmegaConf.to_container(cfg, resolve=False)
+                    if OmegaConf.is_config(cfg) else dict(cfg)) if isinstance(cfg, Mapping) else None
+
 
 @contextmanager
 def startup_validation_scope(cfg, *, require_inputs=False):
     if isinstance(cfg, Mapping):
         validate_startup_config(cfg, require_inputs=require_inputs)
     previous = _VALIDATED_CONFIG.get()
+    revision = _config_revision(cfg)
     input_requirement = require_inputs or (
         previous is not None and previous[0] is cfg and previous[1]
+        and previous[2] == revision
     )
-    token = _VALIDATED_CONFIG.set((cfg, input_requirement))
+    token = _VALIDATED_CONFIG.set((cfg, input_requirement, revision))
     try:
         yield
     finally:
@@ -190,7 +197,9 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
     if not isinstance(cfg, Mapping):
         raise StartupValidationError("config: expected a mapping")
     validated = _VALIDATED_CONFIG.get()
-    if validated is not None and validated[0] is cfg and (validated[1] or not require_inputs):
+    if (validated is not None and validated[0] is cfg
+            and (validated[1] or not require_inputs)
+            and validated[2] == _config_revision(cfg)):
         return {}
     errors = []
     raw = OmegaConf.to_container(cfg, resolve=False) if OmegaConf.is_config(cfg) else dict(cfg)

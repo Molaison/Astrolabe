@@ -177,7 +177,11 @@ def test_cancel_loading_owner_stops_process_group_descendant(tmp_path):
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
             stat_path = Path(f"/proc/{child_pid}/stat")
-            if not stat_path.exists() or stat_path.read_text().split(") ", 1)[1][0] == "Z":
+            try:
+                state = stat_path.read_text().split(") ", 1)[1][0]
+            except (FileNotFoundError, ProcessLookupError):
+                break
+            if state == "Z":
                 break
             time.sleep(0.02)
         else:

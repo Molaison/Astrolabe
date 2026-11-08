@@ -530,6 +530,8 @@ class OpenDDERunner:
         from astrolabe.model_execution import NativeModelClient
 
         with self._daemon_lock:
+            if getattr(self, "_cleanup_pending", False):
+                raise RuntimeError("OpenDDE daemon cleanup is unresolved")
             settings = self._daemon_settings()
             if self._owned_daemon is not None and settings != self._owned_settings:
                 raise ValueError("OpenDDE configuration changed after model initialization")
@@ -563,10 +565,21 @@ class OpenDDERunner:
     def shutdown(self) -> None:
         with self._daemon_lock:
             daemon = self._owned_daemon
+            if daemon is None:
+                return
+            if getattr(self, "_cleanup_running", False):
+                raise RuntimeError("OpenDDE daemon cleanup is already in progress")
+            self._cleanup_pending = self._cleanup_running = True
+        try:
+            daemon.shutdown()
+        except BaseException:
+            with self._daemon_lock:
+                self._cleanup_running = False
+            raise
+        with self._daemon_lock:
             self._owned_daemon = None
             self._owned_settings = None
-        if daemon is not None:
-            daemon.shutdown()
+            self._cleanup_pending = self._cleanup_running = False
 
 
 def write_opendde_input(
