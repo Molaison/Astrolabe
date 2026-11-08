@@ -48,3 +48,21 @@ factory/default/startup/resource owners. Only original product code and its
 unit/control-flow checks are in scope; model/GPU/parity/release qualification is
 owned separately. Historical pH branch reports do not establish current-main
 acceptance. See [Proton/pH guide](ph_sensitive_design.md) for the consumer contract.
+
+### Candidate identity extraction
+
+The current `design.collection.CompletionPool` owns whole-generation validation,
+pool-lifetime job ID uniqueness and submitted-job attribution of worker results.
+The candidate-named facade continues to alias that owner. Restored jobs require
+terminal admission proof to reconcile without execution; unknown work cannot be
+resubmitted through this guard. Selection, budgets and RNG remain unchanged.
+Deterministic identity regressions and the existing candidate/recovery checks
+are included in the release CPU suite. This is a correctness fix, with no model
+or performance qualification claim.
+
+Mol-1 remains on the independent
+[`research/mol1-qualification-20261108` branch](https://github.com/Molaison/Astrolabe/tree/research/mol1-qualification-20261108);
+its [qualification contract](https://github.com/Molaison/Astrolabe/blob/research/mol1-qualification-20261108/docs/mol1-qualification.md)
+separates historical native canaries from the outstanding current-main gates.
+That preservation branch includes old runtime dependencies and is not intended
+for a whole-tree merge.

@@ -45,6 +45,7 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 - Execution-stage observation does not enter backend runtime dictionaries. Native completion, observational failure and scientific acceptance are different statuses.
 - Terminal audit is best-effort evidence, not a live checkpoint. Absence of a completed assessment does not prove no partial effect occurred; uncatchable termination may produce no current audit.
 - Main-loop overlap evaluates serially and bounds outstanding CPU finalizations. Experimental candidate batch remains a separate subprocess-based search protocol, not unified GPU scheduling.
+- `design.collection.CompletionPool` validates a finite generation before admission or dispatch. Job IDs remain unique across the pool lifetime, including failures and consumed results. A rehydrated job can be reconciled once using the owner's terminal admission proof, without execution; missing proof retains the unknown fence. Worker results must match the submitted job ID and generation and retain its input payload. These guards do not change collection selection, RNG or budgets.
 - Explicit repeat seed increments by repeat index; missing seed derives deterministically from task/index; zero is invalid. Bare shared chain selectors are chain-first; `protomer:A` expands repeated A copies.
 - `run --dry-run` stops before model execution; `--print-config` alone does not. Experimental candidate-batch dry-run still writes candidate configurations.
 

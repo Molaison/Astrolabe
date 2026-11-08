@@ -326,6 +326,7 @@ class CompletionPool:
         self._ready: list[JobResult] = []
         self._issued: dict[str, Job] = {}
         self._known_jobs: dict[str, Job] = {}
+        self._submitted_job_ids: set[str] = set()
         self._collection_index = 0
         self._window_started = time.monotonic()
         self._generation_started: dict[int, float] = {}
@@ -353,16 +354,36 @@ class CompletionPool:
         self._collection_index = collection_index
 
     def submit_generation(self, generation: int, jobs: Iterable[Job]) -> None:
+        """Validate a finite generation before any admission or dispatch.
+
+        Job IDs are unique for the pool lifetime, including terminal jobs.
+        Rehydration is separate: an owner may reconcile a restored job once
+        through terminal admission proof, without executing it again.
+        """
         if self._closed:
             raise RuntimeError("CompletionPool is closed")
-        submitted = 0
         generation_int = int(generation)
-        for job in jobs:
+        generation_jobs = tuple(jobs)
+        seen: set[str] = set()
+        for job in generation_jobs:
             if int(job.generation) != generation_int:
                 raise ValueError(
                     f"Job {job.job_id} generation does not match submit generation"
                 )
+            if job.job_id in seen or job.job_id in self._submitted_job_ids:
+                raise CollectionExecutionError(
+                    f"Job id {job.job_id!r} already submitted"
+                )
+            self._validate_known_job(job)
+            seen.add(job.job_id)
+
+        submitted = 0
+        for job in generation_jobs:
+            restored = job.job_id in self._known_jobs
             self._remember_job(job)
+            # Retain identity even if admission or execution fails. Retrying
+            # uncertain work requires the owner's explicit recovery protocol.
+            self._submitted_job_ids.add(job.job_id)
             admitted_result = None
             if self.admission is not None:
                 admitted_result = self.admission(job)
@@ -370,6 +391,10 @@ class CompletionPool:
                 if admitted_result.job != job:
                     raise CollectionExecutionError(
                         "Admission returned a result for another job"
+                    )
+                if admitted_result.status not in {"completed", "failed"}:
+                    raise CollectionExecutionError(
+                        "Admission returned a non-terminal result"
                     )
                 if (
                     admitted_result.status == "failed"
@@ -379,7 +404,13 @@ class CompletionPool:
                         f"Job {job.job_id} failed: {admitted_result.error}"
                     )
                 self._append_ready(admitted_result)
+                self._issued.pop(job.job_id, None)
                 continue
+            if restored:
+                raise OutcomeUnknown(
+                    f"Restored job {job.job_id} requires terminal proof "
+                    "before submission"
+                )
             future = self._executor.submit(self._run_job, job)
             self._pending[future] = job
             submitted += 1
@@ -525,7 +556,18 @@ class CompletionPool:
                 raw = self.worker(job)
                 duration = time.monotonic() - started
                 if isinstance(raw, JobResult):
-                    result = raw
+                    if (
+                        raw.job.job_id != job.job_id
+                        or raw.job.generation != job.generation
+                    ):
+                        raise ValueError(
+                            "Worker result identity does not match submitted job: "
+                            f"expected ({job.generation}, {job.job_id!r}), "
+                            f"got ({raw.job.generation}, {raw.job.job_id!r})"
+                        )
+                    # The submitted Job owns input identity and opaque payload;
+                    # a transport may reconstruct only its ID and generation.
+                    result = replace(raw, job=job)
                 else:
                     result = JobResult(
                         job=job,
@@ -659,12 +701,15 @@ class CompletionPool:
         )
         return collection
 
-    def _remember_job(self, job: Job) -> None:
+    def _validate_known_job(self, job: Job) -> None:
         previous = self._known_jobs.get(job.job_id)
         if previous is not None and previous != job:
             raise CollectionExecutionError(
                 f"Job id {job.job_id!r} changed its admitted content"
             )
+
+    def _remember_job(self, job: Job) -> None:
+        self._validate_known_job(job)
         self._known_jobs[job.job_id] = job
 
     def _append_ready(self, result: JobResult) -> None:
