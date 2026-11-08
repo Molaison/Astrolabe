@@ -176,6 +176,8 @@ class NAMPNNRunner:
         from astrolabe.model_daemon import DaemonSpec, OwnedModelDaemon
 
         with self._daemon_lock:
+            if getattr(self, "_cleanup_pending", False):
+                raise RuntimeError("NA-MPNN daemon cleanup is unresolved")
             if self._owned_daemon is None:
                 spec = DaemonSpec(
                     backend="na_mpnn",
@@ -204,9 +206,20 @@ class NAMPNNRunner:
     def shutdown(self) -> None:
         with self._daemon_lock:
             daemon = self._owned_daemon
-            self._owned_daemon = None
-        if daemon is not None:
+            if daemon is None:
+                return
+            if getattr(self, "_cleanup_running", False):
+                raise RuntimeError("NA-MPNN daemon cleanup is already in progress")
+            self._cleanup_pending = self._cleanup_running = True
+        try:
             daemon.shutdown()
+        except BaseException:
+            with self._daemon_lock:
+                self._cleanup_running = False
+            raise
+        with self._daemon_lock:
+            self._owned_daemon = None
+            self._cleanup_pending = self._cleanup_running = False
 
     # ------------------------------------------------------------------ #
     # Internal helpers

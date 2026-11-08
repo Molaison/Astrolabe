@@ -180,6 +180,7 @@ class ResourceAdmissionTests(unittest.TestCase):
             future = pool.submit(lambda: client.lease(scratch_bytes=100, concurrency_certified=True, timeout=2).__enter__())
             self.pending(client)
             time.sleep(0.015)
+            eventually(lambda: client.snapshot()["controllers"][0]["utilization_samples"] > 0)
             first.finish()
             second = future.result(2)
             time.sleep(0.015)

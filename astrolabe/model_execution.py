@@ -37,40 +37,89 @@ _KERNEL_RANDOM_LOCK = threading.RLock()
 
 
 class StartupScope:
-    def __init__(self):
+    """Retain shared cleanup receipts across startup, construction and run scopes."""
+
+    def __init__(self, parent=None):
         self.lock = threading.RLock()
         self.cancelled = False
         self.owners = []
-        self.stopped = set()
-        self.cleanup_errors = []
+        self._cleanups = {}
+        self._parent = parent
         self.first_error = None
 
-    def add(self, owner):
+    def _find_cleanup(self, owner):
         with self.lock:
-            if self.cancelled:
-                try:
-                    owner.shutdown()
-                except BaseException as error:
-                    self.cleanup_errors.append(error)
-                    raise RuntimeError("evaluator startup was cancelled; owner cleanup failed") from error
-                raise RuntimeError("evaluator startup was cancelled")
-            self.owners.append(owner)
+            cleanup = self._cleanups.get(id(owner))
+        if cleanup is None and self._parent is not None:
+            return self._parent._find_cleanup(owner)
+        return cleanup
 
-    def cancel(self):
+    @property
+    def cleanup_report(self):
+        from astrolabe.runtime_support import CloseReport
+        with self.lock:
+            cleanups = list(self._cleanups.values())
+        reports = [cleanup.report for cleanup in cleanups]
+        return CloseReport(tuple(record for report in reports for record in report.records),
+                           any(report.draining for report in reports))
+
+    @property
+    def stopped(self):
+        return {id(record.resource) for record in self.cleanup_report.records
+                if record.state == "closed"}
+
+    @property
+    def cleanup_errors(self):
+        return [record.error for record in self.cleanup_report.failed]
+
+    def add(self, owner, *, source=None):
+        from astrolabe.runtime_support import ResourceOwner
+        if owner is None:
+            return
+        # Look up shared receipts before taking the lifecycle lock. Never invoke
+        # shutdown under this lock, including registration after cancellation.
+        inherited = (source or self)._find_cleanup(owner)
+        with self.lock:
+            cleanup = self._cleanups.get(id(owner))
+            if cleanup is None:
+                cleanup = inherited
+                if cleanup is None:
+                    cleanup = ResourceOwner()
+                    cleanup.add(owner, type(owner).__name__)
+                self._cleanups[id(owner)] = cleanup
+                self.owners.append(owner)
+            cancelled = self.cancelled
+        if cancelled:
+            report = cleanup.close()
+            error = RuntimeError("evaluator startup was cancelled" +
+                                 ("; owner cleanup failed" if report.failed else ""))
+            self.retain_errors(error)
+            if report.failed:
+                raise error from report.failed[0].error
+            raise error
+
+    def retain_errors(self, error):
+        """Keep failed/in-flight ownership reachable through the original error."""
+        report = self.cleanup_report
+        error.cleanup_report = report
+        scopes = getattr(error, "cleanup_scopes", ())
+        if not any(scope is self for scope in scopes):
+            error.cleanup_scopes = (*scopes, self)
+        for record in report.failed:
+            error.add_note(f"model owner cleanup failed: {record.error!r}")
+
+    def cancel(self, *, retry_failed=False):
+        """Retry only when the caller asserts adapter shutdown is idempotent."""
+        from astrolabe.runtime_support import cleanup_pass
         with self.lock:
             self.cancelled = True
-            owners = [owner for owner in reversed(self.owners) if id(owner) not in self.stopped]
-            self.stopped.update(id(owner) for owner in owners)
-        errors = []
-        for owner in owners:
-            try:
-                owner.shutdown()
-            except BaseException as error:
-                errors.append(error)
-        with self.lock:
-            errors.extend(self.cleanup_errors)
-            self.cleanup_errors.clear()
-        return errors
+            cleanups = [self._cleanups[id(owner)] for owner in reversed(self.owners)]
+        with cleanup_pass():
+            for cleanup in cleanups:
+                cleanup.close(retry_failed=retry_failed)
+        if self.first_error is not None and not self.cleanup_report.complete:
+            self.retain_errors(self.first_error)
+        return self.cleanup_errors
 
 
 @contextmanager
@@ -437,34 +486,31 @@ def register_model_owner(owner) -> None:
         scope.add(owner)
     owners = _RUN_OWNERS.get()
     if owners is not None and not getattr(owner, "attached", False):
-        owners.append(owner)
+        owners.add(owner, source=scope)
 
 
 @contextmanager
 def model_run_scope():
-    owners = []
+    owners = StartupScope(parent=_RUN_OWNERS.get())
     token = _RUN_OWNERS.set(owners)
+    active_error = None
     try:
-        yield
+        yield owners
+    except BaseException as error:
+        active_error = error
+        raise
     finally:
-        active_error = sys.exc_info()[0] is not None
-        first_error = None
-        closed = set()
         try:
-            for owner in reversed(owners):
-                if id(owner) in closed:
-                    continue
-                closed.add(id(owner))
-                try:
-                    owner.shutdown()
-                except Exception as error:
-                    logging.exception("Failed to stop a model owner at the end of its run")
-                    if first_error is None:
-                        first_error = error
+            errors = owners.cancel()
         finally:
             _RUN_OWNERS.reset(token)
-        if first_error is not None and not active_error:
-            raise RuntimeError("A model owner failed to stop after the run") from first_error
+        if errors or not owners.cleanup_report.complete:
+            if active_error is not None:
+                owners.retain_errors(active_error)
+            else:
+                error = RuntimeError("A model owner failed to stop after the run")
+                owners.retain_errors(error)
+                raise error from (errors[0] if errors else None)
 
 
 class ExecutionMode(str, Enum):
@@ -1277,27 +1323,27 @@ def independent_initialization(seed: int):
 def model_construction_scope():
     """Roll back even owners created by a constructor that never returned."""
     parent = _RUN_OWNERS.get()
-    owners = []
+    owners = StartupScope(parent=parent)
     token = _RUN_OWNERS.set(owners)
     try:
-        yield
-    except BaseException:
-        for owner in reversed(owners):
-            try:
-                scope = _STARTUP_SCOPE.get()
-                owner.shutdown()
-                if scope is not None:
-                    with scope.lock:
-                        scope.stopped.add(id(owner))
-            except BaseException as error:
-                logging.exception("Failed to stop a partially initialized model owner")
-                if scope is not None:
-                    with scope.lock:
-                        scope.cleanup_errors.append(error)
+        yield owners
+    except BaseException as error:
+        owners.cancel()
+        if not owners.cleanup_report.complete:
+            owners.retain_errors(error)
         raise
     else:
         if parent is not None:
-            parent.extend(owners)
+            try:
+                for owner in owners.owners:
+                    parent.add(owner, source=owners)
+            except BaseException as error:
+                # A parent may drain while construction is finishing. Retain
+                # and clean every local owner, not only the first transfer.
+                owners.cancel()
+                if not owners.cleanup_report.complete:
+                    owners.retain_errors(error)
+                raise
     finally:
         _RUN_OWNERS.reset(token)
 

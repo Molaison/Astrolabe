@@ -4,45 +4,172 @@ from __future__ import annotations
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from contextvars import copy_context
+from contextvars import ContextVar, copy_context
+from dataclasses import dataclass, replace
 import logging
 import os
 from pathlib import Path
 import secrets
 import stat
-from typing import Callable, Iterable, Iterator, TextIO, TypeVar
+import threading
+from typing import Callable, Iterable, Iterator, Literal, TextIO, TypeVar
 
 
 _T = TypeVar("_T")
 _U = TypeVar("_U")
 _V = TypeVar("_V")
 logger = logging.getLogger(__name__)
+_CLEANUP_RETRY = ContextVar("astrolabe_cleanup_retry", default=True)
+_CLEANUP_ATTEMPTS = ContextVar("astrolabe_cleanup_attempts", default=None)
+
+
+@contextmanager
+def cleanup_pass():
+    """One drain/retry may visit a shared failed child at most once."""
+    token = None
+    if _CLEANUP_ATTEMPTS.get() is None:
+        token = _CLEANUP_ATTEMPTS.set(set())
+    try:
+        yield _CLEANUP_ATTEMPTS.get()
+    finally:
+        if token is not None:
+            _CLEANUP_ATTEMPTS.reset(token)
+
+
+def cleanup_retry_allowed() -> bool:
+    """Propagate explicit retry intent through composite cleanup adapters.
+
+    A direct adapter shutdown is an explicit call. Automatic registry drains
+    set False, including when parent and child are both registered.
+    """
+    return _CLEANUP_RETRY.get()
+
+
+@dataclass(frozen=True)
+class CleanupRecord:
+    """An adapter-contract receipt, not proof of OS/device resource release."""
+
+    resource: object
+    label: str
+    state: Literal["pending", "closing", "closed", "failed", "skipped"] = "pending"
+    attempts: int = 0
+    operation: str | None = None
+    error: BaseException | None = None
+    errors: tuple[BaseException, ...] = ()
+
+
+@dataclass(frozen=True)
+class CloseReport:
+    """Immutable snapshot; failed and in-flight resources remain inspectable."""
+
+    records: tuple[CleanupRecord, ...]
+    draining: bool = False
+
+    @property
+    def failed(self) -> tuple[CleanupRecord, ...]:
+        return tuple(record for record in self.records if record.state == "failed")
+
+    @property
+    def complete(self) -> bool:
+        return not self.draining and all(
+            record.state in {"closed", "skipped"} for record in self.records
+        )
 
 
 class ResourceOwner:
-    """Close explicitly registered objects once, even when aliases repeat."""
+    """Identity-deduplicated, nonblocking cleanup with retained failure receipts.
+
+    Concurrent/reentrant close returns an in-flight snapshot, never waits for a
+    callback (which may itself be waiting on that caller). Inspect ``report``
+    after the draining caller finishes. Late registrations are drained too.
+    Failed operations are not automatically repeated. ``retry_failed=True`` is
+    an explicit caller assertion that these operations are safe to retry, e.g.
+    a documented idempotent shutdown; it must not be used for arbitrary
+    destructors. A retry attempts each previously failed operation at most once.
+    """
 
     def __init__(self) -> None:
-        self._resources: dict[int, tuple[object, str]] = {}
-        self._closed: set[int] = set()
+        self._resources: dict[int, CleanupRecord] = {}
+        self._lock = threading.RLock()
+        self._draining = False
+        self._close_requested = False
+
+    @property
+    def report(self) -> CloseReport:
+        with self._lock:
+            return CloseReport(tuple(self._resources.values()), self._draining)
 
     def add(self, resource: object, label: str) -> None:
         if resource is not None:
-            self._resources.setdefault(id(resource), (resource, label))
+            with self._lock:
+                self._resources.setdefault(id(resource), CleanupRecord(resource, label))
+                drain = self._close_requested and not self._draining
+            if drain:
+                self.close()
 
-    def close(self) -> None:
-        for identity, (resource, label) in list(self._resources.items()):
-            if identity in self._closed:
-                continue
-            self._closed.add(identity)
-            try:
-                method = getattr(resource, "shutdown", None)
-                if not callable(method):
-                    method = getattr(resource, "close", None)
-                if callable(method):
-                    method()
-            except Exception:
-                logger.exception("Failed to close resource %s", label)
+    def close(self, *, retry_failed: bool = False) -> CloseReport:
+        with cleanup_pass() as attempted:
+            return self._close(retry_failed=retry_failed, attempted=attempted)
+
+    def _close(self, *, retry_failed, attempted) -> CloseReport:
+        with self._lock:
+            self._close_requested = True
+            if self._draining:
+                return self.report
+            self._draining = True
+            retry = {identity for identity, record in self._resources.items()
+                     if retry_failed and record.state == "failed"}
+        owns_drain = True
+        try:
+            while True:
+                with self._lock:
+                    candidate = next((
+                        (identity, record) for identity, record in self._resources.items()
+                        if record.state == "pending" or
+                        (identity in retry and identity not in attempted)
+                    ), None)
+                    if candidate is None:
+                        # Atomically finish the drain relative to add().
+                        self._draining = False
+                        owns_drain = False
+                        return self.report
+                    identity, record = candidate
+                    attempted.add(identity)
+                    retry.discard(identity)
+                    record = replace(record, state="closing", attempts=record.attempts + 1,
+                                     error=None)
+                    self._resources[identity] = record
+                operation = record.operation
+                try:
+                    # A retry uses the same adapter operation, not a fallback.
+                    if operation is None:
+                        operation = "shutdown"
+                        method = getattr(record.resource, operation, None)
+                        if not callable(method):
+                            operation = "close"
+                            method = getattr(record.resource, operation, None)
+                        if not callable(method):
+                            operation = None
+                    else:
+                        method = getattr(record.resource, operation)
+                    if operation is not None:
+                        token = _CLEANUP_RETRY.set(retry_failed and cleanup_retry_allowed())
+                        try:
+                            method()
+                        finally:
+                            _CLEANUP_RETRY.reset(token)
+                    result = replace(record, state="closed" if operation else "skipped",
+                                     operation=operation)
+                except BaseException as error:
+                    result = replace(record, state="failed", operation=operation, error=error,
+                                     errors=(*record.errors, error))
+                    logger.exception("Failed to close resource %s", record.label)
+                with self._lock:
+                    self._resources[identity] = result
+        finally:
+            if owns_drain:
+                with self._lock:
+                    self._draining = False
 
 
 def ordered_cpu_overlap(

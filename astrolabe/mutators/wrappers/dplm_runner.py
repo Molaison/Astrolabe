@@ -14,6 +14,8 @@ import weakref
 from typing import Any, Dict, Iterable, Iterator, List, Sequence
 
 from astrolabe.mutators.runtime_stages import device_guard
+from astrolabe.model_daemon import RequestOutcomeUnknown
+from astrolabe.stdio_daemon import json_line_request, positive_timeout, stop_owned_stdio_process
 
 
 def _terminate_process(proc: subprocess.Popen) -> None:
@@ -69,6 +71,10 @@ class DPLMRunner:
         self._proc_finalizer: weakref.finalize | None = None
         self._lock = threading.RLock()
         self._closed = False
+        self._unknown: RequestOutcomeUnknown | None = None
+        self._last_request_id: str | None = None
+        self._cleanup_pending = False
+        self.request_timeout = positive_timeout(self._get("request_timeout"))
         self._response_cache_mem: Dict[str, List[str]] = {}
 
     def __enter__(self) -> "DPLMRunner":
@@ -81,6 +87,10 @@ class DPLMRunner:
     def _ensure_open(self) -> None:
         if self._closed:
             raise RuntimeError("DPLMRunner is closed.")
+        if self._unknown is not None:
+            raise self._unknown
+        if self._cleanup_pending:
+            raise RuntimeError("DPLM daemon cleanup is unresolved")
 
     def _get(self, key: str, default=None):
         if hasattr(self.args, key):
@@ -240,6 +250,8 @@ class DPLMRunner:
         self._ensure_open()
         if self._proc is not None and self._proc.poll() is None:
             return self._proc
+        if self._proc is not None:
+            self.shutdown()
         if self._proc_finalizer is not None:
             self._proc_finalizer.detach()
             self._proc_finalizer = None
@@ -273,6 +285,7 @@ class DPLMRunner:
             stderr=None,
             text=True,
             bufsize=1,
+            start_new_session=True,
         )
         self._proc = proc
         self._proc_finalizer = weakref.finalize(self, _terminate_process, proc)
@@ -280,17 +293,15 @@ class DPLMRunner:
 
     def _daemon_request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         proc = self._ensure_daemon()
-        assert proc.stdin is not None
-        assert proc.stdout is not None
-        proc.stdin.write(json.dumps(payload) + "\n")
-        proc.stdin.flush()
-        line = proc.stdout.readline()
-        if not line:
-            raise RuntimeError("DPLM daemon exited unexpectedly.")
-        return json.loads(line)
+        try:
+            return json_line_request(proc, payload, timeout=self.request_timeout)
+        except RequestOutcomeUnknown as error:
+            self._unknown = error
+            raise
 
     def _daemon_infer(self, tasks: Sequence[Dict[str, Any]]) -> Dict[str, List[str]]:
         request_id = uuid.uuid4().hex
+        self._last_request_id = request_id
         req = {
             "type": "infer",
             "id": request_id,
@@ -302,39 +313,37 @@ class DPLMRunner:
         }
         resp = self._daemon_request(req)
         if resp.get("type") != "result" or resp.get("id") != request_id:
-            raise RuntimeError(f"Unexpected DPLM daemon response: {resp}")
-        self.model_metadata = resp.get("metadata", self.model_metadata)
-        results = {}
-        for item in resp.get("results", []) or []:
-            name = item.get("name")
-            if name is None:
-                continue
-            results[name] = item.get("samples", []) or []
-        return results
+            self._unknown = RequestOutcomeUnknown(
+                "Unexpected DPLM daemon response; not replayed", request_id=request_id)
+            raise self._unknown
+        try:
+            self.model_metadata = resp.get("metadata", self.model_metadata)
+            results = {}
+            for item in resp.get("results", []) or []:
+                name = item.get("name")
+                if name is None:
+                    continue
+                results[name] = item.get("samples", []) or []
+            return results
+        except Exception as error:
+            self._unknown = RequestOutcomeUnknown(
+                "DPLM output validation failed; not replayed", request_id=request_id)
+            raise self._unknown from error
 
     def shutdown(self) -> None:
-        proc = self._proc
-        if proc is None:
-            return
-        if proc.poll() is not None:
-            self._proc = None
+        with self._lock:
+            proc = self._proc
+            if proc is None:
+                return
+            # Never perform an unbounded shutdown RPC on a failed channel.
+            # Keep both the process and finalizer if cleanup cannot be proved.
+            self._cleanup_pending = True
+            stop_owned_stdio_process(proc)
             if self._proc_finalizer is not None:
                 self._proc_finalizer.detach()
                 self._proc_finalizer = None
-            return
-        try:
-            with self._lock:
-                self._daemon_request({"type": "shutdown"})
-        except Exception:
-            pass
-        try:
-            proc.terminate()
-        except Exception:
-            pass
-        if self._proc_finalizer is not None:
-            self._proc_finalizer.detach()
-            self._proc_finalizer = None
-        self._proc = None
+            self._proc = None
+            self._cleanup_pending = False
 
     def close(self) -> None:
         if self._closed:
@@ -345,15 +354,11 @@ class DPLMRunner:
     def _infer_tasks_no_cache(self, task_list: List[Dict[str, Any]]) -> Dict[str, List[str]]:
         self._ensure_open()
         if self.daemon:
-            try:
-                return self._daemon_infer(task_list)
-            except Exception:
-                # One restart attempt in case of a broken pipe / stale daemon.
-                self.shutdown()
-                return self._daemon_infer(task_list)
+            return self._daemon_infer(task_list)
 
         payload = self._build_payload(task_list)
         session_id = uuid.uuid4().hex
+        self._last_request_id = session_id
         input_path = self.work_dir / f"dplm_input_{session_id}.json"
         output_path = self.work_dir / f"dplm_output_{session_id}.json"
         self._write_json(input_path, payload)
@@ -378,19 +383,23 @@ class DPLMRunner:
                     env=env,
                 )
         except subprocess.CalledProcessError as exc:  # pragma: no cover - runtime error path
-            raise RuntimeError(
-                f"DPLM runner failed with exit code {exc.returncode}. Command: {' '.join(cmd)}"
-            ) from exc
+            self._unknown = RequestOutcomeUnknown(
+                f"DPLM subprocess exited {exc.returncode}; outcome unknown; inputs retained",
+                request_id=session_id)
+            raise self._unknown from exc
 
         try:
-            return self._read_results(output_path)
-        finally:
-            # Cleanup intermediate files to avoid unbounded growth.
-            for path in (input_path, output_path):
-                try:
-                    path.unlink(missing_ok=True)
-                except OSError:
-                    pass
+            results = self._read_results(output_path)
+        except Exception as error:
+            self._unknown = RequestOutcomeUnknown(
+                "DPLM output could not be read; inputs retained", request_id=session_id)
+            raise self._unknown from error
+        for path in (input_path, output_path):
+            try:
+                path.unlink(missing_ok=True)
+            except OSError:
+                pass
+        return results
 
     def design_sequences(self, tasks: Iterable[Dict[str, Any]]) -> Dict[str, List[str]]:
         self._ensure_open()
@@ -443,7 +452,13 @@ class DPLMRunner:
                     request_num = int(spec.get("request_num", 1) or 1)
                     generated = self._normalize_samples(inferred.get(name) or [])
                     if cache_key and len(generated) > missing_num:
-                        self._append_cached_samples(cache_key, generated[missing_num:])
+                        try:
+                            self._append_cached_samples(cache_key, generated[missing_num:])
+                        except Exception as error:
+                            self._unknown = RequestOutcomeUnknown(
+                                "DPLM computed samples but cache publication failed",
+                                request_id=self._last_request_id)
+                            raise self._unknown from error
                     results[name] = [*cached, *generated[:missing_num]][:request_num]
 
             return results

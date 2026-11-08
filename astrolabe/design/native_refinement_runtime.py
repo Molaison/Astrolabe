@@ -226,26 +226,26 @@ def _source_identity(value: Any) -> str:
 
 class _LoadedModels:
     def __init__(self, mutator: Any, evaluator: Any) -> None:
+        from astrolabe.runtime_support import ResourceOwner
         self.mutator = mutator
         self.evaluator = evaluator
         self._shutdown = False
+        self._cleanup = ResourceOwner()
+        self._cleanup.add(evaluator, "refinement.evaluator")
+        self._cleanup.add(mutator, "refinement.mutator")
 
     def shutdown(self) -> None:
+        from astrolabe.runtime_support import cleanup_retry_allowed
         if self._shutdown:
             return
-        self._shutdown = True
-        first_error = None
-        for owner in (self.evaluator, self.mutator):
-            close = getattr(owner, "shutdown", None)
-            if close is None:
-                continue
-            try:
-                close()
-            except BaseException as error:
-                if first_error is None:
-                    first_error = error
-        if first_error is not None:
-            raise first_error
+        # Each explicit shutdown may retry failed native lifecycle operations;
+        # successfully closed children are never called again.
+        report = self._cleanup.close(retry_failed=cleanup_retry_allowed())
+        self._shutdown = report.complete
+        if report.failed:
+            raise report.failed[0].error
+        if not report.complete:
+            raise RuntimeError("Refinement model cleanup is still in progress")
 
 
 class DurableNativeRefinementOwner:
@@ -282,6 +282,7 @@ class DurableNativeRefinementOwner:
         self._state = None
         self._request = None
         self._shutdown = False
+        self._partial_cleanup = None
 
         model_sources = tuple(
             _source_identity(callback)
@@ -394,10 +395,15 @@ class DurableNativeRefinementOwner:
         mutator = self.spec.load_mutator()
         try:
             evaluator = self.spec.load_evaluator()
-        except BaseException:
-            close = getattr(mutator, "shutdown", None)
-            if close is not None:
-                close()
+        except BaseException as error:
+            from astrolabe.runtime_support import ResourceOwner
+            self._partial_cleanup = ResourceOwner()
+            self._partial_cleanup.add(mutator, "partial-refinement.mutator")
+            report = self._partial_cleanup.close()
+            if not report.complete:
+                error.cleanup_report = report
+                error.cleanup_owner = self
+                error.add_note("Partial refinement model cleanup is unresolved")
             raise
         return _LoadedModels(mutator, evaluator)
 
@@ -423,6 +429,7 @@ class DurableNativeRefinementOwner:
     def bootstrap(self) -> None:
         """Load models once under a work ID independent of branch transitions."""
 
+        register_model_owner(self)
         self.runtime.preflight(self.requirements)
         history = History(key_for(()), ())
         with self.runtime.bind(_BOOTSTRAP_WORK, history):
@@ -1068,10 +1075,18 @@ class DurableNativeRefinementOwner:
         return result
 
     def shutdown(self) -> None:
+        from astrolabe.runtime_support import cleanup_retry_allowed
         if self._shutdown:
             return
-        self._shutdown = True
         self.models.shutdown()
+        partial = getattr(self, "_partial_cleanup", None)
+        if partial is not None:
+            report = partial.close(retry_failed=cleanup_retry_allowed())
+            if report.failed:
+                raise report.failed[0].error
+            if not report.complete:
+                raise RuntimeError("Partial refinement cleanup is still in progress")
+        self._shutdown = True
 
 
 def run_durable_native_refinement(
@@ -1118,8 +1133,17 @@ def run_durable_native_refinement(
             raise TypeError("selected branch members must be BranchMember values")
         owner.checkpoint(final, request=None, report=False)
         return NativeRefinementResult(selected, final, owner)
-    except BaseException:
-        owner.shutdown()
+    except BaseException as error:
+        # The run scope also sees this owner. Use a registry drain here so the
+        # same unwind never implicitly retries a failed inner cleanup.
+        from astrolabe.runtime_support import ResourceOwner
+        cleanup = ResourceOwner()
+        cleanup.add(owner, "refinement")
+        report = cleanup.close()
+        if not report.complete:
+            error.add_note("Refinement cleanup is unresolved")
+            error.cleanup_report = report
+            error.cleanup_owner = cleanup
         raise
 
 

@@ -5,6 +5,7 @@ import json
 import math
 import os
 import socket
+import sys
 from pathlib import Path
 import queue
 import threading
@@ -126,7 +127,7 @@ def test_describe_uses_remaining_startup_deadline(tmp_path):
         "        return {'metadata': {}, 'random_state': {}}\n"
         "    return handle\n", encoding="utf-8")
     spec = DaemonSpec(backend="slow-describe", factory="slow_describe:make", settings={},
-                      python_bin="python3.11", env={"PYTHONPATH": str(adapter_dir),
+                      python_bin=sys.executable, env={"PYTHONPATH": str(adapter_dir),
                                                      "CUDA_VISIBLE_DEVICES": ""})
     owner = OwnedModelDaemon(spec, startup_timeout=0.8)
     try:
@@ -153,7 +154,7 @@ def test_cancel_loading_owner_stops_process_group_descendant(tmp_path):
         "    subprocess.Popen([sys.executable, '-c', code, settings['pidfile']])\n"
         "    while True: time.sleep(1)\n", encoding="utf-8")
     spec = DaemonSpec(backend="descendant", factory="spawn_descendant:make",
-                      settings={"pidfile": str(descendant_pid)}, python_bin="python3.11",
+                      settings={"pidfile": str(descendant_pid)}, python_bin=sys.executable,
                       env={"PYTHONPATH": str(adapter_dir), "CUDA_VISIBLE_DEVICES": ""})
     owner = OwnedModelDaemon(spec, startup_timeout=15)
     errors = []
@@ -262,7 +263,7 @@ def _spec(tmp_path: Path, **updates) -> DaemonSpec:
         "backend": "cpu-test",
         "factory": "adapter:make",
         "settings": {"variant": "a"},
-        "python_bin": "python3.11",
+        "python_bin": sys.executable,
         "env": {
             "PYTHONPATH": str(adapter_dir),
             "CUDA_VISIBLE_DEVICES": "",

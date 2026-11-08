@@ -51,8 +51,10 @@ def test_resource_owner_deduplicates_outer_aliases_but_not_distinct_outers_shari
 
 
 def test_existing_runner_shutdown_contract_is_repeatable_without_process():
+    from threading import RLock
     for cls in (RF3RunnerService, RAPiDockRunner):
         runner = cls.__new__(cls)
+        runner._lock = RLock()
         runner._proc = None
         runner.shutdown()
         runner.shutdown()

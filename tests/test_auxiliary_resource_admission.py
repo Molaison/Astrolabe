@@ -633,6 +633,7 @@ class PLACER:
 
 def test_rapidock_raw_jsonl_runner_has_only_child_leases(tmp_path, monkeypatch, broker):
     from astrolabe.structure_processors.wrappers.rapidock_runner import RAPiDockRunner
+    from astrolabe.model_daemon import RequestOutcomeUnknown
 
     repo = tmp_path / "vendor"
     repo.mkdir()
@@ -657,7 +658,7 @@ class RAPiDockInference:
         response_cache_dir=str(tmp_path / "cache")))
     try:
         assert runner.ping() == "pong"
-        with pytest.raises(RuntimeError, match="ValueError: synthetic request failure"):
+        with pytest.raises(RequestOutcomeUnknown, match="synthetic request failure"):
             runner._daemon_request({"type": "dock", "id": "fail", "tasks": [{
                 "name": "case", "protein_pdb": "p", "peptide_pdb": "q", "output_dir": str(tmp_path)}]})
         # A device exception is not a completion barrier. Keep the fence and
