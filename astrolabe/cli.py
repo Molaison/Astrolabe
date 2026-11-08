@@ -6220,6 +6220,31 @@ def _cmd_posthoc_report(ns: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_posthoc_proton_parity(ns: argparse.Namespace) -> int:
+    from astrolabe.posthoc import proton_parity
+
+    args = []
+    for key in ("repo_root", "checkpoint", "hbplus", "arm", "inputs", "output"):
+        args.extend(["--" + key.replace("_", "-"), str(getattr(ns, key))])
+    if getattr(ns, "source_root", None):
+        args.extend(["--source-root", str(ns.source_root)])
+    if ns.python_bin:
+        # Keep CLI dependencies in their qualified environment and execute the
+        # native scientific module in the pinned Proton Python environment.
+        return subprocess.call([str(ns.python_bin), str(proton_parity.__file__), *args])
+    return proton_parity.main(args)
+
+def _cmd_posthoc_proton_states(ns: argparse.Namespace) -> int:
+    from astrolabe.posthoc.proton_states import run_from_config
+
+    extra = {'network_scores': True} if getattr(ns, 'network_scores', False) else {}
+    summary = run_from_config(config_path=pathlib.Path(ns.config),
+        inputs_path=pathlib.Path(ns.inputs), output_dir=pathlib.Path(ns.out_dir),
+        dry_run=bool(ns.dry_run), **extra)
+    print(json.dumps({k: v for k, v in summary.items() if k != "items"}, indent=2))
+    return 0
+
+
 def _cmd_posthoc_channel_screen(ns: argparse.Namespace) -> int:
     from astrolabe.cli_channel import parse_ligand_residue_selector
     from astrolabe.posthoc.rosetta_direct_channel import run_pocket_fixed_screen
@@ -7186,6 +7211,23 @@ def _build_parser() -> argparse.ArgumentParser:
     posthoc_p = sub.add_parser("posthoc", help="Post-hoc tools (collect/filter/refold).")
     posthoc_p.set_defaults(_cuda_preinitialize=False)
     posthoc_sub = posthoc_p.add_subparsers(dest="posthoc_cmd", required=True)
+
+    proton_parity_p = posthoc_sub.add_parser("proton-parity", help="Compare pinned native Proton baselines on explicit CPU inputs.")
+    for arg in ("repo-root", "checkpoint", "hbplus", "inputs", "output"):
+        proton_parity_p.add_argument("--" + arg, required=True)
+    proton_parity_p.add_argument("--arm", required=True, choices=("pristine", "clean", "legacy"))
+    proton_parity_p.add_argument("--python-bin", help="Optional pinned native Proton interpreter.")
+    proton_parity_p.add_argument("--source-root", help="Separate original upstream tree for pristine/clean; patched release vendor is refused.")
+    cli_defs.set_handler(proton_parity_p, _cmd_posthoc_proton_parity)
+
+    proton_states_p = posthoc_sub.add_parser("proton-states", help="Audit explicit His states on retained Potts contexts.")
+    proton_states_p.add_argument("--config", required=True, help="Resolved native run configuration.")
+    proton_states_p.add_argument("--inputs", required=True, help="Explicit state-audit input manifest.")
+    proton_states_p.add_argument("--out-dir", required=True, help="New retained output directory.")
+    proton_states_p.add_argument("--dry-run", action="store_true", help="Validate input identities without model loading.")
+    proton_states_p.add_argument("--network-scores", action="store_true", help="Also compute unchanged ph_core N/G/R/U on retained normalized binder geometry; no AF3.")
+    cli_defs.set_handler(proton_states_p, _cmd_posthoc_proton_states)
+
 
     collect_p = posthoc_sub.add_parser(
         "collect",

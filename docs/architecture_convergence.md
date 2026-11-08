@@ -40,3 +40,11 @@ The overlap default bounds unconsumed finalizations to `max_workers + 1`. Succes
 Use supported Python plus the repository's dev dependencies, `CUDA_VISIBLE_DEVICES=''`, and `PYTEST_DISABLE_PLUGIN_AUTOLOAD=1`. Focused regressions cover runtime context, decision/stage transactions, pre-update, score normalization, structure initialization, dry-run configs and paper-score consumers. New boundary checks cover assessments, evidence, runtime support, backend lifecycle, execution observations and optional Torch behavior. Exact commands and final counts are recorded in the delivery report/PR, not implied by a test file's existence.
 
 Broader backend migration, native sample reconstruction, exact recovery and adaptive GPU scheduling remain separately qualified capabilities. Lack of end-to-end verification must not be hidden by green local checks.
+
+### Proton/pH main-interface port
+
+The Proton joint mutator, lazy external runner and pH losses now use existing
+factory/default/startup/resource owners. Only original product code and its
+unit/control-flow checks are in scope; model/GPU/parity/release qualification is
+owned separately. Historical pH branch reports do not establish current-main
+acceptance. See [Proton/pH guide](ph_sensitive_design.md) for the consumer contract.

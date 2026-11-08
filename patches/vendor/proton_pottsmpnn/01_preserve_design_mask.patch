@@ -1,0 +1,93 @@
+--- a/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/utils/inference.py
++++ b/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/utils/inference.py
+@@ -682,6 +682,65 @@
+     input_dict: dict[str, Any]
+ 
+     @staticmethod
++    def _design_mask_by_residue_key(
++        atom_array: AtomArray,
++    ) -> dict[tuple[str, int, str], bool] | None:
++        """Snapshot a caller-provided design mask by unique residue identity.
++
++        ``parse_atom_array`` rebuilds residues from CCD templates, which drops
++        custom annotations and may reorder/add atoms. Capture the token-level
++        mask before parsing so it can be restored afterwards. Returns ``None``
++        when no mask was provided, preserving the legacy input-dict behaviour.
++        """
++        if "mpnn_designed_residue_mask" not in atom_array.get_annotation_categories():
++            return None
++        token_level = atom_array[get_token_starts(atom_array)]
++        if "ins_code" in token_level.get_annotation_categories():
++            ins_codes = token_level.ins_code
++        else:
++            ins_codes = np.full(token_level.array_length(), "", dtype="<U4")
++        keys = list(zip(token_level.chain_id, token_level.res_id, ins_codes))
++        if len(set(keys)) != len(keys):
++            raise ValueError(
++                "'mpnn_designed_residue_mask' cannot be preserved across "
++                "structure parsing: input residues are not uniquely identified "
++                "by (chain_id, res_id, ins_code)."
++            )
++        mask = np.asarray(token_level.mpnn_designed_residue_mask, dtype=bool)
++        return dict(zip(keys, mask.tolist()))
++
++    @staticmethod
++    def _restore_design_mask(
++        atom_array: AtomArray,
++        design_mask_by_residue: dict[tuple[str, int, str], bool],
++    ) -> None:
++        """Re-apply a pre-parse design mask after ``parse_atom_array``.
++
++        Residues added by parsing that have no input counterpart raise an
++        error: silently freeing them would violate the caller's design scope.
++        """
++        token_level = atom_array[get_token_starts(atom_array)]
++        if "ins_code" in token_level.get_annotation_categories():
++            ins_codes = token_level.ins_code
++        else:
++            ins_codes = np.full(token_level.array_length(), "", dtype="<U4")
++        keys = list(zip(token_level.chain_id, token_level.res_id, ins_codes))
++        missing = sorted({key for key in keys if key not in design_mask_by_residue})
++        if missing:
++            raise ValueError(
++                "'mpnn_designed_residue_mask' cannot be preserved across "
++                "structure parsing: parsed residues have no matching input "
++                f"residue identity (chain_id, res_id, ins_code): {missing}"
++            )
++        token_mask = np.asarray(
++            [design_mask_by_residue[key] for key in keys], dtype=bool
++        )
++        atom_array.set_annotation(
++            "mpnn_designed_residue_mask",
++            spread_token_wise(atom_array, token_mask).astype(bool),
++        )
++
++    @staticmethod
+     def from_atom_array_and_dict(
+         *,
+         atom_array: AtomArray | None = None,
+@@ -710,12 +769,24 @@
+ 
+         # Copy atom array.
+         atom_array = atom_array.copy() if atom_array is not None else None
++        # parse_atom_array rebuilds residues from CCD templates (add_missing_atoms),
++        # which drops custom annotations such as the caller's design mask. Snapshot
++        # it by residue identity and restore it on the parsed array below.
++        design_mask_by_residue = (
++            MPNNInferenceInput._design_mask_by_residue_key(atom_array)
++            if atom_array is not None
++            else None
++        )
+         parser_output = parse_atom_array(atom_array) if atom_array is not None else {}
+         atom_array = (
+             parser_output["assemblies"]["1"][0]
+             if len(parser_output.get("assemblies", {})) > 0
+             else None
+         )
++        if design_mask_by_residue is not None and atom_array is not None:
++            MPNNInferenceInput._restore_design_mask(
++                atom_array, design_mask_by_residue
++            )
+ 
+         # Validate the input dictionary.
+         MPNNInferenceInput._validate_all(

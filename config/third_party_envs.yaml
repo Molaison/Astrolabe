@@ -244,6 +244,22 @@ envs:
         value: "{{REPO_ROOT}}/vendor/surfpro"
         env_var: GH_SURFPRO_REPO
 
+  # Proton's Python 3.12 stack stays external to the main interpreter.
+  # The daemon imports the pinned source snapshot and needs separate model assets.
+  - name: proton_pottsmpnn
+    manager: external
+    python_bin: $GH_PROTON_POTTSMPNN_PYTHON
+    export:
+      subprocess_envs.proton_pottsmpnn.python_bin:
+        value: "{{PREFIX}}/bin/python"
+        env_var: GH_PROTON_POTTSMPNN_PYTHON
+      subprocess_envs.proton_pottsmpnn.repo_path:
+        value: "{{REPO_ROOT}}/vendor/proton_pottsmpnn"
+        env_var: GH_PROTON_POTTSMPNN_REPO
+      subprocess_envs.proton_pottsmpnn.hbplus_bin:
+        value: "$GH_PROTON_POTTSMPNN_HBPLUS"
+        env_var: GH_PROTON_POTTSMPNN_HBPLUS
+
   # Optional: isolated Biohub ESMFold2 runner env. This backend uses the official
   # Biohub ESMFold2 model and a forked/newer transformers package, so keep it out
   # of the main `gh` interpreter.

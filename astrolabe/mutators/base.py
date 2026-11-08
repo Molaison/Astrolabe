@@ -197,6 +197,8 @@ def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path", *,
                 "multistate_proteinmpnn": ("LigandMPNN",),
                 "faraparttiedmultitargetligandmpnn": ("LigandMPNN",),
                 "far_apart_tied_multitarget_ligandmpnn": ("LigandMPNN",),
+                "proton_pottsmpnn": ("ProtonPottsMPNN",),
+                "proton-pottsmpnn": ("ProtonPottsMPNN",),
                 "dynamicmpnn": ("DynamicMPNN",), "surfdesign": ("SurfDesign",),
                 "surfpro": ("SurfPro",), "carbondesign": ("CarbonDesign",),
                 "dplm": ("DPLM",), "nampnn": ("NAMPNN",),
@@ -403,6 +405,50 @@ def _build_multistate_proteinmpnn_mutator(
         raw_model_results_dir=raw_model_results_dir,
         output_name=f"MultistateProteinMPNN_{alias}",
     )
+
+
+@register_mutator_factory("proton_pottsmpnn")
+@register_mutator_factory("Proton-PottsMPNN")
+def _build_proton_pottsmpnn_mutator(
+    term_conf, *, alias, mutator_conf, raw_model_results_dir
+):
+    from astrolabe.mutators.proton_pottsmpnn import ProtonPottsMPNNMutator
+    from astrolabe.mutators.wrappers.proton_pottsmpnn_runner import (
+        ProtonPottsMPNNRunner, get_shared_proton_runner,
+    )
+
+    base_conf = mutator_conf.ProtonPottsMPNN
+    term_overrides = dict(term_conf)
+    term_criteria = term_overrides.pop("criteria", None)
+    runner_conf, mutator_kwargs = _merge_runner_conf(base_conf, term_overrides)
+    if term_criteria is not None:
+        base_criteria = base_conf.get("criteria") or {}
+        runner_conf["criteria"] = OmegaConf.merge(
+            OmegaConf.to_container(base_criteria, resolve=True)
+            if OmegaConf.is_config(base_criteria)
+            else dict(base_criteria),
+            term_criteria,
+        )
+    runner_conf["output_dir"] = str(raw_model_results_dir / "ProtonPottsMPNN")
+    for key in ("binder_chain", "n_jobs", "preserve_disulfides", "protect_gly_pro",
+                "reference_sequence", "max_total_mutations", "network_proposal", "network_only"):
+        if key in runner_conf:
+            mutator_kwargs[key] = runner_conf.pop(key)
+    if "criteria" in runner_conf:
+        mutator_kwargs["criteria"] = OmegaConf.to_container(
+            runner_conf.pop("criteria"), resolve=True
+        )
+    runtime_key = runner_conf.pop("runtime_key", None)
+    runner = (get_shared_proton_runner(config=runner_conf, key=str(runtime_key))
+              if runtime_key else ProtonPottsMPNNRunner(runner_conf))
+    try:
+        return ProtonPottsMPNNMutator(
+            sequence_model_runner=runner,
+            **mutator_kwargs,
+        )
+    except BaseException:
+        runner.close()
+        raise
 
 
 @register_mutator_factory("dynamicmpnn")

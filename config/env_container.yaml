@@ -1,6 +1,7 @@
 # @package _global_
 
 weight_path:
+  proton_pottsmpnn: ${oc.env:GH_WEIGHT_PROTON_POTTSMPNN,/workspace/vendor/proton_pottsmpnn/checkpoints}
   ligandmpnn: ${oc.env:GH_WEIGHT_LIGANDMPNN,/models/ligandmpnn}
   rapidock: ${oc.env:GH_WEIGHT_RAPIDOCK,null}
   alphafold3: ${oc.env:GH_WEIGHT_AF3,/models/alphafold3}
@@ -40,6 +41,10 @@ obabel_path: ${oc.env:GH_OBABEL,/usr/local/bin/obabel}
 molfile_to_params: ${oc.env:GH_MOLFILE_TO_PARAMS,/rosetta/molfile_to_params.py}
 
 subprocess_envs:
+  proton_pottsmpnn:
+    python_bin: ${oc.env:GH_PROTON_POTTSMPNN_PYTHON,/envs/proton_pottsmpnn/bin/python}
+    repo_path: ${oc.env:GH_PROTON_POTTSMPNN_REPO,/workspace/vendor/proton_pottsmpnn}
+    hbplus_bin: ${oc.env:GH_PROTON_POTTSMPNN_HBPLUS,null}
   rf3:
     python_bin: ${oc.env:GH_RF3_PYTHON,/ext/foundry/.venv/bin/python}
   opendde:

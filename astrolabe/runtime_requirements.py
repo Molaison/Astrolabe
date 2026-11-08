@@ -79,7 +79,7 @@ def _pyrosetta_loss_types_from_source() -> set[str]:
                 node_src = _source_segment(lines, node)
                 arg_names = [a.arg for a in list(node.args.args) + list(node.args.kwonlyargs)]
                 uses_pyrosetta = (
-                    path.name == "interaction.py"
+                    path.name in {"interaction.py", "ph_sensitive.py", "ph_core.py"}
                     or "pyrosetta_init" in arg_names
                     or "_ensure_pyrosetta" in node_src
                     or "_bindcraft_interface_field" in node_src
@@ -399,6 +399,24 @@ def task_requirements(task_cfg: Any) -> dict:
                 )
             )
 
+    if any(
+        t.lower() in {"proton_pottsmpnn", "proton-pottsmpnn"}
+        for t in mutator_types_used
+    ) or "ph_core_network" in loss_types:
+        req_env_keys |= {
+            "weight_path.proton_pottsmpnn",
+            "subprocess_envs.proton_pottsmpnn.python_bin",
+            "subprocess_envs.proton_pottsmpnn.repo_path",
+            "subprocess_envs.proton_pottsmpnn.hbplus_bin",
+        }
+        req_env_repo_files.add(
+            (
+                "subprocess_envs.proton_pottsmpnn.repo_path",
+                "foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py",
+                "proton_pottsmpnn_source",
+            )
+        )
+
     if any(t.lower() == "nampnn" for t in mutator_types_used):
         req_env_keys |= {"subprocess_envs.nampnn.python_bin", "subprocess_envs.nampnn.repo_path"}
         mutator_cfg = task_cfg.get("mutator") if isinstance(task_cfg, dict) else {}
@@ -490,6 +508,18 @@ def task_requirements(task_cfg: Any) -> dict:
         "interface_polar_satisfaction", "short_range_interface_pair_energy",
     }
     needs_pyrosetta = any(t in pyro_losses for t in loss_types)
+    proton_defaults = (
+        (task_cfg.get("mutator") or {}).get("ProtonPottsMPNN") or {}
+        if isinstance(task_cfg, dict) else {}
+    )
+    for conf in mutator_terms_used.values():
+        if str(conf.get("_type") or "").lower() in {"proton_pottsmpnn", "proton-pottsmpnn"}:
+            if any(_as_bool(conf.get(flag, proton_defaults.get(flag)), default=False)
+                   for flag in ("preserve_disulfides", "protect_gly_pro")):
+                needs_pyrosetta = True
+            network_proposal = conf.get("network_proposal", proton_defaults.get("network_proposal")) or {}
+            if isinstance(network_proposal, dict) and _as_bool(network_proposal.get("enabled"), default=False):
+                needs_pyrosetta = True
     if isinstance(post_eval_hooks, dict):
         rosetta_hook = post_eval_hooks.get("rosetta_minimize") or post_eval_hooks.get("rosetta_repack")
         if isinstance(rosetta_hook, dict) and bool(rosetta_hook.get("enabled", False)):
@@ -605,6 +635,19 @@ def task_requirements(task_cfg: Any) -> dict:
                 "subprocess_envs.surfpro.pdb_to_xyzrn_bin",
             ],
             "required by SurfPro persistent mutator and MSMS preprocessing",
+        )
+    if any(
+        t.lower() in {"proton_pottsmpnn", "proton-pottsmpnn"}
+        for t in mutator_types_used
+    ) or "ph_core_network" in loss_types:
+        _note_env(
+            [
+                "weight_path.proton_pottsmpnn",
+                "subprocess_envs.proton_pottsmpnn.python_bin",
+                "subprocess_envs.proton_pottsmpnn.repo_path",
+                "subprocess_envs.proton_pottsmpnn.hbplus_bin",
+            ],
+            "required by Proton-PottsMPNN persistent mutator and v6 HBPLUS featurisation",
         )
     if any(t.lower() == "nampnn" for t in mutator_types_used):
         _note_env(

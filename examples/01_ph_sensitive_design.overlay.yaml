@@ -1,0 +1,55 @@
+# Apply LAST to an existing A=binder/B=fixed protein target task with a ligand stage.
+# Not a standalone target configuration. The quality objective below is the
+# benchmark_binder_v1_4 ligand objective; adapt it for other host tasks.
+mutator:
+  mutator_terms:
+    ph_design:
+      _type: proton_pottsmpnn
+      binder_chain: A
+      position_selector: interface(interface_distance=8.0)
+      criteria:
+        method: block_descent
+        backend: potts
+        combined_lambda: 0.3
+        block_size: 2
+        temperature: 0.0
+        # Ahn direction: favor neutral His over its protonated contrast.
+        # Native optimization minimizes E(target)-E(contrast).
+        center_types: [HIS-S]
+        dep_map:
+          HIS-S: [HIS-P]
+          HIS-P: [HIS-S]
+          ASP-P: [ASP-D]
+          GLU-P: [GLU-D]
+
+loss:
+  loss_terms:
+    ph_pattern:
+      _type: ph_score
+      oligomer_specific: [AB]
+      binder_chain: A
+      target_chain: B
+    ph_release:
+      _type: ph_dddg_elec
+      oligomer_specific: [AB]
+      binder_chain: A
+      target_chain: B
+      pack_separated: false
+    ph_acceptors:
+      _type: ph_histidine_cation_acceptors
+      oligomer_specific: [AB]
+      binder_chain: A
+      target_chain: B
+
+stages:
+  ligand:
+    mutators: [ph_design]
+    mutator_weights: [1.0]
+    mutation_num: 8
+    weighted_score_expression: >
+      iptm - 0.3 * sigmoid((binder_rog - globin_rog)/5.0)
+      - min(binder_loop_frac,1) * 0.6
+      + 0.2 * (2 * sigmoid(ph_release / 5.0) - 1)
+    # ph_release >= 0 and ph_acceptors >= 1 are FINAL selection criteria,
+    # not stepwise gates. These engineering weights are not from the paper.
+    acceptance_gate: null

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import hashlib
+import json
 from pathlib import Path
 import subprocess
 
@@ -234,6 +236,60 @@ def test_third_party_source_inventory_validates_current_gitmodules() -> None:
     module = _load_script_module()
 
     module._validate_third_party_source_inventory(REPO_ROOT)
+
+
+@pytest.mark.parametrize("fault", [None, "source_bytes", "patch_bytes", "commit", "missing_source"])
+def test_snapshot_source_identity_does_not_require_model_weights(tmp_path: Path, monkeypatch, fault) -> None:
+    module = _load_script_module()
+    component = tmp_path / "vendor/snapshot"
+    component.mkdir(parents=True)
+    engine = component / "engine.py"
+    engine.write_bytes(b"source\n")
+    patch = tmp_path / "local.patch"
+    patch.write_bytes(b"patch\n")
+    manifest = {
+        "source": "https://example.invalid/snapshot",
+        "commit": "a" * 40,
+        "files": [{"path": "engine.py", "size": 7,
+                   "sha256": hashlib.sha256(engine.read_bytes()).hexdigest()}],
+        "local_patch_sha256": {"local.patch": hashlib.sha256(patch.read_bytes()).hexdigest()},
+        # A source-only installation must validate before these are downloaded.
+        "runtime_assets": [{"path": "model.ckpt", "sha256": "b" * 64}],
+    }
+    if fault == "source_bytes":
+        engine.write_bytes(b"alter!\n")  # Same size: size-only checks cannot detect this.
+    elif fault == "patch_bytes":
+        patch.write_bytes(b"other\n")
+    elif fault == "commit":
+        manifest["commit"] = "b" * 40
+    elif fault == "missing_source":
+        engine.unlink()
+    (component / "SOURCE_PROVENANCE.json").write_text(json.dumps(manifest))
+    inventory = tmp_path / "inventory.yaml"
+    inventory.write_text(yaml.safe_dump({"components": {"snapshot": {
+        "path": "vendor/snapshot", "source_mode": "pinned_raw_snapshot",
+        "expected_url": "https://example.invalid/snapshot.git",
+        "expected_commit": "a" * 40,
+        "provenance_manifest": "vendor/snapshot/SOURCE_PROVENANCE.json",
+        "required_files": ["engine.py"], "patch_group": None,
+        "fork_candidate": False, "migration_status": "patch_owned",
+    }}}))
+    monkeypatch.setenv("GH_THIRD_PARTY_SOURCES", str(inventory))
+    monkeypatch.setattr(module, "_gitmodules_urls", lambda _root: {})
+    monkeypatch.setattr(module, "_gitmodules_branches", lambda _root: {})
+    monkeypatch.setattr(module, "_gitlink_commits", lambda _root: {})
+    monkeypatch.setattr(module, "_vendor_patch_script_groups", lambda _root: set())
+    if fault is None:
+        module._validate_third_party_source_inventory(tmp_path)
+    else:
+        diagnostic = {
+            "source_bytes": "provenance SHA256 mismatch",
+            "patch_bytes": "local patch SHA256 mismatch",
+            "commit": "provenance commit",
+            "missing_source": "provenance file is missing",
+        }[fault]
+        with pytest.raises(RuntimeError, match=diagnostic):
+            module._validate_third_party_source_inventory(tmp_path)
 
 
 def test_source_inventory_rejects_missing_gitmodule_entry(monkeypatch) -> None:

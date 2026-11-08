@@ -1,0 +1,78 @@
+# Apply LAST to an A=binder/B=fixed-target task with a ligand stage.
+# Uses the benchmark_binder_v1_4 quality expression; adapt Q for other tasks.
+# All bias strengths, weights and scales below are engineering starting values.
+enable_pyrosetta: true
+
+mutator:
+  ProtonPottsMPNN:
+    runtime_key: auto_ph_core
+  mutator_terms:
+    ph_core_design:
+      _type: proton_pottsmpnn
+      binder_chain: A
+      # Updated from each current structure. No predefined His positions.
+      position_selector: not surface() and not interface(interface_distance=4.5)
+      preserve_disulfides: true
+      protect_gly_pro: true
+      # Optional campaign-wide Hamming cap: set BOTH to the original parent
+      # sequence and a calibrated budget. Never recapture the reference on resume.
+      reference_sequence: null
+      max_total_mutations: null
+      criteria:
+        method: greedy_energy_block
+        backend: potts
+        center_count: 0
+        center_types: []
+        explicit_centers: []
+        infill_scope: chain
+        seed_source: native
+        selective: false
+        combined_lambda: 0.0
+        global_weight: 0.0
+        placement_region: [all]
+        block_size: 2
+        temperature: 0.0
+        # Positive weight favours canonical His in the current core. A cap
+        # saturates the reward; it neither fixes sites nor caps the His count.
+        # In the first His-free-parent canary, 0.5 introduced no His while 2.0
+        # introduced two. This is an insertion starting point, not calibration.
+        aa_bias: {HIS: 2.0}
+        aa_bias_caps: {HIS: 2}
+        aa_bias_region: [core]
+        # Propose in neutral-His/deprotonated-acid states. The release loss
+        # evaluates HIS-S versus HIS-P independently of this proposal bias.
+        forbidden_tokens: [HIS, HIS-P, HIS-A, HIS-D, ASP, ASP-P, ASP-A, GLU, GLU-P, GLU-A]
+
+loss:
+  loss_terms:
+    core_neutral:
+      _type: ph_core_network
+      oligomer_specific: [AB]
+      binder_chain: A
+      metric: neutral
+    core_release:
+      _type: ph_core_network
+      oligomer_specific: [AB]
+      binder_chain: A
+      metric: release
+      runner_key: auto_ph_core
+      gap_reference: 0.0
+      gap_scale: 1.0
+    core_unpaired:
+      _type: ph_core_network
+      oligomer_specific: [AB]
+      binder_chain: A
+      metric: unpaired
+
+stages:
+  ligand:
+    mutators: [ph_core_design]
+    mutator_weights: [1.0]
+    mutation_num: 8
+    weighted_score_expression: >
+      iptm - 0.3 * sigmoid((binder_rog - globin_rog)/5.0)
+      - min(binder_loop_frac,1) * 0.6
+      + 0.2 * core_neutral + 0.1 * core_release - 0.1 * core_unpaired
+    # A parent without His is valid. The existing stage acceptance rule
+    # acts on the full objective, including the release term on every proposal.
+    acceptance_gate: null

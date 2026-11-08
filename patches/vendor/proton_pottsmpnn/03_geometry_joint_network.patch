@@ -1,0 +1,496 @@
+--- a/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
++++ b/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
+@@ -149,6 +149,9 @@
+     aa_bias: Dict[str, float] = field(default_factory=dict)
+     aa_bias_caps: Dict[str, int] = field(default_factory=dict)
+     aa_bias_region: List[str] = field(default_factory=lambda: ["all"])
++    network_pair_bias: float = 0.0
++    network_pair_preferences: List[Dict] = field(default_factory=list)
++    network_pair_max_steps: int = 12
+     mutation_reference_sequence: Optional[str] = None
+     max_total_mutations: Optional[int] = None
+     rank_normalize: bool = False                     # use percentile (rank) scaling instead of z-score
+@@ -291,6 +294,47 @@
+                 raise ValueError("aa_bias_caps needs positive integer caps for configured aa_bias names.")
+         if self.aa_bias and not _centre_free:
+             raise ValueError("aa_bias is supported only for centre-free greedy_energy_block.")
++        if not np.isfinite(self.network_pair_bias) or self.network_pair_bias < 0:
++            raise ValueError("network_pair_bias must be finite and non-negative.")
++        if isinstance(self.network_pair_max_steps, bool) or int(self.network_pair_max_steps) != self.network_pair_max_steps:
++            raise ValueError("network_pair_max_steps must be an integer.")
++        if int(self.network_pair_max_steps) < 1:
++            raise ValueError("network_pair_max_steps must be positive.")
++        if len(self.network_pair_preferences) > 16:
++            raise ValueError("network_pair_preferences supports at most 16 entries.")
++        pair_centre_free = _centre_free and int(self.center_count) == 0
++        if (
++            self.network_pair_bias > 0.0 or self.network_pair_preferences
++        ) and not pair_centre_free:
++            raise ValueError(
++                "network pair bias is supported only for centre-free greedy_energy_block."
++            )
++        allowed_pair_roles = {"HIS", "LYS", "ARG"}
++        for index, preference in enumerate(self.network_pair_preferences):
++            if not isinstance(preference, dict):
++                raise ValueError(f"network_pair_preferences[{index}] must be a mapping.")
++            i, j = preference.get("i"), preference.get("j")
++            aa_i, aa_j = preference.get("aa_i"), preference.get("aa_j")
++            if isinstance(i, bool) or isinstance(j, bool) or not isinstance(i, int) or not isinstance(j, int):
++                raise ValueError(f"network_pair_preferences[{index}] i/j must be zero-based integers.")
++            if i < 0 or j < 0 or i == j:
++                raise ValueError(f"network_pair_preferences[{index}] requires distinct non-negative i/j.")
++            if aa_i != "HIS" or aa_j not in {"LYS", "ARG", "HIS"}:
++                raise ValueError(
++                    f"network_pair_preferences[{index}] requires aa_i='HIS' and "
++                    f"aa_j in {sorted(allowed_pair_roles)}."
++                )
++            quality = preference.get("quality")
++            try:
++                quality = float(quality)
++            except (TypeError, ValueError) as exc:
++                raise ValueError(
++                    f"network_pair_preferences[{index}].quality must be finite."
++                ) from exc
++            if not np.isfinite(quality) or not 0.0 <= quality <= 1.0:
++                raise ValueError(
++                    f"network_pair_preferences[{index}].quality must be in [0,1]."
++                )
+         if self.max_total_mutations is not None:
+             cap = self.max_total_mutations
+             if isinstance(cap, bool) or int(cap) != cap or int(cap) < 0 or not self.mutation_reference_sequence:
+@@ -350,6 +394,15 @@
+         """Build one criteria from a resolved hydra ``params`` dict (unknown keys ignored)."""
+         params = dict(params or {})
+         known = set(cls.__dataclass_fields__)  # type: ignore[attr-defined]
++        if "network_pair_bias" in params:
++            params["network_pair_bias"] = float(params["network_pair_bias"])
++        if "network_pair_max_steps" in params:
++            params["network_pair_max_steps"] = int(params["network_pair_max_steps"])
++        if "network_pair_preferences" in params:
++            params["network_pair_preferences"] = [
++                dict(preference)
++                for preference in (params["network_pair_preferences"] or [])
++            ]
+         crit = cls(**{k: v for k, v in params.items() if k in known})
+         # OmegaConf may hand back ListConfig/DictConfig — coerce to plain containers.
+         crit.center_protonation_types = list(crit.center_protonation_types)
+@@ -360,6 +413,9 @@
+         crit.repetitive_window_parents = list(crit.repetitive_window_parents)
+         crit.repetitive_window_gate_types = list(crit.repetitive_window_gate_types)
+         crit.center_types = list(crit.center_types)
++        crit.network_pair_preferences = [
++            dict(preference) for preference in crit.network_pair_preferences
++        ]
+         return crit
+ 
+ 
+@@ -2452,6 +2508,391 @@
+     return allowed
+ 
+ 
++def _network_pair_specs(ctx, crit, neigh):
++    """Map zero-based binder preferences to context positions and token masks."""
++    binder_positions = [
++        int(position)
++        for position in ctx.chainA_t.nonzero(as_tuple=False).reshape(-1).tolist()
++    ]
++    if not binder_positions:
++        raise ValueError("network_pair_preferences require a non-empty binder chain.")
++    mutable = {int(position) for position in neigh}
++    roles = {"HIS", "LYS", "ARG"}
++    specs = []
++    for index, preference in enumerate(crit.network_pair_preferences):
++        i, j = int(preference["i"]), int(preference["j"])
++        if i >= len(binder_positions) or j >= len(binder_positions):
++            raise ValueError(
++                f"network_pair_preferences[{index}] index is outside binder length "
++                f"{len(binder_positions)}."
++            )
++        aa_i, aa_j = str(preference["aa_i"]), str(preference["aa_j"])
++        if aa_i not in roles or aa_j not in roles:
++            raise ValueError(
++                f"network_pair_preferences[{index}] contains an invalid AA role."
++            )
++        position_i, position_j = binder_positions[i], binder_positions[j]
++        if position_i not in mutable and position_j not in mutable:
++            raise ValueError(
++                f"network_pair_preferences[{index}] has no mutable endpoint."
++            )
++        mask_i = _parent_vocab_mask(ctx, [aa_i]).to(ctx.device)
++        mask_j = _parent_vocab_mask(ctx, [aa_j]).to(ctx.device)
++        for position, mask, role in (
++            (position_i, mask_i, aa_i),
++            (position_j, mask_j, aa_j),
++        ):
++            if position not in mutable and not bool(mask[int(ctx.S_native[position])]):
++                raise ValueError(
++                    f"network_pair_preferences[{index}] fixed endpoint {position} "
++                    f"does not currently match {role}."
++                )
++        specs.append(
++            (
++                position_i,
++                position_j,
++                mask_i,
++                mask_j,
++                float(preference["quality"]),
++            )
++        )
++    return specs
++
++
++def _network_pair_match_value(S, specs):
++    """Best configured pair match quality; max, never a sum over preferences."""
++    best = 0.0
++    for position_i, position_j, mask_i, mask_j, quality in specs:
++        if bool(mask_i[S[position_i]]) and bool(mask_j[S[position_j]]):
++            best = max(best, float(quality))
++    return best
++
++
++def _network_pair_bias_block(ctx, S, block, specs, weight):
++    """Exact negative pair reward over a block, with all non-block endpoints frozen."""
++    if not specs:
++        return torch.zeros([ctx.V] * len(block), device=ctx.device)
++    shape = [ctx.V] * len(block)
++    block_index = {int(position): index for index, position in enumerate(block)}
++    best = torch.zeros(shape, device=ctx.device)
++    for position_i, position_j, mask_i, mask_j, quality in specs:
++        term = torch.full(shape, float(quality), device=ctx.device)
++        for position, mask in ((position_i, mask_i), (position_j, mask_j)):
++            if position in block_index:
++                axis = [1] * len(block)
++                axis[block_index[position]] = ctx.V
++                term = term * mask.reshape(axis).to(term.dtype)
++            elif not bool(mask[S[position]]):
++                term = torch.zeros_like(term)
++        best = torch.maximum(best, term)
++    return -float(weight) * best
++
++
++def _greedy_energy_block_with_network_pairs(
++    ctx,
++    crit,
++    valid_mask,
++    pins,
++    neigh,
++    initial_sequence,
++    rng,
++    trajectory=None,
++):
++    """Exact greedy block search with optional global-max His/cation pair reward."""
++    if pins:
++        raise ValueError("network pair bias requires centre-free greedy_energy_block.")
++    V = ctx.V
++    K = max(1, int(crit.block_size))
++    T = float(crit.temperature)
++    tol = 1e-4
++    w_self, w_pair = crit.stability_weights()
++    stab_scorer = ctx.stability_scorer(w_self, w_pair)
++    rw = float(crit.repetitive_window_weight)
++    rw_parents = tuple(crit.repetitive_window_parents)
++    rw_gate = set(crit.repetitive_window_gate_types)
++    rep_all = "ALL" in rw_parents
++    want_rep = rw != 0.0 and (
++        rep_all
++        or (
++            bool(rw_parents)
++            and (not rw_gate or any(p.protonation_type in rw_gate for p in pins))
++        )
++    )
++    rrad = max(1, int(crit.repetitive_window_radius))
++    canonical_map = ctx.canonical_map
++    same_canon = (
++        (canonical_map.view(-1, 1) == canonical_map.view(1, -1)).float().to(ctx.device)
++        if want_rep and rep_all
++        else None
++    )
++    rep_mask = (
++        _parent_vocab_mask(ctx, rw_parents).float()
++        if want_rep and not rep_all
++        else None
++    )
++    res_id = ctx.token_aa.res_id
++    invalid = ~valid_mask
++    inf_vec = torch.where(
++        invalid,
++        torch.tensor(float("inf"), device=ctx.device),
++        torch.zeros(V, device=ctx.device),
++    )
++    pair_specs = _network_pair_specs(ctx, crit, neigh)
++    S = initial_sequence.clone()
++    if not neigh:
++        return S
++    for position in neigh:
++        current = int(S[int(position)])
++        canonical = int(canonical_map[current])
++        if bool(valid_mask[canonical]):
++            S[int(position)] = canonical
++        elif not bool(valid_mask[current]):
++            alternatives = valid_mask & (canonical_map == canonical)
++            if not bool(alternatives.any()):
++                raise ValueError("No allowed token represents an existing mutable amino acid.")
++            energies = stab_scorer.cond_energy_at(S, int(position)).clone()
++            energies[~alternatives] = float("inf")
++            S[int(position)] = int(torch.argmin(energies))
++    dH0, _, _ = _block_mutation_tables(ctx, valid_mask, S, neigh, [], False)
++    wH = 1.0 / _zscale(dH0, valid_mask)
++    aa_specs = [
++        (_parent_vocab_mask(ctx, [aa]), float(weight), crit.aa_bias_caps.get(aa))
++        for aa, weight in crit.aa_bias.items()
++        if float(weight) != 0.0
++    ]
++    aa_mask = ctx.region_mask(crit.aa_bias_region) if aa_specs else None
++    aa_positions = (
++        [int(position) for position in neigh if bool(aa_mask[position])]
++        if aa_specs
++        else []
++    )
++    pair_endpoints = {
++        position
++        for position_i, position_j, *_ in pair_specs
++        for position in (position_i, position_j)
++    }
++    references = []
++    if crit.max_mutations:
++        references.append((initial_sequence, int(crit.max_mutations)))
++    if crit.max_total_mutations is not None:
++        reference = ctx.encode_initial_sequence(crit.mutation_reference_sequence)
++        references.append((reference, int(crit.max_total_mutations)))
++    for reference, limit in references:
++        if int((canonical_map[S] != canonical_map[reference]).sum()) > limit:
++            raise ValueError("Initial sequence exceeds the declared mutation-reference budget.")
++
++    def objective(sequence):
++        value = wH * stab_scorer.H_of(sequence)
++        if aa_specs:
++            value += _aa_bias_value(sequence, aa_positions, aa_specs)
++        value -= float(crit.network_pair_bias) * _network_pair_match_value(
++            sequence, pair_specs
++        )
++        return value
++
++    def joint_block(block):
++        unary, edges = stab_scorer.block_stability_potentials(S, block)
++        combined = wH * unary
++        block_set = set(block)
++        if want_rep:
++            for block_index, position in enumerate(block):
++                residue_id = int(res_id[position])
++                for delta in range(-rrad, rrad + 1):
++                    if delta == 0:
++                        continue
++                    neighbour = ctx.res_id_to_pos.get(residue_id + delta)
++                    if neighbour is None or int(neighbour) in block_set:
++                        continue
++                    if rep_all:
++                        combined[block_index] += (
++                            rw * same_canon[:, int(S[int(neighbour)])]
++                        )
++                    elif bool(rep_mask[int(S[int(neighbour)])]):
++                        combined[block_index] += rw * rep_mask
++        size = len(block)
++        potential = combined[0].clone().reshape([V] + [1] * (size - 1))
++        for block_index in range(1, size):
++            shape = [1] * size
++            shape[block_index] = V
++            potential = potential + combined[block_index].reshape(shape)
++        for block_i, block_j, pair_matrix in edges:
++            shape = [1] * size
++            shape[block_i] = V
++            shape[block_j] = V
++            potential = potential + (wH * pair_matrix).reshape(shape)
++        if aa_specs:
++            active = [position for position in block if position in aa_positions]
++            if active:
++                potential = potential + _aa_bias_block(
++                    ctx, S, aa_positions, active, aa_specs
++                ).reshape(
++                    [V if position in active else 1 for position in block]
++                )
++        potential = potential + _network_pair_bias_block(
++            ctx,
++            S,
++            block,
++            pair_specs,
++            float(crit.network_pair_bias),
++        )
++        if references:
++            potential = potential.masked_fill(
++                ~_mutation_budget_block(ctx, S, block, references),
++                float("inf"),
++            )
++        if want_rep:
++            residue_ids = [int(res_id[position]) for position in block]
++            pair_penalty = (
++                same_canon
++                if rep_all
++                else (
++                    torch.outer(rep_mask, rep_mask)
++                    if rep_mask is not None
++                    else None
++                )
++            )
++            if pair_penalty is not None:
++                for block_i in range(size):
++                    for block_j in range(block_i + 1, size):
++                        if abs(residue_ids[block_i] - residue_ids[block_j]) <= rrad:
++                            shape = [1] * size
++                            shape[block_i] = V
++                            shape[block_j] = V
++                            potential = potential + (
++                                rw * pair_penalty
++                            ).reshape(shape)
++        for block_index in range(size):
++            shape = [1] * size
++            shape[block_index] = V
++            potential = potential + inf_vec.reshape(shape)
++        return potential
++
++    best_sequence = S.clone()
++    best_objective = objective(S)
++    _record(trajectory, ctx, S, pins, initial=True)
++    patience = crit.cv_patience * len(neigh)
++    cap = min(crit.cv_max * len(neigh), int(crit.network_pair_max_steps))
++    since = step = pair_steps = 0
++    while since < patience and step < cap:
++        improving = []
++        for position in neigh:
++            energy = wH * stab_scorer.cond_energy_at(S, int(position))
++            if aa_specs and int(position) in aa_positions:
++                energy = energy + _aa_bias_block(
++                    ctx, S, aa_positions, [int(position)], aa_specs
++                )
++            if int(position) in pair_endpoints:
++                energy = energy + _network_pair_bias_block(
++                    ctx,
++                    S,
++                    [int(position)],
++                    pair_specs,
++                    float(crit.network_pair_bias),
++                )
++            current = int(S[int(position)])
++            candidate_energy = energy.clone()
++            candidate_energy[invalid] = float("inf")
++            if references:
++                candidate_energy[
++                    ~_mutation_budget_block(ctx, S, [int(position)], references)
++                ] = float("inf")
++            delta = float(candidate_energy.min()) - float(energy[current])
++            if delta < -tol:
++                improving.append((delta, int(position)))
++
++        candidate_blocks = {}
++        if improving:
++            improving.sort(key=lambda item: (item[0], item[1]))
++            candidate_blocks[
++                tuple(sorted(position for _, position in improving[:K]))
++            ] = False
++        if pair_steps < int(crit.network_pair_max_steps):
++            mutable = {int(position) for position in neigh}
++            for position_i, position_j, *_ in pair_specs:
++                block = tuple(
++                    sorted(
++                        position
++                        for position in (position_i, position_j)
++                        if position in mutable
++                    )
++                )
++                if block:
++                    candidate_blocks[block] = True
++        if not candidate_blocks:
++            break
++
++        evaluated = []
++        for block, is_pair in candidate_blocks.items():
++            potential = joint_block(block)
++            flat = potential.reshape(-1)
++            if not bool(torch.isfinite(flat).any()):
++                continue
++            best_choice = int(torch.argmin(flat))
++            best_value = float(flat[best_choice])
++            current_choice = tuple(int(S[position]) for position in block)
++            current_index = int(
++                np.ravel_multi_index(current_choice, [V] * len(block))
++            )
++            current_value = float(flat[current_index])
++            if best_value >= current_value - tol:
++                continue
++            evaluated.append(
++                {
++                    "block": block,
++                    "is_pair": is_pair,
++                    "potential": potential,
++                    "best_choice": best_choice,
++                    "current_index": current_index,
++                    "current_value": current_value,
++                    "delta": best_value - current_value,
++                }
++            )
++        if not evaluated:
++            break
++        evaluated.sort(
++            key=lambda item: (item["delta"], item["block"], item["best_choice"])
++        )
++        selected = evaluated[0]
++        block = selected["block"]
++        potential = selected["potential"]
++        flat = potential.reshape(-1)
++        current_value = selected["current_value"]
++        if T <= 0:
++            choice = int(selected["best_choice"])
++        else:
++            improve_mask = torch.isfinite(flat) & (flat < current_value - tol)
++            if not bool(improve_mask.any()):
++                break
++            improving_values = flat[improve_mask]
++            probabilities = torch.zeros_like(flat)
++            probabilities[improve_mask] = F.softmax(
++                -(improving_values - improving_values.min()) / T,
++                dim=-1,
++            )
++            choice = int(torch.multinomial(probabilities, 1))
++        assignment = list(np.unravel_index(choice, [V] * len(block)))
++        moved = False
++        for block_index, position in enumerate(block):
++            new_token = int(assignment[block_index])
++            if new_token != int(S[position]):
++                S[position] = new_token
++                moved = True
++        if not moved:
++            break
++        if selected["is_pair"]:
++            pair_steps += 1
++        step += 1
++        current = objective(S)
++        if current < best_objective - 1e-9:
++            best_objective = current
++            best_sequence = S.clone()
++            since = 0
++        else:
++            since += 1
++        _record(trajectory, ctx, S, pins)
++    return best_sequence
++
++
+ def _greedy_energy_block(ctx, crit, valid_mask, pins, neigh, initial_sequence, rng, trajectory=None):
+     """Centre-free, dynamically-reranked block coordinate descent on the pure Potts STABILITY energy H
+     (no pins, no selective/λ term). Each step:
+@@ -2472,6 +2913,17 @@
+     keeps the design plain 20-AA. Reuses _block_descent's block machinery (block_stability_potentials +
+     the V**B broadcast) and the repetitive_window unary/pairwise.
+     """
++    if crit.network_pair_bias > 0.0 and crit.network_pair_preferences:
++        return _greedy_energy_block_with_network_pairs(
++            ctx,
++            crit,
++            valid_mask,
++            pins,
++            neigh,
++            initial_sequence,
++            rng,
++            trajectory,
++        )
+     V = ctx.V
+     K = max(1, int(crit.block_size))
+     T = float(crit.temperature)

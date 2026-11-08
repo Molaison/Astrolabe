@@ -13,6 +13,22 @@
 # to a reviewed fork and the local patch is removed or reduced to a small overlay.
 
 components:
+  proton_pottsmpnn:
+    path: vendor/proton_pottsmpnn
+    source_mode: pinned_raw_snapshot
+    expected_url: https://github.com/christian-creator/ProtonPottsMPNN.git
+    expected_commit: 09682abfa7d20e0abcdeea0490b7a4b1c190aee3
+    provenance_manifest: vendor/proton_pottsmpnn/SOURCE_PROVENANCE.json
+    required_files:
+      - LICENSE
+      - foundry/LICENSE.md
+      - foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
+      - foundry/models/mpnn/src/mpnn/utils/inference.py
+    patch_group: null
+    fork_candidate: false
+    migration_status: patch_owned
+    reason: Pinned source with five explicit proposal/mask patches and verified SHA256 records; checkpoint and EV6 weights are separately acquired runtime assets.
+
   abseil_cpp_source:
     path: vendor/abseil-cpp-source
     source_mode: official_submodule

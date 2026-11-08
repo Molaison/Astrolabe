@@ -25,6 +25,8 @@ from .types import Key, SamplingPolicy, key_for
 
 NATIVE_REGISTRY_CODE_VERSION = "astrolabe-native-registry/v1"
 _COMPONENT_CONFIG_ALIASES = {
+    "proton_pottsmpnn": "protonpottsmpnn",
+    "proton-pottsmpnn": "protonpottsmpnn",
     "proteinmpnn": "ligandmpnn",
     "multistate_proteinmpnn": "ligandmpnn",
     "far_apart_tied_multitarget_ligandmpnn": "ligandmpnn",

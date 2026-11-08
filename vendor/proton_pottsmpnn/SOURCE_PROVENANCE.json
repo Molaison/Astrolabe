@@ -1,0 +1,802 @@
+{
+  "source": "https://github.com/christian-creator/ProtonPottsMPNN",
+  "commit": "09682abfa7d20e0abcdeea0490b7a4b1c190aee3",
+  "commit_date": "2026-09-30T06:06:03Z",
+  "selection": {
+    "include": "The explicitly hashed files list is the complete distributed source selection.",
+    "runtime_assets": "Checkpoint and EV6 pickle weights are separate downloads; URLs and hashes are recorded below."
+  },
+  "files": [
+    {
+      "path": "LICENSE",
+      "size": 1738,
+      "sha256": "af267e9ef1118a0ed96000f24685aa70216f9b0966d3ba534e0831a8fc13a7b6",
+      "upstream_git_blob": "f09cc04b8b7a19e2496e12fbcade92a05e5f5bc5"
+    },
+    {
+      "path": "README.md",
+      "size": 14684,
+      "sha256": "926cd86a5a1ca22111401c4f02556739ee182b19352690df5bd8dbd9720f7b03",
+      "upstream_git_blob": "941ab6f89ec7d20d53b042c692374d92d2838fa8"
+    },
+    {
+      "path": "foundry/LICENSE.md",
+      "size": 1533,
+      "sha256": "34ab4f089ed0332b059b3783839e997d44adbe0cdbab9b0ebd142feff75d64eb",
+      "upstream_git_blob": "60e6d124060dcbe91bcc28039b5d33aa35a708a1"
+    },
+    {
+      "path": "foundry/models/mpnn/README.md",
+      "size": 6638,
+      "sha256": "acedaf4147a1c9ef9f64a47e1a3ce98a70130919c5322bd1e410cece511fdf33",
+      "upstream_git_blob": "027e309f9462fc4ee07768a26ea633d69c8e223c"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/__init__.py",
+      "size": 57,
+      "sha256": "86041c5c56826c0c45ae1c9d540cb4c63f320bb50917e18208586a0f4b19ec8e",
+      "upstream_git_blob": "06f8184518330d2404f56760062126e691fc0784"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/callbacks/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "upstream_git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/callbacks/hbond_validation.py",
+      "size": 10222,
+      "sha256": "de62d81d8436f0057fa42a94fd19754984477c0e96a197b3224d343977d15de6",
+      "upstream_git_blob": "87c6cd1b0dad6f678d65d454462a9c68f4295a95"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/callbacks/megascale_benchmark.py",
+      "size": 14032,
+      "sha256": "dd74e3fdc040984ebddc5447cae126b1e069b5c16e168223b3691cf17ce75b2e",
+      "upstream_git_blob": "d42a89862d979c54a580bb89e6f51683ed416c7a"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/callbacks/neutron_benchmark.py",
+      "size": 19067,
+      "sha256": "591505b649536ff10a209a40213d73e05470a146f64789ec20c334a75170e4c0",
+      "upstream_git_blob": "11f6e4364218f2412862d87802f8767f1e0f2ab2"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/callbacks/pkad_benchmark.py",
+      "size": 19960,
+      "sha256": "9b6e66f5e3bc3b72e02796dfb56d4ffc033db23a587d15bb00387b2958f0171c",
+      "upstream_git_blob": "42be735a7097ea30dd62e91a24387c49f418c1dc"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/chemistry.py",
+      "size": 5263,
+      "sha256": "d067d75446d5fd82297d32dab2bad0f549b74c8706e47dc97399f1fcbc616997",
+      "upstream_git_blob": "7ada8f18c432cb134e1c6aeffef6a862526348f6"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/collate/feature_collator.py",
+      "size": 10750,
+      "sha256": "939f2397027964ea93ad9fb951545919c13d80e70a5e30fa7a9f07ead56e546c",
+      "upstream_git_blob": "3331aa20911440b47dd40d3c7d0159f9ffb9dc13"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/featurize_audit.py",
+      "size": 8248,
+      "sha256": "77df3d665ad27b31b90c1892dc05424bf39aa5169f2a6b4477bf58095fc7c1bd",
+      "upstream_git_blob": "3ced07e20052de4e712a42aedf918b13f8fd4e45"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/filter_data.py",
+      "size": 1668,
+      "sha256": "c651b159c63f5b35d116cbdfa3a74660e55c288d523b59012bbf6c2495697055",
+      "upstream_git_blob": "3b397ca9651f93436fa77762c7a22da7f16cbe9c"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/hbond_head.py",
+      "size": 22679,
+      "sha256": "4ebb14a6a3cf67feccef70ffc312ef4ca76a9097f1100bfc9f6bdcbb2955aae1",
+      "upstream_git_blob": "0a08ac131d850fd93d3276d5dfb58a9485b99228"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/inference.py",
+      "size": 1669,
+      "sha256": "c0fb46477db979545579eb17a16b412ba6fff95714f0165a7b921f40ddfe9af0",
+      "upstream_git_blob": "f64138f008f847fe1e6d1a8e5114d28730ae8a93"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/inference_engines/mpnn.py",
+      "size": 22110,
+      "sha256": "9b5ec772ec54062d98c4cc8cb369a69abe590f3797b7660ebcc58db708d3574d",
+      "upstream_git_blob": "9f53c1d577c2eccf7ad4e14298cf457c73ff1ba7"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn.py",
+      "size": 33313,
+      "sha256": "c7754469910ef27c072b2515469526f9a9bcf48a3dfc4eebdd734ffd5f995f59",
+      "upstream_git_blob": "f04414878465df025b99a1bdc7771d68f6b392bd"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py",
+      "size": 181260,
+      "sha256": "7d387e3ebee8b8c37329c13f0ecae09c5769330f27a07676f10e2650c10d7344",
+      "upstream_git_blob": "b6684182892aa7d16936ffb51e26c805992d0134"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/loss/hbond_loss.py",
+      "size": 3445,
+      "sha256": "2ccfc74e1d115cfaf04cc77c6eacdd3b6bcc2964e80cb0d745f540970febcfbe",
+      "upstream_git_blob": "769c3c6957fe30bed450405d41080d94c2c24ea8"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/loss/nll_loss.py",
+      "size": 5947,
+      "sha256": "2a674d7be042cc662d8a38daa69cc102b41c4f580756526729d6353d84389a15",
+      "upstream_git_blob": "59bc61705ea16a2435f0ea44e469aaccb33b5549"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/loss/potts_loss.py",
+      "size": 21637,
+      "sha256": "0c07180a1b2278463934a940408220252183b1a63f3adc530b62ea918f99cef1",
+      "upstream_git_blob": "64e59474182cb3e0817d540ccaf728c8949b9654"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/loss/potts_loss_tmp.py",
+      "size": 4558,
+      "sha256": "2dffc4f45ae8493418823b3f0cc90ac3cc17cfce1cbb33b7bdb87e4f6d37e2d2",
+      "upstream_git_blob": "c5a9cf49083c321061277d5344d2bf24d335f6ec"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/metrics/nll.py",
+      "size": 15299,
+      "sha256": "4faa0c79438478767338c4c7f0d1c5b6c1fdbd4c0b02c1d00cfb33ce3e182972",
+      "upstream_git_blob": "1e28b7fb823b4ec48e1a83cd01366d16fdb86d47"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/metrics/sequence_recovery.py",
+      "size": 23572,
+      "sha256": "468969510787c642d2455dbca09285f35a95adaa8edcdbbea1b76dc062cc39b4",
+      "upstream_git_blob": "8af64e9c79a60b014f1e5b2f525d2313c0e960c7"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/model/POTTS_CONDITIONAL_ENERGY.md",
+      "size": 7834,
+      "sha256": "1d2dd4cd56b83905d87e5b79b971e9a10dc21f765ecb542c4de3bbb6bd216ddb",
+      "upstream_git_blob": "08159ac71358d3f47f00a76f00a0d72355b11bee"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/model/hbond_model.py",
+      "size": 28989,
+      "sha256": "5c9dd511c3592303347dcce6f7a8f64d4e31e0a53a42c3046fe5a57834f97090",
+      "upstream_git_blob": "5934f795ab063eeb2bb73e01f4ce8e8af4dfebfc"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/model/layers/graph_embeddings.py",
+      "size": 100788,
+      "sha256": "cc441b733a6f2424e763decd70dbbaaff45849c81faf28a4bd5366fcd857124e",
+      "upstream_git_blob": "b16c6aede6375032ffdfead1120944fde8fdae9a"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/model/layers/message_passing.py",
+      "size": 13051,
+      "sha256": "4d4906f695eea3846dcf905c8a3f8e07b4f88122a62edd4a8313668c960f70c6",
+      "upstream_git_blob": "95a9db6b61b7c3175563a21133c60c91c2290f0f"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/model/layers/position_wise_feed_forward.py",
+      "size": 1602,
+      "sha256": "1404ccf28bde5b2d975be3c369a17d5cb3c88966de84e1f11bbd7913ad27ffc8",
+      "upstream_git_blob": "0a24bf748fb02834c76c1076bb981d4a666b7fc4"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/model/layers/positional_encoding.py",
+      "size": 4876,
+      "sha256": "7fe6291f5c6f3c6142ef9536fac387acad775ed03d6405b18f1c47d46ac3b753",
+      "upstream_git_blob": "baed8ce0abaf530bb86d78dbc6815d0ccfc52e9e"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/model/mpnn.py",
+      "size": 131181,
+      "sha256": "e79f46ae21a1f481fa5eef695885d207a525666a141ff393e44ba6c26f75aca5",
+      "upstream_git_blob": "fef9fff89c5fa1758bb29be6983e8e054958792b"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/model/pottsmpnn.py",
+      "size": 41919,
+      "sha256": "f64d078c30a35c5a63c3f2be92737bfb9970bdb98c066891688ac440c1353519",
+      "upstream_git_blob": "e9d3950f81628c1952cf60b79373dec7e0b4fa21"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/pipelines/mpnn.py",
+      "size": 6185,
+      "sha256": "4ae930c44700cda0a051929c035fcabaca1dbdc0a0dff6ee375740654f9475ab",
+      "upstream_git_blob": "fa82989327f2b19a07cd902a7d9110276c068932"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/pipelines/potts_mpnn.py",
+      "size": 18410,
+      "sha256": "1382a51cc2a405a7f25302c9621681732d1fadea3c2e70ebbc61e6e41f16a3e8",
+      "upstream_git_blob": "54d958ae38e51ed3fc6d591259dfc8d01cdcf2f0"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/potts_inference.py",
+      "size": 15736,
+      "sha256": "e44a78a8b7c29a2ec560f1b6f2ccd2035846de182a263b84d40a80ee27dc04f6",
+      "upstream_git_blob": "40c4e3ac343c63a0e4dc143cccd80df354ada841"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/samplers/samplers.py",
+      "size": 6129,
+      "sha256": "2c3a5eb4f31592531ba23d6db9c82736f487454690b9e841991da3165e155881",
+      "upstream_git_blob": "62fb5120a25617fcf2cf036c78f0236397057ef1"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/scripts/__init__.py",
+      "size": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "upstream_git_blob": "e69de29bb2d1d6434b8b29ae775ad8c2e48c5391"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/scripts/analyze_embeddings_pca.py",
+      "size": 14710,
+      "sha256": "b0b7907c139f283b3bb8e047a47c99fe297bb6edddfb3c9657a33461f788e3c1",
+      "upstream_git_blob": "02d50ea1c19e2ade4a97cac3968f5b22a3b4f4c4"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/scripts/analyze_ll_per_aa.py",
+      "size": 21785,
+      "sha256": "99d3b3ee2cfcc77bb68f83ef9a9c77fc8589ac2253c56bf8ea73c5ae86c4803a",
+      "upstream_git_blob": "9eee83b27b3a9db2141325c90d1c3315b451e91c"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/scripts/eval_pkad.py",
+      "size": 30789,
+      "sha256": "c1a15bd0f854816348f3412a7f8402a74d8b66f00cee6c77c0e0c92e8ea22704",
+      "upstream_git_blob": "67d5a637399a08350cbf2b2e7d0503cbcb4f9fa8"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/scripts/plot_mpnn_val_metrics.py",
+      "size": 6116,
+      "sha256": "07ed8e04fa8001a2dcd1c450000ef3cf1989ac3edb4a3d0178a6bd29adeffa6d",
+      "upstream_git_blob": "4f4ad209c1914dadbd4ff73a83642e9767062c1c"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/train.py",
+      "size": 32489,
+      "sha256": "3235ec687ac0fe94667c1964e7b333a5c68651c916511c8e1238d4a1c3cb6607",
+      "upstream_git_blob": "5516f4c8b29fbb121cbee43d234843c84afeb595"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/train_hbond.py",
+      "size": 17500,
+      "sha256": "8eaada0abbe327887560d1a4a04283a2e7fa89e6048cd06d279b695296bb7395",
+      "upstream_git_blob": "fb06ec0a611c1f6f9fc3883d4fb93168685f8ddd"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/trainers/hbond_head.py",
+      "size": 11182,
+      "sha256": "534ac0139debf6a112733a84f595be664364dc5feebf48556f59bf8224b907de",
+      "upstream_git_blob": "05575c1d5b4ed833f4dd46091197314e4d205914"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/trainers/mpnn.py",
+      "size": 6586,
+      "sha256": "c1a5cb43eee9143f0c2519672b7ee61d672fa83eae3a34d754febdd74b41e9cc",
+      "upstream_git_blob": "03031c85fca6b27bb3d5ecc0907e3dad2c0052c8"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/trainers/pottsmpnn.py",
+      "size": 13500,
+      "sha256": "5c795134a332674f342b4e27b615f7e611974b0b132aa2b455996e4b2a7fe186",
+      "upstream_git_blob": "96efd7b39ff6249ab58bd57db2493efae3aa87c5"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/bond_annotation.py",
+      "size": 32908,
+      "sha256": "e5fd6969499f13e89a0896706a4342b3d8996045f49db915037299e650ffeeb0",
+      "upstream_git_blob": "e7f6e84f7745f6d0fd5cf46a6691cabbca348af0"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/charge_network.py",
+      "size": 13748,
+      "sha256": "6d8498ffb78a60801f2887cab80f8baf0d9f3456bfb616bdfc0c6923a8f028b8",
+      "upstream_git_blob": "5027bbf050554208ae1eb748f2b76befb335aade"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/__init__.py",
+      "size": 744,
+      "sha256": "974482ed7c20ec26f06cad236c28c3de7d4088e7edd866cf8db80ac1d2d639ab",
+      "upstream_git_blob": "4264bd3373c94db67bfe67d70dc3148c0fc95294"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/features.py",
+      "size": 24839,
+      "sha256": "4b9efc293235c29805776a1c9fad6ea4aab5b2a0b300f046794bb0cebbea6da7",
+      "upstream_git_blob": "9068a20903135500b3a8d728e4e2a34e4d0f1651"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/predictor.py",
+      "size": 6897,
+      "sha256": "d82153fe53ece55df49df288d44d292d63d7c305938d7601a42e7ffefc4dfa14",
+      "upstream_git_blob": "c8f700e7070ec7f00dfe78454fa31992d411440b"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/thresholds.json",
+      "size": 539,
+      "sha256": "81cc00fada2115dfd573f022e23d8c243b2d20195641a41c5f834d9fc7694ca1",
+      "upstream_git_blob": "e71cb7ae9dfa599eb095d8dab54d3ad233e1048b"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/extended_vocab.py",
+      "size": 3606,
+      "sha256": "0161c131dc5349d422a3f7e5ab91e98d587ce65e4d96ab227dc72f7ed8c28b33",
+      "upstream_git_blob": "34309a341e87b26c1ae0bd0edbfcf1306a2f99bc"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/extended_vocab_v3.py",
+      "size": 11787,
+      "sha256": "106b4741de7df8b5b6ceb81f9f31ad69f643213fa1a5b945ef4affa4d5779181",
+      "upstream_git_blob": "389bcab870a552b00b9c47ab79dfe809a4ded4ef"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/extended_vocab_v4.py",
+      "size": 19986,
+      "sha256": "4212f44d3e1b41dce6ea4fb4b5624b58db9348cf37ae03c57a53cef924b700ea",
+      "upstream_git_blob": "3e4ad7afab4db9fbe68b92f912fa35e75ef57ecc"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/extended_vocab_v6.py",
+      "size": 6898,
+      "sha256": "a5441cf6ac6584baf43be630596c6614cbf53ed2c08ea1401b57894df5001bb5",
+      "upstream_git_blob": "270612a46254fac7e75889178b693e3f251e85b8"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/feature_aggregation/encoding.py",
+      "size": 28638,
+      "sha256": "c77f82ba7c89f73cb0fefec91e43e8ce2937aa1050cd5c207f730a1445991f33",
+      "upstream_git_blob": "6a0cf55a9dac980e56c9475fc52046fd4de9a0c1"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/feature_aggregation/mpnn.py",
+      "size": 6324,
+      "sha256": "8e4872302a898a9290d8fbe3a8f92fbc2961a225f1fc8f1ed379670de1fdfff3",
+      "upstream_git_blob": "ef98c42e33f7b16e9a4bf54f622cc936904f2d48"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/feature_aggregation/polymer_ligand_interface.py",
+      "size": 2870,
+      "sha256": "80376df5165dd0f3b4609768b8daf4aac1c5655d62fb97b053a5ee26bc0f639e",
+      "upstream_git_blob": "28829017ed4aa09bb9f1dc0b4d4d9bfa1ef2114a"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/feature_aggregation/potts_encoding.py",
+      "size": 28662,
+      "sha256": "887301e960d965f7c77b673ac064799e58c6417c3af96efe27ebe3753eaa05e4",
+      "upstream_git_blob": "f7d519cb6ccea463d792eea2b90dc025dd03123d"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/feature_aggregation/potts_mpnn.py",
+      "size": 6956,
+      "sha256": "45d55bf27abe4bac8c0e6771829739a2bdd68b384527c99ff69d6381993cbfaa",
+      "upstream_git_blob": "35c9f5233e3ab738d8e45fe22ca3b1a13f17c4d1"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/feature_aggregation/token_encodings.py",
+      "size": 4458,
+      "sha256": "2e05a6dfb3f4ca93ec794108d411938edba309691172f5aea12f586c3c6d2774",
+      "upstream_git_blob": "9b8a0bffd679d1bcd55e9dd1dbbe493ca0f9baf6"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/feature_aggregation/user_settings.py",
+      "size": 15007,
+      "sha256": "b8ac880d7cfe406d3e29640ed64a8f94c8fa8bb46854ceb21f8886357152b685",
+      "upstream_git_blob": "ae756503fac9baa444d6892a43e4432d00cdefca"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/pka_annotation.py",
+      "size": 21017,
+      "sha256": "14ba0ceacdad37d6ae1cc194221b8394163b7a8fd5ce2bf8d26731c2f1262892",
+      "upstream_git_blob": "66e1e506cca4c9ed22a31b757e144c5f9031dd18"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/polymer_ligand_interface.py",
+      "size": 6106,
+      "sha256": "962a4a0edfcd16ba4cf8688e5edbe74c0bcca4848e3b8787c229428319c84895",
+      "upstream_git_blob": "0d14a655357bc4a183def7baf7c9e0613b683691"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/precomputed.py",
+      "size": 5699,
+      "sha256": "1c9e3cc61e6a531f57b464f5219e9d0a92d902adcb53a40d78f5ddbb789d6f3c",
+      "upstream_git_blob": "0e11df1328dfeaf1719f6804d7f94f8d10ba47b1"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/vocab_annotation.py",
+      "size": 10716,
+      "sha256": "f2aef22e0728ddc40cd7cec276378babeefa2795379678ca0bbaed83faa32725",
+      "upstream_git_blob": "224c8cf7ae7fa20c0bac55b7624055fa89525f1e"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/whole_chain_crop.py",
+      "size": 8320,
+      "sha256": "410592de4454d6922640a86464aa582f5c44f593fba81125623d2d9b57171fcf",
+      "upstream_git_blob": "09f60cc937f61dacf0225354563c82b38a7741ae"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/utils/inference.py",
+      "size": 99949,
+      "sha256": "3431e6330f6aef4eb8198112512163e215166ca26316f2c13f3edae7bc1581e8",
+      "upstream_git_blob": "a4fc50bc1f0f814978332066a367b0f8543e94d8"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/utils/probability.py",
+      "size": 990,
+      "sha256": "1188ac9625cd1978ee48f6f36707082a3961c88362906b2a4277460446d0a0f2",
+      "upstream_git_blob": "75525262c3f8b98efc9e96c02a29e07abb5dcc6e"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/utils/weights.py",
+      "size": 16411,
+      "sha256": "56c68870e593bfc1be589f5d7a7c4b466dc543d97a2fae80550374f04f413128",
+      "upstream_git_blob": "5b87589d487e8010ad392953ea0992b654218e2e"
+    },
+    {
+      "path": "foundry/pyproject.toml",
+      "size": 5101,
+      "sha256": "63b6e91b6f99bad634d4cbb1cc638284f54778448ee9a53049b5c0dee7445990",
+      "upstream_git_blob": "0084d176ca7d74d50551df2492b96c05e17764d4"
+    },
+    {
+      "path": "foundry/src/foundry/__init__.py",
+      "size": 2240,
+      "sha256": "553b824e5d597a51165bfb1d38be7a2d848c17c79d6fa63ef557bc0001091a54",
+      "upstream_git_blob": "b1657b66335419cdc17e503a47e651fd13bbed42"
+    },
+    {
+      "path": "foundry/src/foundry/callbacks/__init__.py",
+      "size": 126,
+      "sha256": "56c453d5ee2caa52473dc4c2b1fba9304c7cd88cfe2e838018fa70bdffce25e1",
+      "upstream_git_blob": "88fa5cda6f17c0d6c70ee88a0efa40ee95928697"
+    },
+    {
+      "path": "foundry/src/foundry/callbacks/callback.py",
+      "size": 3890,
+      "sha256": "c59068fecb8fe1b2eb3fa825e6e24f6da5e6d340d78a078f6ba74c783c6e7208",
+      "upstream_git_blob": "ded8173500ad68ed4a33420a1cd8c2291502aacd"
+    },
+    {
+      "path": "foundry/src/foundry/callbacks/health_logging.py",
+      "size": 16664,
+      "sha256": "b44b640723a568003b9e77a5c5becf6ccf7f75c2203ac75bc427506372b9a4c7",
+      "upstream_git_blob": "d7a036e658884479509f9eb53816bdcaebdf98d4"
+    },
+    {
+      "path": "foundry/src/foundry/callbacks/metrics_logging.py",
+      "size": 10299,
+      "sha256": "467c0508862d09e11a50a562eda90ff82c7154f4951d2e08265f398e0265d433",
+      "upstream_git_blob": "db46ecd70bbbae53dbdc6d3a663499df1b8708d8"
+    },
+    {
+      "path": "foundry/src/foundry/callbacks/timing_logging.py",
+      "size": 2343,
+      "sha256": "bbeaf484aa7b7d6398de62e4ec272e2301e065b86d7b5de6e4cd3dc4d81ab590",
+      "upstream_git_blob": "62f7b363c4e307ffa621f1e599f9fa28339c9a74"
+    },
+    {
+      "path": "foundry/src/foundry/callbacks/train_logging.py",
+      "size": 10399,
+      "sha256": "5ecded99903cf2a2f199d48ec2dfb1f1828de0d29bd64566e7dba9b4d5e5e10a",
+      "upstream_git_blob": "109cca50f85ec4c67ecc4ef790ff8cef28dbbe74"
+    },
+    {
+      "path": "foundry/src/foundry/common.py",
+      "size": 3035,
+      "sha256": "02eafc987f82366714a92b30ed581a090496e6c1f506a7fc0daf758f3c4f5756",
+      "upstream_git_blob": "adf95e5ff5ad2d7644787bd14fdd17399a90be11"
+    },
+    {
+      "path": "foundry/src/foundry/constants.py",
+      "size": 913,
+      "sha256": "d27d7004a0af36ec3741a41e8526e6b0762421d6869f7b4b791148b41add7876",
+      "upstream_git_blob": "59e2d030e839b39e12d504e7592af9a8f2604152"
+    },
+    {
+      "path": "foundry/src/foundry/hydra/resolvers.py",
+      "size": 2186,
+      "sha256": "c72273a3a39e58073f2cebbc4621e15fbfc244da0b676dbadba02f6075d89785",
+      "upstream_git_blob": "99a82374c1f62c52442c995b3325f805d964e3b8"
+    },
+    {
+      "path": "foundry/src/foundry/inference_engines/base.py",
+      "size": 8375,
+      "sha256": "64776598652a1f8fa9defe1176b2c7f8fb3cff36a5afb8f9990e31f92e773783",
+      "upstream_git_blob": "7954807328cd7ac5b2003159c28087a0b7ad383a"
+    },
+    {
+      "path": "foundry/src/foundry/inference_engines/checkpoint_registry.py",
+      "size": 4354,
+      "sha256": "c18eab771fa5bf2745ca44846b18e97f5bb83c942c1ee2a09ca02e5c3cc58150",
+      "upstream_git_blob": "3f1af3db32d653bd6446900cf7b3dcf3f33b2c13"
+    },
+    {
+      "path": "foundry/src/foundry/metrics/__init__.py",
+      "size": 236,
+      "sha256": "a8be30c1a890ec4b51df4a6667d302927ab1f74f4125c36f1d598d2546b3fd63",
+      "upstream_git_blob": "d93740502fd5a6403acb23b1f7e71709b8745e4a"
+    },
+    {
+      "path": "foundry/src/foundry/metrics/losses.py",
+      "size": 903,
+      "sha256": "d822d499fee809d1540af809ba474d91f7f41551b706501323e348eb44eda556",
+      "upstream_git_blob": "02cc4cc16086fd283d60188f6e0534c372b8d8d8"
+    },
+    {
+      "path": "foundry/src/foundry/metrics/metric.py",
+      "size": 12687,
+      "sha256": "db7a4a87f45ad047071a8e5c4b361042b506af9cd64717ae7ca489e7cb5f5d7a",
+      "upstream_git_blob": "0169126de823ce7f0dc054cb7249919ffece2477"
+    },
+    {
+      "path": "foundry/src/foundry/model/layers/blocks.py",
+      "size": 1403,
+      "sha256": "8a16db3ffd5f3a5ae4adcad04a4f6d842acd5a32bc9adc43dd6c5c06783d1ed9",
+      "upstream_git_blob": "5c769f902e784d8e9108710986720b1ac4103940"
+    },
+    {
+      "path": "foundry/src/foundry/testing/__init__.py",
+      "size": 223,
+      "sha256": "067ad4edf6789740e6d6fac670d3d0613030f373d6e03198cfb4c6846aa0adf4",
+      "upstream_git_blob": "4114cf90502d9aa68b6850918f6d13712b599857"
+    },
+    {
+      "path": "foundry/src/foundry/testing/fixtures.py",
+      "size": 535,
+      "sha256": "6f8d61fee6dc4b88baa94145063077fd6e87bbf84a3f5a030276f1db734a1bf3",
+      "upstream_git_blob": "9e67f282abdf7a2492700049100a5440a7c42f54"
+    },
+    {
+      "path": "foundry/src/foundry/testing/pytest_hooks.py",
+      "size": 450,
+      "sha256": "e446f0d465d83b65ea4bd26fa73b72ee0de009721d5eed7a8ea839dd772e531e",
+      "upstream_git_blob": "e05854bc623c73885ca00f1787d5a2ff2457fa34"
+    },
+    {
+      "path": "foundry/src/foundry/trainers/fabric.py",
+      "size": 43583,
+      "sha256": "c738b17e0105488406f87e6d18113471e89db063d468b2c9dc2f2d2b4c0036f6",
+      "upstream_git_blob": "c3605c20d0278c4a93586c25ecea7754f98e4637"
+    },
+    {
+      "path": "foundry/src/foundry/training/EMA.py",
+      "size": 2651,
+      "sha256": "dce580f4fcfb5ee0ebf924716f3db8b597f9e439a149ad9f2b2f6be6fd885ea0",
+      "upstream_git_blob": "f6fffd06a6cc9bb1449c7a7119ee87d24d6f920e"
+    },
+    {
+      "path": "foundry/src/foundry/training/checkpoint.py",
+      "size": 1791,
+      "sha256": "99488e6e0faa705dedbcc7d5bbbeec0fd9b7c95469ef5733bf4edc725894eea4",
+      "upstream_git_blob": "79458c3dd423c42a560dcf56ff5713eab5d60c57"
+    },
+    {
+      "path": "foundry/src/foundry/training/schedulers.py",
+      "size": 3647,
+      "sha256": "4ad9977a03df21d2c0bf7d45ade093ac387d76c3af3547f31b86066bad58e281",
+      "upstream_git_blob": "30f4a89d004ac6ff0fa62e6962a2ce2ad5cf76d9"
+    },
+    {
+      "path": "foundry/src/foundry/utils/alignment.py",
+      "size": 2516,
+      "sha256": "37f0f5d4f201fd79f62be03ebc594fcd4bb3d75c9e0cfc59f9d3fcd0e33062e8",
+      "upstream_git_blob": "c5d066ddd02de8dea39be386424e4ba87c6d937f"
+    },
+    {
+      "path": "foundry/src/foundry/utils/components.py",
+      "size": 15743,
+      "sha256": "24966e39b0de11b78fa00f222c46931367c17cbf782e279e8519eaf0795f79ca",
+      "upstream_git_blob": "0af9c7eaea2975a2bd4a90b0974b91d3831065c6"
+    },
+    {
+      "path": "foundry/src/foundry/utils/datasets.py",
+      "size": 16629,
+      "sha256": "a4b07155ece6f934ab62e0b98059c965d1a735657b68f1f6422588544da191d4",
+      "upstream_git_blob": "ef2d511b55c7ef91a199bc5219cb419311019cc7"
+    },
+    {
+      "path": "foundry/src/foundry/utils/ddp.py",
+      "size": 4344,
+      "sha256": "14724374d8a1413a0b2b98e50ca2b1eaf167493fcb8510b5f4313f4f121b4d7c",
+      "upstream_git_blob": "fc9983fa6a141f5c31a557497efd053ee263e49e"
+    },
+    {
+      "path": "foundry/src/foundry/utils/instantiators.py",
+      "size": 2169,
+      "sha256": "a060a9ea1ae663e40f3cf123c4ac5ee6e5452f5db97c7d5168bc6330a5820fff",
+      "upstream_git_blob": "30cb260cb2a70b4e61cd68fb7fe5722ba39e4843"
+    },
+    {
+      "path": "foundry/src/foundry/utils/logging.py",
+      "size": 9312,
+      "sha256": "cb057be4c06542ca2d855d0806faa80104cd83aa63a36f8289bed4a34f349f34",
+      "upstream_git_blob": "84fb384487a439e9231c72d173d2a0857d9b4104"
+    },
+    {
+      "path": "foundry/src/foundry/utils/rigid.py",
+      "size": 44444,
+      "sha256": "fd9d699a2b5beb1831ca0b8b8ff4ee90ab1c50126342c5386ec043db81954bce",
+      "upstream_git_blob": "c32da7ceca0bf0fb43f6155af5e447ce86813f7c"
+    },
+    {
+      "path": "foundry/src/foundry/utils/rotation_augmentation.py",
+      "size": 1927,
+      "sha256": "eead56117da22748bbfb6695f8cf7b9c4684769a9ec434da667e49aae6299149",
+      "upstream_git_blob": "e9417773ee97c192c7b83efa80ea6b37cbf8dac7"
+    },
+    {
+      "path": "foundry/src/foundry/utils/squashfs.py",
+      "size": 5234,
+      "sha256": "425730b89c957be4157c8392ee8d507cb85a0903cdcf3a31ee59f89fc75c6048",
+      "upstream_git_blob": "b2bc5a7b1aeb30fcbbc3009ce4fdad0d07ab9342"
+    },
+    {
+      "path": "foundry/src/foundry/utils/torch.py",
+      "size": 12924,
+      "sha256": "7fd46686bb427ad40b8edbe5bbd686be4aaa4bd302ec6b11ee24401b7c6922f1",
+      "upstream_git_blob": "34cacd6497049b4c3701bb2ef2b59af902d7a7ed"
+    },
+    {
+      "path": "foundry/src/foundry/utils/weights.py",
+      "size": 10381,
+      "sha256": "6edcf84b4db17dfdaf822ab8c4c7e25ee84ad4445a7ea40fb668a6a350e6a166",
+      "upstream_git_blob": "b80f2ddd5d8eb0d31eaf817679a6749b98daf337"
+    },
+    {
+      "path": "foundry/src/foundry/utils/xpu/__init__.py",
+      "size": 1114,
+      "sha256": "8bcfee8958f96f4fbf6786d7e11666684d357b43476e8f9e4cd5cc605d4cd263",
+      "upstream_git_blob": "9b94fc141b1a511887030b17667c3d20b58cc634"
+    },
+    {
+      "path": "foundry/src/foundry/utils/xpu/single_xpu_strategy.py",
+      "size": 1592,
+      "sha256": "dbc884a3ee9ed206e9029985c5975f84b3be4596f642539ff572a545d4de5d77",
+      "upstream_git_blob": "7a518babfa478940dbba3c72db4b7231ca241b60"
+    },
+    {
+      "path": "foundry/src/foundry/utils/xpu/xpu_accelerator.py",
+      "size": 2467,
+      "sha256": "2cf557be004a637384d60872859be8b4fe9a58d5595ccba9d52c22d6fe94e466",
+      "upstream_git_blob": "47005283b3b83d8889a5bbd189ea5c5e5b783c2a"
+    },
+    {
+      "path": "foundry/src/foundry/utils/xpu/xpu_precision.py",
+      "size": 2285,
+      "sha256": "cee15f2e40480cb6c5fa8989ea64e21a8554d1481783ce00da3dd98d8ca800e7",
+      "upstream_git_blob": "22b3357d2f1df5de2b4312a05660287932e73778"
+    },
+    {
+      "path": "install.sh",
+      "size": 1409,
+      "sha256": "1775b38a7b0b4768b9fc52d8234d04f424456c9efd99f26553f988708c96f1e4",
+      "upstream_git_blob": "a3bbad8804a0d941c5019df7b1923d7d1d3c233b"
+    },
+    {
+      "path": "requirements-extra.txt",
+      "size": 953,
+      "sha256": "8e7fca1b07c074c8c3ae54de39c69fda7324bc03990065a61f9a2781592af782",
+      "upstream_git_blob": "a2434206d99e31723fe023ef21c79386a69e8f3e"
+    }
+  ],
+  "license": {
+    "root": "MIT (LICENSE)",
+    "foundry": "BSD-3-Clause (foundry/LICENSE.md, included in this snapshot)"
+  },
+  "notes": "Pinned upstream source plus the five explicit, byte-reconstructed local patches. The checkpoint and ten EV6 pickle weights are runtime assets and are not distributed in Git or source archives. Numerical model weights and the source scientific algorithms are unchanged from the retained Proton worktree. Patched proposal modes are extensions, not claims of calibrated pH, pKa or binding free energy.",
+  "local_patches": [
+    "patches/vendor/proton_pottsmpnn/01_preserve_design_mask.patch",
+    "patches/vendor/proton_pottsmpnn/02_automatic_histidine_bias.patch",
+    "patches/vendor/proton_pottsmpnn/03_geometry_joint_network.patch",
+    "patches/vendor/proton_pottsmpnn/04_network_only_proposals.patch",
+    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch"
+  ],
+  "runtime_assets": [
+    {
+      "path": "checkpoints/potts_v6_afdb_edge_his0.3_acid0.06/epoch-0125.ckpt",
+      "size": 21494143,
+      "sha256": "a39872250c0b8eb4c0b4cb6472a6edad0d6f6134a50c28b611386e83c592fe7b",
+      "upstream_git_blob": "13bf9a44d9b1843980edc11cd486a7ecc1d57df5",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/checkpoints/potts_v6_afdb_edge_his0.3_acid0.06/epoch-0125.ckpt"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold1.pkl",
+      "size": 1316598,
+      "sha256": "66872bea6b8e36c64e2358a59adba936be918e22920628513450c532d5e84d83",
+      "upstream_git_blob": "0d03b65975ae5ca72cc54deafd0a571b4b4fdaaa",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold1.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold2.pkl",
+      "size": 1725149,
+      "sha256": "25430e7df829427cb84450da0279df61d054a099fccbae0ede9579703e41f179",
+      "upstream_git_blob": "f58f5a0ffc0c8b17cedbc13eaa57ff764d4b6985",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold2.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold3.pkl",
+      "size": 965451,
+      "sha256": "34a70ea3e4b39f0521a0b034eb4f48d533ac06d7575841e284853bdda4dcf034",
+      "upstream_git_blob": "f5e2f9630348e5f0bdd7d8f31498e44c50ff2d55",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold3.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold4.pkl",
+      "size": 995799,
+      "sha256": "73e65538f9c0fb865201bbf7f864ca3394baff2d1c114db2f28fba974a21120e",
+      "upstream_git_blob": "4dfacd8f1931ec3a992d3bbdccdab3dc9625bbb7",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold4.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold5.pkl",
+      "size": 1054882,
+      "sha256": "9d81f46b009eb5d08d706fb859be814eeb7526ca0f5a1d08cdf344991624469e",
+      "upstream_git_blob": "110e72b7f345e8fcb680b01ef61ac293c7f24136",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/acid/fold5.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold1.pkl",
+      "size": 3701458,
+      "sha256": "ce4073cefb0f2afc3f357dc773dd634763307276d3628593b8ce2969b19d8ce0",
+      "upstream_git_blob": "0eb24d8ce857f650f54efacf2707dd8899c68036",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold1.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold2.pkl",
+      "size": 14586211,
+      "sha256": "21903320b96e14db8a71b94e4bd3eaacc1c09de557b4af28e23c015e027193e1",
+      "upstream_git_blob": "8a5d4be6f3be0823cac37b0ae9cbf328133588cf",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold2.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold3.pkl",
+      "size": 3120730,
+      "sha256": "2c013f9cb216782cebdc153db213936afd78e89e4a2e754a745c39ae448c87f8",
+      "upstream_git_blob": "68608cc81a4eac23c65ba09c1b363c8149e22b7b",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold3.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold4.pkl",
+      "size": 3818794,
+      "sha256": "ca8a8ae5b7c2ebd8bdab054f7b51ce9c3540d71e93be77f024b7b8aef67a0ee1",
+      "upstream_git_blob": "61e84a5df694b312e5dab0ed3103d3fb4227f3cc",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold4.pkl"
+    },
+    {
+      "path": "foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold5.pkl",
+      "size": 1416276,
+      "sha256": "32a4ad5a71cec9ac90ed9e3ecf4989f2304645d13e7e26cc9f397b5478659587",
+      "upstream_git_blob": "1c2d1e64337cfbeb82757d5984ad97661aa747a7",
+      "url": "https://raw.githubusercontent.com/christian-creator/ProtonPottsMPNN/09682abfa7d20e0abcdeea0490b7a4b1c190aee3/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/his/fold5.pkl"
+    }
+  ],
+  "local_patch_sha256": {
+    "patches/vendor/proton_pottsmpnn/01_preserve_design_mask.patch": "5e9c543c7e0d20b855b188854d9abec53e1b2d26d3260246278d71c670b44be1",
+    "patches/vendor/proton_pottsmpnn/02_automatic_histidine_bias.patch": "7c3a3f7ceb949da8b28f74086bd174c23def1c8148ba0bdd198ec94bbf9160b6",
+    "patches/vendor/proton_pottsmpnn/03_geometry_joint_network.patch": "7c7e5d337b68c99789145ccea2be7cc3ec6bd8917940a57e22b53251232db0c5",
+    "patches/vendor/proton_pottsmpnn/04_network_only_proposals.patch": "c4301a87d1bd3d1c9ac71100c70a8d83c4f202904c1a6ecb2920e5940e520cad",
+    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch": "f0808ed53206a33f317f0d4c3ca199c05ede168194213ddd66a9f0cde7717c80"
+  },
+  "local_patch_workdirs": {
+    "patches/vendor/proton_pottsmpnn/01_preserve_design_mask.patch": ".",
+    "patches/vendor/proton_pottsmpnn/02_automatic_histidine_bias.patch": ".",
+    "patches/vendor/proton_pottsmpnn/03_geometry_joint_network.patch": "vendor/proton_pottsmpnn",
+    "patches/vendor/proton_pottsmpnn/04_network_only_proposals.patch": ".",
+    "patches/vendor/proton_pottsmpnn/05_best_effort_pair_roles.patch": "."
+  },
+  "patch_chain_verified": {
+    "method": "Reverse patches 5..1 with zero fuzz, match upstream Git blobs, apply 1..5 and match original bytes",
+    "upstream_commit": "09682abfa7d20e0abcdeea0490b7a4b1c190aee3",
+    "changed_paths": [
+      "foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py",
+      "foundry/models/mpnn/src/mpnn/utils/inference.py"
+    ]
+  }
+}

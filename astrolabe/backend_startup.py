@@ -223,6 +223,17 @@ def _validate_common_options(family, kind, cfg, root, *, allow_unresolved=False)
             numeric('max_fixed_atom_rmsd', integer=False)
             numeric('request_timeout', integer=False, positive=True)
             seed(nullable=False)
+        if normalized in {'proton_pottsmpnn', 'proton-pottsmpnn'}:
+            boolean('daemon')
+            enum('extended_vocab', {'v6'})
+            enum('design_mask_adapter', {'none', 'preserve'})
+            numeric('n_jobs', 1)
+            seed()
+            for field in ('network_only', 'preserve_disulfides', 'protect_gly_pro'):
+                boolean(field)
+            mapping('criteria')
+            mapping('network_proposal')
+            numeric('max_total_mutations', nullable=True)
         if mpnn:
             numeric('number_of_batches', 1)
             numeric('temperature', integer=False, positive=True)
@@ -678,6 +689,29 @@ def validate_backend_settings(family, kind, options, *, path, check_paths,
                     validate_generation(generation)
                 except (TypeError, ValueError) as error:
                     fail('generation', str(error))
+        elif normalized_kind in {'proton_pottsmpnn', 'proton-pottsmpnn'}:
+            repo = asset('repo_path', required=True, kind='dir')
+            asset('python_bin', required=True, executable=True)
+            asset('hbplus_bin', required=True, executable=True)
+            if value('checkpoint_path') in _MISSING:
+                if repo is not None and check_paths:
+                    target = repo / 'checkpoints/potts_v6_afdb_edge_his0.3_acid0.06/epoch-0125.ckpt'
+                    if not target.is_file():
+                        fail('checkpoint_path', f'default file does not exist: {target}')
+            else:
+                asset('checkpoint_path')
+            if repo is not None and check_paths and not (repo / 'foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py').is_file():
+                fail('repo_path', 'missing native potts_mpnn_ph.py engine')
+            if value('daemon') is False:
+                fail('daemon', 'Proton-PottsMPNN requires persistent daemon')
+            choice('extended_vocab', {'v6'}, 'v6')
+            choice('design_mask_adapter', {'none', 'preserve'}, 'none')
+            device = cfg.get('device') or 'auto'
+            if not (allow_unresolved and isinstance(device, str) and '${' in device):
+                if not isinstance(device, str) or re.fullmatch(r'auto|cpu|cuda(?::\d+)?', device) is None:
+                    fail('device', 'must be auto, cpu, cuda or cuda:N')
+            if value('daemon_script_path') not in _MISSING:
+                asset('daemon_script_path')
         elif normalized_kind in {name.lower() for name in _MPNN}:
             if allow_unresolved and isinstance(value('model_type'), str) and '${' in value('model_type'):
                 return errors  # The selected checkpoint cannot yet be determined.
