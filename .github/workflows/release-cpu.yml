@@ -8,6 +8,7 @@ jobs:
   clean-install:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         python: ['3.11', '3.12']
     steps:
@@ -40,8 +41,10 @@ jobs:
           astrolabe --version
           astrolabe --help
           astrolabe run --task release_protein --dry-run env=env
-      - name: CPU Torch for real process integration
-        run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: CPU dependencies for structural and real process tests
+        run: |
+          python -m pip install rdkit
+          python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: CPU workflows and numerical regressions
         run: python scripts/validation/release_cpu.py -q
       - name: Integrated CLI, Score receipts and deterministic recovery
