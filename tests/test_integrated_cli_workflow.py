@@ -21,6 +21,7 @@ def test_isolated_cli_completes_and_resumes_without_new_evaluations(tmp_path, sh
         "run", "--task", "beam_refinement", "--no-chdir", "env=env",
         "evaluator.evaluator_terms.ESMFold._type=dummy",
         "execution.devices=[]", "execution.cpu_slots=2",
+        "execution.ram_bytes=2147483648", "execution.max_pending_bytes=67108864",
         f"search.execution.model_sharing={sharing}",
         f"out_dir={output}", f"raw_model_results_dir={tmp_path / 'raw'}",
         "task_name=integrated_cli", "obabel_path=null",

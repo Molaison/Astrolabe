@@ -4,6 +4,7 @@ from concurrent.futures import Future
 import hashlib
 import json
 from pathlib import Path
+import sys
 
 from omegaconf import OmegaConf, open_dict
 import pytest
@@ -12,12 +13,46 @@ from branching_test_support import native_control_assets
 from astrolabe import interface
 from astrolabe.protein_beam import load_config
 
-INPUT = Path('/case/inputs/001_binder_interface/01_astrolabe_beam/03_bind_target_homologies')
+INPUT = None
+
+
+@pytest.fixture(autouse=True)
+def interface_inputs(tmp_path, monkeypatch):
+    """Portable structural input for budget tests; no physical prediction claim."""
+    from Bio.SeqUtils import seq3
+
+    directory = tmp_path / "inputs"
+    directory.mkdir()
+    binder, target = "AAAACCCCGGGGTTTT", "DEFGHIKLMNPQRSTVWY"
+    lines = []
+    serial = 0
+    for chain, sequence, y in (("A", binder, 0.0), ("B", target, 4.0)):
+        for residue, aa in enumerate(sequence, 1):
+            for atom, offset, element in (
+                ("N", 0.0, "N"), ("CA", 1.2, "C"),
+                ("C", 2.4, "C"), ("O", 3.0, "O"),
+            ):
+                serial += 1
+                lines.append(
+                    f"ATOM  {serial:5d} {atom:^4s} {seq3(aa).upper():3s} {chain}"
+                    f"{residue:4d}    {residue * 3.8 + offset:8.3f}{y:8.3f}"
+                    f"{0.0:8.3f}{1.0:6.2f}{0.0:6.2f}          {element:>2s}\n"
+                )
+        lines.append("TER\n")
+    for number in range(3):
+        (directory / f"complex_{number}.pdb").write_text("".join(lines) + "END\n")
+    (directory / "target.json").write_text(json.dumps({
+        "name": "budget_fixture", "modelSeeds": [17], "dialect": "alphafold3", "version": 1,
+        "sequences": [{"protein": {"id": "B", "sequence": target,
+                                   "unpairedMsa": f">query\n{target}\n",
+                                   "pairedMsa": "", "templates": []}}],
+    }))
+    monkeypatch.setattr(sys.modules[__name__], "INPUT", directory)
 
 
 def prepare(output, budget=None, directory=False):
-    return interface._prepare(INPUT if directory else INPUT/'D5056_D15.pdb',
-                              INPUT/'gd-ctd_data.json', output, None, None, budget)
+    return interface._prepare(INPUT if directory else INPUT/'complex_0.pdb',
+                              INPUT/'target.json', output, None, None, budget)
 
 
 @pytest.mark.parametrize('budget', [1, 4, 13])
@@ -45,8 +80,8 @@ def test_budget_is_per_complex_and_preserves_scientific_settings(tmp_path, budge
 def test_invalid_budget_never_creates_output(tmp_path, budget):
     out = tmp_path/'out'
     with pytest.raises(ValueError, match='positive integer'):
-        interface.run_interface(input_path=INPUT/'D5056_D15.pdb',
-                                target_homology=INPUT/'gd-ctd_data.json',
+        interface.run_interface(input_path=INPUT/'complex_0.pdb',
+                                target_homology=INPUT/'target.json',
                                 output_root=out, prepare_only=True, budget=budget)
     assert not out.exists()
 
@@ -54,7 +89,7 @@ def test_invalid_budget_never_creates_output(tmp_path, budget):
 def test_same_budget_resume_preserves_artifacts_changed_or_omitted_budget_is_rejected(tmp_path, monkeypatch):
     from astrolabe.evaluators import af3_lifecycle
     monkeypatch.setattr(af3_lifecycle, 'OwnedAF3', lambda *a, **k: pytest.fail('No AF3 owner'))
-    args = dict(input_path=INPUT/'D5056_D15.pdb', target_homology=INPUT/'gd-ctd_data.json',
+    args = dict(input_path=INPUT/'complex_0.pdb', target_homology=INPUT/'target.json',
                 output_root=tmp_path/'out', prepare_only=True)
     assert interface.run_interface(**args, budget=13) == 0
     def digests():
