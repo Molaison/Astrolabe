@@ -237,3 +237,25 @@ def test_validation_scope_cannot_reuse_proof_after_config_mutation(monkeypatch):
         cfg.steps = -1
         with pytest.raises(StartupValidationError, match="steps"):
             validate_startup_config(cfg)
+
+
+def test_nested_validation_cannot_inherit_input_proof_from_old_revision(monkeypatch):
+    from astrolabe import startup_validation as module, startup_dependencies
+    monkeypatch.setattr(startup_dependencies, "check_startup_dependencies", lambda cfg: None)
+
+    def task_validator(cfg, *, require_inputs, **kwargs):
+        return ["changed input is invalid"] if require_inputs and cfg.get("changed_input") else []
+
+    monkeypatch.setattr(module, "validate_task_config", task_validator)
+    cfg = OmegaConf.create({
+        "seed": 17, "steps": 2,
+        "evaluator": {"evaluator_terms": {"first": {"_type": "sequence"}}},
+        "mutator": {"mutator_terms": {"m": {"_type": "mcmc"}}},
+        "stages": {"default": {"evaluator": "first", "mutators": ["m"],
+                               "weighted_score_expression": "0", "mutation_num": 1}},
+    })
+    with module.startup_validation_scope(cfg, require_inputs=True):
+        cfg.changed_input = True
+        with module.startup_validation_scope(cfg, require_inputs=False):
+            with pytest.raises(module.StartupValidationError, match="changed input"):
+                module.validate_startup_config(cfg, require_inputs=True)

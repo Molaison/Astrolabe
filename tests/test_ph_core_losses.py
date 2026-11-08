@@ -9,6 +9,7 @@ import numpy as np
 import pytest
 
 from astrolabe.evaluators.utils import StandardScores
+from astrolabe.core import global_config
 from astrolabe.losses import ph_core
 from astrolabe.losses.base import LossEngine, loss_registry
 
@@ -32,6 +33,16 @@ class _FakeBackend:
             "protonated_energy": -1.0,
             "center_states": {str(index): "C" for index in kwargs["histidine_positions"]},
         }
+
+
+@pytest.fixture
+def runtime_context(monkeypatch):
+    state = global_config.RuntimeState()
+    monkeypatch.setattr(global_config, "_current_state", state)
+    state.init_const("stage_manager", SimpleNamespace(current_stage="test"))
+    state.init_const("protomers", {})
+    state.set_variable("step", 1)
+    return global_config.build_runtime_context(state)
 
 
 @pytest.fixture(autouse=True)
@@ -380,7 +391,7 @@ def test_nonfinite_backend_gap_raises(monkeypatch, tmp_path):
         ph_core.ph_core_network(result, "A", metric="release")
 
 
-def test_score_expression_and_acceptance_gate_use_scalar_only(monkeypatch, tmp_path):
+def test_score_expression_and_acceptance_gate_use_scalar_only(monkeypatch, tmp_path, runtime_context):
     result, _path = _eval_result(tmp_path)
     _patch_fake_network(
         monkeypatch,
@@ -402,11 +413,7 @@ def test_score_expression_and_acceptance_gate_use_scalar_only(monkeypatch, tmp_p
                 },
             }
         },
-        runtime_context=SimpleNamespace(
-            stage_manager=SimpleNamespace(current_stage="test"),
-            step=1,
-            protomers={},
-        ),
+        runtime_context=runtime_context,
         validate_config=False,
     )
     engine.setup(
@@ -425,7 +432,7 @@ def test_score_expression_and_acceptance_gate_use_scalar_only(monkeypatch, tmp_p
     assert engine.passes_acceptance_gate(detail) is True
 
 
-def test_example_objective_release_direction_and_no_his_gate(monkeypatch, tmp_path):
+def test_example_objective_release_direction_and_no_his_gate(monkeypatch, tmp_path, runtime_context):
     positive, positive_path = _eval_result(
         tmp_path,
         "positive-g",
@@ -498,11 +505,7 @@ def test_example_objective_release_direction_and_no_his_gate(monkeypatch, tmp_pa
                 },
             }
         },
-        runtime_context=SimpleNamespace(
-            stage_manager=SimpleNamespace(current_stage="test"),
-            step=1,
-            protomers={},
-        ),
+        runtime_context=runtime_context,
         validate_config=False,
     )
     engine.setup(

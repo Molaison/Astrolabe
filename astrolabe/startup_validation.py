@@ -121,10 +121,12 @@ def startup_validation_scope(cfg, *, require_inputs=False):
     if isinstance(cfg, Mapping):
         validate_startup_config(cfg, require_inputs=require_inputs)
     previous = _VALIDATED_CONFIG.get()
+    revision = _config_revision(cfg)
     input_requirement = require_inputs or (
         previous is not None and previous[0] is cfg and previous[1]
+        and previous[2] == revision
     )
-    token = _VALIDATED_CONFIG.set((cfg, input_requirement, _config_revision(cfg)))
+    token = _VALIDATED_CONFIG.set((cfg, input_requirement, revision))
     try:
         yield
     finally:

@@ -5,6 +5,7 @@ import json
 import random
 import sys
 from types import SimpleNamespace
+from unittest.mock import patch
 
 import pytest
 
@@ -394,7 +395,15 @@ def test_haddock_unknown_does_not_fall_through_to_another_anchor(tmp_path, monke
 
 
 def test_vina_geometry_retry_rejects_wrapped_unknown(monkeypatch):
-    from astrolabe.structure_processors.autodock import AutoDockVinaLigandPoseRescue, DockingPenaltyError
+    try:
+        from astrolabe.structure_processors.autodock import AutoDockVinaLigandPoseRescue, DockingPenaltyError
+    except ModuleNotFoundError as error:
+        if error.name != "prody":
+            raise
+        # This fault exercises transport classification, never ProDy geometry.
+        # Restore the import table so the placeholder cannot reach another test.
+        with patch.dict(sys.modules, {"prody": SimpleNamespace()}):
+            from astrolabe.structure_processors.autodock import AutoDockVinaLigandPoseRescue, DockingPenaltyError
     owner = AutoDockVinaLigandPoseRescue.__new__(AutoDockVinaLigandPoseRescue)
 
     def unknown(*args, **kwargs):
