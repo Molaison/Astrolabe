@@ -48,7 +48,14 @@ jobs:
           python -m pip install rdkit
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: CPU workflows and numerical regressions
-        run: python scripts/validation/release_cpu.py -q
+        run: python scripts/validation/release_cpu.py -q --junitxml="$RUNNER_TEMP/release-cpu.xml"
+      - name: Upload release CPU evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-cpu-python-${{ matrix.python }}
+          path: ${{ runner.temp }}/release-cpu.xml
+          if-no-files-found: error
       - name: Integrated CLI, Score receipts and deterministic recovery
         if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.cpu_dependencies.outcome == 'success' }}
         env:

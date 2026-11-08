@@ -29,6 +29,12 @@ SOFTWARE: dict[str, SoftwareSpec] = {
         "rfd4", "RFD4 native sequence/structure mutator", "manual",
         "Supply the accepted RFD4 source, model.safetensors/config.json and isolated interpreter; no geometry guide",
     ),
+    "proton_pottsmpnn": SoftwareSpec(
+        "proton_pottsmpnn", "Proton-PottsMPNN joint design and state scoring", "manual",
+        "Pinned patched source plus external checkpoint, EV6 labeller assets, HBPLUS and isolated Python; see docs/proton_installation.md",
+        asset_urls=("https://github.com/christian-creator/ProtonPottsMPNN",),
+        revision="09682abfa7d20e0abcdeea0490b7a4b1c190aee3",
+    ),
     "bioemu2": SoftwareSpec(
         "bioemu2", "BioEmu2 per-request subprocess evaluator", "manual",
         "Supply an independently installed BioEmu2 interpreter and populated bioemu2-preview cache; not resident staged inference",

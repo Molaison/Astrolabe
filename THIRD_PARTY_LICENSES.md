@@ -30,6 +30,7 @@ Auto-generated third-party inventory for release compliance.
 | `openfold_esm2` | `vendor/openfold_esm2` | `https://github.com/Molaison/openfold.git` | `LICENSE` | `ok` |
 | `protein_sequence_models` | `vendor/protein_sequence_models` | `https://github.com/microsoft/protein-sequence-models.git` | `LICENSE` | `ok` |
 | `protenix` | `vendor/protenix` | `https://github.com/bytedance/Protenix.git` | `LICENSE` | `ok` |
+| `proton_pottsmpnn` | `vendor/proton_pottsmpnn` | `https://github.com/christian-creator/ProtonPottsMPNN` | `LICENSE`, `foundry/LICENSE.md` | `pinned source snapshot; five declared patches; model assets separate` |
 | `pybind11` | `vendor/pybind11` | `-` | `LICENSE` | `ok` |
 | `pybind11-abseil-source` | `vendor/pybind11-abseil-source` | `https://github.com/pybind/pybind11_abseil.git` | `LICENSE` | `ok` |
 | `pybind11-source` | `vendor/pybind11-source` | `https://github.com/pybind/pybind11.git` | `LICENSE` | `ok` |

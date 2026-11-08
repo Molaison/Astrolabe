@@ -174,6 +174,14 @@ def test_public_source_export_has_no_history_and_records_gitlinks(tmp_path: Path
     assert not (destination / ".git").exists()
     assert not (destination / ".codex-tasks").exists()
     assert not (destination / ".beads").exists()
+    proton = destination / "vendor/proton_pottsmpnn"
+    provenance = json.loads((proton / "SOURCE_PROVENANCE.json").read_text())
+    for source in provenance["files"]:
+        assert (proton / source["path"]).is_file()
+    for asset in provenance["runtime_assets"]:
+        assert not (proton / asset["path"]).exists()
+    for patch in provenance["local_patches"]:
+        assert (destination / patch).is_file()
     assert not any(path.name.startswith("d.") and path.name.endswith(".overlay.yaml") for path in destination.rglob("*"))
 
     # The same archive is a model-install source: no public main-repo clone needed.

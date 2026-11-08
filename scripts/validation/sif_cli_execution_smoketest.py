@@ -7,6 +7,7 @@ import argparse
 import csv
 from dataclasses import dataclass
 import itertools
+import hashlib
 import json
 import math
 import os
@@ -309,6 +310,23 @@ def _prepare_fixtures(work_root: Path) -> None:
     (work_root / "empty_manifest.jsonl").write_text("", encoding="ascii")
     (work_root / "env.yaml").write_text("paths: {}\n", encoding="ascii")
 
+    # Proton smoke inputs exercise validation only, never native/model execution.
+    (work_root / "proton_states.yaml").write_text("mutator: {}\n", encoding="ascii")
+    (work_root / "proton_states.json").write_text(
+        json.dumps({
+            "schema": "astrolabe_proton_state_audit_v1",
+            "items": [{
+                "item_id": "cli_dry_run",
+                "pdb_path": str(work_root / "protein.pdb"),
+                "input_sha256": hashlib.sha256((work_root / "protein.pdb").read_bytes()).hexdigest(),
+                "binder_chain": "A", "binder_sequence": "ACGS", "histidine_positions": [],
+            }],
+        }) + "\n", encoding="ascii",
+    )
+    (work_root / "proton_parity_invalid.json").write_text(
+        json.dumps({"schema": "cli_smoke_invalid"}) + "\n", encoding="ascii",
+    )
+
     run_dir = work_root / "posthoc_outputs" / "smoke_task" / "001_run"
     structures = run_dir / "structures"
     structures.mkdir(parents=True, exist_ok=True)
@@ -453,6 +471,12 @@ def _case_specs(work_root: Path, repo_root: Path) -> list[Case]:
         Case(("bench-pseudocycle-v1",), configured("bench-pseudocycle-v1", "--task-name", "cli_pseudocycle", "--out-dir", p("out_pseudocycle"), "--unit-len", "8", "--copies", "2", "--dry-run", "--dump-config", p("pseudocycle.yaml")), artifacts=(p("pseudocycle.yaml"),)),
         Case(("bench-tandem-repeat-v1",), configured("bench-tandem-repeat-v1", "--task-name", "cli_tandem", "--out-dir", p("out_tandem"), "--unit-len", "8", "--copies", "2", "--dry-run", "--dump-config", p("tandem.yaml")), artifacts=(p("tandem.yaml"),)),
         Case(("refine-heterooligomer-v1",), configured("refine-heterooligomer-v1", "--task-name", "cli_hetero", "--out-dir", p("out_hetero"), "--seq", "ACDEFG", "--copies", "2", "--interface", "2", "--dry-run", "--dump-config", p("hetero.yaml")), artifacts=(p("hetero.yaml"),)),
+        Case(("posthoc", "proton-states"),
+             ("posthoc", "proton-states", "--config", p("proton_states.yaml"), "--inputs", p("proton_states.json"), "--out-dir", p("proton_states_out"), "--dry-run"),
+             require_stdout=True, json_stdout=True),
+        Case(("posthoc", "proton-parity"),
+             ("posthoc", "proton-parity", "--repo-root", str(repo_root), "--checkpoint", p("missing_proton.ckpt"), "--hbplus", p("missing_hbplus"), "--arm", "pristine", "--inputs", p("proton_parity_invalid.json"), "--output", p("proton_parity_out")),
+             expected_returncode=2, stderr_contains="expected proton_native_parity_v1 input schema"),
         Case(("posthoc", "collect"), ("posthoc", "collect", "--out-root", p("posthoc_outputs"), "--db", p("scores.sqlite"), "--workers", "1", "--format", "json"), artifacts=(p("scores.sqlite"),), json_stdout=True),
         Case(("posthoc", "channel-screen"), ("posthoc", "channel-screen", "--structure", p("channel_screen.pdb"), "--protein-chain", "A", "--ligand-residue", "L:HOH:101", "--mutable-positions", p("mutable.txt"), "--spheres", p("spheres.pdb"), "--out-dir", p("channel_screen_out"), "--target-aas", "G", "--contact-distance", "2.5", "--hole-executable", p("hole-smoke"), "--hole-radius-file", p("radius.rad"), "--format", "json"), require_stdout=True, artifacts=(p("channel_screen_out/03_collect/pocket_fixed_screen_summary.json"),), timeout_seconds=300.0),
         Case(("posthoc", "filter"), ("posthoc", "filter", "--preset", p("preset.yaml"), "--preview-preset", "--format", "json"), json_stdout=True),

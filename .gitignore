@@ -83,3 +83,7 @@ d.*.overlay.yaml
 config/env/.astrolabe_python_path
 # Native DAlphaBall diagnostics emitted by scientific regression tests.
 /debug_holes_DalphaBall_*
+
+# Proton runtime model assets are acquired separately from source.
+/vendor/proton_pottsmpnn/checkpoints/
+/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/transforms/ev6/weights/**/*.pkl

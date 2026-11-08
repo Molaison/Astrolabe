@@ -1,0 +1,14 @@
+--- a/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
++++ b/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
+@@ -2787,7 +2787,10 @@
+             potential = joint_block(block)
+             local_specs = [spec for spec in pair_specs
+                            if ({spec[0], spec[1]} & mutable) == set(block)]
+-            role_match = _network_pair_bias_block(ctx, S, block, local_specs, 1.0) < 0.0
++            # Quality zero marks a best-effort, unvalidated geometry. Role
++            # eligibility is independent of geometry quality in this mode.
++            role_specs = [(*spec[:-1], 1.0) for spec in local_specs]
++            role_match = _network_pair_bias_block(ctx, S, block, role_specs, 1.0) < 0.0
+             different = torch.zeros_like(potential, dtype=torch.bool)
+             for axis, position in enumerate(block):
+                 shape = [1] * len(block); shape[axis] = V

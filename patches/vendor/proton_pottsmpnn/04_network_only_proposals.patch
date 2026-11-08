@@ -1,0 +1,96 @@
+--- a/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
++++ b/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
+@@ -152,6 +152,7 @@
+     network_pair_bias: float = 0.0
+     network_pair_preferences: List[Dict] = field(default_factory=list)
+     network_pair_max_steps: int = 12
++    network_pair_only: bool = False
+     mutation_reference_sequence: Optional[str] = None
+     max_total_mutations: Optional[int] = None
+     rank_normalize: bool = False                     # use percentile (rank) scaling instead of z-score
+@@ -303,6 +304,12 @@
+         if len(self.network_pair_preferences) > 16:
+             raise ValueError("network_pair_preferences supports at most 16 entries.")
+         pair_centre_free = _centre_free and int(self.center_count) == 0
++        if not isinstance(self.network_pair_only, bool):
++            raise ValueError("network_pair_only must be boolean.")
++        if self.network_pair_only and not pair_centre_free:
++            raise ValueError("network_pair_only requires centre-free greedy_energy_block.")
++        if self.network_pair_only and self.aa_bias:
++            raise ValueError("network_pair_only does not use independent amino-acid rewards.")
+         if (
+             self.network_pair_bias > 0.0 or self.network_pair_preferences
+         ) and not pair_centre_free:
+@@ -2767,6 +2774,51 @@
+             potential = potential + inf_vec.reshape(shape)
+         return potential
+ 
++    if getattr(crit, "network_pair_only", False):
++        # Propose one supported pair using neutral compatibility. This is a
++        # proposal, not an acceptance decision: a favourable raw delta is not
++        # required to cross the zero-His starting state. The outer measured
++        # network/protonation gate decides whether it can be accepted.
++        choices = []
++        mutable = set(int(p) for p in neigh)
++        blocks = sorted({tuple(sorted({spec[0], spec[1]} & mutable))
++                         for spec in pair_specs} - {()})
++        for block in blocks:
++            potential = joint_block(block)
++            local_specs = [spec for spec in pair_specs
++                           if ({spec[0], spec[1]} & mutable) == set(block)]
++            role_match = _network_pair_bias_block(ctx, S, block, local_specs, 1.0) < 0.0
++            different = torch.zeros_like(potential, dtype=torch.bool)
++            for axis, position in enumerate(block):
++                shape = [1] * len(block); shape[axis] = V
++                different |= (canonical_map != canonical_map[S[position]]).reshape(shape)
++            valid = role_match & different & torch.isfinite(potential)
++            indices = valid.reshape(-1).nonzero(as_tuple=False).reshape(-1)
++            if not int(indices.numel()):
++                continue
++            current = potential[tuple(int(S[p]) for p in block)]
++            deltas = potential.reshape(-1)[indices] - current
++            choices.append((block, indices, deltas))
++        if not choices:
++            return S
++        deltas = torch.cat([item[2] for item in choices])
++        if T <= 0:
++            selected = int(torch.argmin(deltas))
++        else:
++            probabilities = F.softmax(-(deltas - deltas.min()) / T, dim=-1)
++            selected = int(torch.multinomial(probabilities, 1))
++        for block, indices, block_deltas in choices:
++            if selected >= len(indices):
++                selected -= len(indices); continue
++            assignment = np.unravel_index(int(indices[selected]), [V] * len(block))
++            proposed = S.clone()
++            for position, token in zip(block, assignment):
++                proposed[int(position)] = int(token)
++            _record(trajectory, ctx, S, pins, initial=True)
++            _record(trajectory, ctx, proposed, pins)
++            return proposed
++        raise RuntimeError("Network-only candidate index out of range.")
++
+     best_sequence = S.clone()
+     best_objective = objective(S)
+     _record(trajectory, ctx, S, pins, initial=True)
+@@ -2913,7 +2965,19 @@
+     keeps the design plain 20-AA. Reuses _block_descent's block machinery (block_stability_potentials +
+     the V**B broadcast) and the repetitive_window unary/pairwise.
+     """
+-    if crit.network_pair_bias > 0.0 and crit.network_pair_preferences:
++    if getattr(crit, "network_pair_only", False) and not crit.network_pair_preferences:
++        # Canonical identities are unchanged; normalize only forbidden chemical
++        # spellings at mutable sites so a no-op still respects the caller's states.
++        sequence = initial_sequence.clone()
++        for position in neigh:
++            token = int(sequence[position])
++            if not bool(valid_mask[token]):
++                allowed = valid_mask & (ctx.canonical_map == ctx.canonical_map[token])
++                if not bool(allowed.any()):
++                    raise ValueError("No allowed state represents an existing mutable residue.")
++                sequence[position] = int(allowed.nonzero(as_tuple=False)[0])
++        return sequence
++    if (crit.network_pair_bias > 0.0 or getattr(crit, "network_pair_only", False)) and crit.network_pair_preferences:
+         return _greedy_energy_block_with_network_pairs(
+             ctx,
+             crit,

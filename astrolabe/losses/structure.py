@@ -18,6 +18,86 @@ from astrolabe.core import global_config
 from astrolabe.losses.base import loss_registry
 
 
+@loss_registry.register(
+    name="interface_backbone_rmsd",
+    description="Reference-interface N/CA/C/O RMSD after joint interface superposition (angstrom)",
+    required_params=["reference_complex", "binder_chain", "target_chain"],
+    optional_params=["contact_cutoff"],
+    supports_oligomer_specific=True,
+)
+def interface_backbone_rmsd(
+    eval_result, reference_complex: str, binder_chain: str, target_chain: str,
+    contact_cutoff: float = 10.0,
+):
+    """Reference-contact iRMSD with chain-wise sequence-position correspondence.
+
+    The interface is defined once on the reference by heavy-atom contacts. Both
+    sides' backbone atoms are fitted together; this is NOT target-aligned binder
+    RMSD. Residue numbers may differ, but chain lengths and backbone coverage
+    must match. See docs/ph_sensitive_design.md for the paper-method boundary.
+    """
+    from Bio.PDB import Superimposer
+    from scipy.spatial import cKDTree
+
+    from astrolabe.core.chain_resolution import resolve_selector_chain_ids
+    from astrolabe.losses.design_screening import _load_biopython_structure
+
+    if not np.isfinite(contact_cutoff) or contact_cutoff <= 0:
+        raise ValueError("contact_cutoff must be positive and finite (angstrom).")
+    reference = next(_load_biopython_structure(pathlib.Path(reference_complex)).get_models())
+    scores = {}
+    for name in eval_result.names:
+        binder = resolve_selector_chain_ids(name, binder_chain)
+        target = resolve_selector_chain_ids(name, target_chain)
+        if not binder or not target or set(binder) & set(target):
+            raise ValueError("binder_chain and target_chain must select existing, disjoint chains.")
+        prediction = next(_load_biopython_structure(pathlib.Path(eval_result.complex_paths[name])).get_models())
+        ref_residues, pred_residues = {}, {}
+        for chain in binder + target:
+            if chain not in reference or chain not in prediction:
+                raise ValueError(f"Chain {chain!r} must exist in both reference and prediction.")
+            ref_residues[chain] = [r for r in reference[chain] if is_aa(r)]
+            pred_residues[chain] = [r for r in prediction[chain] if is_aa(r)]
+            if not ref_residues[chain] or len(ref_residues[chain]) != len(pred_residues[chain]):
+                raise ValueError(f"Chain {chain!r} has missing or unequal residue coverage.")
+
+        def heavy_atoms(chains):
+            atoms, positions = [], []
+            for chain in chains:
+                for index, residue in enumerate(ref_residues[chain]):
+                    for atom in residue:
+                        if atom.element not in {"H", "D"}:
+                            atoms.append(atom.coord)
+                            positions.append((chain, index))
+            if not atoms:
+                raise ValueError("Selected reference chains have no heavy atoms.")
+            return np.asarray(atoms), positions
+
+        left, left_positions = heavy_atoms(binder)
+        right, right_positions = heavy_atoms(target)
+        neighbors = cKDTree(left).query_ball_tree(cKDTree(right), contact_cutoff)
+        interface = set()
+        for i, matches in enumerate(neighbors):
+            if matches:
+                interface.add(left_positions[i])
+                interface.update(right_positions[j] for j in matches)
+        if not interface:
+            raise ValueError("No reference-interface residues within contact_cutoff.")
+        fixed, moving = [], []
+        for chain, index in sorted(interface):
+            ref, pred = ref_residues[chain][index], pred_residues[chain][index]
+            for atom in ("N", "CA", "C", "O"):
+                if atom not in ref or atom not in pred:
+                    raise ValueError(f"Missing backbone atom {atom!r} in interface residue {chain}:{index + 1}.")
+                fixed.append(ref[atom])
+                moving.append(pred[atom])
+        fit = Superimposer()
+        fit.set_atoms(fixed, moving)
+        scores[name] = float(fit.rms)
+    return scores
+
+
+
 def _looks_like_mkdssp(path: str) -> bool:
     name = pathlib.Path(str(path)).name
     return name == "mkdssp" or name.startswith("mkdssp_")

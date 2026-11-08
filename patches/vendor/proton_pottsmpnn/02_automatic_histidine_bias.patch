@@ -1,0 +1,204 @@
+diff --git a/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py b/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
+index b668418..967d350 100644
+--- a/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
++++ b/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
+@@ -143,6 +143,14 @@ class PHDesignCriteria:
+     # changes the answer ONLY through stability coupling.
+     block_size: int = 2
+     global_weight: float = 0.0                       # extra z-scaled global term (0 = report-only)
++    # Local Astrolabe extension: optional canonical-AA proposal preferences, in
++    # frozen stability-z units. Positive favours the AA; caps saturate the reward
++    # instead of fixing any residue or rewarding unlimited His accumulation.
++    aa_bias: Dict[str, float] = field(default_factory=dict)
++    aa_bias_caps: Dict[str, int] = field(default_factory=dict)
++    aa_bias_region: List[str] = field(default_factory=lambda: ["all"])
++    mutation_reference_sequence: Optional[str] = None
++    max_total_mutations: Optional[int] = None
+     rank_normalize: bool = False                     # use percentile (rank) scaling instead of z-score
+     # z-scale reference distribution for the frozen combined objective (block_descent):
+     #   "block" (default) — std of the BLOCK (V**block_size) joint spread, pooled WITHIN-block; captures
+@@ -261,7 +269,7 @@ class PHDesignCriteria:
+                 f"center_count must be >= 1 (got {self.center_count}); center_count=0 is allowed only for "
+                 f"method='greedy_energy_block' with infill_scope='chain' and no center_types/explicit_centers.")
+         _regions = {"interface", "core", "surface", "all"}
+-        bad = set(self.placement_region) - _regions
++        bad = (set(self.placement_region) | set(self.aa_bias_region)) - _regions
+         if bad:
+             raise ValueError(f"Unknown placement_region {bad}. Allowed: {_regions}.")
+         if self.sweep_order not in ("position", "knn", "energy"):
+@@ -274,6 +282,21 @@ class PHDesignCriteria:
+             raise ValueError(f"Unknown zscale_mode '{self.zscale_mode}'. Use 'single_mutation' or 'block'.")
+         if self.self_weight < 0:
+             raise ValueError(f"self_weight must be >= 0 (got {self.self_weight}).")
++        canonical = set("ACDEFGHIKLMNPQRSTVWY")
++        for aa, value in self.aa_bias.items():
++            if DICT_THREE_TO_ONE.get(aa) not in canonical or not np.isfinite(float(value)):
++                raise ValueError("aa_bias needs canonical three-letter AA names and finite weights.")
++        for aa, cap in self.aa_bias_caps.items():
++            if aa not in self.aa_bias or isinstance(cap, bool) or int(cap) != cap or int(cap) < 1:
++                raise ValueError("aa_bias_caps needs positive integer caps for configured aa_bias names.")
++        if self.aa_bias and not _centre_free:
++            raise ValueError("aa_bias is supported only for centre-free greedy_energy_block.")
++        if self.max_total_mutations is not None:
++            cap = self.max_total_mutations
++            if isinstance(cap, bool) or int(cap) != cap or int(cap) < 0 or not self.mutation_reference_sequence:
++                raise ValueError("max_total_mutations needs a nonnegative integer and mutation_reference_sequence.")
++            if not _centre_free:
++                raise ValueError("max_total_mutations is supported only for centre-free greedy_energy_block.")
+         if self.explicit_centers and self.center_count not in (1, len(self.explicit_centers)):
+             raise ValueError("center_count must equal len(explicit_centers) when explicit_centers is set.")
+         if self.center_types:
+@@ -2387,6 +2410,48 @@ def _block_descent(ctx, crit, valid_mask, pins, neigh, initial_sequence, rng, tr
+     return S
+ 
+ 
++def _aa_bias_value(S, positions, specs):
++    """Saturating proposal reward. Never changes the model's reported energy."""
++    value = 0.0
++    for token_mask, weight, cap in specs:
++        count = int(token_mask[S[list(positions)]].sum())
++        value -= weight * (min(count, cap) if cap is not None else count)
++    return value
++
++
++def _aa_bias_block(ctx, S, positions, block, specs):
++    shape = [ctx.V] * len(block)
++    out = torch.zeros(shape, device=ctx.device)
++    outside = [p for p in positions if p not in set(block)]
++    for token_mask, weight, cap in specs:
++        count = torch.full(shape, int(token_mask[S[outside]].sum()), device=ctx.device)
++        for bi in range(len(block)):
++            axis = [1] * len(block)
++            axis[bi] = ctx.V
++            count = count + token_mask.reshape(axis)
++        if cap is not None:
++            count = count.clamp(max=cap)
++        out = out - weight * count
++    return out
++
++
++def _mutation_budget_block(ctx, S, block, references):
++    """Mask full joint assignments, never trim individual edits after solving."""
++    shape = [ctx.V] * len(block)
++    allowed = torch.ones(shape, dtype=torch.bool, device=ctx.device)
++    canon = ctx.canonical_map
++    for ref, cap in references:
++        different = canon[S] != canon[ref]
++        outside = int(different.sum()) - int(different[list(block)].sum())
++        count = torch.full(shape, outside, device=ctx.device)
++        for bi, p in enumerate(block):
++            axis = [1] * len(block)
++            axis[bi] = ctx.V
++            count = count + (canon != canon[ref[p]]).reshape(axis)
++        allowed = allowed & (count <= cap)
++    return allowed
++
++
+ def _greedy_energy_block(ctx, crit, valid_mask, pins, neigh, initial_sequence, rng, trajectory=None):
+     """Centre-free, dynamically-reranked block coordinate descent on the pure Potts STABILITY energy H
+     (no pins, no selective/λ term). Each step:
+@@ -2397,7 +2462,10 @@ def _greedy_energy_block(ctx, crit, valid_mask, pins, neigh, initial_sequence, r
+           Boltzmann sample (temperature>0) of the (1/sdH)-scaled stability energy + the optional
+           repetitive_window penalty;
+       (4) stop when NO position improves (or the step cap).
+-    Returns the LOWEST-H sequence visited (robust to temperature>0 wandering).
++    Optional ``aa_bias`` adds a saturating canonical-AA reward in frozen
++    stability-z units within ``aa_bias_region``. Without a bias this returns the
++    LOWEST-H sequence visited; with a bias it returns the lowest biased objective.
++    Joint assignments also obey optional step and original-parent mutation caps.
+ 
+     This is the "same algorithm as block descent, but pick the positions that most improve the energy,
+     recomputed at every step" variant: no titratable centre is ever placed (pins == []); forbidden_tokens
+@@ -2446,13 +2514,46 @@ def _greedy_energy_block(ctx, crit, valid_mask, pins, neigh, initial_sequence, r
+         ci = int(cmap[int(S[int(i)])])
+         if bool(valid_mask[ci]):
+             S[int(i)] = ci
++        elif not bool(valid_mask[int(S[int(i)])]):
++            # A caller may choose a specific neutral microstate instead of the
++            # bare canonical token. Preserve identity while choosing a legal
++            # state; an excluded input state must not persist by no-op.
++            alternatives = valid_mask & (cmap == ci)
++            if not bool(alternatives.any()):
++                raise ValueError("No allowed token represents an existing mutable amino acid.")
++            energies = stab_scorer.cond_energy_at(S, int(i)).clone()
++            energies[~alternatives] = float("inf")
++            S[int(i)] = int(torch.argmin(energies))
+ 
+     # freeze the stability z-scale (so `temperature` is in std units, exactly as in _block_descent)
+     dH0, _, _ = _block_mutation_tables(ctx, valid_mask, S, neigh, [], False)
+     wH = 1.0 / _zscale(dH0, valid_mask)
+ 
++    # Opt-in AA bias acts in stability-z units and is free to introduce, move or
++    # remove His. No centre is pinned. The cap is a reward cap, not a His count
++    # constraint. Raw ctx.scorer/H_of and selective state scoring remain intact.
++    bias_specs = [
++        (_parent_vocab_mask(ctx, [aa]), float(weight), crit.aa_bias_caps.get(aa))
++        for aa, weight in crit.aa_bias.items() if float(weight) != 0.0
++    ]
++    bias_mask = ctx.region_mask(crit.aa_bias_region) if bias_specs else None
++    bias_positions = [int(p) for p in neigh if bool(bias_mask[p])] if bias_specs else []
++    references = []
++    if crit.max_mutations:
++        references.append((initial_sequence, int(crit.max_mutations)))
++    if crit.max_total_mutations is not None:
++        ref = ctx.encode_initial_sequence(crit.mutation_reference_sequence)
++        references.append((ref, int(crit.max_total_mutations)))
++    for ref, limit in references:
++        if int((ctx.canonical_map[S] != ctx.canonical_map[ref]).sum()) > limit:
++            raise ValueError("Initial sequence exceeds the declared mutation-reference budget.")
++
++    def objective(seq):
++        raw = stab_scorer.H_of(seq)
++        return wH * raw + _aa_bias_value(seq, bias_positions, bias_specs) if bias_specs else raw
++
+     best_S = S.clone()
+-    best_H = stab_scorer.H_of(S)
++    best_H = objective(S)
+     _record(trajectory, ctx, S, pins, initial=True)
+     patience, cap = crit.cv_patience * len(neigh), crit.cv_max * len(neigh)
+     since = step = 0
+@@ -2461,9 +2562,16 @@ def _greedy_energy_block(ctx, crit, valid_mask, pins, neigh, initial_sequence, r
+         improving = []
+         for i in neigh:
+             e_i = stab_scorer.cond_energy_at(S, int(i))                # [V] absolute conditional energy
++            if bias_specs:
++                if int(i) in bias_positions:
++                    e_i = wH * e_i + _aa_bias_block(ctx, S, bias_positions, [int(i)], bias_specs)
++                else:
++                    e_i = wH * e_i
+             cur = int(S[int(i)])
+             e_valid = e_i.clone()
+             e_valid[invalid] = float("inf")
++            if references:
++                e_valid[~_mutation_budget_block(ctx, S, [int(i)], references)] = float("inf")
+             delta = float(e_valid.min()) - float(e_i[cur])
+             if delta < -tol:
+                 improving.append((delta, int(i)))
+@@ -2498,6 +2606,16 @@ def _greedy_energy_block(ctx, crit, valid_mask, pins, neigh, initial_sequence, r
+         for (bi, bj, M) in sedges:
+             shape = [1] * B; shape[bi] = V; shape[bj] = V
+             J = J + (wH * M).reshape(shape)
++        if bias_specs:
++            # Only biased positions contribute to the reward. Other block axes
++            # still participate in the full joint Potts move.
++            active = [p for p in block if p in bias_positions]
++            if active:
++                bias_tensor = _aa_bias_block(ctx, S, bias_positions, active, bias_specs)
++                axes = [ctx.V if p in active else 1 for p in block]
++                J = J + bias_tensor.reshape(axes)
++        if references:
++            J = J.masked_fill(~_mutation_budget_block(ctx, S, block, references), float("inf"))
+         if want_rep:                                                   # within-block repetitive pairwise
+             bres = [int(res_id[p_b]) for p_b in block]
+             pair_pen = same_canon if rep_all else (
+@@ -2522,8 +2640,8 @@ def _greedy_energy_block(ctx, crit, valid_mask, pins, neigh, initial_sequence, r
+             S[p_b] = int(assign[bi])
+         step += 1
+ 
+-        # (4) track the lowest-H sequence (temperature>0 can wander; return the best seen)
+-        H = stab_scorer.H_of(S)
++        # (4) track the best configured objective (temperature>0 can wander)
++        H = objective(S)
+         if H < best_H - 1e-9:
+             best_H, best_S, since = H, S.clone(), 0
+         else:

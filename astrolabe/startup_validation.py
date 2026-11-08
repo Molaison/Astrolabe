@@ -38,6 +38,8 @@ _MUTATOR_DEFAULTS = {
     "faraparttiedmultitargetligandmpnn": ("LigandMPNN",),
     "far_apart_tied_multitarget_ligandmpnn": ("LigandMPNN",),
     "dynamicmpnn": ("DynamicMPNN",), "surfdesign": ("SurfDesign",),
+    "proton_pottsmpnn": ("ProtonPottsMPNN",),
+    "proton-pottsmpnn": ("ProtonPottsMPNN",),
     "surfpro": ("SurfPro",), "carbondesign": ("CarbonDesign",),
     "dplm": ("DPLM",), "nampnn": ("NAMPNN",),
 }

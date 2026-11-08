@@ -51,3 +51,17 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 ## Verification routing
 
 Use affected-owner tests and real CPU boundary probes before broad checks. Decision changes require accepted/rejected history, CSV rows and RNG replay; evidence changes require clone/filter/merge and transformation provenance; resource changes require acquisition/cleanup faults and bounded scheduling. Native model, GPU, end-to-end and measured throughput claims need separate evidence and were not established in this change.
+
+## Proton integration boundary
+
+`proton_pottsmpnn` / `Proton-PottsMPNN` are lazy, protein-only joint sequence
+mutators registered through the existing factory and merged component defaults.
+The persistent external runner also supplies fixed-context pH state scores;
+private and explicitly shared runners attach to the active `ResourceOwner`.
+Standalone posthoc callers still close their own runners. Raw extended tokens,
+centres and native energies remain mutation evidence, not prediction confidence.
+`ph_sensitive` and `ph_core` register through the existing loss loader. Posthoc
+`proton-states` and `proton-parity` are explicit opt-in commands, not automatic
+scientific acceptance. Patched source and external checkpoint/EV6 assets have
+separate provenance; see [installation](proton_installation.md) and
+[pH interfaces](ph_sensitive_design.md). This port adds no AF3 or vdM implementation.

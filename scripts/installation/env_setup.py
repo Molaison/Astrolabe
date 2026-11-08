@@ -589,6 +589,80 @@ def _vendor_patch_script_groups(repo_root):
     return set(module.VENDOR_PATCHES)
 
 
+SNAPSHOT_SOURCE_MODES = frozenset({"pinned_raw_snapshot"})
+
+
+def _canonical_git_url(value):
+    url = str(value or "").strip().rstrip("/")
+    return url if url.endswith(".git") else url + ".git"
+
+
+def _validate_pinned_raw_snapshot(repo_root, name, spec):
+    """Validate distributed source independently of separately acquired weights."""
+    errors = []
+    path = pathlib.Path(str(spec.get("path") or ""))
+    manifest_rel = spec.get("provenance_manifest")
+    if not manifest_rel:
+        return [f"{name}: provenance_manifest is required for {spec.get('source_mode')}"]
+    manifest_path = repo_root / str(manifest_rel)
+    if not manifest_path.is_file():
+        return [f"{name}: provenance manifest does not exist: {manifest_rel}"]
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return [f"{name}: cannot read provenance manifest {manifest_rel}: {exc}"]
+    if not isinstance(manifest, dict):
+        return [f"{name}: provenance manifest must be a JSON object"]
+    if _canonical_git_url(manifest.get("source")) != _canonical_git_url(spec.get("expected_url")):
+        errors.append(f"{name}: provenance source URL does not match expected_url")
+    expected_commit = spec.get("expected_commit")
+    if not expected_commit or manifest.get("commit") != expected_commit:
+        errors.append(f"{name}: provenance commit does not match expected_commit")
+    records = manifest.get("files")
+    if not isinstance(records, list) or not records:
+        errors.append(f"{name}: provenance manifest has no selected file records")
+        records = []
+    recorded_paths = set()
+    for record in records:
+        if not isinstance(record, dict):
+            errors.append(f"{name}: provenance file record must be an object")
+            continue
+        rel = str(record.get("path") or "")
+        candidate_rel = pathlib.PurePosixPath(rel)
+        if not rel or candidate_rel.is_absolute() or ".." in candidate_rel.parts:
+            errors.append(f"{name}: invalid provenance file path {rel!r}")
+            continue
+        recorded_paths.add(rel)
+        candidate = repo_root / path / rel
+        if not candidate.is_file():
+            errors.append(f"{name}: provenance file is missing: {path / rel}")
+            continue
+        if "size" in record:
+            try:
+                expected_size = int(record["size"])
+            except (TypeError, ValueError):
+                errors.append(f"{name}: invalid provenance size for {rel!r}")
+                continue
+            if candidate.stat().st_size != expected_size:
+                errors.append(f"{name}: provenance size mismatch for {path / rel}")
+        if "sha256" in record:
+            actual = hashlib.sha256(candidate.read_bytes()).hexdigest()
+            if actual != record["sha256"]:
+                errors.append(f"{name}: provenance SHA256 mismatch for {path / rel}")
+    for rel in spec.get("required_files") or []:
+        if rel not in recorded_paths:
+            errors.append(f"{name}: required_file {rel!r} is absent from provenance")
+        if not (repo_root / path / rel).is_file():
+            errors.append(f"{name}: required_file is missing: {path / rel}")
+    for rel, expected in manifest.get("local_patch_sha256", {}).items():
+        patch = repo_root / rel
+        if not patch.is_file() or hashlib.sha256(patch.read_bytes()).hexdigest() != expected:
+            errors.append(f"{name}: local patch SHA256 mismatch for {rel}")
+    if (repo_root / path / ".git").exists():
+        errors.append(f"{name}: pinned_raw_snapshot must not contain a .git directory")
+    return errors
+
+
 def _validate_third_party_source_inventory(repo_root):
     from omegaconf import OmegaConf
 
@@ -621,6 +695,15 @@ def _validate_third_party_source_inventory(repo_root):
             errors.append(f"{name}: path, expected_url, source_mode, and migration_status are required")
             continue
         inventory_paths.add(str(path))
+        if source_mode in SNAPSHOT_SOURCE_MODES:
+            if gitmodule_urls.get(str(path)) is not None:
+                errors.append(f"{name}: pinned_raw_snapshot must not have a .gitmodules stanza")
+            if spec.get("expected_branch") is not None:
+                errors.append(f"{name}: pinned_raw_snapshot cannot set expected_branch")
+            if patch_group is not None:
+                errors.append(f"{name}: snapshot patches must be recorded in provenance")
+            errors.extend(_validate_pinned_raw_snapshot(repo_root, name, spec))
+            continue
         actual_url = gitmodule_urls.get(str(path))
         if actual_url != expected_url:
             errors.append(

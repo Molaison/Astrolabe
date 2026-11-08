@@ -952,6 +952,55 @@ mutator:
     startup_timeout: 600
     request_timeout: null
     output_dir: null
+  ProtonPottsMPNN:
+    # Joint Potts energy optimizer from christian-creator/ProtonPottsMPNN.
+    # It is not an independent per-position probability model: one coherent
+    # canonical sequence is selected and its actual edits enter GH.
+    python_bin: ${subprocess_envs.proton_pottsmpnn.python_bin}
+    repo_path: ${subprocess_envs.proton_pottsmpnn.repo_path}
+    checkpoint_path: ${weight_path.proton_pottsmpnn}/potts_v6_afdb_edge_his0.3_acid0.06/epoch-0125.ckpt
+    hbplus_bin: ${subprocess_envs.proton_pottsmpnn.hbplus_bin}
+    extended_vocab: v6
+    device: auto
+    # Optional process-local mask preservation; official vendor files stay intact.
+    design_mask_adapter: none
+    daemon: true
+    startup_timeout: 600
+    request_timeout: null
+    output_dir: null
+    seed: ${seed}
+    n_jobs: 1
+    binder_chain: null
+    # Opt-in sharing between this mutator and ph_core_network release scoring.
+    runtime_key: null
+    # Opt-in: propose only one geometry-supported neutral-His H/K/R pair.
+    network_only: false
+    preserve_disulfides: false
+    protect_gly_pro: false
+    reference_sequence: null
+    max_total_mutations: null
+    # Dynamic virtual geometry supports joint proposals; no motif is installed.
+    network_proposal:
+      enabled: false
+    criteria:
+      # Native forbidden microstates (HIS-A/ASP-A/GLU-A/HIS-D) and the global
+      # exclude_AA list are merged into forbidden_tokens before inference.
+      method: block_descent
+      backend: potts
+      selective: true
+      combined_lambda: 0.3
+      block_size: 2
+      temperature: 0.0
+      topk_sites: 1
+      samples_per_site: 1
+      center_count: 1
+      neighbour_k: 16
+      max_mutations: null
+      # v6 checkpoint vocabulary: neutral His is HIS-S; HID/HIE belong to v3/v4.
+      dep_map:
+        HIS-P: [HIS-S]
+        ASP-P: [ASP-D]
+        GLU-P: [GLU-D]
   CarbonDesign:
     repo_path: ${carbondesign.repo_path}
     model_ckpt: ${carbondesign.model_ckpt}

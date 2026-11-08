@@ -393,6 +393,10 @@ def test_sif_cli_execution_matrix_parses_every_canonical_leaf(tmp_path: Path) ->
     assert "--dry-run" in by_path[("setup",)].argv
     assert "--prepare-only" in by_path[("refine", "interface")].argv
     assert by_path[("daemon", "backends")].json_stdout
+    assert "--dry-run" in by_path[("posthoc", "proton-states")].argv
+    assert by_path[("posthoc", "proton-states")].json_stdout
+    assert by_path[("posthoc", "proton-parity")].expected_returncode == 2
+    assert "expected proton_native_parity_v1 input schema" in by_path[("posthoc", "proton-parity")].stderr_contains
     assert by_path[("daemon", "status")].expected_returncode == 2
     assert by_path[("daemon", "stop")].expected_returncode == 2
     assert by_path[("daemon", "serve")].expected_returncode == 2
