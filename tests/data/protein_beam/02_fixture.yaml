@@ -1,0 +1,101 @@
+# Engineering validation only; production objective/budget are not calibrated.
+task_name: engineering_fixture
+out_dir: /tmp/beam_fixture
+raw_model_results_dir: /tmp/beam_fixture/raw
+repeats: 1
+steps: 7
+seed: 20261028
+types:
+  A: p
+  B: p
+seqs:
+  A: SSEKKKVEEEVKKLLEEAKKDPSKLIEVSKKLFDLFIKYLTEESLEAAIEVQELLIKLLKDEKFKARAEEHIEVGEKGLKEMKEE
+  B: +GYKELKEKAIDAMLDFDIAGARELPLEEEYKILEELKKLLKKSSDDKREEIALKIGELFHEYAETGDEEKLKKGLEEMLEEKKKLII
+homologies: {}
+initializer:
+  mode: random
+enable_pyrosetta: true
+skip_complex_poses: false
+allow_mmcif_pdb_fallback: true
+use_metropolis_acceptance: false
+exclude_AA:
+- C
+structure_start: null
+mutator:
+  selector_expression: null
+  mutator_terms:
+    LigandMPNN_itf:
+      _type: LigandMPNN
+      temperature: 0.5
+      position_selector: interface(interface_distance=10.0)
+      fallback_to_all_mutable_if_selector_empty: false
+      enforce_mutation_num: true
+evaluator:
+  evaluator_terms:
+    Alphafold3:
+      _type: Alphafold3
+  alphafold3:
+    num_recycles: 3
+    num_samples: 1
+    service_socket: null
+    num_seeds: 1
+    run_data_pipeline: false
+    run_inference: true
+    flash_attention_implementation: cudnn
+    refstructure_workers: 1
+    jax_compilation_cache_dir: /tmp/beam_jax_cache
+  scheduling:
+    overlap_cpu_postprocess: false
+    cpu_postprocess_workers: 1
+loss:
+  loss_terms:
+    interface_ipae:
+      _type: ipae
+      chain_a: A
+      chain_b: B
+      contact_method: sc
+      sc_cutoff: 5.0
+    interface_ipsae:
+      _type: ipsae
+      chain_a: A
+      chain_b: B
+      pae_cutoff: 10.0
+    interface_sc:
+      _type: protomer_shape_complementarity
+      protomer_a: A
+      protomer_b: B
+      strict: true
+    interface_buns:
+      _type: interface_buried_unsatisfied_hbonds
+      protomer_a: A
+      protomer_b: B
+      ignore_surface_res: false
+    interface_holes:
+      _type: interface_holes
+      protomer_a: A
+      protomer_b: B
+      interface_distance: 10.0
+  expression_terms: {}
+per_residue_scores:
+  enabled: false
+  terms: {}
+stages:
+  default:
+    oligo:
+    - AB
+    evaluator: Alphafold3
+    mutators:
+    - LigandMPNN_itf
+    mutator_weights:
+    - 1.0
+    mutation_num: 4
+    weighted_score_expression: interface_ipsae - interface_ipae / 10 + interface_sc
+      - interface_holes / 100 - interface_buns / 10
+    acceptance_threshold: null
+    acceptance_gate: null
+    early_stopping: null
+post_eval_hooks: {}
+protein_beam:
+  width: 2
+  proposals_per_parent: 2
+  max_evaluations: 7

@@ -37,6 +37,8 @@ config/env_local.yaml
 config/env_local*.yaml
 config/env/env_local.yaml
 config/env/env_local*.yaml
+config/env/runtime_local.json
+config/env/.astrolabe_python_path
 config/env/.gh_python_path
 config/env.auto*.yaml
 config/env.merged*.yaml

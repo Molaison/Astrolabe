@@ -1,0 +1,44 @@
+task_name: daily_task_control
+out_dir: null
+seqs:
+  A: input:A1-3
+types:
+  A: p
+homologies: {}
+named_files:
+  input: tests/fixtures/daily_task_config/assets/tiny_chain_A.pdb
+seed: 17
+steps: 2
+repeats: 1
+debug: false
+enable_pyrosetta: false
+skip_complex_poses: true
+use_metropolis_acceptance: false
+initial_temperature: 0.05
+initializer:
+  mode: random
+evaluator:
+  evaluator_terms:
+    Sequence:
+      _type: sequence
+mutator:
+  selector_expression: null
+  mutator_terms:
+    MCMC:
+      _type: mcmc
+loss:
+  loss_terms:
+    hotspot_b:
+      _type: hotspot_dsasa
+      select_expression: A_1:4
+      _for: A
+  expression_terms: {}
+stages:
+  default:
+    oligo:
+    - A
+    evaluator: Sequence
+    mutators:
+    - MCMC
+    mutation_num: 1
+    weighted_score_expression: '0'

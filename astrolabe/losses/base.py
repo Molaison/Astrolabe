@@ -14,6 +14,7 @@ except Exception:  # pragma: no cover - optional dependency
 from omegaconf import DictConfig
 
 from astrolabe.core import global_config
+from astrolabe.loss_config import INTRINSIC_PARAMS
 from astrolabe.losses.utils import LossRegistry
 from astrolabe.score_contributions import (
     score_contributions_from_runtime_config,
@@ -24,7 +25,6 @@ from astrolabe.utils.log_events import event_span, summarize_event_items
 # Global registry instance
 loss_registry = LossRegistry()
 logger = logging.getLogger(__name__)
-INTRINSIC_PARAMS = {"oligomer_specific"}
 DYNAMIC_BINDING_SITE_LOSS = "dynamic_binding_site_allowed_min_dist"
 
 
@@ -149,6 +149,7 @@ class LossEngine:
         self.expression_terms = (
             loss_config.get("expression_terms", {}) or {}
         )
+        self.active_loss_terms = None
 
     def setup(
         self,
@@ -158,10 +159,14 @@ class LossEngine:
         acceptance_gate=None,
         validate_config: bool = True,
         prefix_early_stopping=None,
+        active_loss_terms: List[str] | None = None,
     ):
         # `loss_specs` can change across stages; invalidate any cached score extraction
         # results so the next call recomputes with the updated registry specs.
         self._clear_score_cache()
+        self.active_loss_terms = (
+            set(active_loss_terms) if active_loss_terms is not None else None
+        )
 
         # Store expressions
         (
@@ -211,8 +216,20 @@ class LossEngine:
         # referenced outside of the main weighted score expression (e.g. for
         # predocker conditions or debug logging).
         required_loss_terms = set(included_loss_terms) | defined_loss_terms
+        if self.active_loss_terms is not None:
+            unknown = self.active_loss_terms - (
+                defined_loss_terms | set(self.registry.valid_losses)
+            )
+            if unknown:
+                raise ValueError(f"Unknown active_loss_terms: {sorted(unknown)}")
+            self._validate_active_loss_dependencies(included_loss_terms)
+            required_loss_terms = self.active_loss_terms
         # todo for those losses that have no required params, we can use loss name directly
-        self.parsed_defined_losses = self._parse_loss_specs(self.defined_losses)
+        self.parsed_defined_losses = self._parse_loss_specs({
+            name: self.defined_losses[name]
+            for name in self.defined_losses
+            if name in required_loss_terms
+        })
 
         self.loss_specs = build_loss_specs(
             required_loss_terms.intersection(set(self.registry.param_free_losses))
@@ -692,11 +709,22 @@ class LossEngine:
         self._extract_scores_with_registry_cached.cache_clear()
 
     def _score_cache_token(self):
+        # Sequence-dependent losses read the current working protomers rather
+        # than the scores object, which may intentionally be reused while a
+        # mutation stack proposes a new sequence.
+        try:
+            protomers = getattr(global_config, "protomers", {}) or {}
+            sequences = tuple(sorted(
+                (str(name), _freeze_cache_value(getattr(protomer, "mutated_sequence", None)))
+                for name, protomer in protomers.items()
+            ))
+        except RuntimeError:
+            sequences = ()
         if not any(
             spec == DYNAMIC_BINDING_SITE_LOSS
             for spec, _loss_func, _params in getattr(self, "loss_specs", {}).values()
         ):
-            return None
+            return ("working-sequences", sequences)
         try:
             dynamic_binding_site = getattr(global_config, "dynamic_binding_site", None)
         except RuntimeError:
@@ -704,6 +732,7 @@ class LossEngine:
         return (
             DYNAMIC_BINDING_SITE_LOSS,
             _freeze_cache_value(dynamic_binding_site),
+            sequences,
         )
 
     @functools.lru_cache(maxsize=4)
@@ -806,11 +835,14 @@ class LossEngine:
                 excluded_terms=list(self.expression_terms.keys()),
             )
         )
-        parsed_defined_losses = getattr(
-            self,
-            "parsed_defined_losses",
-            self._parse_loss_specs(self.defined_losses),
-        )
+        self._validate_active_loss_dependencies(included_loss_terms)
+        parsed_defined_losses = getattr(self, "parsed_defined_losses", None)
+        if parsed_defined_losses is None:
+            parsed_defined_losses = self._parse_loss_specs({
+                name: self.defined_losses[name]
+                for name in self.defined_losses
+                if self.active_loss_terms is None or name in self.active_loss_terms
+            })
         specs = build_loss_specs(
             included_loss_terms.intersection(set(self.registry.param_free_losses))
         )
@@ -823,6 +855,16 @@ class LossEngine:
             }
         )
         return {k: v for k, v in specs.items() if v is not None}
+
+    def _validate_active_loss_dependencies(self, required_terms) -> None:
+        if self.active_loss_terms is None:
+            return
+        loss_names = set(self.defined_losses) | set(self.registry.valid_losses)
+        omitted = (set(required_terms) & loss_names) - self.active_loss_terms
+        if omitted:
+            raise ValueError(
+                f"Expression dependencies omitted from active_loss_terms: {sorted(omitted)}"
+            )
 
 
 def extract_variables(expr):

@@ -9,6 +9,7 @@ from astrolabe.evaluators.utils import construct_evaluators
 from astrolabe.mutators import base as mutator_base
 from astrolabe.mutators.registry import MutatorRegistry
 from astrolabe.runtime_support import ResourceOwner
+from astrolabe.evaluator_startup import EvaluatorInitializationError
 from astrolabe.structure_processors.base import StructureProcessorRegistry, initialize_predockers
 
 
@@ -58,9 +59,9 @@ def test_factory_failure_cleans_unique_objects_and_preserves_original(family, tm
             return next(objects)
         except StopIteration:
             raise original
-    with pytest.raises(ValueError) as error:
+    with pytest.raises(EvaluatorInitializationError if family == "evaluator" else ValueError) as error:
         invoke(family, ["a", "alias", "b", "c", "fail"], factory, tmp_path, monkeypatch)
-    assert error.value is original
+    assert (error.value.__cause__ if family == "evaluator" else error.value) is original
     assert events == ["shared", "interrupt", "last"]
     if family == "predocker":
         assert global_config.predockers == {}
@@ -86,7 +87,7 @@ def test_object_cleaned_when_alias_assignment_fails(family, tmp_path, monkeypatc
         def alias(self, value):
             raise ValueError("alias failed")
     obj = BadAlias("resource", events)
-    with pytest.raises(ValueError, match="alias failed"):
+    with pytest.raises(EvaluatorInitializationError if family == "evaluator" else ValueError, match="alias failed"):
         invoke(family, ["a"], lambda *args, **kwargs: obj, tmp_path, monkeypatch)
     assert events == ["resource"]
 
@@ -119,7 +120,7 @@ def test_shared_owner_deduplicates_across_families_and_later_run_cleanup(failure
             raise original
     with pytest.raises(RuntimeError) as error:
         invoke(failure_family, ["alias", "fail"], later, tmp_path, monkeypatch, owner)
-    assert error.value is original
+    assert (error.value.__cause__ if failure_family == "evaluator" else error.value) is original
     assert events == ["shared"]
     owner.close()
     assert events == ["shared"]

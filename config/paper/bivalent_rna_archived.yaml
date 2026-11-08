@@ -5,7 +5,7 @@ defaults:
 task_name: bivalent_rna_archived
 seqs:
   A: UCGGCAGCUGCCAUCUGACU@repeat repeat
-beam_search:
+search:
   initialization: archived
 paper_protocol:
   source:

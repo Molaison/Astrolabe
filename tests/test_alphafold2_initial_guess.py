@@ -396,7 +396,7 @@ def test_af2_initial_guess_populates_multimer_template_features(
     )
     captured: dict[str, dict] = {}
 
-    def fake_make_afm_features(*, chain_id_map, is_homomer_or_monomer, chain_homology):
+    def fake_make_afm_features(*, chain_id_map, is_homomer_or_monomer, chain_homology, pair_and_merge_fn):
         captured.update(chain_homology)
         return {"feature_marker": np.array([1], dtype=np.int32)}
 
@@ -443,7 +443,7 @@ def test_af2_initial_guess_can_disable_template_features(
     )
     captured: dict[str, dict] = {}
 
-    def fake_make_afm_features(*, chain_id_map, is_homomer_or_monomer, chain_homology):
+    def fake_make_afm_features(*, chain_id_map, is_homomer_or_monomer, chain_homology, pair_and_merge_fn):
         captured.update(chain_homology)
         return {"feature_marker": np.array([1], dtype=np.int32)}
 
@@ -483,7 +483,7 @@ def test_af2_initial_guess_does_not_override_explicit_templates(
     )
     captured: dict[str, dict] = {}
 
-    def fake_make_afm_features(*, chain_id_map, is_homomer_or_monomer, chain_homology):
+    def fake_make_afm_features(*, chain_id_map, is_homomer_or_monomer, chain_homology, pair_and_merge_fn):
         captured.update(chain_homology)
         return {"feature_marker": np.array([1], dtype=np.int32)}
 
@@ -520,7 +520,7 @@ def test_af2_initial_guess_template_features_zero_fill_omitted_chain(
     )
     captured: dict[str, dict] = {}
 
-    def fake_make_afm_features(*, chain_id_map, is_homomer_or_monomer, chain_homology):
+    def fake_make_afm_features(*, chain_id_map, is_homomer_or_monomer, chain_homology, pair_and_merge_fn):
         captured.update(chain_homology)
         return {"feature_marker": np.array([1], dtype=np.int32)}
 

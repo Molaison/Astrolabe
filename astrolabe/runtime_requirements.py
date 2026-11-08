@@ -23,6 +23,22 @@ def _extract_selector_vars(expr: Optional[str]) -> set[str]:
     return {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
 
 
+def _source_segment(lines: list[bytes], node: ast.FunctionDef) -> str:
+    """Read AST UTF-8 byte offsets from source split once on CR/LF.
+
+    bytes.splitlines preserves the parser's line boundaries (unlike str's,
+    which also splits form feeds and other Unicode separators).
+    """
+    first, last = node.lineno - 1, node.end_lineno - 1
+    if first == last:
+        return lines[first][node.col_offset:node.end_col_offset].decode("utf-8")
+    return b"".join([
+        lines[first][node.col_offset:],
+        *lines[first + 1:last],
+        lines[last][:node.end_col_offset],
+    ]).decode("utf-8")
+
+
 @lru_cache(maxsize=1)
 def _pyrosetta_loss_types_from_source() -> set[str]:
     """
@@ -42,6 +58,7 @@ def _pyrosetta_loss_types_from_source() -> set[str]:
         if "pyrosetta" not in src and ".rosetta." not in src:
             continue
         tree = ast.parse(src, filename=str(path))
+        lines = src.encode("utf-8").splitlines(keepends=True)
         for node in tree.body:
             if not isinstance(node, ast.FunctionDef):
                 continue
@@ -59,7 +76,7 @@ def _pyrosetta_loss_types_from_source() -> set[str]:
                         v = _ast_literal(kw.value)
                         if isinstance(v, str) and v.strip():
                             loss_name = v.strip()
-                node_src = ast.get_source_segment(src, node) or ""
+                node_src = _source_segment(lines, node)
                 arg_names = [a.arg for a in list(node.args.args) + list(node.args.kwonlyargs)]
                 uses_pyrosetta = (
                     path.name == "interaction.py"
@@ -108,6 +125,8 @@ def task_requirements(task_cfg: Any) -> dict:
 
     # Always needed by `run.py` (used for logging control).
     req_imports.add("absl")
+    # Native operation descriptors validate selected options before execution.
+    req_imports.add("jsonschema")
 
     enable_pyrosetta = bool(task_cfg.get("enable_pyrosetta", True)) if isinstance(task_cfg, dict) else True
     post_eval_hooks = (task_cfg.get("post_eval_hooks") or {}) if isinstance(task_cfg, dict) else {}
@@ -256,6 +275,23 @@ def task_requirements(task_cfg: Any) -> dict:
     if any(t.lower() == "chai1" for t in evaluator_types_used):
         req_imports.add("chai_lab")
 
+    # These backends own their explicit interpreter/assets in selected term
+    # settings, checked by backend_startup, not in a synthetic global env block.
+    if any(t.lower() == "bioemu2" for t in evaluator_types_used):
+        req_repo_files.add("astrolabe/evaluators/wrappers/bioemu2_worker.py")
+    if any(t.lower() == "generated_structure" for t in evaluator_types_used):
+        req_repo_files.add("astrolabe/evaluators/generated_structure.py")
+    if any(t.lower() == "rfd4" for t in mutator_types_used):
+        req_repo_files |= {
+            "astrolabe/mutators/wrappers/rfd4_worker.py",
+            "astrolabe/mutators/wrappers/rfd4_unindexed_worker.py",
+            "astrolabe/mutators/rfd4_reconstruction.py",
+        }
+        if any(_as_bool((conf.get("feedback") or {}).get("enabled"), default=False)
+               for conf in mutator_terms_used.values()
+               if str(conf.get("_type") or "").lower() == "rfd4"):
+            req_imports.add("pyrosetta")
+
     if any(t.lower() == "esmfold2" for t in evaluator_types_used):
         req_env_keys |= {
             "subprocess_envs.esmfold2.python_bin",
@@ -275,7 +311,6 @@ def task_requirements(task_cfg: Any) -> dict:
         in {
             "ligandmpnn",
             "grouped_ligandmpnn",
-            "dynamicmpnn",
             "proteinmpnn",
             "multistateproteinmpnn",
             "multistate_proteinmpnn",
@@ -450,6 +485,10 @@ def task_requirements(task_cfg: Any) -> dict:
 
     # PyRosetta requirement inference
     pyro_losses = _pyrosetta_loss_types_from_source()
+    pyro_losses |= {
+        "interface_shape_complementarity", "interface_hbond_count",
+        "interface_polar_satisfaction", "short_range_interface_pair_energy",
+    }
     needs_pyrosetta = any(t in pyro_losses for t in loss_types)
     if isinstance(post_eval_hooks, dict):
         rosetta_hook = post_eval_hooks.get("rosetta_minimize") or post_eval_hooks.get("rosetta_repack")
@@ -538,7 +577,7 @@ def task_requirements(task_cfg: Any) -> dict:
             "required by RFD3 initializer subprocess",
         )
     if any(
-        t.lower() in {"ligandmpnn", "grouped_ligandmpnn", "dynamicmpnn"}
+        t.lower() in {"ligandmpnn", "grouped_ligandmpnn"}
         for t in mutator_types_used
     ):
         _note_env(["weight_path.ligandmpnn"], "required by MPNN mutator checkpoints")

@@ -1,0 +1,97 @@
+--- a/inference/run.py
++++ b/inference/run.py
+@@ -137,6 +137,8 @@
+     #fix seeds
+     if args.seed:
+         seed=args.seed
++    elif getattr(args, "_load_only", False):
++        seed=0
+     else:
+         seed=int(np.random.randint(0, high=99999, size=1, dtype=int)[0])
+ 
+@@ -167,20 +169,17 @@
+ 
+     if args.model_type == "na_mpnn":
+         checkpoint_path = args.checkpoint_na_mpnn
+-    else:
+-        print("Choose --model_type flag from currently available models")
+-        sys.exit()
+-    checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+-
+-    if args.model_type == "na_mpnn":
++        resident = getattr(args, "_resident_model", None)
++        checkpoint = None
++        if resident is None:
++            checkpoint = torch.load(checkpoint_path, map_location=device, weights_only=False)
+         k_neighbors = 32
++        if args.k_neighbors is not None:
++            k_neighbors = args.k_neighbors
+     else:
+         print("Choose --model_type flag from currently available models")
+         sys.exit()
+ 
+-    if args.k_neighbors is not None:
+-        k_neighbors = args.k_neighbors
+-
+     model = ProteinMPNN(
+         node_features=128,
+         edge_features=128,
+@@ -196,10 +195,33 @@
+         polytype_to_int=polytype_to_int
+     )
+ 
+-    #load pretrained parameters
+-    model.load_state_dict(checkpoint['model_state_dict'])
+-    model.to(device)
+-    model.eval()
++    metadata = (
++        args.model_type,
++        checkpoint_path,
++        k_neighbors,
++        int(args.na_shared_tokens),
++    )
++    if resident is None:
++        #load pretrained parameters
++        model.load_state_dict(checkpoint['model_state_dict'])
++        model.to(device)
++        model.eval()
++        resident = {
++            "metadata": metadata,
++            "model": model,
++        }
++    else:
++        if resident["metadata"] != metadata:
++            raise RuntimeError(
++                "Resident NA-MPNN model options differ from the loaded model."
++            )
++        # ProteinMPNN's CPU initializer consumes random numbers before sampling.
++        # Discard this uninitialized object after its RNG draws; the one loaded
++        # model remains resident. This preserves seeded request behavior.
++        model = resident["model"]
++
++    if getattr(args, "_load_only", False):
++        return resident
+     #----
+ 
+     #make amino acid bias array [num_letters]
+@@ -515,6 +537,20 @@
+                 with open(output_fasta, 'w') as f:
+                     f.write("\n".join(fasta_entires))
+ 
++
++def load_model(args):
++    """Load one reusable model while preserving the CLI defaults."""
++    load_args = argparse.Namespace(**vars(args))
++    load_args._load_only = True
++    return main(load_args)
++
++
++def run_design(args, resident):
++    """Run one design request with a model returned by load_model()."""
++    run_args = argparse.Namespace(**vars(args))
++    run_args._resident_model = resident
++    return main(run_args)
++
+ if __name__ == "__main__":
+     argparser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+ 

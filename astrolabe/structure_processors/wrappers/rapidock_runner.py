@@ -11,7 +11,7 @@ import uuid
 from typing import Any, Dict, List
 
 
-_CACHE_PAYLOAD_VERSION = 2
+_CACHE_PAYLOAD_VERSION = 4
 
 
 def default_rapidock_daemon_script_path() -> pathlib.Path:
@@ -69,6 +69,7 @@ class RAPiDockRunner:
         self._lock = threading.RLock()
         self._response_cache_mem: Dict[str, List[str]] = {}
         self._cursor_mem: Dict[str, int] = {}
+        self.last_runtime_status: Dict[str, Any] | None = None
         atexit.register(self.shutdown)
 
     def _get(self, key: str, default=None):
@@ -101,6 +102,48 @@ class RAPiDockRunner:
             return None
         return self._sha256_file(path)
 
+    def _source_cache_metadata(self) -> Dict[str, Any]:
+        try:
+            revision = subprocess.run(
+                ["git", "-C", str(self.repo_path), "rev-parse", "HEAD"],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+            tracked = subprocess.run(
+                [
+                    "git",
+                    "-C",
+                    str(self.repo_path),
+                    "status",
+                    "--porcelain",
+                    "--untracked-files=no",
+                ],
+                check=False,
+                capture_output=True,
+                text=True,
+            )
+        except OSError:
+            return {"revision": None, "tracked_changes_sha256": None}
+        revision_text = (
+            revision.stdout.strip()
+            if revision.returncode == 0
+            else None
+        )
+        tracked_text = (
+            tracked.stdout.strip()
+            if tracked.returncode == 0
+            else None
+        )
+        return {
+            "revision": revision_text,
+            "tracked_changes_sha256": (
+                hashlib.sha256(tracked_text.encode("utf-8")).hexdigest()
+                if tracked_text is not None
+                else None
+            ),
+        }
+
     def _dock_params(self) -> Dict[str, Any]:
         params = {
             "num_samples_bank": int(self.num_samples_bank),
@@ -122,12 +165,18 @@ class RAPiDockRunner:
     def _cache_key(self, *, protein_pdb: str, peptide_pdb: str) -> str:
         protein_path = pathlib.Path(protein_pdb).resolve()
         peptide_path = pathlib.Path(peptide_pdb).resolve()
+        runtime_path = pathlib.Path(__file__).with_name("rapidock_runtime.py")
+        source = self._source_cache_metadata()
         payload = {
             "version": _CACHE_PAYLOAD_VERSION,
             "protein_sha256": self._sha256_file(protein_path),
             "peptide_sha256": self._sha256_file(peptide_path),
             "repo_path": str(self.repo_path),
+            "api_sha256": self._optional_file_sha256(self.repo_path / "RAPiDock" / "API.py"),
             "inference_sha256": self._optional_file_sha256(self.repo_path / "inference.py"),
+            "source_revision": source["revision"],
+            "source_tracked_changes_sha256": source["tracked_changes_sha256"],
+            "runtime_sha256": self._optional_file_sha256(runtime_path),
             "daemon_script_path": str(self.daemon_script_path),
             "daemon_script_sha256": self._optional_file_sha256(self.daemon_script_path),
             "model_dir": str(self.model_dir),
@@ -217,10 +266,47 @@ class RAPiDockRunner:
             bufsize=1,
         )
         self._proc = proc
+        try:
+            request_id = uuid.uuid4().hex
+            response = self._daemon_exchange({"type": "ping", "id": request_id})
+            if response.get("type") != "pong" or response.get("id") != request_id:
+                raise RuntimeError(f"Unexpected RAPiDock daemon startup response: {response}")
+            if response.get("model_ready") is False:
+                detail = response.get("message") or "model is not ready"
+                raise RuntimeError(f"RAPiDock daemon startup failed: {detail}")
+            self.last_runtime_status = {
+                key: response[key]
+                for key in (
+                    "runtime",
+                    "source_revision",
+                    "model_ready",
+                    "load_count",
+                    "load_attempts",
+                    "confidence_model_ready",
+                    "confidence_load_count",
+                    "confidence_load_attempts",
+                    "message",
+                    "confidence_message",
+                )
+                if key in response
+            }
+        except Exception:
+            self._proc = None
+            try:
+                proc.terminate()
+                proc.wait(timeout=5)
+            except Exception:
+                try:
+                    proc.kill()
+                except Exception:
+                    pass
+            raise
         return proc
 
-    def _daemon_request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        proc = self._ensure_daemon()
+    def _daemon_exchange(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        proc = self._proc
+        if proc is None or proc.poll() is not None:
+            raise RuntimeError("RAPiDock daemon exited unexpectedly.")
         assert proc.stdin is not None
         assert proc.stdout is not None
         proc.stdin.write(json.dumps(payload) + "\n")
@@ -234,6 +320,10 @@ class RAPiDockRunner:
             message = response.get("message") or "RAPiDock daemon returned an error."
             raise RuntimeError(f"{error_type}: {message}")
         return response
+
+    def _daemon_request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        self._ensure_daemon()
+        return self._daemon_exchange(payload)
 
     def _request_bank(self, *, name: str, protein_pdb: str, peptide_pdb: str) -> List[str]:
         request_id = uuid.uuid4().hex
@@ -274,6 +364,25 @@ class RAPiDockRunner:
             response = self._daemon_request({"type": "ping", "id": request_id})
             if response.get("type") != "pong" or response.get("id") != request_id:
                 raise RuntimeError(f"Unexpected RAPiDock ping response: {response}")
+            if response.get("model_ready") is False:
+                detail = response.get("message") or "model is not ready"
+                raise RuntimeError(f"RAPiDock daemon is not ready: {detail}")
+            self.last_runtime_status = {
+                key: response[key]
+                for key in (
+                    "runtime",
+                    "source_revision",
+                    "model_ready",
+                    "load_count",
+                    "load_attempts",
+                    "confidence_model_ready",
+                    "confidence_load_count",
+                    "confidence_load_attempts",
+                    "message",
+                    "confidence_message",
+                )
+                if key in response
+            }
             return "pong"
 
     def _request_bank_with_retry(

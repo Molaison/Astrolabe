@@ -1,0 +1,61 @@
+task_name: "daily_task_control"
+out_dir: null
+seqs:
+  A: "ACDEFGHIKLMNPQRSTVWY"
+  B: "+ACDEFGHIKLMNPQRSTVWY"
+  C: "+ACDEFGHIKLMNPQRSTVWY"
+types:
+  A: "p"
+  B: "p"
+  C: "p"
+homologies: {}
+named_files: null
+seed: 17
+steps: 2
+repeats: 1
+debug: false
+enable_pyrosetta: false
+skip_complex_poses: true
+use_metropolis_acceptance: false
+initial_temperature: 0.05
+initializer:
+  mode: "random"
+evaluator:
+  evaluator_terms:
+    Sequence:
+      _type: "sequence"
+mutator:
+  selector_expression: null
+  mutator_terms:
+    MCMC:
+      _type: "mcmc"
+loss:
+  loss_terms:
+    hotspot_b:
+      _type: "hotspot_dsasa"
+      _for: "AB"
+      select_expression: "B_1:2-4"
+    hotspot_c:
+      _type: "hotspot_dsasa"
+      _for: "AC"
+      select_expression: "C_1:3-5"
+  expression_terms: {}
+stages:
+  default:
+    oligo: ["AB", "AC"]
+    evaluator: "Sequence"
+    mutators: ["MCMC"]
+    mutation_num: 1
+    weighted_score_expression: "0"
+binding_site:
+  AB:
+    binder: "A"
+    target: "B:2-4"
+    mode: "pocket"
+    max_distance: 8.0
+multitarget:
+  pair_name: "B_C"
+  purpose: "joint_multitarget_with_per_oligo_binding_site"
+  shared_hotspots:
+    B: [2, 3, 4]
+    C: [3, 4, 5]

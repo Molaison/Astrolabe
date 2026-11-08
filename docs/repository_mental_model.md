@@ -1,6 +1,18 @@
 # Repository Mental Model
 
-Baseline: `xcflab/Astrolabe@b537b8a81ff0738922e80a997ffeb9700cdafe09`. This describes the architecture-convergence implementation built on that baseline, not an already merged or deployed release. Check the current commit before reuse. See [implementation and validation limits](architecture_convergence.md).
+The architecture-convergence work was based on
+`b537b8a81ff0738922e80a997ffeb9700cdafe09` and merged in `2a8b72a`.
+The runtime integration combines those owners with the locally qualified
+`25a2b3a` source snapshot, using their original `261b240` release tree for the
+three-way comparison. Both histories are retained. Check the current commit
+and [runtime qualification](adaptive_runtime.md#qualified-release-boundary)
+before reusing evidence. The older [implementation ledger](architecture_convergence.md)
+records the scope of the convergence work.
+
+`configuration.py` also routes explicit typed search to `design/`, whose durable
+raw/Score receipts and scientific identity checks own recovery. The observational
+`execution_audit.json` described below remains a separate artifact; it cannot
+authorize replay of an uncertain inference request.
 
 ```text
 CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline

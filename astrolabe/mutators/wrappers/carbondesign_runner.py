@@ -1,17 +1,56 @@
 import json
+import argparse
 import logging
 import pathlib
 import sys
 from collections import OrderedDict
+from contextlib import contextmanager
+from threading import RLock
 from typing import Dict, List
 
 import torch
 from ml_collections import ConfigDict
 
+from astrolabe.mutators.runtime_stages import guarded_device
+
+
+_ESM_LOADER_LOCK = RLock()
+
+
+@contextmanager
+def _local_esm_serialization(model_path):
+    """Allow legacy Namespace metadata only inside the selected local loader.
+
+    Static inspection of the original t33 checkpoint requires only Namespace;
+    the contact-regression checkpoint requires no additional globals. Keep
+    weights_only enabled, leave torch.load untouched, and restore the vendor's
+    imported loader alias even if model construction fails.
+    """
+    import carbondesign.data.esm as embeddings
+
+    selected = pathlib.Path(model_path).expanduser().resolve(strict=True)
+    if not selected.is_file():
+        raise FileNotFoundError(selected)
+    with _ESM_LOADER_LOCK:
+        original = embeddings.load_model_and_alphabet_local
+
+        def local_loader(path, *args, **kwargs):
+            if pathlib.Path(path).expanduser().resolve() != selected:
+                return original(path, *args, **kwargs)
+            with torch.serialization.safe_globals([argparse.Namespace]):
+                return original(path, *args, **kwargs)
+
+        embeddings.load_model_and_alphabet_local = local_loader
+        try:
+            yield
+        finally:
+            embeddings.load_model_and_alphabet_local = original
+
 
 class CarbonDesignRunner:
     """Thin wrapper that exposes CarbonDesign inference as a reusable runner."""
 
+    @guarded_device("carbondesign", phase="load")
     def __init__(self, args) -> None:
         self.args = args
         self.repo_path = self._resolve_absolute_path(self._get("repo_path"))
@@ -37,9 +76,14 @@ class CarbonDesignRunner:
             CarbonDesign, model_config, self._get("model_ckpt")
         )
 
-    def design_sequences(self, data_dir: str, name_idx: List[str]) -> Dict[str, Dict[str, torch.Tensor]]:
+    def prepare_design(self, data_dir: str, name_idx: List[str]):
+        return str(data_dir), list(name_idx)
+
+    @guarded_device("carbondesign")
+    def execute_design(self, prepared):
+        data_dir, name_idx = prepared
         if not name_idx:
-            return {}
+            return []
         loader = self._dataset_test.load(
             data_dir=str(data_dir),
             name_idx=list(name_idx),
@@ -48,35 +92,36 @@ class CarbonDesignRunner:
             shuffle=False,
             num_workers=0,
         )
-        outputs: Dict[str, Dict[str, torch.Tensor]] = {}
+        outputs = []
         with torch.no_grad():
+            # Feature transforms are configured with the actual device; retain
+            # the iterator in this subgraph until vendor transforms are traced.
             for batch in loader:
                 if batch is None:
                     continue
-                if (
-                    self.max_seq_len > 0
-                    and batch["seq"].shape[1] > self.max_seq_len
-                ):
-                    logging.warning(
-                        "Skipping batch with length %s (max_seq_len=%s)",
-                        batch["seq"].shape[1],
-                        self.max_seq_len,
-                    )
+                if self.max_seq_len > 0 and batch["seq"].shape[1] > self.max_seq_len:
+                    logging.warning("Skipping batch with length %s (max_seq_len=%s)",
+                                    batch["seq"].shape[1], self.max_seq_len)
                     continue
-
                 ret = self.model(batch=batch, compute_loss=True)
                 logits = ret["heads"]["seqhead"]["logits"]
                 temperature = self.temperature if self.temperature > 0 else 1.0
-                probs = torch.softmax(
-                    logits[..., : self.num_aa] / temperature, dim=-1
-                )
+                probs = torch.softmax(logits[..., :self.num_aa] / temperature, dim=-1)
                 mask = batch["mask"].to(torch.bool)
-                for i, name in enumerate(batch["name"]):
-                    valid_len = int(mask[i].sum().item())
-                    outputs[name] = {
-                        "sampling_probs": probs[i : i + 1, :valid_len].detach().cpu()
-                    }
+                outputs.append((batch["name"], probs.detach().cpu(), mask.cpu()))
         return outputs
+
+    @staticmethod
+    def finalize_design(batches):
+        outputs = {}
+        for names, probs, mask in batches:
+            for i, name in enumerate(names):
+                valid_len = int(mask[i].sum().item())
+                outputs[name] = {"sampling_probs": probs[i:i+1, :valid_len]}
+        return outputs
+
+    def design_sequences(self, data_dir: str, name_idx: List[str]):
+        return self.finalize_design(self.execute_design(self.prepare_design(data_dir, name_idx)))
 
     # --------------------------------------------------------------------- #
     # Internal helpers
@@ -150,7 +195,12 @@ class CarbonDesignRunner:
     def _load_model(self, model_cls, config: ConfigDict, ckpt_path):
         ckpt_path = self._resolve_repo_path(ckpt_path)
         checkpoint = torch.load(ckpt_path, map_location=self.device)
-        model = model_cls(config=config.model)
+        lm = getattr(config.model.embeddings_and_seqformer, "lm", None)
+        if lm is not None and getattr(lm, "enabled", False):
+            with _local_esm_serialization(lm.model_path):
+                model = model_cls(config=config.model)
+        else:
+            model = model_cls(config=config.model)
         state_dict = OrderedDict()
         for key, value in checkpoint["model"].items():
             clean_key = key[len("module.") :] if key.startswith("module.") else key

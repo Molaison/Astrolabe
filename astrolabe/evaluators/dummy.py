@@ -144,8 +144,8 @@ class DummyEvaluator(Evaluator):
                     inputs[name],
                     runtime_config or {},
                 )
-            else:
-                complex_paths[name] = pathlib.Path("")
+        # A score-only smoke result has no structure artifact. Path("") is the
+        # current directory and cannot be persisted as a prediction sidecar.
         return StandardScores(
             names=names,
             plddt=plddt,

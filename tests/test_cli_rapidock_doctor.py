@@ -106,7 +106,12 @@ def test_probe_rapidock_daemon_uses_local_wrapper_without_upstream_daemon(tmp_pa
     repo_path = tmp_path / "rapidock_repo"
     (repo_path / "RAPiDock").mkdir(parents=True)
     (repo_path / "RAPiDock" / "__init__.py").write_text("", encoding="utf-8")
-    (repo_path / "inference.py").write_text("import argparse\nargparse.ArgumentParser()\n", encoding="utf-8")
+    (repo_path / "RAPiDock" / "API.py").write_text(
+        "class RAPiDockInference:\n"
+        "    def __init__(self, **kwargs):\n"
+        "        pass\n",
+        encoding="utf-8",
+    )
 
     model_dir = tmp_path / "weights"
     model_dir.mkdir()

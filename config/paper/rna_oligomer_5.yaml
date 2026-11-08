@@ -34,15 +34,21 @@ evaluator:
     num_recycles: 10
     run_data_pipeline: false
     flash_attention_implementation: cudnn
-beam_search:
-  beam_width: 8
+search:
+  algorithm: branching
+  owner: archived_refinement
+  width: 8
   proposals_per_parent: 4
   max_evaluations: 1000
+  measurement: confidence
+  initialization: configured
+  summary_format: json
+repeat_plan:
+  output: "{repeat:03d}_seed_{seed}"
 paper_protocol:
   source:
   - MainPaper 208-209 (2026-10-08 revision)
   - 010_rna_aptamer_target_protein/scheduler/rna_af3_optimization_plddt_retry/beam_oligo5_original20309_20260915.yaml
-  engine: rna_beam
   representative: final_beam
   notes:
   - Includes the archived 87nt starting candidate; all physical chains share it.

@@ -325,6 +325,25 @@ class Segment:
     probs: List[np.ndarray] | None = None
     scores: List[float] | None = None
     mutations: List[Tuple[int, str, str, float, float]] = None
+    length_bounds: tuple[int, int] | None = None
+    pending_sequence: str | None = None
+
+    def stage_sequence(self, sequence: str) -> None:
+        """Stage one complete bounded proposal without changing accepted layout."""
+        bounds = self.length_bounds
+        if (not isinstance(bounds, tuple) or len(bounds) != 2
+                or any(type(value) is not int for value in bounds)
+                or not 0 < bounds[0] <= bounds[1]):
+            raise ValueError("stage_sequence requires explicit positive length_bounds")
+        if (self.type != ProtomerTypes.PROTEIN or self.is_fixed or self.ptm_dict
+                or not set(self.sequence) <= set("ACDEFGHIKLMNPQRSTVWY")):
+            raise ValueError("complete proposals require a mutable unmodified canonical protein")
+        if (not isinstance(sequence, str) or not bounds[0] <= len(sequence) <= bounds[1]
+                or not set(sequence) <= set("ACDEFGHIKLMNPQRSTVWY")):
+            raise ValueError("proposed sequence must be canonical and within length_bounds")
+        if self.mutations:
+            raise ValueError("complete proposals cannot be mixed with point mutations")
+        self.pending_sequence = sequence
 
     @property
     def aa_order(self) -> np.ndarray:
@@ -405,6 +424,8 @@ class Segment:
         return result
 
     def add_mutations(self, mutation) -> bool:
+        if self.pending_sequence is not None:
+            raise ValueError("point mutations cannot be mixed with a complete proposal")
         if self.mutations is None:
             self.mutations = []
         sites = list(zip(*self.mutations))[0] if self.mutations else []
@@ -417,6 +438,12 @@ class Segment:
 
     def apply_mutations(self) -> None:
         """Assign mutations to the segment."""
+        if self.pending_sequence is not None:
+            self.stage_sequence(self.pending_sequence)
+            self.sequence = self.pending_sequence
+            self.pending_sequence = None
+            self.clean_up()
+            return
         if self.mutations is None or not self.mutations:
             return
 
@@ -432,10 +459,13 @@ class Segment:
     def clear_mutations(self):
         """Clear mutations for the segment."""
         self.mutations = []
+        self.pending_sequence = None
 
     @property
     def mutated_sequence(self) -> str:
         """Get the sequence after applying mutations."""
+        if self.pending_sequence is not None:
+            return self.pending_sequence
         if self.mutations is None or not self.mutations:
             return self.sequence
         mutated_sequence = list(self.sequence)
@@ -1083,6 +1113,21 @@ class SegmentManager:
         for segment in self.unique_segments.values():
             segment.apply_mutations()
         self.clear_mutations()
+        self.refresh_protomers()
+
+    def refresh_protomers(self) -> None:
+        """Rebuild accepted component layout and invalidate derived caches."""
+        for protomer in (global_config.__dict__.get("_protomers") or {}).values():
+            offset = 0
+            slices = []
+            for name in protomer.components:
+                stop = offset + len(global_config.segments[name].sequence)
+                slices.append(slice(offset, stop))
+                offset = stop
+            protomer.components_slices = slices
+            protomer._ptm_dict = {}
+            for attribute in ("_mutable_mask", "_homology_seq", "_tied_positions", "_tied_positions_dict"):
+                protomer.__dict__.pop(attribute, None)
 
     def clear_mutations(self):
         """Clear mutations from all segments."""
@@ -1091,6 +1136,8 @@ class SegmentManager:
 
     def begin_pre_update_step(self) -> None:
         """Snapshot accepted sequences before staged mutator-stack updates."""
+        if any(segment.length_bounds is not None for segment in self.unique_segments.values()):
+            raise ValueError("variable-length proposals do not support pre-update mutation stacks")
         if self._pre_update_snapshot is not None:
             return
         self._pre_update_snapshot = {
@@ -1237,34 +1284,7 @@ def get_standard_aa(
     )
 
 
-def parse_ranges(s: str):
-    if s is None:
-        raise ValueError("Missing chain/range statement (expected like 'A' or 'A1-10').")
-    result = defaultdict(list)
-    s = str(s).strip()
-    if not s:
-        raise ValueError("Empty chain/range statement (expected like 'A' or 'A1-10').")
-    items = s.split(",")
-
-    for item in items:
-        item = item.strip()
-        if not item:
-            continue
-        # Allow specifying an entire chain with no residue indices, e.g. "A" or "A,B".
-        match_chain_only = re.fullmatch(r"([A-Za-z])", item)
-        if match_chain_only:
-            result[match_chain_only.group(1)] = []
-            continue
-
-        match = re.fullmatch(r"([A-Za-z])(?::?)(\d+)(?:-(\d+))?", item)
-        if not match:
-            raise ValueError(f"Invalid format: {item}")
-        prefix = match.group(1)
-        start = int(match.group(2))
-        end = int(match.group(3)) if match.group(3) else start
-        result[prefix].extend(range(start, end + 1))
-
-    return dict(result)
+from astrolabe.core.sequence_ranges import parse_ranges
 
 
 def parse_predefined_statement(

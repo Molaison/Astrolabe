@@ -5,8 +5,10 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
+import threading
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -306,6 +308,12 @@ class OpenDDERunner:
     foldcp_devices: str = ""
     foldcp_metrics_jsonl: str = ""
     timeout_seconds: float | None = None
+    execution_mode: str = "daemon"
+    _owned_daemon: Any = field(default=None, init=False, repr=False)
+    _owned_settings: Any = field(default=None, init=False, repr=False)
+    _daemon_lock: threading.Lock = field(
+        default_factory=threading.Lock, init=False, repr=False
+    )
 
     @classmethod
     def from_config(cls, conf: Any) -> "OpenDDERunner":
@@ -357,12 +365,13 @@ class OpenDDERunner:
             foldcp_devices=str(get("foldcp_devices", "") or ""),
             foldcp_metrics_jsonl=str(get("foldcp_metrics_jsonl", "") or ""),
             timeout_seconds=float(get("timeout_seconds")) if get("timeout_seconds") is not None else None,
+            execution_mode=str(get("execution_mode", "daemon")).strip().lower(),
         )
 
     def _env(self) -> dict[str, str]:
-        env = os.environ.copy()
-        repo_str = str(self.repo_path)
-        existing = env.get("PYTHONPATH")
+        env = {}
+        repo_str = os.pathsep.join((str(self.repo_path), str(_REPO_ROOT)))
+        existing = os.environ.get("PYTHONPATH")
         env["PYTHONPATH"] = repo_str if not existing else f"{repo_str}{os.pathsep}{existing}"
         if self.opendde_root_dir is not None:
             env["OPENDDE_ROOT_DIR"] = str(self.opendde_root_dir)
@@ -372,50 +381,31 @@ class OpenDDERunner:
         cmd = [
             self.python_bin,
             "-m",
-            "runner.batch_inference",
+            "astrolabe.evaluators.wrappers.opendde_daemon",
             "pred",
             "-i",
             str(input_json),
             "-o",
             str(out_dir),
-            "-n",
-            self.model_name,
-            "--cycle",
-            str(self.num_cycles),
-            "--step",
-            str(self.num_steps),
-            "--sample",
-            str(self.num_samples),
-            "--dtype",
-            self.dtype,
-            "--use_msa",
-            _bool_cli(self.use_msa),
-            "--use_template",
-            _bool_cli(self.use_template),
-            "--use_rna_msa",
-            _bool_cli(self.use_rna_msa),
-            "--need_atom_confidence",
-            _bool_cli(self.need_atom_confidence),
-            "--trimul_kernel",
-            self.triangle_multiplicative,
-            "--triatt_kernel",
-            self.triangle_attention,
-            "--enable_cache",
-            _bool_cli(self.enable_cache),
-            "--enable_fusion",
-            _bool_cli(self.enable_fusion),
-            "--enable_tf32",
-            _bool_cli(self.enable_tf32),
-            "--deterministic",
-            _bool_cli(self.deterministic),
-            "--use_tfg_guidance",
-            _bool_cli(self.use_tfg_guidance),
-            "--foldcp_mode",
-            self.foldcp_mode,
-            "--foldcp_size_dp",
-            str(self.foldcp_size_dp),
-            "--foldcp_size_cp",
-            str(self.foldcp_size_cp),
+            "-n", self.model_name,
+            "--cycle", str(self.num_cycles),
+            "--step", str(self.num_steps),
+            "--sample", str(self.num_samples),
+            "--dtype", self.dtype,
+            "--use_msa", _bool_cli(self.use_msa),
+            "--use_template", _bool_cli(self.use_template),
+            "--use_rna_msa", _bool_cli(self.use_rna_msa),
+            "--need_atom_confidence", _bool_cli(self.need_atom_confidence),
+            "--trimul_kernel", self.triangle_multiplicative,
+            "--triatt_kernel", self.triangle_attention,
+            "--enable_cache", _bool_cli(self.enable_cache),
+            "--enable_fusion", _bool_cli(self.enable_fusion),
+            "--enable_tf32", _bool_cli(self.enable_tf32),
+            "--deterministic", _bool_cli(self.deterministic),
+            "--use_tfg_guidance", _bool_cli(self.use_tfg_guidance),
+            "--foldcp_mode", self.foldcp_mode,
+            "--foldcp_size_dp", str(self.foldcp_size_dp),
+            "--foldcp_size_cp", str(self.foldcp_size_cp),
         ]
         optional = {
             "--load_checkpoint_path": self.load_checkpoint_path,
@@ -429,7 +419,7 @@ class OpenDDERunner:
             "--ntrna_database_path": self.ntrna_database_path,
             "--rfam_database_path": self.rfam_database_path,
             "--rna_central_database_path": self.rna_central_database_path,
-            "--nhmmer_n_cpu": None if self.nhmmer_n_cpu is None else str(self.nhmmer_n_cpu),
+            "--nhmmer_n_cpu": self.nhmmer_n_cpu,
             "--foldcp_devices": self.foldcp_devices or None,
             "--foldcp_metrics_jsonl": self.foldcp_metrics_jsonl or None,
         }
@@ -438,17 +428,49 @@ class OpenDDERunner:
                 cmd.extend([flag, str(value)])
         return cmd
 
-    def run_inference(self, *, input_json: Path, out_dir: Path) -> None:
+    def run_inference(self, *, input_json: Path, out_dir: Path) -> Path:
         if not self.repo_path.exists():
             raise FileNotFoundError(
                 f"Vendored OpenDDE repo not found: {self.repo_path}. Initialize vendor/opendde."
             )
+        if self.execution_mode not in {"daemon", "subprocess"}:
+            raise ValueError(
+                "OpenDDE execution_mode must be 'daemon' or 'subprocess', "
+                f"got {self.execution_mode!r}."
+            )
         out_dir.mkdir(parents=True, exist_ok=True)
+        out_dir = Path(tempfile.mkdtemp(prefix="request-", dir=out_dir))
+        if self.execution_mode == "subprocess":
+            self._run_subprocess(input_json=input_json, out_dir=out_dir)
+            return out_dir
+        try:
+            self._request_daemon(input_json=input_json, out_dir=out_dir)
+        except Exception as exc:
+            (out_dir / "opendde.stderr.log").write_text(
+                f"{type(exc).__name__}: {exc}\n",
+                encoding="utf-8",
+            )
+            raise
+        (out_dir / "opendde.stdout.log").write_text(
+            "resident worker request completed\n",
+            encoding="utf-8",
+        )
+        (out_dir / "opendde.stderr.log").write_text("", encoding="utf-8")
+        return out_dir
+
+    def _run_subprocess(self, *, input_json: Path, out_dir: Path) -> None:
+        if os.environ.get("ASTROLABE_RESOURCE_SOCKET") and (
+            self.foldcp_size_cp > 1 or self.foldcp_size_dp > 1 or self.foldcp_devices
+        ):
+            raise ValueError("OpenDDE FoldCP device routing requires explicit multi-device admission")
+        return self._run_subprocess_native(input_json=input_json, out_dir=out_dir)
+
+    def _run_subprocess_native(self, *, input_json: Path, out_dir: Path) -> None:
         cmd = self._command(input_json=input_json, out_dir=out_dir)
         result = subprocess.run(
             cmd,
             cwd=str(self.repo_path),
-            env=self._env(),
+            env={**os.environ, **self._env()},
             capture_output=True,
             text=True,
             timeout=self.timeout_seconds,
@@ -461,6 +483,90 @@ class OpenDDERunner:
                 f"OpenDDE subprocess failed with exit code {result.returncode}. "
                 f"See {out_dir / 'opendde.stderr.log'}.\n{tail}"
             )
+
+    def _daemon_settings(self) -> dict[str, object]:
+        return {
+            "repo_path": str(self.repo_path),
+            "opendde_root_dir": (
+                str(self.opendde_root_dir) if self.opendde_root_dir is not None else None
+            ),
+            "model_name": self.model_name,
+            "load_checkpoint_path": self.load_checkpoint_path,
+            "num_cycles": self.num_cycles,
+            "num_steps": self.num_steps,
+            "num_samples": self.num_samples,
+            "dtype": self.dtype,
+            "use_msa": self.use_msa,
+            "use_template": self.use_template,
+            "use_rna_msa": self.use_rna_msa,
+            "need_atom_confidence": self.need_atom_confidence,
+            "triangle_multiplicative": self.triangle_multiplicative,
+            "triangle_attention": self.triangle_attention,
+            "enable_cache": self.enable_cache,
+            "enable_fusion": self.enable_fusion,
+            "enable_tf32": self.enable_tf32,
+            "deterministic": self.deterministic,
+            "use_tfg_guidance": self.use_tfg_guidance,
+            "kalign_binary_path": self.kalign_binary_path,
+            "hmmsearch_binary_path": self.hmmsearch_binary_path,
+            "hmmbuild_binary_path": self.hmmbuild_binary_path,
+            "seqres_database_path": self.seqres_database_path,
+            "nhmmer_binary_path": self.nhmmer_binary_path,
+            "hmmalign_binary_path": self.hmmalign_binary_path,
+            "hmmbuild_rna_binary_path": self.hmmbuild_rna_binary_path,
+            "ntrna_database_path": self.ntrna_database_path,
+            "rfam_database_path": self.rfam_database_path,
+            "rna_central_database_path": self.rna_central_database_path,
+            "nhmmer_n_cpu": self.nhmmer_n_cpu,
+            "foldcp_mode": self.foldcp_mode,
+            "foldcp_size_dp": self.foldcp_size_dp,
+            "foldcp_size_cp": self.foldcp_size_cp,
+            "foldcp_devices": self.foldcp_devices,
+        }
+
+    def prepare_shared_model(self):
+        if self.execution_mode != "daemon":
+            return None
+        from astrolabe.model_execution import NativeModelClient
+
+        with self._daemon_lock:
+            settings = self._daemon_settings()
+            if self._owned_daemon is not None and settings != self._owned_settings:
+                raise ValueError("OpenDDE configuration changed after model initialization")
+            if self._owned_daemon is None:
+                self._owned_daemon = NativeModelClient(
+                    backend="opendde",
+                    factory="astrolabe.evaluators.wrappers.opendde_daemon:create_handler",
+                    settings=settings,
+                    python_bin=self.python_bin,
+                    cwd=str(self.repo_path),
+                    env=self._env(),
+                    startup_timeout=300,
+                    request_timeout=self.timeout_seconds,
+                    shutdown_timeout=30,
+                    max_pending=4,
+                    direct_payload=True,
+                )
+                self._owned_settings = settings
+            return self._owned_daemon
+
+    def _request_daemon(self, *, input_json: Path, out_dir: Path) -> None:
+        daemon = self.prepare_shared_model()
+        daemon.request(
+            {
+                "input_json": str(input_json.resolve()),
+                "out_dir": str(out_dir.resolve()),
+                "foldcp_metrics_jsonl": self.foldcp_metrics_jsonl,
+            }
+        )
+
+    def shutdown(self) -> None:
+        with self._daemon_lock:
+            daemon = self._owned_daemon
+            self._owned_daemon = None
+            self._owned_settings = None
+        if daemon is not None:
+            daemon.shutdown()
 
 
 def write_opendde_input(

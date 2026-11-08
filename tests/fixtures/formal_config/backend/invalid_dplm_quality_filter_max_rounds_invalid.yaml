@@ -1,0 +1,48 @@
+# Standalone startup-only fixture; no model is loaded.
+# config/base.yaml is an existing file placeholder for path-stat checks, not weights.
+task_name: backend_formal_fixture
+out_dir: /tmp/astrolabe-backend-formal-fixture
+steps: 1
+seed: 17
+types:
+  A: p
+seqs:
+  A: AAAA
+enable_pyrosetta: false
+skip_complex_poses: true
+evaluator:
+  evaluator_terms:
+    backend:
+      _type: sequence
+mutator:
+  mutator_terms:
+    mcmc:
+      _type: mcmc
+      mutation_method: frequency_adjusted
+      select_positions: random
+    candidate:
+      _type: dplm
+      python_bin: /usr/bin/true
+      repo_path: .
+      model_name: airkingbd/dplm_150m
+      sampling_strategy: gumbel_argmax
+      max_iter: 1
+      num_samples: 1
+      temperature: 1.0
+      daemon: true
+      response_cache: false
+      quality_filter_max_rounds: -1
+loss:
+  loss_terms: {}
+stages:
+  default:
+    evaluator: backend
+    oligo:
+    - A
+    mutators:
+    - mcmc
+    - candidate
+    mutation_num: 1
+    weighted_score_expression: '0'
+    acceptance_threshold: null
+    early_stopping: null

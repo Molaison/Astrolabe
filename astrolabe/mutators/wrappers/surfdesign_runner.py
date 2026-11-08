@@ -186,6 +186,7 @@ class SurfDesignRunner:
             proc.terminate()
             proc.wait()
             raise RuntimeError(f"Unexpected SurfDesign daemon startup response: {ready}")
+        self.model_metadata = ready.get("metadata", {"residency": "unknown"})
         return proc
 
     @staticmethod
@@ -256,6 +257,9 @@ class SurfDesignRunner:
             response = self._read_response(proc, self.request_timeout)
         if response.get("type") != "result" or response.get("id") != request_id:
             raise RuntimeError(f"Unexpected SurfDesign daemon response: {response}")
+        self.last_runtime = response.get("runtime")
+        if self.last_runtime is not None:
+            self.model_metadata["runtime_lifecycle"] = self.last_runtime["lifecycle"]
         return {
             "sampling_probs": self._validate_probabilities(response.get("probabilities")),
             "surfdesign_sequence": response.get("sequence"),

@@ -113,7 +113,7 @@ def test_initialize_pipeline_components_passes_enabled_aliases_to_construct_eval
         enabled_aliases=None,
     ):
         calls["enabled_aliases"] = enabled_aliases
-        return {}
+        return {alias: object() for alias in enabled_aliases}
 
     monkeypatch.setattr(run_mod, "construct_evaluators", _fake_construct_evaluators)
     monkeypatch.setattr(run_mod, "initialize_global_config", lambda _args: None)
@@ -154,4 +154,72 @@ def test_initialize_pipeline_components_passes_enabled_aliases_to_construct_eval
 
     run_mod.initialize_pipeline_components(args)
 
+    assert calls == {}
+    assert set(global_config.evaluators) == {"Dummy"}
+    assert calls == {}
+    assert global_config.stage_manager.current_evaluator is global_config.evaluators["Dummy"]
     assert calls["enabled_aliases"] == ["Dummy"]
+
+
+@pytest.mark.parametrize("enter_joint", [False, True])
+def test_lazy_evaluators_defer_future_models_and_close_only_live_instances(
+    tmp_path, monkeypatch, enter_joint
+) -> None:
+    import run as run_mod
+    from astrolabe.evaluators.sequence import SequenceEvaluator
+
+    global_config.reset()
+    constructed = []
+    closed = []
+
+    def construct(_config, _output, _oligos, *, enabled_aliases):
+        alias, = enabled_aliases
+        constructed.append(alias)
+        evaluator = SequenceEvaluator()
+        evaluator.shutdown = lambda: closed.append(alias)
+        return {alias: evaluator}
+
+    monkeypatch.setattr(run_mod, "construct_evaluators", construct)
+    config = OmegaConf.create({"evaluator_terms": {
+        "secondary": {"_type": "sequence"},
+        "joint": {"_type": "future_model", "weights": "${missing.weights}"},
+        "unused": {"_type": "future_model"},
+        "disabled": None,
+    }})
+    evaluators = run_mod.LazyEvaluatorMap(config, tmp_path, ["AA"])
+    global_config.init_const("evaluators", evaluators)
+
+    assert set(evaluators) == {"secondary", "joint", "unused"}
+    assert "joint" in evaluators
+    assert constructed == []
+    scores = evaluators["secondary"].evaluate({"AA": object()})
+    assert scores.names == ["AA"]
+    assert scores.plddt == {}
+    assert scores.iptm == {}
+    assert scores.complex_paths == {}
+    assert scores.complex_poses is None
+    assert constructed == ["secondary"]
+    if enter_joint:
+        assert evaluators["joint"] is evaluators["joint"]
+        assert constructed == ["secondary", "joint"]
+    run_mod._shutdown_pipeline_resources()
+    assert closed == constructed
+    assert "unused" not in constructed
+
+
+def test_af3_future_stage_does_not_require_initial_af3_token_setup() -> None:
+    import run as run_mod
+
+    secondary = types.SimpleNamespace(evaluator="secondary")
+    joint = types.SimpleNamespace(evaluator="joint")
+    stages = types.SimpleNamespace(
+        default_setting=secondary,
+        current_setting=secondary,
+        stage_args={"default": secondary, "joint": joint},
+    )
+    args = types.SimpleNamespace(evaluator={"evaluator_terms": {
+        "secondary": {"_type": "sequence"},
+        "joint": {"_type": "alphafold3"},
+    }})
+    assert run_mod._uses_alphafold3_evaluator(args, stages) is True
+    assert run_mod._uses_alphafold3_evaluator(args, stages, current_only=True) is False

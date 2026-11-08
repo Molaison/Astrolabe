@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 
 from types import SimpleNamespace
 
@@ -16,25 +17,35 @@ from astrolabe.evaluators.utils import construct_evaluators
 
 
 def test_construct_evaluators_merges_esmfold_base_and_term_defaults(tmp_path: Path) -> None:
+    model_path = tmp_path / "base_model.pt"
+    model_path.touch()
     class _EvalConf:
-        esmfold = {"model_name": "/tmp/base_model.pt", "device": "cpu"}
+        esmfold = {
+            "model_name": str(model_path),
+            "device": "cpu",
+            "execution_mode": "in_process",
+        }
         evaluator_terms = {"esmfold": {"_type": "ESMFold", "device": "cuda"}}
 
     evaluators = construct_evaluators(_EvalConf(), raw_model_results_dir=tmp_path)
     evaluator = evaluators["esmfold"]
     assert isinstance(evaluator, ESMFoldEvaluator)
-    assert evaluator._model_name == "/tmp/base_model.pt"
+    assert evaluator._model_name == str(model_path)
     assert evaluator._device == "cuda"
 
 
 def test_construct_evaluators_merges_esmfold2_base_and_term_defaults(tmp_path: Path) -> None:
+    esm_repo = tmp_path / "esm"
+    transformers_repo = tmp_path / "transformers"
+    esm_repo.mkdir()
+    transformers_repo.mkdir()
     class _EvalConf:
         esmfold = {"model_name": "/tmp/esmfold_v1.pt", "device": "cpu"}
         esmfold2 = {
             "model_name": "biohub/ESMFold2-Fast",
-            "python_bin": "/tmp/esmfold2/bin/python",
-            "esm_repo_path": "/tmp/biohub_esm",
-            "transformers_repo_path": "/tmp/biohub_transformers",
+            "python_bin": sys.executable,
+            "esm_repo_path": str(esm_repo),
+            "transformers_repo_path": str(transformers_repo),
             "device": "cpu",
         }
         evaluator_terms = {"esmfold2": {"_type": "esmfold2", "device": "cuda"}}
@@ -44,9 +55,9 @@ def test_construct_evaluators_merges_esmfold2_base_and_term_defaults(tmp_path: P
     assert isinstance(evaluator, ESMFold2Evaluator)
     assert evaluator._model_name == "biohub/ESMFold2-Fast"
     assert evaluator._device == "cuda"
-    assert evaluator.runner.python_bin == "/tmp/esmfold2/bin/python"
-    assert evaluator.runner.esm_repo_path == "/tmp/biohub_esm"
-    assert evaluator.runner.transformers_repo_path == "/tmp/biohub_transformers"
+    assert evaluator.runner.python_bin == sys.executable
+    assert evaluator.runner.esm_repo_path == str(esm_repo)
+    assert evaluator.runner.transformers_repo_path == str(transformers_repo)
 
 
 def test_base_config_declares_esmfold2_defaults() -> None:

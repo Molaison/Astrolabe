@@ -4,6 +4,7 @@ import os
 import shutil
 from collections import defaultdict
 from pathlib import Path
+from threading import RLock
 
 import numpy as np
 import torch
@@ -12,7 +13,8 @@ from astrolabe.core import global_config
 from astrolabe.core.cyclization import flatten_cyclic_relative_patches
 from astrolabe.core.folding_input import ProteinChain
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.structure_output import project_structure, structure_directory
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.protenix import (
     protenix_from_dict_to_feature,
     from_af3_to_protenix,
@@ -21,6 +23,8 @@ from astrolabe.evaluators.wrappers.protenix import (
 
 
 class ProtenixEvaluator(Evaluator):
+    _staged_evaluation = True
+
     _SUMMARY_VECTOR_FIELDS = (
         "chain_ptm",
         "chain_iptm",
@@ -38,6 +42,21 @@ class ProtenixEvaluator(Evaluator):
     def __init__(self, model_runner: "ProtenixRunner", *, use_constraints: bool = True):
         self.model_runner = model_runner
         self.use_constraints = bool(use_constraints)
+        self._evaluation_lock = RLock()
+        self._prediction_kernel = None
+        dump_dir = getattr(model_runner.configs, "dump_dir", None)
+        self.output_dir = Path(dump_dir) if dump_dir is not None else None
+
+    def shutdown(self) -> None:
+        with self._evaluation_lock:
+            if self._prediction_kernel is not None:
+                self._prediction_kernel.close()
+                self._prediction_kernel = None
+            shutdown_model_handles(self.model_runner)
+
+    def evaluate(self, inputs=None, runtime_config=None):
+        with self._evaluation_lock:
+            return super().evaluate(inputs, runtime_config)
 
     @classmethod
     def _normalize_summary_value(cls, value, *, field_name: str) -> np.ndarray:
@@ -168,27 +187,55 @@ class ProtenixEvaluator(Evaluator):
         return result
 
     def run_function(self, input_feat):
+        with self._evaluation_lock:
+            return self._run_predictions(input_feat)
+
+    def _run_predictions(self, input_feat):
         result = {}
         step = int(getattr(global_config, "step", 0) or 0)
         dataset_name = f"step_{step:03d}"
         for oligo_name, cplx_input in input_feat.items():
             data, atom_array, data_error_message = cplx_input
+            atom_to_residue = data["input_feature_dict"]["atom_to_token_idx"]
             new_configs = update_inference_configs(
                 self.model_runner.configs, data["N_token"].item()
             )
-            self.model_runner.update_model_configs(new_configs)
-            prediction = self.model_runner.predict(data)
-            self.model_runner.dumper.dump(
-                dataset_name=dataset_name,
-                pdb_id=oligo_name,
-                seed=self.model_runner.configs.seed,
-                pred_dict=prediction,
-                atom_array=atom_array,
-                entity_poly_type=data["entity_poly_type"],
-            )
-            prediction["atom_to_residue"] = data["input_feature_dict"][
-                "atom_to_token_idx"
-            ]
+            if self.output_dir is not None:
+                new_configs.dump_dir = str(self.output_dir)
+            if hasattr(self.model_runner, "predict_and_dump"):
+                self.model_runner.update_model_configs(new_configs)
+                prediction = self.model_runner.predict_and_dump(
+                    data,
+                    atom_array=atom_array,
+                    dataset_name=dataset_name,
+                    pdb_id=oligo_name,
+                    seed=self.model_runner.configs.seed,
+                    entity_poly_type=data["entity_poly_type"],
+                )
+            else:
+                if self._prediction_kernel is None:
+                    from astrolabe.evaluators.protenix_stages import evaluator_stages
+                    from astrolabe.evaluators.runtime_stages import DirectKernel
+
+                    metadata = {
+                        "backend": "protenix", "residency": "resident_model",
+                        "precision": str(self.model_runner.configs.dtype),
+                        "device": str(self.model_runner.device), "weights_loaded": True,
+                    }
+                    self._prediction_kernel = DirectKernel(
+                        {}, lambda _: (evaluator_stages(self.model_runner), metadata),
+                        torch_device=str(self.model_runner.device), lifecycle=metadata,
+                    )
+                prediction = self._prediction_kernel(dict(
+                    configs=new_configs,
+                    data=data,
+                    dataset_name=dataset_name,
+                    pdb_id=oligo_name,
+                    seed=self.model_runner.configs.seed,
+                    atom_array=atom_array,
+                    entity_poly_type=data["entity_poly_type"],
+                ))
+            prediction["atom_to_residue"] = atom_to_residue
             result[oligo_name] = prediction
 
         return result
@@ -206,8 +253,7 @@ class ProtenixEvaluator(Evaluator):
         per_proto_plddt = defaultdict(list)
         step = int(getattr(global_config, "step", 0) or 0)
         dataset_name = f"step_{step:03d}"
-        structures_dir = global_config.out_dir / "structures"
-        structures_dir.mkdir(parents=True, exist_ok=True)
+        structures_dir = structure_directory(global_config.out_dir, getattr(self, "alias", None))
         soft_select_candidates = self._structure_start_soft_select_enabled()
         candidate_payloads: dict[int, dict[str, dict]] = defaultdict(
             lambda: {
@@ -263,13 +309,17 @@ class ProtenixEvaluator(Evaluator):
                 sample_iptm,
                 sample_chain_pair_scores,
                 per_residue_plddt,
-                sample_data["token_pair_pae"],
-                sample_data["token_pair_pde"],
+                self._normalize_summary_value(
+                    sample_data["token_pair_pae"], field_name="token_pair_pae"
+                ),
+                self._normalize_summary_value(
+                    sample_data["token_pair_pde"], field_name="token_pair_pde"
+                ),
             )
 
         for oligo_name, prediction in output.items():
             seed = self.model_runner.configs.seed
-            dump_dir = Path(self.model_runner.configs.dump_dir)
+            dump_dir = self.output_dir or Path(self.model_runner.configs.dump_dir)
             jobname = f"step_{step:03d}_{oligo_name}"
             raw_cif = self._find_raw_prediction_cif(
                 dump_dir=dump_dir,
@@ -285,8 +335,11 @@ class ProtenixEvaluator(Evaluator):
                         f"Protenix prediction CIF not found under {dump_dir} for {oligo_name}"
                     )
                 shutil.copy(str(raw_cif), str(out_cif))
+                project_structure(out_cif, global_config.out_dir, getattr(self, "alias", None))
                 complex_paths[oligo_name] = out_cif
             except Exception:
+                if getattr(self, "alias", None) is not None:
+                    raise
                 if raw_cif is not None and raw_cif.exists():
                     complex_paths[oligo_name] = raw_cif
 
@@ -342,6 +395,7 @@ class ProtenixEvaluator(Evaluator):
                 sample_jobname = f"{jobname}_candidate_{sample_idx:03d}"
                 sample_path = structures_dir / f"{sample_jobname}_model.cif"
                 shutil.copy(str(raw_sample_cif), str(sample_path))
+                project_structure(sample_path, global_config.out_dir, getattr(self, "alias", None))
                 (
                     sample_ptm,
                     sample_iptm,

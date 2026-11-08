@@ -6,7 +6,10 @@ import pathlib
 import re
 import subprocess
 import sys
+import threading
 from typing import Dict, List, Sequence
+
+from astrolabe.mutators.runtime_stages import guarded_device
 
 import numpy as np
 
@@ -29,8 +32,25 @@ class NAMPNNRunner:
         self.parse_na_only = int(self._get("parse_na_only", 0))
         self.na_shared_tokens = int(self._get("na_shared_tokens", 0))
         self.output_pdbs = int(self._get("output_pdbs", 0))
+        self.seed = int(self._get("seed", 0))
         self.job_name = self._get("job_name")
         self.extra_args = dict(self._get("extra_args", {}) or {})
+        self.execution_mode = str(self._get("execution_mode", "daemon")).strip().lower()
+        if self.execution_mode not in {"daemon", "subprocess"}:
+            raise ValueError(
+                "NAMPNN execution_mode must be 'daemon' or 'subprocess', "
+                f"got {self.execution_mode!r}."
+            )
+        self.startup_timeout = float(self._get("startup_timeout", 300))
+        raw_request_timeout = self._get("request_timeout")
+        self.request_timeout = (
+            None if raw_request_timeout is None else float(raw_request_timeout)
+        )
+        self.shutdown_timeout = float(self._get("shutdown_timeout", 30))
+        self.max_pending = int(self._get("max_pending", 4))
+        self.lifecycle = {"backend": "na_mpnn", "residency": "resident_model" if self.execution_mode == "daemon" else "one_shot", "device": "unknown"}
+        self._owned_daemon = None
+        self._daemon_lock = threading.Lock()
         self.output_root = pathlib.Path(output_root).expanduser().resolve()
         self.output_root.mkdir(parents=True, exist_ok=True)
 
@@ -50,6 +70,35 @@ class NAMPNNRunner:
         job_dir = self.output_root / self._safe_name(job_name)
         job_dir.mkdir(parents=True, exist_ok=True)
 
+        payload = {
+            "structure_path": str(structure_path),
+            "job_dir": str(job_dir),
+            "job_name": self._safe_name(job_name),
+            "chains_to_design": chains_to_design,
+            "fixed_residues": fixed_residues,
+            "parse_these_chains_only": parse_these_chains_only,
+            "seed": int(self.extra_args.get("seed", self.seed)),
+            "extra_args": dict(self.extra_args),
+        }
+        logger.info("Running NA-MPNN design for %s", structure_path.name)
+        if self.execution_mode == "subprocess":
+            self._run_subprocess(payload)
+        else:
+            self._request_daemon(payload)
+
+        expected_fasta = job_dir / "seqs" / f"{self._structure_basename(structure_path)}.fa"
+        fasta_files = [expected_fasta]
+        if not expected_fasta.exists():
+            raise RuntimeError(f"NA-MPNN did not produce expected FASTA output: {expected_fasta}.")
+
+        best_entry, best_fasta_path = self._select_best_entry(fasta_files)
+        best_entry["job_dir"] = job_dir
+        best_entry["fasta_path"] = best_fasta_path
+        best_entry["probabilities"] = self._load_specificity_matrix(job_dir, structure_path)
+        return best_entry
+
+    @guarded_device("na_mpnn")
+    def _run_subprocess(self, payload) -> None:
         cmd = [
             self.python,
             str(self.repo_path / "inference" / "run.py"),
@@ -58,9 +107,9 @@ class NAMPNNRunner:
             "--model_type",
             "na_mpnn",
             "--pdb_path",
-            str(structure_path),
+            payload["structure_path"],
             "--out_folder",
-            str(job_dir),
+            payload["job_dir"],
             "--checkpoint_na_mpnn",
             str(self.checkpoint),
             "--temperature",
@@ -77,34 +126,30 @@ class NAMPNNRunner:
             str(self.na_shared_tokens),
             "--output_pdbs",
             str(self.output_pdbs),
-            # Always output sequence + specificity when running as a mutator.
             "--output_sequences",
             "1",
             "--output_specificity",
             "1",
+            "--seed",
+            str(payload["seed"]),
         ]
-
+        chains_to_design = payload["chains_to_design"]
+        fixed_residues = payload["fixed_residues"]
+        parse_chains = payload["parse_these_chains_only"]
         if chains_to_design:
             cmd.extend(["--chains_to_design", self._normalize_chain_list(chains_to_design)])
         if fixed_residues:
             cmd.extend(["--fixed_residues", self._normalize_residue_list(fixed_residues)])
-        if parse_these_chains_only:
+        if parse_chains:
             cmd.extend(
-                [
-                    "--parse_these_chains_only",
-                    self._normalize_parse_chain_spec(parse_these_chains_only),
-                ]
+                ["--parse_these_chains_only", self._normalize_parse_chain_spec(parse_chains)]
             )
-
-        for key, value in self.extra_args.items():
+        for key, value in dict(payload.get("extra_args") or {}).items():
             if value is None:
                 continue
             key = str(key).strip().replace("_", "-")
-            if not key:
-                continue
-            cmd.extend([f"--{key}", str(value)])
-
-        logger.info("Running NA-MPNN design for %s", structure_path.name)
+            if key and key != "seed":
+                cmd.extend([f"--{key}", str(value)])
         subprocess.run(
             cmd,
             check=True,
@@ -112,16 +157,56 @@ class NAMPNNRunner:
             env=self._patched_env(),
         )
 
-        expected_fasta = job_dir / "seqs" / f"{self._structure_basename(structure_path)}.fa"
-        fasta_files = [expected_fasta]
-        if not expected_fasta.exists():
-            raise RuntimeError(f"NA-MPNN did not produce expected FASTA output: {expected_fasta}.")
+    def _daemon_settings(self) -> dict[str, object]:
+        return {
+            "repo_path": str(self.repo_path),
+            "checkpoint": str(self.checkpoint),
+            "temperature": self.temperature,
+            "batch_size": self.batch_size,
+            "number_of_batches": self.number_of_batches,
+            "design_na_only": self.design_na_only,
+            "parse_na_only": self.parse_na_only,
+            "na_shared_tokens": self.na_shared_tokens,
+            "output_pdbs": self.output_pdbs,
+            "seed": self.seed,
+            "extra_args": dict(self.extra_args),
+        }
 
-        best_entry, best_fasta_path = self._select_best_entry(fasta_files)
-        best_entry["job_dir"] = job_dir
-        best_entry["fasta_path"] = best_fasta_path
-        best_entry["probabilities"] = self._load_specificity_matrix(job_dir, structure_path)
-        return best_entry
+    def _request_daemon(self, payload) -> None:
+        from astrolabe.model_daemon import DaemonSpec, OwnedModelDaemon
+
+        with self._daemon_lock:
+            if self._owned_daemon is None:
+                spec = DaemonSpec(
+                    backend="na_mpnn",
+                    factory=(
+                        "astrolabe.mutators.wrappers.na_mpnn_daemon:create_handler"
+                    ),
+                    settings=self._daemon_settings(),
+                    python_bin=self.python,
+                    cwd=str(self.repo_path),
+                    env=self._patched_env(),
+                )
+                self._owned_daemon = OwnedModelDaemon(
+                    spec,
+                    startup_timeout=self.startup_timeout,
+                    request_timeout=self.request_timeout,
+                    shutdown_timeout=self.shutdown_timeout,
+                    max_pending=self.max_pending,
+                )
+            daemon = self._owned_daemon
+        response = daemon.request({**payload, "_runtime_report": True})
+        if isinstance(response, dict) and "metadata" in response:
+            self.model_metadata = response["metadata"]
+            self.last_runtime = response.get("runtime")
+            self.lifecycle = self.model_metadata["runtime_lifecycle"]
+
+    def shutdown(self) -> None:
+        with self._daemon_lock:
+            daemon = self._owned_daemon
+            self._owned_daemon = None
+        if daemon is not None:
+            daemon.shutdown()
 
     # ------------------------------------------------------------------ #
     # Internal helpers
@@ -165,8 +250,10 @@ class NAMPNNRunner:
     def _patched_env(self):
         env = os.environ.copy()
         pythonpath = env.get("PYTHONPATH", "")
-        repo_str = str(self.repo_path)
-        env["PYTHONPATH"] = f"{repo_str}:{pythonpath}" if pythonpath else repo_str
+        paths = [str(self.repo_path), str(self.repo_path / "inference")]
+        if pythonpath:
+            paths.append(pythonpath)
+        env["PYTHONPATH"] = os.pathsep.join(paths)
         return env
 
     @staticmethod

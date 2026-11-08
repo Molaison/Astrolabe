@@ -9,16 +9,19 @@ import random
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, Optional
+from omegaconf import OmegaConf
 
 from astrolabe.core import global_config
 from astrolabe.runtime_support import ResourceOwner
+from astrolabe.design.operations import OperationOwner
 from astrolabe.utils.log_events import event_span, log_event
+from astrolabe.component_config import merge_component_config
 
 
 logger = logging.getLogger(__name__)
 
 
-class StructureProcessorRegistry:
+class StructureProcessorRegistry(OperationOwner):
     """
     Registry for coordinate-processing implementations.
     Stable configuration identifiers select docking, alignment or rescue classes.
@@ -55,34 +58,36 @@ class StructureProcessorRegistry:
         return list(cls._registry.keys())
 
 
-def initialize_predockers(
-    predocker_args, *, resource_owner: ResourceOwner | None = None
-):
-    """Build predockers; a shared owner is closed if construction fails."""
-    predocker_terms = predocker_args.get("predocker_terms")
-    global_config.init_const("predockers", {})
+def initialize_predockers(predocker_args, *, resource_owner: ResourceOwner | None = None):
     owner = resource_owner if resource_owner is not None else ResourceOwner()
+    global_config.init_const("predockers", {})
     try:
-        for alias, config in predocker_terms.items():
-            predocker_class = StructureProcessorRegistry.get(config._type)
-            kwargs = {}
-            for default_key in _predocker_default_keys(str(config._type)):
-                kwargs.update(predocker_args.get(default_key, {}))
-            kwargs.update(config)
+        predocker_terms = predocker_args.get("predocker_terms") or {}
+        enabled = predocker_args.get("enabled_aliases")
+        if enabled is None:
+            enabled = list(predocker_terms)
+        planned = []
+        for alias in enabled:
+            config = predocker_terms.get(alias)
+            if config is None:
+                raise ValueError(f"Predocker alias {alias!r} is undefined or disabled")
+            kind = str(config.get("_type", ""))
+            predocker_class = StructureProcessorRegistry.get(kind)
+            merged = merge_component_config(predocker_args, _predocker_default_keys(kind), config)
+            planned.append((alias, predocker_class, OmegaConf.to_container(merged, resolve=True)))
+        for alias, predocker_class, kwargs in planned:
             predocker = predocker_class(**kwargs)
             owner.add(predocker, f"predockers.{alias}")
             setattr(predocker, "alias", str(alias))
             global_config.predockers[alias] = predocker
     except BaseException:
         global_config.predockers.clear()
-        # ResourceOwner marks an object closed before calling it. If even a
-        # BaseException escapes a closer, retry to finish the other objects.
         while True:
             try:
                 owner.close()
                 break
             except BaseException:
-                logging.exception("Failed to clean up predockers after construction error")
+                logging.exception("Failed to clean up resources after construction error")
         raise
 
 
@@ -248,6 +253,12 @@ class StructureProcessor(ABC):
         self.debug_dir = Path(self.out_dir) / "predocker"
         self.debug_dir.mkdir(parents=True, exist_ok=True)
         logging.info(f"Debug mode enabled. Outputs will be saved to: {self.debug_dir}")
+
+    def shutdown(self) -> None:
+        runner = getattr(self, "runner", None)
+        shutdown = getattr(runner, "shutdown", None)
+        if callable(shutdown):
+            shutdown()
 
     def _generate_cache_key(self, input_file) -> str:
         """

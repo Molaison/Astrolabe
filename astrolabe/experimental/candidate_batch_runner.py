@@ -5,9 +5,11 @@ import csv
 import hashlib
 import json
 import logging
+import os
 import subprocess
 import sys
-from dataclasses import dataclass, field
+import time
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Callable
 
@@ -23,20 +25,25 @@ from astrolabe.experimental.candidate_batch_policy import (
     CandidateTask,
     select_highest_score_candidate,
 )
+from astrolabe.design.collection_search import (
+    CollectionAction,
+    CollectionEvent,
+    CollectionPolicy,
+    CollectionRun,
+    CollectionState,
+    CollectionTrial,
+)
+from astrolabe.design.collection import Job
+from astrolabe.design.collection_receipts import (
+    DurableCollectionTrial,
+    RehydratedCollection,
+)
+from astrolabe.design.runtime import ContractConflict, OutcomeUnknown, Runtime
+from astrolabe.design.store import DataclassCodec, JSONCodec
+from astrolabe.design.types import Blob
 
 
-@dataclass(frozen=True)
-class CandidateBatchRun:
-    collections: tuple[CandidateCollection, ...]
-    decision_collection_count: int
-
-    @property
-    def decision_collections(self) -> tuple[CandidateCollection, ...]:
-        return self.collections[: self.decision_collection_count]
-
-    @property
-    def drain_collections(self) -> tuple[CandidateCollection, ...]:
-        return self.collections[self.decision_collection_count :]
+CandidateBatchRun = CollectionRun
 
 
 class CandidateBatchConfigError(ValueError):
@@ -56,6 +63,7 @@ class ProcessCandidateRunnerConfig:
     candidate_steps: int = 2
     candidate_timeout_s: float | None = None
     dry_run: bool = False
+    resume: bool = False
 
 
 @dataclass(frozen=True)
@@ -84,8 +92,277 @@ class ProcessCandidateScore:
     sequences: dict[str, str]
 
 
+CHILD_RECEIPT_SCHEMA = "astrolabe.process-candidate-receipt/v1"
+COLLECTION_RECEIPT_SCHEMA = "astrolabe.process-collection-receipt/v1"
+
+
+@dataclass(frozen=True)
+class CandidateExecutionSpec:
+    job_id: str
+    generation: int
+    attempt: int
+    actual_seed: int
+    task_name: str
+    out_dir: str
+    work_root: str
+    config_yaml: str
+    stdout_log: str
+    stderr_log: str
+    receipt_path: str
+    sequences: dict[str, str]
+    final_config: dict[str, Any]
+    scientific_config: dict[str, Any]
+    source_manifest: tuple[dict[str, Any], ...]
+    input_assets_manifest: dict[str, Any]
+    content_id: str
+
+
+@dataclass(frozen=True)
+class ProcessCandidateReceipt:
+    schema: str
+    status: str
+    job_id: str
+    generation: int
+    attempt: int
+    actual_seed: int
+    content_id: str
+    task_name: str
+    config_yaml: str
+    out_dir: str
+    stdout_log: str
+    stderr_log: str
+    sequences: dict[str, str]
+    final_config: dict[str, Any]
+    scientific_config: dict[str, Any]
+    source_manifest: tuple[dict[str, Any], ...]
+    input_assets_manifest: dict[str, Any]
+    issued_process: dict[str, Any] | None = None
+    cli_provenance: dict[str, Any] | None = None
+    output_manifest: tuple[dict[str, Any], ...] = ()
+    result: CandidateResult | None = None
+    error: str | None = None
+
+
+@dataclass(frozen=True)
+class ProcessCollectionReceipt:
+    schema: str
+    action_id: str
+    collection_index: int
+    trigger: str
+    ordered_job_ids: tuple[str, ...]
+    selected_job_id: str | None
+    consumed_job_ids: tuple[str, ...]
+    carryforward_job_ids: tuple[str, ...]
+    rng_before: Blob
+    rng_after: Blob
+    collection: CandidateCollection
+
+
+_PAYLOAD_CODEC = DataclassCodec(
+    ProcessCandidatePayload,
+    "astrolabe.process-candidate-payload/v1",
+)
+_RECEIPT_CODEC = DataclassCodec(
+    ProcessCandidateReceipt,
+    "astrolabe.process-candidate-receipt/v1",
+    nested_types=(CandidateResult, CandidateTask, ProcessCandidatePayload),
+)
+_COLLECTION_CODEC = DataclassCodec(
+    ProcessCollectionReceipt,
+    "astrolabe.process-collection-receipt/v1",
+    nested_types=(
+        CollectionAction,
+        CandidateCollection,
+        CandidateResult,
+        CandidateTask,
+        ProcessCandidatePayload,
+    ),
+)
+_STATE_CODEC = DataclassCodec(
+    CollectionState,
+    "astrolabe.collection-state/v1",
+    nested_types=(
+        CandidateCollection,
+        CandidateResult,
+        CandidateTask,
+        ProcessCandidatePayload,
+    ),
+)
+_ACTION_CODEC = DataclassCodec(
+    CollectionAction,
+    "astrolabe.collection-action/v1",
+    nested_types=(CandidateTask, ProcessCandidatePayload),
+)
+_EVENT_CODEC = DataclassCodec(
+    CollectionEvent,
+    "astrolabe.collection-event/v1",
+    nested_types=(
+        CollectionAction,
+        CandidateCollection,
+        CandidateResult,
+        CandidateTask,
+        ProcessCandidatePayload,
+    ),
+)
+_JSON_CODEC = JSONCodec("astrolabe.process-candidate-run-identity/v1")
+
+
+def _write_candidate_receipt(path: Path, receipt: ProcessCandidateReceipt) -> None:
+    encoded = _RECEIPT_CODEC.encode(receipt)
+    _write_json_atomic(path, json.loads(encoded.decode("utf-8")))
+
+
+def _read_candidate_receipt(path: Path) -> ProcessCandidateReceipt:
+    return _RECEIPT_CODEC.decode(path.read_bytes())
+
+
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[2]
+
+
+def _sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(8 * 1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _digest(value: Any) -> str:
+    payload = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(payload).hexdigest()
+
+
+def _write_json_atomic(path: Path, value: dict[str, Any]) -> None:
+    """Durably replace one JSON receipt before its state is acknowledged."""
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(
+        f".{path.name}.{os.getpid()}.{time.monotonic_ns()}.tmp"
+    )
+    descriptor = os.open(
+        temporary,
+        os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+        0o600,
+    )
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(
+                value,
+                handle,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=False,
+                allow_nan=False,
+            )
+            handle.write("\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        directory = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    finally:
+        try:
+            temporary.unlink()
+        except FileNotFoundError:
+            pass
+
+
+def _process_identity(pid: int | None = None) -> dict[str, Any] | None:
+    target = os.getpid() if pid is None else int(pid)
+    proc = Path("/proc") / str(target)
+    try:
+        boot_id = Path("/proc/sys/kernel/random/boot_id").read_text(
+            encoding="utf-8"
+        ).strip()
+        stat_fields = (proc / "stat").read_text(encoding="utf-8").split()
+        start_ticks = int(stat_fields[21])
+    except (FileNotFoundError, IndexError, OSError, ValueError):
+        return None
+    return {
+        "pid": target,
+        "boot_id": boot_id,
+        "start_ticks": start_ticks,
+    }
+
+
+def _owned_process_alive(identity: dict[str, Any] | None) -> bool:
+    if not isinstance(identity, dict):
+        return False
+    current = _process_identity(identity.get("pid"))
+    return current == identity
+
+
+def _source_manifest() -> tuple[dict[str, Any], ...]:
+    root = _repo_root()
+    paths = set((root / "astrolabe").rglob("*.py"))
+    paths.update({root / "run.py", root / "scripts" / "astrolabe"})
+    files: list[dict[str, Any]] = []
+    for path in sorted(item for item in paths if item.is_file()):
+        files.append(
+            {
+                "path": path.relative_to(root).as_posix(),
+                "sha256": _sha256_file(path),
+                "size_bytes": path.stat().st_size,
+            }
+        )
+    return tuple(files)
+
+
+def _asset_manifest(cfg: Any) -> dict[str, Any]:
+    from astrolabe.design.configured_refinement import (
+        _asset_manifest_record,
+        _selected_asset_manifest,
+    )
+
+    record = _asset_manifest_record(_selected_asset_manifest(cfg))
+    return dict(record)
+
+
+def _scientific_config(cfg: Any) -> dict[str, Any]:
+    from astrolabe.design.configured_refinement import (
+        _scientific_config_payload,
+    )
+
+    return dict(_scientific_config_payload(cfg))
+
+
+def _candidate_content_id(
+    *,
+    job_id: str,
+    generation: int,
+    attempt: int,
+    actual_seed: int,
+    task_name: str,
+    out_dir: str,
+    final_config: dict[str, Any],
+    scientific_config: dict[str, Any],
+    source_manifest: tuple[dict[str, Any], ...],
+    input_assets_manifest: dict[str, Any],
+) -> str:
+    return _digest(
+        {
+            "job_id": job_id,
+            "generation": int(generation),
+            "attempt": int(attempt),
+            "actual_seed": int(actual_seed),
+            "task_name": task_name,
+            "out_dir": out_dir,
+            "final_config": final_config,
+            "scientific_config": scientific_config,
+            "source_manifest": list(source_manifest),
+            "input_assets_manifest": input_assets_manifest,
+        }
+    )
 
 
 def _load_base_cfg(path: Path) -> Any:
@@ -97,31 +374,6 @@ def _load_base_cfg(path: Path) -> Any:
         raise CandidateBatchConfigError(
             f"failed to load candidate batch config {path}: {exc}"
         ) from exc
-
-
-def _write_candidate_cfg(
-    *,
-    base_cfg: Any,
-    path: Path,
-    task_name: str,
-    out_dir: Path,
-    steps: int,
-    seed: int,
-    sequences: dict[str, str],
-) -> None:
-    cfg = OmegaConf.create(OmegaConf.to_container(base_cfg, resolve=False))
-    with open_dict(cfg):
-        cfg.task_name = task_name
-        cfg.out_dir = str(out_dir)
-        cfg.steps = int(steps)
-        cfg.seed = int(seed)
-        if sequences:
-            if "seqs" not in cfg or cfg.seqs is None:
-                cfg.seqs = {}
-            for chain, sequence in sequences.items():
-                cfg.seqs[str(chain)] = str(sequence)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(OmegaConf.to_yaml(cfg, resolve=False), encoding="utf-8")
 
 
 def _find_scores_csv(out_dir: Path, task_name: str) -> Path:
@@ -165,7 +417,7 @@ def _extract_sequences(row: dict[str, str]) -> dict[str, str]:
 
 
 class CandidateDecisionRun:
-    """Own the candidate generation state for a multi-round decision run."""
+    """Compatibility adapter from candidate payloads to generic collection."""
 
     def __init__(
         self,
@@ -176,6 +428,9 @@ class CandidateDecisionRun:
         initial_sequences: dict[str, str] | None = None,
         selector: CandidateSelector | None = None,
         logger: logging.Logger | None = None,
+        runtime: Runtime | None = None,
+        receipts: ProcessCandidateReceipts | None = None,
+        resumed: bool = False,
     ) -> None:
         self.pool_config = pool_config
         self.worker = worker
@@ -185,61 +440,72 @@ class CandidateDecisionRun:
         self.next_candidate = 1
         self.selector = selector
         self.logger = logger
+        self.runtime = runtime
+        self.receipts = receipts
+        self.resumed = bool(resumed)
 
     def run(self) -> CandidateBatchRun:
-        collections: list[CandidateCollection] = []
-        with CandidatePoolScheduler(
-            self.pool_config,
-            self.worker,
+        from astrolabe.app import Astrolabe
+        from astrolabe.design.composition import ControlRun
+
+        policy = CollectionPolicy(
+            config=self.pool_config,
+            decision_rounds=self.decision_rounds,
+            initial_payload=dict(self.current_sequences),
             selector=self.selector,
-            logger=self.logger,
-        ) as scheduler:
-            scheduler.submit_generation(1, self._tasks_for_generation(1))
-            for generation in range(1, self.decision_rounds + 1):
-                collection = scheduler.collect_until_ready(target_generation=generation)
-                if collection is None:
-                    break
-                collections.append(collection)
-                self._adopt_selected_sequences(collection, generation=generation)
-                if generation < self.decision_rounds:
-                    scheduler.submit_generation(
-                        generation + 1,
-                        self._tasks_for_generation(generation + 1),
-                    )
-            decision_collection_count = len(collections)
-            collections.extend(scheduler.drain())
-        return CandidateBatchRun(
-            collections=tuple(collections),
-            decision_collection_count=decision_collection_count,
+            job_id_factory=lambda number: f"cand_{int(number):04d}",
+            payload_factory=lambda payload: {
+                "sequences": dict(payload or {})
+            },
+            adopt_selected=self._adopt_selected_payload,
         )
-
-    def _tasks_for_generation(self, generation: int) -> list[CandidateTask]:
-        tasks: list[CandidateTask] = []
-        for _ in range(self.num_candidates):
-            tasks.append(
-                CandidateTask(
-                    candidate_id=f"cand_{self.next_candidate:04d}",
-                    generation=int(generation),
-                    payload={"sequences": dict(self.current_sequences)},
-                )
+        if self.runtime is not None:
+            if self.receipts is None:
+                raise TypeError("Durable candidate collection requires receipts")
+            trial_context = DurableCollectionTrial(
+                runtime=self.runtime,
+                config=self.pool_config,
+                worker=self.worker,
+                selector=policy.selector,
+                receipts=self.receipts,
+                action_codec=_ACTION_CODEC,
+                result_codec=_EVENT_CODEC,
+                logger=self.logger,
+                resumed=self.resumed,
             )
-            self.next_candidate += 1
-        return tasks
-
-    def _adopt_selected_sequences(
-        self,
-        collection: CandidateCollection,
-        *,
-        generation: int,
-    ) -> None:
-        if collection.selected is None:
-            raise CandidateExecutionError(
-                "No successful candidate was available for decision "
-                f"round {generation}; failed={len(collection.failed)}"
+            control_runtime = self.runtime
+            state_codec = _STATE_CODEC
+            request_codec = _ACTION_CODEC
+            result_codec = _EVENT_CODEC
+        else:
+            trial_context = CollectionTrial(
+                config=self.pool_config,
+                worker=self.worker,
+                selector=policy.selector,
+                logger=self.logger,
             )
-        payload = collection.selected.payload
+            control_runtime = None
+            state_codec = None
+            request_codec = None
+            result_codec = None
+        with trial_context as trial:
+            control = ControlRun(
+                policy=policy,
+                trial=trial,
+                initial_state=policy.initial_state(),
+                runtime=control_runtime,
+                state_codec=state_codec,
+                request_codec=request_codec,
+                result_codec=result_codec,
+            )
+            return Astrolabe(control).run()
+
+    @staticmethod
+    def _adopt_selected_payload(current_payload, selected):
+        payload = selected.payload
         if isinstance(payload, ProcessCandidatePayload):
-            self.current_sequences = dict(payload.sequences)
+            return dict(payload.sequences)
+        return current_payload
 
 
 class ProcessCandidateOutputReader:
@@ -259,97 +525,625 @@ class ProcessCandidateWorker:
         self.config = config
         self.base_cfg = base_cfg
         self.output_reader = ProcessCandidateOutputReader(config.out_root)
+        self._source_manifest: tuple[dict[str, Any], ...] | None = None
+        self._input_assets_manifest: dict[str, Any] | None = None
 
-    def __call__(self, task: CandidateTask) -> CandidateResult:
+    def execution_spec(self, task: CandidateTask) -> CandidateExecutionSpec:
         payload = dict(task.payload or {})
         sequences = dict(payload.get("sequences") or {})
-        task_name = f"{self.config.config_yaml.stem}__g{task.generation:03d}__{task.candidate_id}"
+        task_name = (
+            f"{self.config.config_yaml.stem}__g{task.generation:03d}__"
+            f"{task.candidate_id}"
+        )
         work_root = self.config.out_root / "candidate_pool" / task.candidate_id
         cfg_path = work_root / "config.yaml"
         stdout_log = work_root / "stdout.log"
         stderr_log = work_root / "stderr.log"
+        receipt_path = work_root / "candidate_receipt.json"
         seed_base = int(getattr(self.base_cfg, "seed", 0) or 0)
-        seed = seed_base + _candidate_seed_offset(task.candidate_id)
-        _write_candidate_cfg(
-            base_cfg=self.base_cfg,
-            path=cfg_path,
-            task_name=task_name,
-            out_dir=self.config.out_root,
-            steps=self.config.candidate_steps,
-            seed=seed,
-            sequences=sequences,
+        actual_seed = seed_base + _candidate_seed_offset(task.candidate_id)
+        final_cfg = OmegaConf.create(
+            OmegaConf.to_container(self.base_cfg, resolve=False)
         )
-        payload_info = ProcessCandidatePayload(
-            config_yaml=str(cfg_path),
-            out_dir=str(self.config.out_root),
+        with open_dict(final_cfg):
+            final_cfg.task_name = task_name
+            final_cfg.out_dir = str(self.config.out_root)
+            final_cfg.steps = int(self.config.candidate_steps)
+            final_cfg.seed = int(actual_seed)
+            if sequences:
+                if "seqs" not in final_cfg or final_cfg.seqs is None:
+                    final_cfg.seqs = {}
+                for chain, sequence in sequences.items():
+                    final_cfg.seqs[str(chain)] = str(sequence)
+        final_config = OmegaConf.to_container(final_cfg, resolve=False)
+        if not isinstance(final_config, dict):
+            raise CandidateBatchConfigError("candidate config is not a mapping")
+        if self.config.dry_run:
+            self._source_manifest = self._source_manifest or ()
+            self._input_assets_manifest = (
+                self._input_assets_manifest
+                or {"schema": "astrolabe.process-candidate-dry-run/v1"}
+            )
+            scientific_config = final_config
+        else:
+            if self._source_manifest is None:
+                self._source_manifest = _source_manifest()
+            if self._input_assets_manifest is None:
+                self._input_assets_manifest = _asset_manifest(final_cfg)
+            scientific_config = _scientific_config(final_cfg)
+        content_id = _candidate_content_id(
+            job_id=task.job_id,
+            generation=int(task.generation),
+            attempt=1,
+            actual_seed=actual_seed,
             task_name=task_name,
+            out_dir=str(self.config.out_root),
+            final_config=final_config,
+            scientific_config=scientific_config,
+            source_manifest=self._source_manifest,
+            input_assets_manifest=self._input_assets_manifest,
+        )
+        return CandidateExecutionSpec(
+            job_id=task.job_id,
+            generation=int(task.generation),
+            attempt=1,
+            actual_seed=actual_seed,
+            task_name=task_name,
+            out_dir=str(self.config.out_root),
+            work_root=str(work_root),
+            config_yaml=str(cfg_path),
             stdout_log=str(stdout_log),
             stderr_log=str(stderr_log),
+            receipt_path=str(receipt_path),
             sequences=sequences,
+            final_config=final_config,
+            scientific_config=scientific_config,
+            source_manifest=self._source_manifest,
+            input_assets_manifest=self._input_assets_manifest,
+            content_id=content_id,
         )
+
+    def prepare(self, task: CandidateTask) -> ProcessCandidateReceipt:
+        spec = self.execution_spec(task)
+        path = Path(spec.receipt_path)
+        if path.is_file():
+            receipt = _read_candidate_receipt(path)
+            self._validate_receipt(task, spec, receipt)
+            config_path = Path(spec.config_yaml)
+            if receipt.status == "admitted" and not config_path.is_file():
+                final_cfg = OmegaConf.create(spec.final_config)
+                config_path.parent.mkdir(parents=True, exist_ok=True)
+                config_path.write_text(
+                    OmegaConf.to_yaml(final_cfg, resolve=False),
+                    encoding="utf-8",
+                )
+            return receipt
+        final_cfg = OmegaConf.create(spec.final_config)
+        Path(spec.config_yaml).parent.mkdir(parents=True, exist_ok=True)
+        Path(spec.config_yaml).write_text(
+            OmegaConf.to_yaml(final_cfg, resolve=False),
+            encoding="utf-8",
+        )
+        receipt = ProcessCandidateReceipt(
+            schema=CHILD_RECEIPT_SCHEMA,
+            status="admitted",
+            job_id=spec.job_id,
+            generation=spec.generation,
+            attempt=spec.attempt,
+            actual_seed=spec.actual_seed,
+            content_id=spec.content_id,
+            task_name=spec.task_name,
+            config_yaml=spec.config_yaml,
+            out_dir=spec.out_dir,
+            stdout_log=spec.stdout_log,
+            stderr_log=spec.stderr_log,
+            sequences=spec.sequences,
+            final_config=spec.final_config,
+            scientific_config=spec.scientific_config,
+            source_manifest=spec.source_manifest,
+            input_assets_manifest=spec.input_assets_manifest,
+        )
+        _write_candidate_receipt(path, receipt)
+        return receipt
+
+    def receipt(self, task: CandidateTask) -> ProcessCandidateReceipt | None:
+        receipt_path = (
+            self.config.out_root
+            / "candidate_pool"
+            / task.job_id
+            / "candidate_receipt.json"
+        )
+        return (
+            _read_candidate_receipt(receipt_path)
+            if receipt_path.is_file()
+            else None
+        )
+
+    @staticmethod
+    def _claim_attempt(receipt: ProcessCandidateReceipt) -> Path:
+        """Take the one exclusive outer claim before any wrapper is launched."""
+
+        work_root = Path(receipt.config_yaml).parent
+        path = work_root / f"candidate_claim_{receipt.attempt}.json"
+        claim = {
+            "schema": "astrolabe.process-candidate-claim/v1",
+            "job_id": receipt.job_id,
+            "generation": receipt.generation,
+            "attempt": receipt.attempt,
+            "actual_seed": receipt.actual_seed,
+            "content_id": receipt.content_id,
+            "claimant": _process_identity(),
+            "claimed_unix_s": time.time(),
+        }
+        try:
+            descriptor = os.open(
+                path,
+                os.O_WRONLY | os.O_CREAT | os.O_EXCL,
+                0o600,
+            )
+        except FileExistsError as exc:
+            raise OutcomeUnknown(
+                f"Candidate {receipt.job_id} attempt {receipt.attempt} "
+                "already has an exclusive outer claim"
+            ) from exc
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                json.dump(
+                    claim,
+                    handle,
+                    sort_keys=True,
+                    separators=(",", ":"),
+                    allow_nan=False,
+                )
+                handle.write("\n")
+                handle.flush()
+                os.fsync(handle.fileno())
+            directory = os.open(work_root, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        except BaseException:
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
+            raise
+        return path
+
+    def _validate_receipt(
+        self,
+        task: CandidateTask,
+        spec: CandidateExecutionSpec,
+        receipt: ProcessCandidateReceipt,
+    ) -> None:
+        if receipt.schema != CHILD_RECEIPT_SCHEMA:
+            raise ContractConflict("Unsupported candidate receipt schema")
+        if (
+            receipt.job_id != task.job_id
+            or receipt.generation != task.generation
+            or receipt.attempt != spec.attempt
+            or receipt.actual_seed != spec.actual_seed
+        ):
+            raise ContractConflict(
+                "Candidate receipt job, attempt or seed changed on resume"
+            )
+        if receipt.content_id != spec.content_id:
+            raise ContractConflict(
+                "Candidate config, source, weights or input assets changed "
+                f"at {spec.work_root}"
+            )
+        if (
+            receipt.final_config != spec.final_config
+            or receipt.scientific_config != spec.scientific_config
+            or receipt.source_manifest != spec.source_manifest
+            or receipt.input_assets_manifest != spec.input_assets_manifest
+        ):
+            raise ContractConflict(
+                "Candidate receipt content does not match its content identity"
+            )
+
+    def __call__(self, task: CandidateTask) -> CandidateResult:
         if self.config.dry_run:
+            spec = self.execution_spec(task)
+            config_path = Path(spec.config_yaml)
+            config_path.parent.mkdir(parents=True, exist_ok=True)
+            config_path.write_text(
+                OmegaConf.to_yaml(
+                    OmegaConf.create(spec.final_config),
+                    resolve=False,
+                ),
+                encoding="utf-8",
+            )
             return CandidateResult(
                 task=task,
                 status="completed",
                 score=0.0,
-                payload=payload_info,
+                payload=ProcessCandidatePayload(
+                    config_yaml=spec.config_yaml,
+                    out_dir=spec.out_dir,
+                    task_name=spec.task_name,
+                    stdout_log=spec.stdout_log,
+                    stderr_log=spec.stderr_log,
+                    sequences=spec.sequences,
+                ),
             )
-
-        work_root.mkdir(parents=True, exist_ok=True)
+        receipt = self.prepare(task)
+        path = Path(receipt.config_yaml).parent / "candidate_receipt.json"
+        if receipt.status == "completed":
+            if receipt.result is None:
+                raise ContractConflict("Completed candidate receipt has no result")
+            return receipt.result
+        if receipt.status == "failed":
+            if receipt.result is None:
+                raise ContractConflict("Failed candidate receipt has no result")
+            return receipt.result
+        if receipt.status in {"issued", "unknown"}:
+            raise OutcomeUnknown(
+                f"Candidate {task.job_id} has no terminal owner proof"
+            )
+        if receipt.status != "admitted":
+            raise ContractConflict(
+                f"Unknown candidate receipt status {receipt.status!r}"
+            )
+        self._claim_attempt(receipt)
+        wrapper_log = path.parent / "candidate_wrapper.stderr.log"
         cmd = [
+            sys.executable,
+            "-m",
+            "astrolabe.experimental.candidate_child",
+            "--receipt",
+            str(path),
+            "--runner",
             str(self.config.runner),
-            "run",
-            "--standalone",
-            str(cfg_path),
-            "--no-chdir",
+            "--timeout-s",
+            (
+                "none"
+                if self.config.candidate_timeout_s is None
+                else str(float(self.config.candidate_timeout_s))
+            ),
         ]
         try:
-            with stdout_log.open("w", encoding="utf-8") as stdout, stderr_log.open(
-                "w", encoding="utf-8"
-            ) as stderr:
+            with wrapper_log.open("w", encoding="utf-8") as stderr:
                 proc = subprocess.run(
                     cmd,
                     cwd=str(_repo_root()),
-                    stdout=stdout,
+                    stdout=subprocess.DEVNULL,
                     stderr=stderr,
                     text=True,
                     check=False,
-                    timeout=(
-                        None
-                        if self.config.candidate_timeout_s is None
-                        else float(self.config.candidate_timeout_s)
-                    ),
+                    start_new_session=True,
                 )
-            if proc.returncode != 0:
-                return CandidateResult(
+        except OSError as exc:
+            failed = replace(
+                receipt,
+                status="failed",
+                error=f"candidate wrapper launch failed: {exc}",
+                result=CandidateResult(
+                    task=task,
+                    status="failed",
+                    error=f"candidate wrapper launch failed: {exc}",
+                    payload=ProcessCandidatePayload(
+                        config_yaml=receipt.config_yaml,
+                        out_dir=receipt.out_dir,
+                        task_name=receipt.task_name,
+                        stdout_log=receipt.stdout_log,
+                        stderr_log=receipt.stderr_log,
+                        sequences=receipt.sequences,
+                    ),
+                ),
+            )
+            _write_candidate_receipt(path, failed)
+            return failed.result
+        terminal = _read_candidate_receipt(path)
+        self._validate_terminal_receipt(task, receipt, terminal)
+        if terminal.status == "completed":
+            if terminal.result is None:
+                raise ContractConflict("Candidate wrapper completed without result")
+            return terminal.result
+        if terminal.status == "failed":
+            if terminal.result is None:
+                raise ContractConflict("Candidate wrapper failed without result")
+            return terminal.result
+        if terminal.status == "unknown":
+            raise OutcomeUnknown(
+                terminal.error
+                or f"Candidate {task.job_id} has uncertain terminal outcome"
+            )
+        if proc.returncode != 0:
+            failed = replace(
+                receipt,
+                status="failed",
+                error=(
+                    "candidate wrapper exited before issue "
+                    f"rc={proc.returncode}; stderr={wrapper_log}"
+                ),
+                result=CandidateResult(
                     task=task,
                     status="failed",
                     error=(
-                        f"candidate command failed rc={proc.returncode}; "
-                        f"stderr={stderr_log}"
+                        "candidate wrapper exited before issue "
+                        f"rc={proc.returncode}; stderr={wrapper_log}"
                     ),
-                    payload=payload_info,
-                )
-            score = self.output_reader.read_best_score(task_name)
-        except Exception as exc:
-            return CandidateResult(
-                task=task,
-                status="failed",
-                error=str(exc) or exc.__class__.__name__,
-                payload=payload_info,
+                    payload=ProcessCandidatePayload(
+                        config_yaml=receipt.config_yaml,
+                        out_dir=receipt.out_dir,
+                        task_name=receipt.task_name,
+                        stdout_log=receipt.stdout_log,
+                        stderr_log=receipt.stderr_log,
+                        sequences=receipt.sequences,
+                    ),
+                ),
             )
-        return CandidateResult(
-            task=task,
-            status="completed",
-            score=score.weighted_score,
-            payload=ProcessCandidatePayload(
-                config_yaml=payload_info.config_yaml,
-                out_dir=payload_info.out_dir,
-                task_name=payload_info.task_name,
-                stdout_log=payload_info.stdout_log,
-                stderr_log=payload_info.stderr_log,
-                sequences=score.sequences,
+            _write_candidate_receipt(path, failed)
+            return failed.result
+        raise OutcomeUnknown(
+            f"Candidate wrapper returned no terminal receipt: {path}"
+        )
+
+    @staticmethod
+    def _validate_terminal_receipt(
+        task: CandidateTask,
+        admitted: ProcessCandidateReceipt,
+        terminal: ProcessCandidateReceipt,
+    ) -> None:
+        if terminal.content_id != admitted.content_id:
+            raise ContractConflict("Candidate wrapper changed admitted content")
+        if (
+            terminal.job_id != task.job_id
+            or terminal.generation != task.generation
+            or terminal.actual_seed != admitted.actual_seed
+            or terminal.attempt != admitted.attempt
+        ):
+            raise ContractConflict(
+                "Candidate wrapper returned another job or attempt"
+            )
+        if terminal.result is not None:
+            result_payload = dict(terminal.result.job.payload or {})
+            if (
+                terminal.result.job.job_id != task.job_id
+                or terminal.result.job.generation != task.generation
+                or dict(result_payload.get("sequences") or {})
+                != dict(admitted.sequences)
+            ):
+                raise ContractConflict("Candidate wrapper returned another task")
+
+
+class ProcessCandidateReceipts:
+    """Candidate-specific single-writer receipts used by durable collection."""
+
+    def __init__(
+        self,
+        runtime: Runtime,
+        worker: ProcessCandidateWorker,
+        *,
+        resumed: bool,
+    ) -> None:
+        self.runtime = runtime
+        self.worker = worker
+        self.resumed = bool(resumed)
+        for codec in (
+            _RECEIPT_CODEC,
+            _COLLECTION_CODEC,
+            _JSON_CODEC,
+            _PAYLOAD_CODEC,
+        ):
+            runtime.data.register(codec)
+        source = _source_manifest()
+        assets = _asset_manifest(worker.base_cfg)
+        identity = {
+            "schema": "astrolabe.process-candidate-run-identity/v1",
+            "config_yaml": str(worker.config.config_yaml),
+            "config_sha256": _sha256_file(worker.config.config_yaml),
+            "source_manifest": list(source),
+            "input_assets_manifest": assets,
+        }
+        identity["identity"] = _digest(identity)
+        prior = runtime.load("collection/run-identity", _JSON_CODEC)
+        if prior is not None and prior != identity:
+            raise ContractConflict(
+                "Candidate base config, source or selected input assets "
+                "changed on resume"
+            )
+        if prior is None:
+            runtime.save("collection/run-identity", identity, _JSON_CODEC)
+        self.identity = identity
+
+    @staticmethod
+    def _job_name(job: Job) -> str:
+        return "collection/job/" + job.job_id
+
+    @staticmethod
+    def _commit_name(action_id: str) -> str:
+        return "collection/commit/" + action_id
+
+    def _save_receipt(self, receipt: ProcessCandidateReceipt) -> None:
+        task = CandidateTask(
+            candidate_id=receipt.job_id,
+            generation=receipt.generation,
+            payload={"sequences": dict(receipt.sequences)},
+        )
+        self.runtime.save(
+            self._job_name(task),
+            receipt,
+            _RECEIPT_CODEC,
+        )
+
+    def admission(self, job: Job) -> CandidateResult | None:
+        spec = self.worker.execution_spec(job)
+        file_receipt = self.worker.receipt(job)
+        if file_receipt is not None:
+            self.worker._validate_receipt(job, spec, file_receipt)
+            self._save_receipt(file_receipt)
+            if file_receipt.status in {"completed", "failed"}:
+                if file_receipt.result is None:
+                    raise ContractConflict(
+                        f"Terminal receipt {job.job_id} has no result"
+                    )
+                return file_receipt.result
+            if file_receipt.status in {"issued", "unknown"}:
+                raise OutcomeUnknown(
+                    f"Candidate {job.job_id} is issued without terminal proof"
+                )
+        durable = self.runtime.load(self._job_name(job), _RECEIPT_CODEC)
+        if durable is not None:
+            self.worker._validate_receipt(job, spec, durable)
+            if durable.status in {"completed", "failed"}:
+                if durable.result is None:
+                    raise ContractConflict(
+                        f"Terminal receipt {job.job_id} has no result"
+                    )
+                return durable.result
+            if durable.status in {"issued", "unknown"}:
+                raise OutcomeUnknown(
+                    f"Candidate {job.job_id} is issued without terminal proof"
+                )
+            if durable.status != "admitted":
+                raise ContractConflict(
+                    f"Unsupported candidate receipt status {durable.status!r}"
+                )
+        receipt = self.worker.prepare(job)
+        self.worker._validate_receipt(job, spec, receipt)
+        self._save_receipt(receipt)
+        if receipt.status in {"completed", "failed"}:
+            if receipt.result is None:
+                raise ContractConflict(
+                    f"Terminal receipt {job.job_id} has no result"
+                )
+            return receipt.result
+        if receipt.status in {"issued", "unknown"}:
+            raise OutcomeUnknown(
+                f"Candidate {job.job_id} is issued without terminal proof"
+            )
+        if receipt.status != "admitted":
+            raise ContractConflict(
+                f"Unsupported candidate receipt status {receipt.status!r}"
+            )
+        return None
+
+    def terminal_observed(self, job: Job, result: CandidateResult) -> None:
+        receipt = self.worker.receipt(job)
+        if receipt is None:
+            receipt = self.runtime.load(self._job_name(job), _RECEIPT_CODEC)
+        if receipt is None:
+            raise ContractConflict(
+                f"Candidate {job.job_id} has no admitted receipt"
+            )
+        if receipt.status in {"completed", "failed"}:
+            if receipt.result != result:
+                raise ContractConflict(
+                    f"Candidate {job.job_id} result differs from its receipt"
+                )
+            self._save_receipt(receipt)
+            return
+        unknown = replace(
+            receipt,
+            status="unknown",
+            result=None,
+            error=(
+                "pool observed a result without a completed/failed child "
+                f"receipt: {result.status}"
             ),
+        )
+        self._save_receipt(unknown)
+        raise OutcomeUnknown(unknown.error)
+
+    def collection_commit(self, commit) -> None:
+        receipt = ProcessCollectionReceipt(
+            schema=COLLECTION_RECEIPT_SCHEMA,
+            action_id=commit.action_id,
+            collection_index=commit.collection_index,
+            trigger=commit.trigger,
+            ordered_job_ids=commit.ordered_job_ids,
+            selected_job_id=commit.selected_job_id,
+            consumed_job_ids=commit.consumed_job_ids,
+            carryforward_job_ids=commit.carryforward_job_ids,
+            rng_before=commit.rng_before,
+            rng_after=commit.rng_after,
+            collection=commit.collection,
+        )
+        self.runtime.save(
+            self._commit_name(commit.action_id),
+            receipt,
+            _COLLECTION_CODEC,
+        )
+
+    def committed_collection(
+        self,
+        action_id: str,
+    ) -> tuple[CandidateCollection, Blob, Blob] | None:
+        receipt = self.runtime.load(
+            self._commit_name(action_id),
+            _COLLECTION_CODEC,
+        )
+        if receipt is None:
+            return None
+        return receipt.collection, receipt.rng_before, receipt.rng_after
+
+    def rehydrate(self) -> RehydratedCollection:
+        consumed: set[str] = set()
+        collection_index = 0
+        records = self.runtime._records("checkpoint")
+        for name in sorted(records):
+            if not name.startswith("collection/commit/"):
+                continue
+            receipt = self.runtime.load(name, _COLLECTION_CODEC)
+            if receipt is not None:
+                consumed.update(receipt.consumed_job_ids)
+                collection_index = max(
+                    collection_index,
+                    int(receipt.collection_index),
+                )
+        ready: list[CandidateResult] = []
+        issued: list[CandidateTask] = []
+        uncommitted_generations: set[int] = set()
+        for name in sorted(records):
+            if not name.startswith("collection/job/"):
+                continue
+            receipt = self.runtime.load(name, _RECEIPT_CODEC)
+            if receipt is None or receipt.job_id in consumed:
+                continue
+            uncommitted_generations.add(int(receipt.generation))
+            task = CandidateTask(
+                candidate_id=receipt.job_id,
+                generation=receipt.generation,
+                payload={"sequences": dict(receipt.sequences)},
+            )
+            file_receipt = self.worker.receipt(task)
+            if file_receipt is not None:
+                if file_receipt.content_id != receipt.content_id:
+                    raise ContractConflict(
+                        f"Candidate {receipt.job_id} file receipt changed content"
+                    )
+                if file_receipt.status in {
+                    "completed",
+                    "failed",
+                    "issued",
+                    "unknown",
+                }:
+                    receipt = file_receipt
+                    self._save_receipt(receipt)
+            if receipt.status in {"completed", "failed"}:
+                if receipt.result is None:
+                    raise ContractConflict(
+                        f"Terminal receipt {receipt.job_id} has no result"
+                    )
+                ready.append(receipt.result)
+            elif receipt.status in {"issued", "unknown"}:
+                issued.append(task)
+            elif receipt.status == "admitted":
+                # A later exact submit action may execute an admitted job.
+                # A collect/drain action without a committed boundary stops.
+                continue
+            else:
+                raise ContractConflict(
+                    f"Unsupported candidate receipt status {receipt.status!r}"
+                )
+        return RehydratedCollection(
+            ready_results=tuple(ready),
+            issued_jobs=tuple(issued),
+            uncommitted_generations=tuple(sorted(uncommitted_generations)),
+            collection_index=collection_index,
         )
 
 
@@ -387,18 +1181,51 @@ def run_process_candidate_batch(
         max_in_flight=config.max_in_flight,
     )
     worker = active_adapters.worker_factory(config, base_cfg)
-    run = CandidateDecisionRun(
-        pool_config=pool_cfg,
-        worker=worker,
-        decision_rounds=config.decision_rounds,
-        selector=active_adapters.selector,
-    ).run()
+    durable = isinstance(worker, ProcessCandidateWorker) and not config.dry_run
+    if config.resume and not durable:
+        raise CandidateBatchConfigError(
+            "Durable candidate resume requires ProcessCandidateWorker"
+        )
+    if durable:
+        runtime_root = config.out_root / ".framework"
+        journal_path = runtime_root / "journal.sqlite"
+        if config.resume and not journal_path.is_file():
+            raise FileNotFoundError(
+                f"candidate resume journal not found: {journal_path}"
+            )
+        if not config.resume and journal_path.exists():
+            raise CandidateBatchConfigError(
+                "candidate output already contains a durable run; use --resume"
+            )
+        with Runtime(root=runtime_root) as runtime:
+            receipts = ProcessCandidateReceipts(
+                runtime,
+                worker,
+                resumed=config.resume,
+            )
+            run = CandidateDecisionRun(
+                pool_config=pool_cfg,
+                worker=worker,
+                decision_rounds=config.decision_rounds,
+                selector=active_adapters.selector,
+                runtime=runtime,
+                receipts=receipts,
+                resumed=config.resume,
+            ).run()
+    else:
+        run = CandidateDecisionRun(
+            pool_config=pool_cfg,
+            worker=worker,
+            decision_rounds=config.decision_rounds,
+            selector=active_adapters.selector,
+        ).run()
 
     return {
         "config_yaml": str(config.config_yaml),
         "out_root": str(config.out_root),
         "runner": str(config.runner),
         "dry_run": bool(config.dry_run),
+        "resume": bool(config.resume),
         "num_candidates": int(config.num_candidates),
         "min_completed": int(config.min_completed),
         "max_wait_s": float(config.max_wait_s),
@@ -452,6 +1279,11 @@ def add_candidate_batch_arguments(parser: argparse.ArgumentParser) -> argparse.A
         ),
     )
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Verify and continue an existing durable candidate batch.",
+    )
     parser.add_argument("--format", choices=["text", "json"], default="text")
     return parser
 
@@ -477,6 +1309,7 @@ def _config_from_namespace(args: argparse.Namespace) -> ProcessCandidateRunnerCo
         candidate_steps=int(args.candidate_steps),
         candidate_timeout_s=args.candidate_timeout_s,
         dry_run=bool(args.dry_run),
+        resume=bool(args.resume),
     )
 
 
@@ -487,6 +1320,7 @@ def _print_summary(summary: dict[str, Any], output_format: str) -> None:
     print(f"config_yaml: {summary['config_yaml']}")
     print(f"out_root: {summary['out_root']}")
     print(f"dry_run: {str(summary['dry_run']).lower()}")
+    print(f"resume: {str(summary['resume']).lower()}")
     print(
         "pool: "
         f"num_candidates={summary['num_candidates']} "

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from types import SimpleNamespace
 
 import pytest
 
@@ -33,6 +34,32 @@ def _init_test_state_with_covalent_bonds(
     global_config.init_const("protomers", protomers)
     global_config.init_const("cyclization", None)
     global_config.init_const("covalent_bonds", covalent_bonds)
+
+
+@pytest.mark.parametrize(
+    "after_sequence,pending_sequence",
+    [("GGGG", None), ("GG", None), ("GGGGGG", None), ("GGGG", "GGGG")],
+)
+def test_construct_standard_input_preserves_legacy_and_pending_sequences(
+    after_sequence, pending_sequence, caplog,
+):
+    protomer = _ProtomerStub(sequence="ACDE", mutated_sequence=after_sequence)
+    _init_test_state(cyclization=None, protomers={"A": protomer})
+    if pending_sequence is not None:
+        protomer.components = ["binder"]
+        global_config.init_const(
+            "segments", {"binder": SimpleNamespace(pending_sequence=pending_sequence)},
+        )
+
+    with caplog.at_level("DEBUG"):
+        result = construct_standard_input(["A"], seed=73)["A"]
+
+    assert [(chain.id, chain.sequence) for chain in result.chains] == [("A", after_sequence)]
+    assert protomer.sequence == "ACDE"
+    assert protomer.mutated_sequence == after_sequence
+    assert result.rng_seeds == [73]
+    reconstruction = len(after_sequence) != 4 or pending_sequence is not None
+    assert ("whole-sequence reconstruction" in caplog.text) is reconstruction
 
 
 @pytest.mark.parametrize(

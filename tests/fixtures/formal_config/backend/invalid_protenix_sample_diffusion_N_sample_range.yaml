@@ -1,0 +1,64 @@
+# Standalone startup-only fixture; no model is loaded.
+# config/base.yaml is an existing file placeholder for path-stat checks, not weights.
+task_name: backend_formal_fixture
+out_dir: /tmp/astrolabe-backend-formal-fixture
+steps: 1
+seed: 17
+types:
+  A: p
+seqs:
+  A: AAAA
+enable_pyrosetta: false
+skip_complex_poses: true
+evaluator:
+  evaluator_terms:
+    backend:
+      _type: protenix
+      model_name: protenix-v2
+      load_checkpoint_path: null
+      load_checkpoint_dir: null
+      dtype: bf16
+      model:
+        N_cycle: 0
+      sample_diffusion:
+        N_sample: 0
+        N_step: 1
+        gamma0: 0.0
+        gamma_min: 0.0
+        noise_scale_lambda: 1.0
+        step_scale_eta: 1.0
+        guidance:
+          enable: false
+      infer_setting:
+        chunk_size: 1
+      data:
+        num_dl_workers: 0
+        msa:
+          enable: false
+        template:
+          enable: false
+      num_workers: 0
+      use_msa: false
+      seed: 0
+      seeds:
+      - 0
+      - 17
+mutator:
+  mutator_terms:
+    mcmc:
+      _type: mcmc
+      mutation_method: frequency_adjusted
+      select_positions: random
+loss:
+  loss_terms: {}
+stages:
+  default:
+    evaluator: backend
+    oligo:
+    - A
+    mutators:
+    - mcmc
+    mutation_num: 1
+    weighted_score_expression: '0'
+    acceptance_threshold: null
+    early_stopping: null

@@ -1,18 +1,25 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import subprocess
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from contextlib import nullcontext
 
 import numpy as np
+import pytest
+import torch
 from omegaconf import OmegaConf
 
+import astrolabe.model_daemon as model_daemon
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import Input, Ligand, ProteinChain
 from astrolabe.evaluators.opendde import OpenDDEEvaluator
 from astrolabe.evaluators.utils import construct_evaluators
+from astrolabe.evaluators.wrappers.opendde_daemon import OpenDDEHandler
 from astrolabe.evaluators.wrappers.opendde import (
     OpenDDERunner,
     collect_opendde_outputs,
@@ -119,21 +126,24 @@ def test_opendde_runner_builds_subprocess_command_and_logs(tmp_path: Path, monke
         num_samples=1,
         use_msa=False,
         timeout_seconds=12,
+        execution_mode="subprocess",
     )
     out_dir = tmp_path / "raw"
 
-    runner.run_inference(input_json=tmp_path / "input.json", out_dir=out_dir)
+    request_dir = runner.run_inference(input_json=tmp_path / "input.json", out_dir=out_dir)
 
     assert calls[0]["cwd"] == str(repo)
     assert calls[0]["env"]["OPENDDE_ROOT_DIR"] == str(root)
     assert str(repo) in calls[0]["env"]["PYTHONPATH"].split(os.pathsep)
     assert calls[0]["timeout"] == 12
     cmd = calls[0]["cmd"]
-    assert cmd[:4] == [str(python), "-m", "runner.batch_inference", "pred"]
+    assert cmd[:4] == [str(python), "-m", "astrolabe.evaluators.wrappers.opendde_daemon", "pred"]
+    assert request_dir.parent == out_dir
+    assert cmd[cmd.index("-o") + 1] == str(request_dir)
     assert "--use_msa" in cmd
     assert cmd[cmd.index("--use_msa") + 1] == "false"
-    assert (out_dir / "opendde.stdout.log").read_text(encoding="utf-8") == "ok\n"
-    assert (out_dir / "opendde.stderr.log").read_text(encoding="utf-8") == "warn\n"
+    assert (request_dir / "opendde.stdout.log").read_text(encoding="utf-8") == "ok\n"
+    assert (request_dir / "opendde.stderr.log").read_text(encoding="utf-8") == "warn\n"
 
 
 def test_collect_opendde_outputs_returns_standard_score_payload(tmp_path: Path) -> None:
@@ -221,10 +231,12 @@ def test_opendde_evaluator_wires_outputs_to_standard_scores(tmp_path: Path) -> N
 
 
 def test_construct_evaluators_builds_opendde_runner(tmp_path: Path) -> None:
+    import sys
+    (tmp_path / "assets").mkdir()
     class _EvalConf:
         opendde = OmegaConf.create(
             {
-                "python_bin": "/usr/bin/python3",
+                "python_bin": sys.executable,
                 "repo_path": str(tmp_path),
                 "opendde_root_dir": str(tmp_path / "assets"),
                 "num_samples": 1,
@@ -237,6 +249,231 @@ def test_construct_evaluators_builds_opendde_runner(tmp_path: Path) -> None:
     assert set(evaluators) == {"OpenDDE"}
     evaluator = evaluators["OpenDDE"]
     assert isinstance(evaluator, OpenDDEEvaluator)
-    assert evaluator.model_runner.python_bin == "/usr/bin/python3"
+    assert evaluator.model_runner.python_bin == sys.executable
     assert evaluator.model_runner.repo_path == tmp_path
-    assert evaluator.output_dir == tmp_path / "raw" / "opendde"
+    assert evaluator.output_dir == tmp_path / "raw" / "evaluators" / "alias-OpenDDE" / "opendde"
+
+
+def test_opendde_daemon_retains_runner_and_recovers_after_failure(tmp_path: Path) -> None:
+    input_json = tmp_path / "input.json"
+    input_json.write_text(
+        json.dumps([{"name": "AB", "modelSeeds": [123], "sequences": []}]),
+        encoding="utf-8",
+    )
+    out_dirs = [
+        tmp_path / "raw" / "opendde" / "step_1",
+        tmp_path / "raw" / "opendde" / "step_2",
+    ]
+    for out_dir in out_dirs:
+        out_dir.mkdir(parents=True)
+
+    class _Config(dict):
+        __getattr__ = dict.__getitem__
+        __setattr__ = dict.__setitem__
+
+    class _BatchInference:
+        def __init__(self) -> None:
+            self.load_calls = 0
+            self.seeds: list[list[int]] = []
+            self.runner = SimpleNamespace(
+                device="cpu",
+                configs=_Config(
+                    {
+                        "need_atom_confidence": False,
+                        "sorted_by_ranking_score": True,
+                    }
+                ),
+                init_dumper=self._init_dumper,
+                foldcp_recorder=SimpleNamespace(
+                    jsonl_path="",
+                    rank=0,
+                    write_rank_sidecar=False,
+                ),
+                foldcp_config=SimpleNamespace(enabled=False),
+                update_model_configs=lambda configs: None,
+            )
+
+        def _init_dumper(self, **kwargs):
+            self.runner.dumper = SimpleNamespace(
+                base_dir=self.runner.dump_dir, dump=self._dump)
+
+        def _dump(self, *, group_name, pdb_id, seed, pred_dict, atom_array,
+                  entity_poly_type):
+            directory = Path(self.runner.dumper.base_dir)
+            (directory / f"result_{pred_dict['call']}.txt").write_text(
+                "ok", encoding="utf-8")
+            predictions = directory / pdb_id / f"seed_{seed}" / "predictions"
+            predictions.mkdir(parents=True, exist_ok=True)
+            for sample in range(self.options["n_sample"]):
+                (predictions / f"{pdb_id}_sample_{sample}.cif").write_text(
+                    "data_stub\n", encoding="utf-8")
+                (predictions / f"{pdb_id}_summary_confidence_sample_{sample}.json").write_text(
+                    "{}", encoding="utf-8")
+
+        def get_default_runner(self, **kwargs):
+            self.load_calls += 1
+            self.options = kwargs
+            self.runner.configs.update(
+                seeds=kwargs["seeds"], deterministic=kwargs["deterministic"],
+                dtype=kwargs["dtype"])
+            self.runner.dumper = SimpleNamespace(base_dir=kwargs["dump_dir"])
+            return self.runner
+
+        def preprocess_input(self, input_json, **kwargs):
+            payload = json.loads(Path(input_json).read_text(encoding="utf-8"))
+            self.seeds.append(payload[0]["modelSeeds"])
+            return input_json
+
+    class _Inference:
+        def __init__(self, runner) -> None:
+            self.calls = 0
+            self.fail_next = False
+            self.runners = []
+            self.runner = runner
+            runner.model = self._model
+            self.torch = torch
+            self.logger = logging.getLogger(__name__)
+            self.DIST_WRAPPER = SimpleNamespace(rank=0)
+
+        def _model(self, *, input_feature_dict, label_full_dict, label_dict, mode):
+            self.calls += 1
+            self.runners.append(self.runner)
+            assert input_feature_dict["inference_seed"].item() == 123
+            assert mode == "inference"
+            if self.fail_next:
+                self.fail_next = False
+                raise RuntimeError("fake inference failure")
+            return {"call": self.calls}, None, None
+
+        def get_inference_dataloader(self, *, configs):
+            assert configs["input_json_path"] == str(input_json)
+            data = dict(sample_name="AB", sample_index=0, input_feature_dict={},
+                        entity_poly_type={"A": "polypeptide(L)"},
+                        **{key: torch.tensor(1) for key in
+                           ("N_asym", "N_token", "N_atom", "N_msa")})
+
+            class _Loader(list):
+                dataset = [data]
+
+            return _Loader([[(data, None, "")]])
+
+        def update_inference_configs(self, configs, n_token):
+            return configs
+
+        def infer_n_token(self, data):
+            return data["N_token"].item()
+
+        def to_device(self, data, device):
+            assert device == "cpu"
+            return data
+
+        def seed_everything(self, *, seed, deterministic):
+            assert seed == 123
+
+        def cleanup_cuda_memory(self, **kwargs):
+            pass
+
+        def disable_cudnn_benchmark(self):
+            return nullcontext()
+
+        def measure_foldcp_stage(self, **kwargs):
+            assert kwargs["stage_name"] == "model_forward"
+            return nullcontext()
+
+    batch = _BatchInference()
+    inference = _Inference(batch.runner)
+    handler = OpenDDEHandler(
+        {
+            "repo_path": str(tmp_path),
+            "num_samples": 2,
+            "use_msa": True,
+        },
+        batch_inference=batch,
+        inference=inference,
+    )
+    first_payload = {"input_json": str(input_json), "out_dir": str(out_dirs[0])}
+    second_payload = {"input_json": str(input_json), "out_dir": str(out_dirs[1])}
+
+    handler(first_payload)
+    inference.fail_next = True
+    with pytest.raises(RuntimeError, match="OpenDDE reported inference errors"):
+        handler(first_payload)
+    # The native driver reports incomplete/failed jobs after the staged loop;
+    # preserve the underlying failure evidence instead of mocking that loop out.
+    assert "fake inference failure" in (out_dirs[0] / "ERR" / "AB.txt").read_text()
+    handler(second_payload)
+
+    assert batch.load_calls == 1
+    assert batch.options["n_sample"] == 2
+    assert batch.options["use_msa"] is True
+    assert batch.seeds == [[123], [123], [123]]
+    assert inference.calls == 3
+    assert len({id(runner) for runner in inference.runners}) == 1
+    assert (out_dirs[0] / "result_1.txt").is_file()
+    assert (out_dirs[1] / "result_3.txt").is_file()
+
+
+def test_opendde_runner_owns_one_daemon_for_multiple_requests(
+    tmp_path: Path, monkeypatch
+) -> None:
+    repo = tmp_path / "opendde"
+    repo.mkdir()
+    input_json = tmp_path / "input.json"
+    input_json.write_text("[]", encoding="utf-8")
+    out_dir = tmp_path / "raw"
+
+    created = []
+
+    class _OwnedDaemon:
+        def __init__(self, spec, **kwargs):
+            self.spec = spec
+            self.kwargs = kwargs
+            self.requests = []
+            created.append(self)
+
+        def request(self, payload):
+            self.requests.append(payload)
+            if payload.get("operation") == "describe":
+                return {"metadata": {"backend": "opendde", "device": "cpu",
+                                     "residency": "resident_model"}}
+            return {"input_json": payload["input_json"], "out_dir": payload["out_dir"]}
+
+        def shutdown(self):
+            self.closed = True
+
+    monkeypatch.setattr(model_daemon, "OwnedModelDaemon", _OwnedDaemon)
+    runner = OpenDDERunner(
+        python_bin=sys.executable,
+        repo_path=repo,
+        num_samples=2,
+        timeout_seconds=12,
+    )
+
+    first_dir = runner.run_inference(input_json=input_json, out_dir=out_dir)
+    second_dir = runner.run_inference(input_json=input_json, out_dir=out_dir)
+
+    assert len(created) == 1
+    assert created[0].spec.backend == "opendde"
+    assert created[0].spec.settings["num_samples"] == 2
+    assert "out_dir" not in created[0].spec.settings
+    assert "foldcp_metrics_jsonl" not in created[0].spec.settings
+    assert created[0].kwargs["request_timeout"] == 12
+    assert created[0].requests == [
+        {"operation": "describe"},
+        {
+            "input_json": str(input_json),
+            "out_dir": str(first_dir),
+            "foldcp_metrics_jsonl": "",
+        },
+        {
+            "input_json": str(input_json),
+            "out_dir": str(second_dir),
+            "foldcp_metrics_jsonl": "",
+        },
+    ]
+    assert first_dir != second_dir
+    assert first_dir.parent == second_dir.parent == out_dir
+    assert (first_dir / "opendde.stdout.log").is_file()
+    assert (second_dir / "opendde.stdout.log").is_file()
+    runner.shutdown()
+    assert created[0].closed

@@ -1,15 +1,23 @@
 #!/usr/bin/env python3
-"""JSONL daemon that bridges GH's RAPiDock runner to upstream inference.py."""
+"""JSONL daemon that owns one retained RAPiDock Python API object."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import pathlib
-import re
-import subprocess
 import sys
-from typing import Any, Dict, List
+from typing import Any, Dict
+
+from astrolabe.model_execution import KernelStages, kernel_handler
+
+try:
+    from .rapidock_runtime import build_rapidock_runtime
+except ImportError:
+    from rapidock_runtime import build_rapidock_runtime
+
+
+_PROTOCOL_STDOUT = sys.stdout
 
 
 def _parse_args() -> argparse.Namespace:
@@ -24,204 +32,131 @@ def _parse_args() -> argparse.Namespace:
 
 
 def _write(obj: Dict[str, Any]) -> None:
-    sys.stdout.write(json.dumps(obj) + "\n")
-    sys.stdout.flush()
+    _PROTOCOL_STDOUT.write(json.dumps(obj) + "\n")
+    _PROTOCOL_STDOUT.flush()
 
 
-def _rank_sort_key(path: pathlib.Path) -> tuple[int, str]:
-    match = re.search(r"rank(\d+)", path.name)
-    if match is None:
-        return (sys.maxsize, path.name)
-    return (int(match.group(1)), path.name)
+def _error_response(message: Dict[str, Any], exc: Exception) -> Dict[str, Any]:
+    return {
+        "type": "error",
+        "id": message.get("id"),
+        "error_type": type(exc).__name__,
+        "message": str(exc),
+    }
 
 
-def _collect_candidates(output_dir: pathlib.Path) -> List[str]:
-    preferred = [path for path in output_dir.rglob("rank*_confidence.pdb") if path.is_file()]
-    fallback = [
-        path
-        for path in output_dir.rglob("rank*.pdb")
-        if path.is_file() and re.fullmatch(r"rank\d+\.pdb", path.name)
-    ]
-    candidates = sorted(preferred or fallback, key=_rank_sort_key)
-    if not candidates:
-        raise RuntimeError(f"No final rank PDB outputs found under '{output_dir}'.")
-    return [str(path.resolve()) for path in candidates]
+def _create_runtime_handler(runtime, device):
+    def load(_settings):
+        runtime.load()
+        if not runtime.status().get("model_ready"):
+            raise RuntimeError("RAPiDock initialization did not produce a ready model")
 
+        def prepare(message):
+            tasks = message.get("tasks") or []
+            params = message.get("params") or {}
+            if not isinstance(tasks, list):
+                raise ValueError("dock tasks must be a list.")
+            if not isinstance(params, dict):
+                raise ValueError("dock params must be an object.")
+            return tasks, params
 
-def _build_command(
-    *,
-    repo_path: pathlib.Path,
-    model_dir: pathlib.Path,
-    ckpt: str,
-    confidence_model_dir: str | None,
-    confidence_ckpt: str,
-    device: str | None,
-    task: Dict[str, Any],
-    params: Dict[str, Any],
-) -> List[str]:
-    name = task.get("name")
-    protein_pdb = task.get("protein_pdb")
-    peptide_pdb = task.get("peptide_pdb")
-    output_dir = task.get("output_dir")
-    if not all(
-        isinstance(item, str) and item
-        for item in (name, protein_pdb, peptide_pdb, output_dir)
-    ):
-        raise ValueError("Dock task must include non-empty name/protein_pdb/peptide_pdb/output_dir.")
+        # prepare_data includes ESM CUDA work and lazy confidence loading. Keep
+        # the runtime's complete call together under the device execute lease.
+        # ESM may retain CUDA allocator memory even with a CPU score model.
+        # Register the conservative whole graph on its admitted GPU.
+        return KernelStages(prepare, lambda args: runtime.run(*args)), {
+            "device": device if str(device).startswith("cuda") else None,
+        }
 
-    cmd = [
-        sys.executable,
-        str(repo_path / "inference.py"),
-        "--complex_name",
-        name,
-        "--protein_description",
-        protein_pdb,
-        "--peptide_description",
-        peptide_pdb,
-        "--output_dir",
-        output_dir,
-        "--model_dir",
-        str(model_dir),
-        "--ckpt",
-        ckpt,
-        "--N",
-        str(int(params.get("num_samples_bank", 1))),
-        "--batch_size",
-        str(int(params.get("batch_size", 1))),
-        "--inference_steps",
-        str(int(params.get("inference_steps", 20))),
-        "--cpu",
-        str(int(params.get("cpu", 1))),
-        "--conformation_type",
-        str(params.get("conformation_type", "E")),
-    ]
-
-    actual_steps = params.get("actual_steps")
-    if actual_steps not in (None, "", "null", "None"):
-        cmd.extend(["--actual_steps", str(int(actual_steps))])
-    if bool(params.get("no_final_step_noise", False)):
-        cmd.append("--no_final_step_noise")
-    scoring_function = params.get("scoring_function")
-    if scoring_function not in (None, "", "null", "None"):
-        cmd.extend(["--scoring_function", str(scoring_function)])
-    if bool(params.get("fastrelax", False)):
-        cmd.append("--fastrelax")
-    if bool(params.get("save_visualisation", False)):
-        cmd.append("--save_visualisation")
-    conformation_partial = params.get("conformation_partial")
-    if conformation_partial not in (None, "", "null", "None"):
-        cmd.extend(["--conformation_partial", str(conformation_partial)])
-    if confidence_model_dir not in (None, "", "null", "None"):
-        cmd.extend(["--confidence_model_dir", str(confidence_model_dir)])
-        cmd.extend(["--confidence_ckpt", str(confidence_ckpt)])
-    return cmd
-
-
-def _run_dock(
-    *,
-    repo_path: pathlib.Path,
-    model_dir: pathlib.Path,
-    ckpt: str,
-    confidence_model_dir: str | None,
-    confidence_ckpt: str,
-    device: str | None,
-    task: Dict[str, Any],
-    params: Dict[str, Any],
-) -> List[str]:
-    output_dir = pathlib.Path(str(task["output_dir"])).expanduser()
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    cmd = _build_command(
-        repo_path=repo_path,
-        model_dir=model_dir,
-        ckpt=ckpt,
-        confidence_model_dir=confidence_model_dir,
-        confidence_ckpt=confidence_ckpt,
-        device=device,
-        task=task,
-        params=params,
+    return kernel_handler(
+        {}, load,
+        lifecycle={"backend": "rapidock", "residency": "resident_model",
+                   "weights_loaded": True, "gpu_resident": None,
+                   "device": device if str(device).startswith("cuda:") else None},
     )
-    proc = subprocess.run(
-        cmd,
-        cwd=str(repo_path),
-        check=False,
-        capture_output=True,
-        text=True,
-    )
-    if proc.returncode != 0:
-        detail = (proc.stderr or proc.stdout or "").strip()
-        raise RuntimeError(
-            f"RAPiDock inference failed with exit code {proc.returncode}: {detail}"
-        )
-
-    return _collect_candidates(output_dir)
 
 
 def main() -> int:
     args = _parse_args()
     repo_path = pathlib.Path(args.repo_path).expanduser().resolve()
     model_dir = pathlib.Path(args.model_dir).expanduser().resolve()
-    inference_path = repo_path / "inference.py"
     ckpt_path = model_dir / args.ckpt
 
     if not repo_path.exists():
         raise FileNotFoundError(f"RAPiDock repo path does not exist: {repo_path}")
-    if not inference_path.exists():
-        raise FileNotFoundError(f"RAPiDock inference script not found: {inference_path}")
-    if not ckpt_path.exists():
+    if not ckpt_path.is_file():
         raise FileNotFoundError(f"RAPiDock checkpoint not found: {ckpt_path}")
+
+    confidence_model_dir = args.confidence_model_dir
+    if confidence_model_dir not in (None, "", "null", "None"):
+        confidence_path = pathlib.Path(confidence_model_dir).expanduser()
+        confidence_ckpt_path = confidence_path / args.confidence_ckpt
+        if not confidence_ckpt_path.is_file():
+            raise FileNotFoundError(
+                f"RAPiDock confidence checkpoint not found: {confidence_ckpt_path}"
+            )
+        confidence_model_dir = str(confidence_path.resolve())
+
+    runtime = build_rapidock_runtime(
+        repo_path=repo_path,
+        model_dir=model_dir,
+        ckpt=str(args.ckpt),
+        confidence_model_dir=confidence_model_dir,
+        confidence_ckpt=str(args.confidence_ckpt),
+        device=args.device,
+    )
+    handler = None
+    load_error = None
+    try:
+        handler = _create_runtime_handler(runtime, args.device)
+    except Exception as exc:
+        # Preserve the raw ping/error protocol, but never report a partially
+        # initialized or unadmitted runtime as ready.
+        load_error = f"{type(exc).__name__}: {exc}"
 
     for raw in sys.stdin:
         line = raw.strip()
         if not line:
             continue
-        msg: Dict[str, Any] | None = None
-        try:
-            msg = json.loads(line)
-            mtype = msg.get("type")
-            if mtype == "ping":
-                _write({"type": "pong", "id": msg.get("id")})
-                continue
-            if mtype == "shutdown":
-                _write({"type": "ok", "message": "bye"})
-                return 0
-            if mtype != "dock":
-                raise ValueError(f"unknown type: {mtype}")
 
-            req_id = msg.get("id")
-            tasks = msg.get("tasks") or []
-            params = msg.get("params") or {}
-            results = []
-            for task in tasks:
-                candidates = _run_dock(
-                    repo_path=repo_path,
-                    model_dir=model_dir,
-                    ckpt=str(args.ckpt),
-                    confidence_model_dir=args.confidence_model_dir,
-                    confidence_ckpt=str(args.confidence_ckpt),
-                    device=args.device,
-                    task=task,
-                    params=params,
-                )
-                results.append(
+        message: Dict[str, Any] = {}
+        try:
+            decoded = json.loads(line)
+            if not isinstance(decoded, dict):
+                raise ValueError("JSONL request must be an object.")
+            message = decoded
+            message_type = message.get("type")
+            if message_type == "ping":
+                status = runtime.status()
+                if load_error is not None:
+                    status = dict(status, model_ready=False, message=load_error)
+                _write(
                     {
-                        "name": task.get("name"),
-                        "candidates": [
-                            {"rank": rank, "peptide_pdb": path}
-                            for rank, path in enumerate(candidates, start=1)
-                        ],
+                        "type": "pong",
+                        "id": message.get("id"),
+                        **status,
                     }
                 )
-            _write({"type": "result", "id": req_id, "results": results})
+                continue
+            if message_type == "shutdown":
+                _write({"type": "ok", "id": message.get("id"), "message": "bye"})
+                return 0
+            if message_type != "dock":
+                raise ValueError(f"unknown type: {message_type}")
+
+            if handler is None:
+                raise RuntimeError(f"RAPiDock model is not ready: {load_error}")
+            response = handler({"operation": "infer", "payload": message,
+                                "random_state": {}})
+            if not response["ok"]:
+                _write({"type": "error", "id": message.get("id"),
+                        "error_type": response["error_type"],
+                        "message": response["error"]})
+            else:
+                _write({"type": "result", "id": message.get("id"),
+                        "results": response["result"]})
         except Exception as exc:
-            _write(
-                {
-                    "type": "error",
-                    "id": msg.get("id") if isinstance(msg, dict) else None,
-                    "error_type": type(exc).__name__,
-                    "message": str(exc),
-                }
-            )
+            _write(_error_response(message, exc))
     return 0
 
 

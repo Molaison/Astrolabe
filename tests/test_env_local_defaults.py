@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
+import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 import astrolabe.dev_wrapper as dev_wrapper
@@ -134,17 +136,20 @@ def test_base_defaults_to_env_local() -> None:
     assert "- env: env_local" in base_text
 
 
-def test_gh_dev_reports_setup_command_when_python_resolver_fails(tmp_path: Path) -> None:
+def test_gh_dev_reports_unavailable_configured_interpreter(tmp_path: Path) -> None:
     repo_root = Path(__file__).resolve().parents[1]
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
-    resolver = bin_dir / "python3"
-    resolver.write_text("#!/bin/sh\nexit 1\n", encoding="utf-8")
-    resolver.chmod(0o755)
+    (bin_dir / "python3").symlink_to(sys.executable)
+    unavailable = tmp_path / "missing-python"
     env = os.environ.copy()
     env.pop("GH_PY", None)
-    env.pop("ASTROLABE_PY", None)
-    env.update({"HOME": str(tmp_path), "PATH": f"{bin_dir}:/usr/bin:/bin"})
+    env.update({
+        "HOME": str(tmp_path),
+        "PATH": f"{bin_dir}:/usr/bin:/bin",
+        "ASTROLABE_PY": str(unavailable),
+        "ASTROLABE_RUNTIME_ACTIVE": "1",
+    })
 
     result = subprocess.run(
         ["bash", str(repo_root / "scripts" / "gh_dev"), "--help"],
@@ -156,37 +161,43 @@ def test_gh_dev_reports_setup_command_when_python_resolver_fails(tmp_path: Path)
     )
 
     assert result.returncode == 2
-    assert result.stderr.strip() == (
-        "Unable to resolve an Astrolabe interpreter. Activate a Python 3.11+ environment or set ASTROLABE_PY. For model setup: python scripts/install.py --help"
-    )
+    assert "interpreter must be an executable absolute path" in result.stderr
+    assert str(unavailable) in result.stderr
+    assert "Traceback" not in result.stderr
 
 
 def test_gh_dev_auto_resolved_runner_binds_current_checkout(tmp_path: Path) -> None:
-    repo_root = Path(__file__).resolve().parents[1]
+    source_root = Path(__file__).resolve().parents[1]
+    repo_root = tmp_path / "checkout"
+    (repo_root / "scripts").mkdir(parents=True)
+    for name in ("astrolabe", "gh_dev"):
+        shutil.copy2(source_root / "scripts" / name, repo_root / "scripts" / name)
+    (repo_root / "astrolabe").symlink_to(source_root / "astrolabe", target_is_directory=True)
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     runner = tmp_path / "container_runner"
     runner.write_text(
         "#!/bin/sh\n"
+        "case \"$*\" in *sys.version_info*) exit 0;; esac\n"
         "printf 'host=%s\\n' \"${GH_HOST_REPO_ROOT-}\"\n"
         "printf 'map=%s\\n' \"${GH_HOST_REPO_MAP_ROOT-}\"\n"
         "printf 'args=%s\\n' \"$*\"\n",
         encoding="utf-8",
     )
     runner.chmod(0o755)
-    resolver = bin_dir / "python3"
-    resolver.write_text(
-        "#!/bin/sh\nprintf '%s\\n' \"$FAKE_GH_PY\"\n",
-        encoding="utf-8",
-    )
-    resolver.chmod(0o755)
+    (bin_dir / "python3").symlink_to(sys.executable)
+    dev_wrapper.write_gh_python_hint_for_config_dir(repo_root / "config", str(runner))
     env = os.environ.copy()
-    for key in ("GH_PY", "GH_HOST_REPO_ROOT", "GH_HOST_REPO_MAP_ROOT"):
+    for key in (
+        "GH_PY", "ASTROLABE_PY", "GH_HOST_REPO_ROOT", "GH_HOST_REPO_MAP_ROOT",
+        "ASTROLABE_HOST_REPO_ROOT", "ASTROLABE_HOST_REPO_MAP_ROOT",
+        "ASTROLABE_RUNTIME_CONFIG",
+    ):
         env.pop(key, None)
     env.update(
         {
-            "FAKE_GH_PY": str(runner),
             "PATH": f"{bin_dir}:/usr/bin:/bin",
+            "ASTROLABE_RUNTIME_ACTIVE": "1",
         }
     )
 

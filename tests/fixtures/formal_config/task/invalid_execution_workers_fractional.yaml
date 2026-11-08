@@ -1,0 +1,51 @@
+# Explicit common task configuration; no runtime-generated mutations.
+seqs:
+  A: ACDEFGHIKLMNPQRSTVWY
+types:
+  A: p
+homologies: {}
+named_files: null
+seed: 17
+steps: 2
+repeats: 1
+debug: false
+enable_pyrosetta: false
+skip_complex_poses: true
+use_metropolis_acceptance: false
+initial_temperature: 0.05
+initializer:
+  mode: random
+evaluator:
+  evaluator_terms:
+    Sequence:
+      _type: sequence
+mutator:
+  selector_expression: null
+  mutator_terms:
+    MCMC:
+      _type: mcmc
+loss:
+  loss_terms: {}
+  expression_terms: {}
+stages:
+  default:
+    oligo:
+    - A
+    evaluator: Sequence
+    mutators:
+    - MCMC
+    mutation_num: 1
+    weighted_score_expression: '0'
+search:
+  algorithm: branching
+  owner: isolated_native
+  execution:
+    socket_path: astrolabe-formal-config.sock
+    workers: 1.5
+    in_flight: 2
+    resume: false
+    retry_interrupted: false
+protein_beam:
+  width: 2
+  proposals_per_parent: 2
+  max_evaluations: 3

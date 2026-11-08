@@ -40,6 +40,19 @@ env-setup:
 test:
     GH_HOST_REPO_ROOT="{{justfile_directory()}}" {{gh_python}} -m pytest -q
 
+test-cpu:
+    GH_HOST_REPO_ROOT="{{justfile_directory()}}" {{gh_python}} scripts/validation/release_cpu.py -q
+
+# CPU contract tests requiring the configured scientific runtime (including Torch/AF3).
+test-execution:
+    GH_HOST_REPO_ROOT="{{justfile_directory()}}" {{gh_python}} scripts/validation/release_cpu.py --suite execution -q
+
+test-daily-cli report="outputs/daily-cli.json":
+    {{gh_python}} tests/run_daily_task_cli.py --report '{{report}}' --jobs 2
+
+verify-recovery:
+    {{gh_python}} scripts/validation/verify_runtime_recovery.py --self-test
+
 # Recompute contact geometry on the bundled prediction, then collect/filter/report.
 reproduce-cpu out="outputs/cpu-example":
     {{gh_python}} examples/01_cpu_reproduce.py --out-dir '{{out}}'

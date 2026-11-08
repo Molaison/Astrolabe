@@ -8,6 +8,7 @@ from typing import Any, List, Optional
 from omegaconf import OmegaConf
 
 from astrolabe.core import global_config
+from astrolabe.stage_config import resolve_mutation_num
 from astrolabe.losses.base import LossEngine
 from astrolabe.stage_transition import (
     TransitionConsistencyGateConfig,
@@ -61,57 +62,6 @@ def _extract_attribute_roots(expr: str | None) -> set[str]:
     return roots
 
 
-def resolve_mutation_num(raw_value, *, protomer_pool=None) -> Optional[int]:
-    """Convert a mutation_num spec into an integer count."""
-
-    if raw_value is None:
-        return None
-
-    def _total_mutable_length():
-        pool = protomer_pool
-        if pool is None:
-            pool = (
-                global_config.mutable_protomers
-                if getattr(global_config, "mutable_protomers", None)
-                else global_config.protomers
-            )
-        total = 0
-        for protomer in pool.values():
-            try:
-                total += protomer.mutable_length
-            except AttributeError:
-                total += len(protomer.sequence)
-        return total or 1
-
-    if isinstance(raw_value, str):
-        stripped = raw_value.strip()
-        if stripped.endswith("%"):
-            number_part = stripped[:-1].strip()
-            if not number_part:
-                raise ValueError("Percentage value for mutation_num is empty.")
-            try:
-                percent = float(number_part) / 100.0
-            except ValueError as exc:
-                raise ValueError(
-                    f"Invalid percentage value for mutation_num: '{raw_value}'"
-                ) from exc
-            total_len = _total_mutable_length()
-            return max(1, int(round(total_len * percent)))
-        try:
-            return int(round(float(stripped)))
-        except ValueError as exc:
-            raise ValueError(
-                f"Invalid numeric value for mutation_num: '{raw_value}'"
-            ) from exc
-
-    if isinstance(raw_value, (int, float)):
-        return int(round(raw_value))
-
-    raise TypeError(
-        "mutation_num must be an int, float, or percentage string (e.g., '5%')."
-    )
-
-
 @dataclass
 class StageUnit:
     oligo: List[str] | None = None
@@ -123,6 +73,7 @@ class StageUnit:
     ignored_complexes: List[str] | None = field(default_factory=list)
     negative_design_complexes: List[str] | None = field(default_factory=list)
     evaluator: str | None = None
+    active_loss_terms: List[str] | None = None
     mutators: List[str] | None = None
     mutator_weights: List[str] | None = None
     transition_consistency_gate: TransitionConsistencyGateConfig | dict[str, Any] | None = None
@@ -256,6 +207,7 @@ class StageManager:
             self.current_acceptance_threshold,
             self.current_acceptance_gate,
             prefix_early_stopping=self.current_prefix_early_stopping,
+            active_loss_terms=self.current_active_loss_terms,
         )
         self._apply_mutation_num()
         mutator_aliases = list(
@@ -332,6 +284,10 @@ class StageManager:
             return self.default_setting.weighted_score_expression
 
         return stage_setting.weighted_score_expression
+
+    @property
+    def current_active_loss_terms(self) -> List[str] | None:
+        return self.execution_setting.active_loss_terms
 
     @property
     def execution_setting(self) -> StageUnit:
@@ -487,6 +443,7 @@ class StageManager:
             self.current_acceptance_threshold,
             self.current_acceptance_gate,
             prefix_early_stopping=self.current_prefix_early_stopping,
+            active_loss_terms=self.current_active_loss_terms,
         )
         self._apply_mutation_num()
 
@@ -526,6 +483,7 @@ class StageManager:
             self.current_acceptance_threshold,
             self.current_acceptance_gate,
             prefix_early_stopping=self.current_prefix_early_stopping,
+            active_loss_terms=self.current_active_loss_terms,
         )
         self._apply_mutation_num()
         return rollback_scores

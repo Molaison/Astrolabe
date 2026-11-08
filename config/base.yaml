@@ -176,6 +176,12 @@ predocker:
     max_binding_site_pairs: 16
 
 evaluator:
+  initialization:
+    # Legacy caller RNG and lazy construction remain the default.
+    workers: 1
+    # An explicit seed selects stable per-alias initialization streams.
+    # Required for workers > 1; supported: native AF2, AF3 and ESMFold v1.
+    seed: null
   scheduling:
     # Default-off main-loop scheduling hook. When enabled, per-oligomer
     # incremental evaluations keep backend/GPU calls serial but finalize
@@ -224,6 +230,7 @@ evaluator:
     device: cuda
     relax_steps: 200
   alphafold3:
+    service_socket: null  # Optional existing AF3 service; interface owns one by default.
     json_path: None
     input_dir: None
     # construct inputs from astrolabe seqs
@@ -361,9 +368,11 @@ evaluator:
     num_sampling_steps: 50
     num_diffusion_samples: 1
     seed: null
-    lm_dropout: 0.0
-    msa_max_depth: 1024
-    msa_column_mask_rate: 0.1
+    # The native Biohub builder does not accept these options. Explicit values
+    # fail validation; null selects its supported native behavior.
+    lm_dropout: null
+    msa_max_depth: null
+    msa_column_mask_rate: null
     chunk_size: 64
     local_files_only: false
     timeout_seconds: null
@@ -896,11 +905,11 @@ mutator:
     transmembrane_buried: ""
     transmembrane_interface: ""
   DynamicMPNN:
-    # Real Alex-Abrudan/DynamicMPNN backend. This is intentionally separate from
-    # LigandMPNN/ProteinMPNN. Prefer backend_callable for in-process probability
-    # transfer; command_template is only for isolated external installs.
+    execution_mode: null
+    torch_device: null
     repo_path: null
     checkpoint: null
+    backend_factory: null
     backend_callable: null
     command_template: null
     temperature: 0.3
@@ -908,6 +917,8 @@ mutator:
     probabilities_path: probabilities.npy
     probabilities_key: probabilities
     timeout: null
+    request_timeout: null
+    python_bin: null
     output_dir: null
     env: {}
   SurfDesign:
@@ -972,6 +983,11 @@ mutator:
     max_iter: 500
     num_samples: 10
     temperature: 1.0
+
+# Shared execution defaults; task configs choose scientific search settings.
+protein_beam:
+  workers: 3
+  in_flight: 3
 
 hydra:
   run:

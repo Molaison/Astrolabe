@@ -119,42 +119,31 @@ def test_rapidock_runner_ping_and_shutdown(tmp_path: Path) -> None:
     assert runner._proc is None
 
 
-def test_rapidock_runner_default_wrapper_uses_inference_script(tmp_path: Path) -> None:
+def test_rapidock_runner_default_wrapper_uses_retained_python_api(tmp_path: Path) -> None:
     from astrolabe.structure_processors.wrappers.rapidock_runner import RAPiDockRunner
 
     repo_root = tmp_path / "rapidock_repo_default_wrapper"
     (repo_root / "RAPiDock").mkdir(parents=True)
     (repo_root / "RAPiDock" / "__init__.py").write_text("", encoding="utf-8")
-    (repo_root / "inference.py").write_text(
+    (repo_root / "RAPiDock" / "API.py").write_text(
         """
-import argparse
 from pathlib import Path
 
 
-def main():
-    print("NOISY-LIB-STDOUT")
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--complex_name", required=True)
-    parser.add_argument("--protein_description", required=True)
-    parser.add_argument("--peptide_description", required=True)
-    parser.add_argument("--output_dir", required=True)
-    parser.add_argument("--model_dir", required=True)
-    parser.add_argument("--ckpt", required=True)
-    parser.add_argument("--N", type=int, default=1)
-    parser.add_argument("--batch_size")
-    parser.add_argument("--inference_steps")
-    parser.add_argument("--cpu")
-    parser.add_argument("--conformation_type")
-    args = parser.parse_args()
-    output_dir = Path(args.output_dir)
-    output_dir.mkdir(parents=True, exist_ok=True)
-    for rank in range(1, args.N + 1):
-        (output_dir / f"rank{rank}_confidence.pdb").write_text("MODEL 1\\nEND\\n", encoding="utf-8")
-    return 0
+class RAPiDockInference:
+    def __init__(self, model_dir, ckpt, confidence_model_dir=None, confidence_ckpt="best_model.pt", device=None):
+        print("NOISY-LIB-STDOUT")
 
-
-if __name__ == "__main__":
-    raise SystemExit(main())
+    def run_inference_strict(self, output_dir, complex_name, N, **kwargs):
+        print("NOISY-INFERENCE-STDOUT")
+        write_dir = Path(output_dir) / complex_name
+        write_dir.mkdir(parents=True, exist_ok=True)
+        candidates = []
+        for rank in range(1, N + 1):
+            path = write_dir / f"rank{rank}_confidence.pdb"
+            path.write_text("MODEL 1\\nEND\\n", encoding="utf-8")
+            candidates.append(str(path))
+        return {complex_name: {"candidate_paths": candidates}}
 """.strip()
         + "\n",
         encoding="utf-8",
@@ -191,46 +180,6 @@ if __name__ == "__main__":
     ]
     assert runner.ping() == "pong"
     runner.shutdown()
-
-
-def test_rapidock_default_wrapper_collects_only_final_rank_candidates(
-    tmp_path: Path,
-) -> None:
-    from astrolabe.structure_processors.wrappers.rapidock_daemon import _collect_candidates
-
-    output_dir = tmp_path / "rapidock_outputs"
-    output_dir.mkdir()
-    for name in [
-        "rank1.pdb",
-        "rank1_reverseprocess.pdb",
-        "rank1_ref2015.pdb",
-        "rank1_confidence.pdb",
-        "rank2_confidence.pdb",
-        "rank2_reverseprocess.pdb",
-    ]:
-        (output_dir / name).write_text("MODEL 1\nEND\n", encoding="utf-8")
-
-    candidates = _collect_candidates(output_dir)
-
-    assert [Path(path).name for path in candidates] == [
-        "rank1_confidence.pdb",
-        "rank2_confidence.pdb",
-    ]
-
-
-def test_rapidock_default_wrapper_falls_back_to_exact_rank_pdbs(
-    tmp_path: Path,
-) -> None:
-    from astrolabe.structure_processors.wrappers.rapidock_daemon import _collect_candidates
-
-    output_dir = tmp_path / "rapidock_outputs"
-    output_dir.mkdir()
-    for name in ["rank10.pdb", "rank2.pdb", "rank2_reverseprocess.pdb"]:
-        (output_dir / name).write_text("MODEL 1\nEND\n", encoding="utf-8")
-
-    candidates = _collect_candidates(output_dir)
-
-    assert [Path(path).name for path in candidates] == ["rank2.pdb", "rank10.pdb"]
 
 
 def test_rapidock_runner_uses_content_cache_and_refreshes_after_bank_exhaustion(
@@ -556,6 +505,42 @@ def test_rapidock_runner_cache_key_changes_with_repo_path(tmp_path: Path) -> Non
     state_b = (repo_b / "RAPiDock" / "daemon_state.json").read_text(encoding="utf-8")
     assert '"dock_calls": 1' in state_a
     assert '"dock_calls": 1' in state_b
+
+
+def test_rapidock_runner_cache_key_changes_with_original_inference_source(
+    tmp_path: Path,
+) -> None:
+    from astrolabe.structure_processors.wrappers.rapidock_runner import RAPiDockRunner
+
+    repo_root = tmp_path / "rapidock_repo"
+    daemon_path = _write_fake_rapidock_repo(repo_root)
+    model_dir = tmp_path / "model"
+    model_dir.mkdir()
+    (model_dir / "rapidock_global.pt").write_text("stub", encoding="utf-8")
+    protein_path = _write_pdb(tmp_path / "protein_source.pdb", "CA")
+    peptide_path = _write_pdb(tmp_path / "peptide_source.pdb", "CB")
+    runner = RAPiDockRunner(
+        {
+            "python_bin": sys.executable,
+            "repo_path": str(repo_root),
+            "daemon_script_path": str(daemon_path),
+            "model_dir": str(model_dir),
+            "ckpt": "rapidock_global.pt",
+            "response_cache_dir": str(tmp_path / "cache"),
+            "work_dir": str(tmp_path / "work"),
+            "num_samples_bank": 2,
+        }
+    )
+
+    before = runner._cache_key(
+        protein_pdb=str(protein_path), peptide_pdb=str(peptide_path)
+    )
+    (repo_root / "inference.py").write_text("# official source\n", encoding="utf-8")
+    after = runner._cache_key(
+        protein_pdb=str(protein_path), peptide_pdb=str(peptide_path)
+    )
+
+    assert before != after
 
 
 def test_rapidock_predocker_scores_full_bank_and_keeps_original_peptide(

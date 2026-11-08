@@ -1103,47 +1103,9 @@ _PYROSETTA_INITED = False
 
 
 def _maybe_add_dalphaball(init_opts: str) -> str:
-    """
-    BindCraft configures BuriedUnsatHbonds with `dalphaball_sasa=1`, which requires
-    `-holes:dalphaball <path-to-DAlphaBall>` at PyRosetta init time.
+    from astrolabe.startup_dependencies import dalphaball_init_options
 
-    Best-effort: try common locations in this environment so users don't have to
-    manually inject this flag in every config.
-    """
-    toks = [t for t in str(init_opts).split() if t.strip()]
-
-    if "-holes:dalphaball" in toks:
-        i = toks.index("-holes:dalphaball")
-        has_path = (i + 1) < len(toks) and not toks[i + 1].startswith("-")
-        if has_path:
-            return init_opts
-
-    candidates: list[Path] = []
-    dalpha = os.environ.get("GH_DALPHABALL", "").strip()
-    if dalpha:
-        candidates.append(Path(os.path.expanduser(os.path.expandvars(dalpha))))
-    candidates.extend(
-        [
-            Path(__file__).resolve().parents[1] / "assets" / "DAlphaBall.gcc",
-            Path(__file__).resolve().parents[2] / "assets" / "DAlphaBall.gcc",
-        ]
-    )
-    dalpha = next((p for p in candidates if p.exists()), None)
-    if dalpha is None:
-        return init_opts
-
-    try:
-        mode = dalpha.stat().st_mode
-        if (mode & 0o100) == 0:
-            dalpha.chmod(mode | 0o100)
-    except Exception:
-        pass
-
-    if "-holes:dalphaball" in toks:
-        i = toks.index("-holes:dalphaball")
-        toks.insert(i + 1, str(dalpha))
-        return " ".join(toks)
-    return f"{init_opts} -holes:dalphaball {dalpha}"
+    return dalphaball_init_options(init_opts)
 
 
 def _ensure_pyrosetta(

@@ -43,11 +43,26 @@ def test_gh_dev_does_not_shadow_installed_vendor_packages() -> None:
     assert '\"$REPO_ROOT\" \"$@\"' in text
 
 
-def test_gh_dev_auto_resolved_runtime_binds_current_checkout() -> None:
-    text = (SCRIPTS_DIR / "astrolabe").read_text(encoding="utf-8")
+def test_gh_dev_auto_resolved_runtime_binds_current_checkout(monkeypatch, tmp_path) -> None:
+    from astrolabe import dev_wrapper, launcher
 
-    assert 'GH_HOST_REPO_MAP_ROOT="${GH_HOST_REPO_MAP_ROOT:-$ASTROLABE_HOST_REPO_MAP_ROOT}"' in text
-    assert 'GH_HOST_REPO_ROOT="${GH_HOST_REPO_ROOT:-$ASTROLABE_HOST_REPO_ROOT}"' in text
+    for key in (
+        "GH_PY", "ASTROLABE_PY", "GH_HOST_REPO_ROOT", "GH_HOST_REPO_MAP_ROOT",
+        "ASTROLABE_HOST_REPO_ROOT", "ASTROLABE_HOST_REPO_MAP_ROOT",
+    ):
+        monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("ASTROLABE_RUNTIME_ACTIVE", "1")
+    monkeypatch.setattr(dev_wrapper, "resolve_default_astrolabe_python", lambda root: sys.executable)
+    executed = []
+    monkeypatch.setattr(launcher.os, "execvpe", lambda *args: executed.append(args))
+
+    launcher.checkout_main(tmp_path, ["run", "--task", "example"])
+
+    executable, command, env = executed[0]
+    assert executable == sys.executable
+    assert command[-4:] == [str(tmp_path), "run", "--task", "example"]
+    assert env["GH_HOST_REPO_ROOT"] == env["ASTROLABE_HOST_REPO_ROOT"] == str(tmp_path)
+    assert env["GH_HOST_REPO_MAP_ROOT"] == env["ASTROLABE_HOST_REPO_MAP_ROOT"] == str(tmp_path)
 
 
 @pytest.mark.parametrize(
@@ -317,14 +332,19 @@ def test_sif_smoketest_uses_task_scoped_doctor(monkeypatch, tmp_path: Path) -> N
 
 def test_sif_cli_smoketest_manifest_covers_all_commands() -> None:
     module = _load_script_module("sif_cli_smoketest.py")
+    execution_module = _load_script_module("sif_cli_execution_smoketest.py")
 
     manifest = module._command_manifest()
     leaves = [node for node in manifest["nodes"] if node["leaf"]]
+    node_paths = [tuple(node["path"]) for node in manifest["nodes"]]
+    leaf_paths = {tuple(node["path"]) for node in leaves}
+    alias_paths = [tuple(alias["path"]) for alias in manifest["aliases"]]
+    legacy_paths = [tuple(alias["path"]) for alias in manifest["legacy_aliases"]]
 
-    assert len(manifest["nodes"]) == 67
-    assert len(leaves) == 57
-    assert len(manifest["aliases"]) == 6
-    assert len(manifest["legacy_aliases"]) == 4
+    assert len(node_paths) == len(set(node_paths))
+    assert len(alias_paths) == len(set(alias_paths))
+    assert len(legacy_paths) == len(set(legacy_paths))
+    assert leaf_paths == execution_module._canonical_leaf_paths()
     assert all(node["handler"] for node in leaves)
     assert module._completion_errors(manifest) == []
 
@@ -336,8 +356,7 @@ def test_sif_cli_execution_matrix_parses_every_canonical_leaf(tmp_path: Path) ->
     module._prepare_fixtures(tmp_path)
     cases = module._case_specs(tmp_path, REPO_ROOT)
 
-    assert len(cases) == 57
-    assert len({case.path for case in cases}) == 57
+    assert len({case.path for case in cases}) == len(cases)
     assert {case.path for case in cases} == module._canonical_leaf_paths()
     parser = cli._build_parser()
     for case in cases:
@@ -366,8 +385,17 @@ def test_sif_cli_execution_matrix_parses_every_canonical_leaf(tmp_path: Path) ->
         }
     }
     model_paths.update({("paper", "run"), ("paper", "baseline")})
+    model_paths.discard(("refine", "interface"))
     assert model_paths
     assert all("--dry-run" in case.argv for case in cases if case.path in model_paths)
+
+    by_path = {case.path: case for case in cases}
+    assert "--dry-run" in by_path[("setup",)].argv
+    assert "--prepare-only" in by_path[("refine", "interface")].argv
+    assert by_path[("daemon", "backends")].json_stdout
+    assert by_path[("daemon", "status")].expected_returncode == 2
+    assert by_path[("daemon", "stop")].expected_returncode == 2
+    assert by_path[("daemon", "serve")].expected_returncode == 2
 
 
 def test_paper_cli_execution_matrix_runs_analyses_and_model_previews(tmp_path: Path) -> None:
@@ -415,14 +443,16 @@ def test_sif_cli_smoketest_outer_uses_engine_helpers_and_writes_report(
     sif_path.write_text("placeholder", encoding="utf-8")
     report_path = tmp_path / "report.json"
     captured = {}
+    manifest = module._command_manifest()
+    canonical_leaves = sum(node["leaf"] for node in manifest["nodes"])
 
     class Result:
         returncode = 0
         stdout = json.dumps(
             {
-                "canonical_leaves": 57,
-                "parser_aliases": 6,
-                "legacy_aliases": 4,
+                "canonical_leaves": canonical_leaves,
+                "parser_aliases": len(manifest["aliases"]),
+                "legacy_aliases": len(manifest["legacy_aliases"]),
                 "failures": [],
             }
         )
@@ -452,7 +482,10 @@ def test_sif_cli_smoketest_outer_uses_engine_helpers_and_writes_report(
     assert rc == 0
     assert captured["command"][0] == str(engine.resolve())
     assert captured["env"]["PATH"].split(os.pathsep)[0] == str(engine.parent.resolve())
-    assert json.loads(report_path.read_text(encoding="utf-8"))["canonical_leaves"] == 57
+    assert (
+        json.loads(report_path.read_text(encoding="utf-8"))["canonical_leaves"]
+        == canonical_leaves
+    )
 
 
 @pytest.mark.parametrize(

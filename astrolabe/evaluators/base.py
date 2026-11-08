@@ -13,6 +13,16 @@ class Evaluator:
         std_output = self.prepare_output(output, inputs, runtime_config)
         return std_output
 
+    def shutdown(self):
+        from astrolabe.evaluators.utils import shutdown_model_handles
+
+        shutdown_model_handles(
+            getattr(self, "model_runner", None),
+            getattr(self, "model_runners", None),
+            getattr(self, "runner", None),
+            getattr(self, "_model", None),
+        )
+
     @abstractmethod
     def run_function(self, input_feat):
         pass

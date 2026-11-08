@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from collections import defaultdict
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
 from astrolabe.core import global_config
 from astrolabe.evaluators.base import Evaluator
+from astrolabe.evaluators.structure_output import project_structure, structure_directory
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.evaluators.wrappers.opendde import (
     OpenDDEPreparedInput,
@@ -16,6 +18,8 @@ from astrolabe.evaluators.wrappers.opendde import (
 
 
 class OpenDDEEvaluator(Evaluator):
+    _staged_evaluation = True
+
     def __init__(self, model_runner: OpenDDERunner, output_dir: Path):
         self.model_runner = model_runner
         self.output_dir = Path(output_dir)
@@ -43,15 +47,17 @@ class OpenDDEEvaluator(Evaluator):
         return prepared
 
     def run_function(self, input_feat):
-        for prepared in input_feat.values():
-            self.model_runner.run_inference(
+        result = {}
+        for name, prepared in input_feat.items():
+            actual_dir = self.model_runner.run_inference(
                 input_json=prepared.json_path,
                 out_dir=prepared.output_dir,
             )
-        return input_feat
+            result[name] = replace(prepared, output_dir=actual_dir) if actual_dir is not None else prepared
+        return result
 
     def prepare_output(self, output, inputs, runtime_config):
-        structures_dir = Path(global_config.out_dir) / "structures"
+        structures_dir = structure_directory(global_config.out_dir, getattr(self, "alias", None))
         plddt: dict[str, list[Any]] = {}
         ptm: dict[str, list[float]] = {}
         iptm: dict[str, list[float]] = {}
@@ -62,6 +68,7 @@ class OpenDDEEvaluator(Evaluator):
 
         for oligo_name, prepared in output.items():
             collected = collect_opendde_outputs(prepared, structures_dir=structures_dir)
+            project_structure(collected["complex_path"], global_config.out_dir, getattr(self, "alias", None))
             plddt[oligo_name] = collected["plddt"]
             if collected["ptm"] is not None:
                 ptm[oligo_name] = collected["ptm"]

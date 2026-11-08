@@ -3,8 +3,9 @@ import pathlib
 from abc import abstractmethod
 from typing import Any, Dict
 
-from astrolabe.core import global_config
 from astrolabe.runtime_support import ResourceOwner
+from astrolabe.core import global_config
+from astrolabe.model_execution import ExecutionMode, execution_mode
 from astrolabe.mutators.capabilities import (
     MutatorCapabilities,
     validate_mutator_capabilities,
@@ -15,6 +16,7 @@ from astrolabe.mutators.utils import (
     mutation_output_supports_sampling_probs,
 )
 from omegaconf import OmegaConf
+from astrolabe.component_config import merge_component_config
 
 
 class Mutator:
@@ -24,6 +26,12 @@ class Mutator:
     def shutdown(self) -> None:
         """Release external resources held by the mutator."""
         return None
+
+    def finalize_pending_mutations(self) -> None:
+        """Materialize queued segment mutations before candidate capture."""
+        from astrolabe.design.legacy import finalize_pending_mutations
+
+        finalize_pending_mutations(global_config.segment_manager)
 
     @abstractmethod
     def compute_mutation(self, input_feat):
@@ -147,10 +155,9 @@ class Mutator:
 
 
 def _merge_runner_conf(base_conf, overrides):
-    base_dict = (
-        OmegaConf.to_container(base_conf, resolve=True) if base_conf is not None else {}
-    )
-    runner_dict = dict(base_dict)
+    base_keys = set(base_conf.keys()) if base_conf is not None else set()
+    merged = merge_component_config(base_conf._get_parent(), (base_conf._key(),), overrides)
+    runner_dict = {key: merged[key] for key in base_keys}
     overrides = dict(overrides)
     leftover = {}
     for key, value in overrides.items():
@@ -161,29 +168,40 @@ def _merge_runner_conf(base_conf, overrides):
     return OmegaConf.create(runner_dict), leftover
 
 
-def build_mutators(
-    mutator_conf, raw_model_results_dir: "pathlib.Path", *,
-    resource_owner: ResourceOwner | None = None,
-):
-    """Build mutators; a shared owner is closed if construction fails."""
-    enabled_aliases = getattr(mutator_conf, "enabled_aliases", None)
-    if enabled_aliases is None:
-        enabled_aliases = list((getattr(mutator_conf, "mutator_terms", {}) or {}).keys())
-    enabled_aliases = [str(a) for a in enabled_aliases if str(a)]
-    enabled_set = set(enabled_aliases)
-
-    mutators = {}
+def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path", *,
+                   resource_owner: ResourceOwner | None = None):
     owner = resource_owner if resource_owner is not None else ResourceOwner()
     try:
+        enabled_aliases = getattr(mutator_conf, "enabled_aliases", None)
+        if enabled_aliases is None:
+            enabled_aliases = list((getattr(mutator_conf, "mutator_terms", {}) or {}).keys())
+        enabled_aliases = [str(a) for a in enabled_aliases if str(a)]
+        enabled_set = set(enabled_aliases)
+
+        mutators = {}
+
+        planned = []
         for alias, conf in mutator_conf.mutator_terms.items():
             # Allow turning off mutators via config overlays by setting them to null.
             if conf is None:
                 continue
             # Build only mutators that are enabled for this run (derived from stages by
             # argparser, or defaulting to all mutator_terms keys).
-            if enabled_set and str(alias) not in enabled_set:
+            if str(alias) not in enabled_set:
                 continue
-            conf = dict(conf)
+            raw_kind = str(conf.get("_type", "")).strip().lower()
+            default_keys = {
+                "mcmc": ("MCMC",), "pore_blocker_mcmc": ("MCMC",),
+                "ligandmpnn": ("LigandMPNN",), "grouped_ligandmpnn": ("LigandMPNN",),
+                "proteinmpnn": ("LigandMPNN",), "multistateproteinmpnn": ("LigandMPNN",),
+                "multistate_proteinmpnn": ("LigandMPNN",),
+                "faraparttiedmultitargetligandmpnn": ("LigandMPNN",),
+                "far_apart_tied_multitarget_ligandmpnn": ("LigandMPNN",),
+                "dynamicmpnn": ("DynamicMPNN",), "surfdesign": ("SurfDesign",),
+                "surfpro": ("SurfPro",), "carbondesign": ("CarbonDesign",),
+                "dplm": ("DPLM",), "nampnn": ("NAMPNN",),
+            }.get(raw_kind, ())
+            conf = OmegaConf.to_container(merge_component_config(mutator_conf, default_keys, conf), resolve=True)
             name = conf.pop("_type", None)
             if not name:
                 raise ValueError(f"Mutator name must be specified for {alias} in `_type`")
@@ -209,6 +227,9 @@ def build_mutators(
                     f"Unknown mutator name {name!r}. Available mutator types: {available}"
                 ) from exc
 
+            planned.append((alias, conf, factory))
+
+        for alias, conf, factory in planned:
             mutator = factory(
                 conf,
                 alias=alias,
@@ -223,24 +244,38 @@ def build_mutators(
                 protomers = {}
             validate_mutator_capabilities(mutator, alias=str(alias), protomers=protomers)
             mutators[alias] = mutator
+
+        return mutators
     except BaseException:
-        # ResourceOwner marks an object closed before calling it. If even a
-        # BaseException escapes a closer, retry to finish the other objects.
         while True:
             try:
                 owner.close()
                 break
             except BaseException:
-                logging.exception("Failed to clean up mutators after construction error")
+                logging.exception("Failed to clean up resources after construction error")
         raise
-    return mutators
+
+
+@register_mutator_factory("rfd4")
+def _build_rfd4_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
+    from astrolabe.mutators.rfd4 import RFD4Mutator
+
+    for settings in (mutator_conf, getattr(mutator_conf, "LigandMPNN", None)):
+        if settings is not None and any(settings.get(key) for key in (
+            "aa_bias", "bias_AA", "bias_AA_per_residue", "bias_AA_per_residue_multi",
+        )):
+            raise ValueError("RFD4 does not support amino-acid probability biases")
+    return RFD4Mutator(**term_conf)
+
+
+_build_rfd4_mutator.requires_native_preparation = True
 
 
 @register_mutator_factory("mcmc")
 def _build_mcmc_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.random_substitution import RandomSubstitutionMutator
 
-    kwargs = {**OmegaConf.to_container(mutator_conf.MCMC, resolve=True), **term_conf}
+    kwargs = OmegaConf.to_container(merge_component_config(mutator_conf, ("MCMC",), term_conf), resolve=True)
     return RandomSubstitutionMutator(**kwargs)
 
 
@@ -254,8 +289,7 @@ def _build_pore_blocker_mcmc_mutator(
 ):
     from astrolabe.mutators.random_substitution import PoreBlockingSubstitutionMutator
 
-    base_conf = OmegaConf.to_container(mutator_conf.MCMC, resolve=True)
-    kwargs = {**base_conf, **term_conf}
+    kwargs = OmegaConf.to_container(merge_component_config(mutator_conf, ("MCMC",), term_conf), resolve=True)
     kwargs.setdefault("mutation_method", "frequency_adjusted")
     kwargs.setdefault("select_positions", "plddt")
     return PoreBlockingSubstitutionMutator(**kwargs)
@@ -271,9 +305,27 @@ def _build_mpnn_mutator(
 ):
     from astrolabe.mutators.wrappers.ligandmpnn_run import LigandMPNN
 
+    term_conf = dict(term_conf)
+    mode_value = term_conf.pop("execution_mode", None)
     runner_conf, mutator_kwargs = _merge_runner_conf(mutator_conf.LigandMPNN, term_conf)
+    configured_mode = runner_conf.pop("execution_mode", None)
+    if mode_value is None:
+        mode_value = configured_mode
+    mode = execution_mode(mode_value)
     runner_conf["out_folder"] = str(raw_model_results_dir / output_name)
-    sequence_model_runner = LigandMPNN(runner_conf)
+    if mode is ExecutionMode.DAEMON:
+        from astrolabe.mutators.native_daemons import (
+            LIGANDMPNN_DAEMON_FACTORY,
+            NativeSequenceRunner,
+        )
+
+        sequence_model_runner = NativeSequenceRunner(
+            backend="ligandmpnn",
+            factory=LIGANDMPNN_DAEMON_FACTORY,
+            runner_config=runner_conf,
+        )
+    else:
+        sequence_model_runner = LigandMPNN(runner_conf)
     return mutator_cls(
         sequence_model_runner=sequence_model_runner,
         **mutator_kwargs,
@@ -401,9 +453,27 @@ def _build_carbondesign_mutator(term_conf, *, alias, mutator_conf, raw_model_res
     from astrolabe.mutators.carbondesign import CarbonDesignMutator
     from astrolabe.mutators.wrappers.carbondesign_runner import CarbonDesignRunner
 
+    term_conf = dict(term_conf)
+    mode_value = term_conf.pop("execution_mode", None)
     runner_conf, mutator_kwargs = _merge_runner_conf(mutator_conf.CarbonDesign, term_conf)
+    configured_mode = runner_conf.pop("execution_mode", None)
+    if mode_value is None:
+        mode_value = configured_mode
+    mode = execution_mode(mode_value)
     runner_conf["output_dir"] = str(raw_model_results_dir / "CarbonDesign")
-    sequence_model_runner = CarbonDesignRunner(runner_conf)
+    if mode is ExecutionMode.DAEMON:
+        from astrolabe.mutators.native_daemons import (
+            CARBONDESIGN_DAEMON_FACTORY,
+            NativeSequenceRunner,
+        )
+
+        sequence_model_runner = NativeSequenceRunner(
+            backend="carbondesign",
+            factory=CARBONDESIGN_DAEMON_FACTORY,
+            runner_config=runner_conf,
+        )
+    else:
+        sequence_model_runner = CarbonDesignRunner(runner_conf)
     return CarbonDesignMutator(
         sequence_model_runner=sequence_model_runner,
         **mutator_kwargs,
@@ -414,21 +484,27 @@ def _build_carbondesign_mutator(term_conf, *, alias, mutator_conf, raw_model_res
 def _build_esmif_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.esm_if1 import ESMIF1Mutator
 
-    return ESMIF1Mutator(**term_conf)
+    term_conf = dict(term_conf)
+    mode = execution_mode(term_conf.pop("execution_mode", None))
+    return ESMIF1Mutator(execution_mode=mode, **term_conf)
 
 
 @register_mutator_factory("esm2")
 def _build_esm2_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.esm2 import ESM2Mutator
 
-    return ESM2Mutator(**term_conf)
+    term_conf = dict(term_conf)
+    mode = execution_mode(term_conf.pop("execution_mode", None))
+    return ESM2Mutator(execution_mode=mode, **term_conf)
 
 
 @register_mutator_factory("esm3")
 def _build_esm3_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.esm3 import ESM3Mutator
 
-    return ESM3Mutator(**term_conf)
+    term_conf = dict(term_conf)
+    mode = execution_mode(term_conf.pop("execution_mode", None))
+    return ESM3Mutator(execution_mode=mode, **term_conf)
 
 
 @register_mutator_factory("motifbreaker")
@@ -442,7 +518,7 @@ def _build_motifbreaker_mutator(term_conf, *, alias, mutator_conf, raw_model_res
 def _build_dplm_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
     from astrolabe.mutators.dplm import DPLMMutator
 
-    runner_kwargs = {**OmegaConf.to_container(mutator_conf.DPLM, resolve=True), **term_conf}
+    runner_kwargs = OmegaConf.to_container(merge_component_config(mutator_conf, ("DPLM",), term_conf), resolve=True)
     runner_kwargs["work_dir"] = str(raw_model_results_dir / "DPLM")
     return DPLMMutator(**runner_kwargs)
 

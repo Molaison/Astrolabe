@@ -8,6 +8,7 @@ import numpy as np
 
 from astrolabe.core import global_config
 from astrolabe.evaluators.base import Evaluator
+from astrolabe.evaluators.structure_output import project_structure, structure_directory
 from astrolabe.evaluators.utils import StandardScores
 
 
@@ -671,8 +672,7 @@ class RosettaCrystalEvaluator(Evaluator):
 
     def prepare_output(self, output, inputs, runtime_config):
         step = int((runtime_config or {}).get("step", getattr(global_config, "step", 0)) or 0)
-        structure_dir = Path(global_config.out_dir) / "structures"
-        structure_dir.mkdir(parents=True, exist_ok=True)
+        structure_dir = structure_directory(global_config.out_dir, getattr(self, "alias", None))
         complex_paths: dict[str, Path] = {}
         metrics_by_oligo: dict[str, dict[str, Any]] = {}
         per_proto_score_terms: dict[str, dict[str, list[np.ndarray]]] = {}
@@ -682,6 +682,7 @@ class RosettaCrystalEvaluator(Evaluator):
             primary["pose"].dump_pdb(str(path))
             if not path.is_file() or path.stat().st_size == 0:
                 raise RuntimeError(f"Rosetta evaluator did not write {path}")
+            project_structure(path, global_config.out_dir, getattr(self, "alias", None))
             complex_paths[oligo_name] = path
             state_metrics = {
                 state: dict(result["metrics"]) for state, result in states.items()

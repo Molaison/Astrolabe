@@ -2173,9 +2173,51 @@ def generate_mol2_files_for_protomer(
     return mol2_files
 
 
+def _reuse_explicit_residue_params(params, protomers, aliases, resname_map, output_dir):
+    """Stage exact user params for declared targets before built-in detection."""
+    if not params:
+        return {}
+    if isinstance(params, (str, Path, Mapping)):
+        raise TypeError("extra_residue_params must be a list of .params paths")
+    declared = {str(entry["ccd_id"]).strip().upper() for entry in aliases.values()}
+    for key, proto in protomers.items():
+        if proto.type not in (ProtomerTypes.CCD, ProtomerTypes.SMILES):
+            continue
+        codes = _normalize_ccd_codes(proto.sequence) if proto.type == ProtomerTypes.CCD else (None,)
+        declared.update(_resolve_ligand_resname(
+            protomer_key=key, protomer_name=str(getattr(proto, "name", key)),
+            ligand_resnames=resname_map, ccd_code=code,
+        ) for code in codes)
+    staged = {}
+    for raw_path in params:
+        source = Path(str(raw_path)).expanduser().resolve(strict=True)
+        records = [line.split() for line in source.read_text().splitlines() if line.strip()]
+        names = [fields[1:] for fields in records if fields[0] == "NAME"]
+        ids = [fields[1:] for fields in records if fields[0] == "IO_STRING"]
+        if (source.suffix != ".params" or len(names) != 1 or len(names[0]) != 1
+                or len(ids) != 1 or len(ids[0]) != 2 or ids[0][0] not in declared):
+            raise ValueError(f"Explicit params must declare one NAME and IO_STRING for a configured target: {source}")
+        resname = _require_ccd_code_resname(ids[0][0])
+        destination = Path(output_dir) / f"{resname}.params"
+        companions = [(source, destination)]
+        conformer = source.with_name(f"{source.stem}_0001.pdb")
+        if conformer.exists():
+            companions.append((conformer, destination.with_name(f"{resname}_0001.pdb")))
+        for original, target in companions:
+            contents = original.read_bytes()
+            if target.exists() and target.read_bytes() != contents:
+                raise ValueError(f"Refusing to replace different existing explicit params/conformer: {target}")
+            if not target.exists():
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(contents)
+        staged[resname] = str(destination)
+    return staged
+
+
 def setup_extra_residues(
     ligand_resnames: Optional[Mapping[str, str]] = None,
     structure_files: Optional[Mapping[str, object]] = None,
+    extra_residue_params: Optional[Sequence[str]] = None,
 ) -> Dict[str, str]:
     """
     从评估结果中提取非标准残基并准备PyRosetta参数文件。
@@ -2189,12 +2231,20 @@ def setup_extra_residues(
     has_ligand_protomers = any(
         v.type in (ProtomerTypes.SMILES, ProtomerTypes.CCD) for _, v in protomers.items()
     )
-    if not has_ligand_protomers and not nonstandard_aliases:
+    if extra_residue_params is None:
+        try:
+            extra_residue_params = getattr(global_config, "extra_residue_params", None)
+        except RuntimeError:
+            extra_residue_params = None
+    if not has_ligand_protomers and not nonstandard_aliases and not extra_residue_params:
         logging.info("Skipping extra residue setup; no ligand or nonstandard PTM targets.")
         return {}
 
     merged_resname_map = get_merged_ligand_resnames(ligand_resnames)
     output_dir = global_config.out_dir / "raw_model_results"
+    explicit_params = _reuse_explicit_residue_params(
+        extra_residue_params or (), protomers, nonstandard_aliases, merged_resname_map, output_dir,
+    )
     all_mol2_files: Dict[str, str] = {}
 
     builtin_residue_names = _get_runtime_rosetta_builtin_residue_names()
@@ -2248,6 +2298,8 @@ def setup_extra_residues(
                 protomer_name=str(getattr(protomer, "name", proto_name)),
                 ligand_resnames=merged_resname_map,
             )
+            if resname in explicit_params:
+                continue
             source_id = f"SMILES:{str(protomer.sequence).strip()}"
             owner = f"protomer:{proto_name}"
             if _register_params_target(
@@ -2264,6 +2316,12 @@ def setup_extra_residues(
 
         ccd_codes = _normalize_ccd_codes(protomer.sequence)
         protomer_name = str(getattr(protomer, "name", proto_name))
+        ccd_codes = [code for code in ccd_codes if _resolve_ligand_resname(
+            protomer_key=proto_name, protomer_name=protomer_name,
+            ligand_resnames=merged_resname_map, ccd_code=code,
+        ) not in explicit_params]
+        if not ccd_codes:
+            continue
         params_codes = _ccd_codes_requiring_params_for_protomer(
             proto_name=proto_name,
             protomer_name=protomer_name,
@@ -2303,6 +2361,8 @@ def setup_extra_residues(
     if nonstandard_aliases:
         for alias, alias_entry in sorted(nonstandard_aliases.items()):
             ccd_code = str(alias_entry["ccd_id"]).strip().upper()
+            if ccd_code in explicit_params:
+                continue
             if ccd_code in builtin_residue_names:
                 logging.info(
                     "Skipping params generation for nonstandard alias %s: CCD code %s is built into Rosetta.",
@@ -2332,7 +2392,7 @@ def setup_extra_residues(
             else:
                 target_ccd_codes[resname] = ccd_code
 
-    generated_files: Dict[str, str] = {}
+    generated_files: Dict[str, str] = dict(explicit_params)
     unresolved_resnames: Set[str] = set(target_meta)
 
     if target_nonstandard_aliases:

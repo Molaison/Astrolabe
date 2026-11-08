@@ -135,6 +135,8 @@ def test_parse_arguments_writes_started_provenance_with_metadata(
     # Persisted config digest matches the config.yaml this run directory holds.
     assert provenance["config"]["algorithm"] == "sha256"
     assert provenance["config"]["sha256"] == _sha256(run_dir / "config.yaml")
+    assert provenance["config"]["resolved"]["sha256"]
+    assert provenance["config"]["resolved"]["reason"] is None
 
     # Explicit input file identities, streamed and tolerant of a `:CHAIN` suffix.
     motif_entry = provenance["input_files"]["named_files"]["motif"]
@@ -188,6 +190,100 @@ def test_provenance_failures_are_not_raised(tmp_path: pathlib.Path) -> None:
     assert lifecycle.start_run_provenance(args) is None
     assert lifecycle.finish_run_provenance(args, "failed") is None
     assert not (missing_dir / "provenance.json").exists()
+
+
+def test_resolved_config_identity_tracks_environment_without_changing_saved_yaml(
+    tmp_path: pathlib.Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cfg = OmegaConf.create({"out_dir": str(tmp_path), "seed": "${oc.env:ASTROLABE_TEST_SEED}"})
+    OmegaConf.save(cfg, tmp_path / "config.yaml")
+    before = OmegaConf.to_container(cfg, resolve=False)
+
+    monkeypatch.setenv("ASTROLABE_TEST_SEED", "7")
+    first = lifecycle.build_run_provenance(cfg)
+    monkeypatch.setenv("ASTROLABE_TEST_SEED", "11")
+    second = lifecycle.build_run_provenance(cfg)
+
+    assert first["config"]["sha256"] == second["config"]["sha256"] == _sha256(tmp_path / "config.yaml")
+    assert first["config"]["resolved"]["sha256"]
+    assert first["config"]["resolved"]["sha256"] != second["config"]["resolved"]["sha256"]
+    assert second["config"]["resolved"]["reason"] is None
+    assert OmegaConf.to_container(cfg, resolve=False) == before
+
+
+def test_resolved_view_reuses_pruning_and_original_interpolation_context() -> None:
+    cfg = OmegaConf.create({
+        "seed": 7,
+        "weight_path": {"unused": "/weights/selected.bin"},
+        "evaluator": {
+            "evaluator_terms": {
+                "active": {"_type": "dummy", "weights": "${weight_path.unused}"},
+                "inactive": {"_type": "other", "weights": "${absent.value}"},
+            },
+            "enabled_aliases": ["active"],
+            "other": {"unusable": "${absent.value}"},
+        },
+    })
+    original = OmegaConf.to_container(cfg, resolve=False)
+
+    resolved = lifecycle.build_persisted_run_config(cfg, resolve=True)
+
+    assert resolved.evaluator.evaluator_terms.active.weights == "/weights/selected.bin"
+    assert set(resolved.evaluator.evaluator_terms) == {"active"}
+    assert "other" not in resolved.evaluator
+    assert "weight_path" not in resolved
+    assert OmegaConf.to_container(cfg, resolve=False) == original
+
+
+def test_resolved_config_identity_is_order_independent_and_paths_are_portable(tmp_path: pathlib.Path) -> None:
+    first = OmegaConf.create({"out_dir": tmp_path, "seed": 7}, flags={"allow_objects": True})
+    second = OmegaConf.create({"seed": 7, "out_dir": str(tmp_path)})
+
+    left = lifecycle.build_run_provenance(first)["config"]["resolved"]
+    right = lifecycle.build_run_provenance(second)["config"]["resolved"]
+
+    assert left["sha256"] and left["sha256"] == right["sha256"]
+    assert left["reason"] is None
+
+
+def test_resolved_config_identity_includes_report_only_losses(tmp_path: pathlib.Path) -> None:
+    cfg = OmegaConf.create({
+        "out_dir": str(tmp_path),
+        "seed": 7,
+        "stages": {"default": {"weighted_score_expression": "objective"}},
+        "loss": {"loss_terms": {
+            "objective": {"_type": "ptm"},
+            "report": {"_type": "plddt"},
+            "disabled": None,
+        }},
+    })
+    before = lifecycle.build_run_provenance(cfg)["config"]["resolved"]
+    cfg.loss.loss_terms.report._type = "iptm"
+    after = lifecycle.build_run_provenance(cfg)["config"]["resolved"]
+
+    assert before["sha256"] and after["sha256"]
+    assert before["sha256"] != after["sha256"]
+    resolved = lifecycle.build_persisted_run_config(cfg, resolve=True)
+    assert set(resolved.loss.loss_terms) == {"objective", "report"}
+
+
+@pytest.mark.parametrize("value", ["${missing.value}", "???", float("nan"), {1: "value"}])
+def test_unavailable_resolved_config_keeps_provenance_and_terminal_state(
+    tmp_path: pathlib.Path, value
+) -> None:
+    cfg = OmegaConf.create({"out_dir": str(tmp_path), "seed": 7, "custom": value})
+    OmegaConf.save(cfg, tmp_path / "config.yaml")
+
+    assert lifecycle.start_run_provenance(cfg) == tmp_path / "provenance.json"
+    initial = _read_provenance(tmp_path)
+    assert initial["config"]["sha256"] == _sha256(tmp_path / "config.yaml")
+    assert initial["config"]["resolved"]["sha256"] is None
+    assert initial["config"]["resolved"]["reason"]
+    lifecycle.finish_run_provenance(cfg, "failed", error=RuntimeError("actual run error"))
+    final = _read_provenance(tmp_path)
+    assert final["state"] == "failed"
+    assert final["error"]["message"] == "actual run error"
+    assert final["config"] == initial["config"]
 
 
 def test_git_provenance_does_not_infer_from_cwd(

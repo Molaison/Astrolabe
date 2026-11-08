@@ -1,0 +1,103 @@
+defaults:
+  - base
+  - override env: env
+  - _self_
+
+task_name: ???
+out_dir: ???
+repeats: 1
+steps: 3
+seed: 17
+enable_pyrosetta: true
+ananas_path: null
+exclude_AA: [C]
+
+types:
+  A: p
+  B: p
+seqs:
+  A: ???
+  B: ???
+
+mutator:
+  mutator_terms:
+    rfd4:
+      _type: rfd4
+      assembly: AB
+      binder_chains: [A]
+      target_chains: [B]
+      python_bin: ${oc.env:ASTROLABE_RFD4_PYTHON}
+      source_dir: ${oc.env:ASTROLABE_RFD4_SOURCE}
+      model_dir: ${oc.env:ASTROLABE_RFD4_MODEL}
+      cache_dir: ${oc.env:ASTROLABE_RFD4_CACHE}
+      max_fixed_atom_rmsd: 0.5
+      generation:
+        nsteps: 60
+        partial_t_backbone: 0.7
+        partial_t_latent: 0.7
+        recycle_strategy: medium/front_loaded
+        precision: bf16-mixed
+      feedback:
+        enabled: true
+        chemistry:
+          hbond_energy_cutoff: 0.0
+          interface_distance: 5.0
+          buried_sasa_cutoff: 1.0
+          sasa_probe_radius: 1.4
+        retention:
+          freeze_hbonds: true
+          energy_top_k: 0
+          max_hbond_conditions: 8
+
+evaluator:
+  evaluator_terms:
+    Alphafold3:
+      _type: Alphafold3
+      num_seeds: 1
+      num_recycles: 1
+      num_samples: 1
+      run_data_pipeline: false
+      run_inference: true
+      flash_attention_implementation: xla
+
+loss:
+  loss_terms:
+    interface_sc:
+      _type: interface_shape_complementarity
+      binder_chains: [A]
+      target_chains: [B]
+    interface_hbonds:
+      _type: interface_hbond_count
+      binder_chains: [A]
+      target_chains: [B]
+      hbond_energy_cutoff: 0.0
+    pair_energy:
+      _type: short_range_interface_pair_energy
+      binder_chains: [A]
+      target_chains: [B]
+
+per_residue_scores:
+  enabled: true
+  terms:
+    interface_hbond_count:
+      binder_chains: [A]
+      target_chains: [B]
+    short_range_interface_pair_energy:
+      binder_chains: [A]
+      target_chains: [B]
+    unsatisfied_interface_polar_count:
+      binder_chains: [A]
+      target_chains: [B]
+  mutator_score_terms:
+    short_range_interface_pair_energy: 1.0
+
+stages:
+  default:
+    oligo: [AB]
+    evaluator: Alphafold3
+    mutators: [rfd4]
+    mutation_num: "100%"
+    weighted_score_expression: interface_sc + interface_hbonds
+    acceptance_gate: delta_interface_sc >= 0 and delta_interface_hbonds >= 0
+    acceptance_threshold: null
+    early_stopping: null

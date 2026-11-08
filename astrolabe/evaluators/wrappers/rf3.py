@@ -147,6 +147,7 @@ class RF3RunnerResponse:
 class _CachedEngine:
     engine: Any
     post_init_rng_state: _RNGStateSnapshot
+    kernel: Any = None
 
 
 class RF3RunnerService:
@@ -181,13 +182,13 @@ class RF3RunnerService:
         if cached is not None:
             return cached
         engine_cls = _load_rf3_inference_engine(repo_path)
-        engine = engine_cls(**effective)
-        initialize = getattr(engine, "initialize", None)
-        if callable(initialize):
-            initialize()
+        from astrolabe.evaluators.runtime_stages import resident_engine_kernel
+
+        engine, kernel = resident_engine_kernel(engine_cls, effective)
         cached = _CachedEngine(
             engine=engine,
             post_init_rng_state=_capture_rng_state(),
+            kernel=kernel,
         )
         self._engine_cache[cache_key] = cached
         return cached
@@ -340,7 +341,11 @@ class RF3RunnerService:
             with self._lock:
                 cached = self._get_engine(request.rf3_overrides)
                 _restore_rng_state(cached.post_init_rng_state)
-                cached.engine.run(**self._run_kwargs(cached.engine, request))
+                kwargs = self._run_kwargs(cached.engine, request)
+                if cached.kernel is None:
+                    cached.engine.run(**kwargs)
+                else:
+                    cached.kernel(kwargs)
             return self._build_response(request)
         except Exception as exc:
             return RF3RunnerResponse(

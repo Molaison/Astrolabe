@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import copy
 import itertools
 import json
 import os
@@ -8,9 +9,11 @@ from pathlib import Path
 import logging
 import shutil
 import time
+import threading
 from collections import defaultdict
 from collections.abc import Mapping
 from typing import Sequence
+from types import SimpleNamespace
 
 import jax
 import numpy as np
@@ -21,10 +24,12 @@ from alphafold3.constants import chemical_components
 from alphafold3.data import featurisation
 from astrolabe.core.cyclization import serialize_cyclic_relative_patches
 from astrolabe.utils.mmcif_ids import int_id_to_str_id
+from astrolabe.af3_featurisation_settings import featurisation_environment
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.structure_output import project_structure, structure_directory
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.alphafold3 import (
     BUCKETS,
     ResultsForSeed,
@@ -45,7 +50,10 @@ from astrolabe.pre_eval_hooks.af3_antibody_msa_cache import (
 
 
 class AlphaFold3Evaluator(Evaluator):
+    _staged_evaluation = True
+
     def __init__(self, model_runner, output_dir, af3_conf=None):
+        self._evaluation_lock = threading.RLock()
         self.model_runner = model_runner
         self.af3_conf = af3_conf
         self._pre_eval_hook_reports = {}
@@ -91,6 +99,50 @@ class AlphaFold3Evaluator(Evaluator):
             else None
         )
 
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runner)
+
+    def evaluate(self, inputs=None, runtime_config=None):
+        # Legacy scientific configuration is not qualified for concurrent use.
+        # Serialize this facade, but do not acquire a whole-evaluation GPU lease.
+        with self._evaluation_lock:
+            request = copy.copy(self)
+            if (getattr(self.model_runner, "_client", None) is not None
+                    or getattr(self.model_runner, "_socket", None) is not None):
+                request.model_runner = copy.copy(self.model_runner)
+            request.kwargs = copy.deepcopy(self.kwargs)
+            request.buckets = dict(self.buckets)
+            request.af3_conf = copy.deepcopy(self.af3_conf)
+            request.query_residue_index_jumps = copy.deepcopy(self.query_residue_index_jumps)
+            request._pre_eval_hook_reports = {}
+            request._af3_antibody_msa_cache = copy.deepcopy(self._af3_antibody_msa_cache)
+            if hasattr(self, "pre_eval_hooks_config"):
+                request.pre_eval_hooks_config = copy.deepcopy(self.pre_eval_hooks_config)
+            context = {}
+            for name in ("step", "out_dir", "num_tokens", "protomers", "pre_eval_hooks", "structure_start"):
+                try:
+                    context[name] = getattr(global_config, name)
+                except RuntimeError:
+                    continue
+            for name in ("num_tokens", "pre_eval_hooks"):
+                if name in context:
+                    context[name] = copy.deepcopy(context[name])
+            if "protomers" in context:
+                context["protomers"] = {key: copy.copy(value) for key, value in context["protomers"].items()}
+            request._request_context = SimpleNamespace(**context)
+            frozen_runtime_config = copy.deepcopy(runtime_config)
+            prepared_inputs = request.prepare_input(copy.deepcopy(inputs), frozen_runtime_config)
+            output = request.run_function(prepared_inputs)
+            scores = request.prepare_output(output, prepared_inputs, frozen_runtime_config)
+            # Reuse the hook cache only after this request has finished. All
+            # per-request kwargs, buckets, reports and inputs stay on its copy.
+            self._af3_antibody_msa_cache = request._af3_antibody_msa_cache
+            return scores
+
+    @property
+    def _context(self):
+        return getattr(self, "_request_context", global_config)
+
     @staticmethod
     def _get_config_value(config, key, default=None):
         if config is None:
@@ -109,7 +161,7 @@ class AlphaFold3Evaluator(Evaluator):
             "af3_antibody_msa_cache",
         )
         if root_hook_cfg is None:
-            global_hooks = self._get_config_value(global_config, "pre_eval_hooks")
+            global_hooks = self._get_config_value(self._context, "pre_eval_hooks")
             root_hook_cfg = self._get_config_value(
                 global_hooks,
                 "af3_antibody_msa_cache",
@@ -160,9 +212,8 @@ class AlphaFold3Evaluator(Evaluator):
             )
         return inputs
 
-    @staticmethod
-    def _semantic_protomer_expectations():
-        return global_config.protomers
+    def _semantic_protomer_expectations(self):
+        return self._context.protomers
 
     @staticmethod
     def _semantic_state_report(reports, oligo_name):
@@ -184,7 +235,7 @@ class AlphaFold3Evaluator(Evaluator):
                 os.path.expandvars(os.path.expanduser(str(raw_dir)))
             ).resolve()
         output_dir.mkdir(parents=True, exist_ok=True)
-        step = int(self._get_config_value(global_config, "step", 0))
+        step = int(self._get_config_value(self._context, "step", 0))
         paths = {}
         for oligo_name, input_obj in inputs.items():
             path = output_dir / f"step_{step:03d}_{oligo_name}_input.json"
@@ -229,10 +280,10 @@ class AlphaFold3Evaluator(Evaluator):
         return tuple(specs)
 
     @staticmethod
-    def _structure_start_soft_select_enabled() -> bool:
+    def _structure_start_soft_select_enabled(context=global_config) -> bool:
         try:
-            state = global_config.structure_start
-        except RuntimeError:
+            state = context.structure_start
+        except (RuntimeError, AttributeError):
             return False
         config = getattr(state, "config", None)
         return bool(config is not None and getattr(config, "mode", None) == "soft_select")
@@ -257,6 +308,7 @@ class AlphaFold3Evaluator(Evaluator):
                 fold_input=feat,
                 model_runner=self.model_runner,
                 buckets=self.buckets.get(oligo),
+                featurisation_config=self.af3_conf,
                 **self.kwargs[oligo],
             )
         return output
@@ -281,7 +333,7 @@ class AlphaFold3Evaluator(Evaluator):
                         token_count += len(seq)
             except Exception:
                 token_count = 0
-            baseline = global_config.num_tokens.get(oligo)
+            baseline = self._context.num_tokens.get(oligo)
             if baseline is not None:
                 # AF3 tokenization includes non-polymer chains (e.g. ligands). Sequence
                 # lengths alone can undercount tokens when small molecules are present,
@@ -336,12 +388,11 @@ class AlphaFold3Evaluator(Evaluator):
     def prepare_output(self, outputs, inputs, runtime_config):
 
         per_proto_plddt = defaultdict(list)
-        step = global_config.step
-        structure_path = global_config.out_dir / "structures"
-        structure_path.mkdir(parents=True, exist_ok=True)
+        step = self._context.step
+        structure_path = structure_directory(self._context.out_dir, getattr(self, "alias", None))
 
         complex_dump_paths = {}
-        soft_select_candidates = self._structure_start_soft_select_enabled()
+        soft_select_candidates = self._structure_start_soft_select_enabled(self._context)
         candidate_payloads: dict[tuple[int, int], dict[str, dict]] = defaultdict(
             lambda: {
                 "plddt": {},
@@ -369,7 +420,7 @@ class AlphaFold3Evaluator(Evaluator):
         def ligand_resname_mapping_for_oligo(oligo_name):
             mapping = {}
             for i, proto in enumerate(oligo_name):
-                protomer = global_config.protomers[proto]
+                protomer = self._context.protomers[proto]
                 if protomer.type not in {ProtomerTypes.SMILES, ProtomerTypes.CCD}:
                     continue
 
@@ -411,6 +462,7 @@ class AlphaFold3Evaluator(Evaluator):
                 structure_path / f"{jobname}_model.cif",
                 lig_name_mapping,
             )
+            project_structure(structure_path / f"{jobname}_model.cif", self._context.out_dir, getattr(self, "alias", None))
             complex_dump_paths[oligo_name] = structure_path / f"{jobname}_model.cif"
 
             scores = get_af3_scores(outputs[oligo_name])
@@ -457,6 +509,7 @@ class AlphaFold3Evaluator(Evaluator):
                         candidate_path,
                         lig_name_mapping,
                     )
+                    project_structure(candidate_path, self._context.out_dir, getattr(self, "alias", None))
                     candidate_scores = get_af3_scores([single_result])
                     payload = candidate_payloads[key]
                     payload["complex_paths"][oligo_name] = candidate_path
@@ -590,7 +643,7 @@ class AlphaFold3Evaluator(Evaluator):
         return patched
 
     @staticmethod
-    def predict_structure(fold_input, model_runner, buckets, **kwargs):
+    def predict_structure(fold_input, model_runner, buckets, *, featurisation_config=None, **kwargs):
         """Runs the full inference pipeline to predict structures for each seed."""
 
         cyclic_asym_ids = tuple(
@@ -615,7 +668,7 @@ class AlphaFold3Evaluator(Evaluator):
             )
             kwargs["init_guess_positions"] = init_guess_positions
         query_residue_index_jumps = tuple(kwargs.pop("query_residue_index_jumps", ()) or ())
-        with allow_all_x_protein_chains_during_featurisation(fold_input):
+        with featurisation_environment(featurisation_config), allow_all_x_protein_chains_during_featurisation(fold_input):
             featurised_examples = featurisation.featurise_input(
                 fold_input=fold_input, buckets=buckets, ccd=ccd, verbose=True, **kwargs
             )
@@ -633,11 +686,26 @@ class AlphaFold3Evaluator(Evaluator):
         for seed, example in zip(fold_input.rng_seeds, featurised_examples):
             logging.debug(f"Running model inference for seed {seed}...")
             inference_start_time = time.time()
-            rng_key = jax.random.PRNGKey(seed)
-            result = model_runner.run_inference(example, rng_key)
-            inference_results = model_runner.extract_structures(
-                batch=example, result=result, target_name=fold_input.name
-            )
+            staged_extract = getattr(model_runner, "run_inference_and_extract_for_seed", None)
+            seeded_remote = getattr(model_runner, "run_inference_for_seed", None)
+            if callable(staged_extract):
+                inference_results = staged_extract(example, seed, fold_input.name)
+            elif callable(seeded_remote):
+                result = seeded_remote(example, seed)
+            elif (getattr(model_runner, "_client", None) is not None
+                    or getattr(model_runner, "_socket", None) is not None):
+                # RPC clients only assemble host requests. Even creating a
+                # PRNG key on JAX's default GPU would bypass owner admission.
+                with jax.default_device(jax.local_devices(backend="cpu")[0]):
+                    rng_key = jax.random.PRNGKey(seed)
+                result = model_runner.run_inference(example, rng_key)
+            else:
+                rng_key = jax.random.PRNGKey(seed)
+                result = model_runner.run_inference(example, rng_key)
+            if not callable(staged_extract):
+                inference_results = model_runner.extract_structures(
+                    batch=example, result=result, target_name=fold_input.name
+                )
             all_inference_results.append(
                 ResultsForSeed(
                     seed=seed,

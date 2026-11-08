@@ -3,11 +3,13 @@ from __future__ import annotations
 import logging
 from typing import Callable, Dict, List
 
+from astrolabe.design.operations import OperationOwner
+
 
 EvaluatorFactory = Callable[..., object]
 
 
-class EvaluatorRegistry:
+class EvaluatorRegistry(OperationOwner):
     """Registry for evaluator factories.
 
     Evaluators often require backend-specific runners and optional dependencies.
@@ -49,6 +51,18 @@ class EvaluatorRegistry:
     @classmethod
     def list_available(cls) -> List[str]:
         return sorted(cls._registry.keys())
+
+    @classmethod
+    def build_operation(cls, name: str, *, alias: str, options: dict, context):
+        from astrolabe.design.native_registry import build_evaluator_operation
+
+        return build_evaluator_operation(
+            cls,
+            name,
+            alias=alias,
+            options=options,
+            context=context,
+        )
 
 
 def register_evaluator_factory(name: str):

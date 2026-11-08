@@ -1,91 +1,55 @@
-"""NA-MPNN/AlphaFold 3 refinement of synchronized RNA oligomers.
+"""Scientific adapters for archived NA-MPNN/AlphaFold 3 RNA refinement.
 
-The search bookkeeping is independent of model execution. ``run_rna_beam``
-uses the native mutator, shared segments and folding inputs; importing this
-module does not load a predictor or provide a substitute predictor.
+Search control is the generic branching coordinator. This module validates
+the archived RNA protocol, supplies native proposal/evaluation/measurement
+callbacks, and projects completed branch records into the historical output
+files. It contains no search loop or second budget/frontier owner.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from contextlib import ExitStack
 import copy
 import csv
+from dataclasses import dataclass
 import json
 import math
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
+import re
+
+from astrolabe.design.legacy import (
+    capture_legacy_candidate,
+    finalize_pending_mutations,
+    native_sequence_key as _sequence_key,
+    restore_native_sequence as _restore_sequence,
+)
+from astrolabe.design.repeats import RepeatRun
+from astrolabe.design.owner import scientific_session
+from astrolabe.design.store import DataclassCodec
+from astrolabe.design.types import Blob, Key, key_for
 
 
 @dataclass(frozen=True)
-class BeamCandidate:
-    evaluation_id: int
-    sequence: str
-    score: float
-    structure_path: str
-    generation: int
-    parent_id: int | None
-    metrics: dict = field(default_factory=dict)
+class _RNAPreparedCheckpoint:
+    protocol: Key
+    candidate: Blob
+    rng_before: Blob
+    rng_after: Blob
 
 
-class BeamSearchState:
-    """Budget, global sequence deduplication and elitist beam selection.
+@dataclass(frozen=True)
+class _BivalentRawOutput:
+    identifier: str
+    model_path: Path
+    confidence_path: Path
 
-    Reserve an evaluation immediately before calling the predictor. A failed
-    call consumes its reservation and must be propagated by the caller.
-    Scores are maximized; exact ties retain earlier evaluation order.
-    """
 
-    def __init__(self, *, beam_width: int = 8, max_evaluations: int = 1000):
-        for name, value in (("beam_width", beam_width), ("max_evaluations", max_evaluations)):
-            if type(value) is not int or value < 1:
-                raise ValueError(f"{name} must be a positive integer")
-        self.beam_width = beam_width
-        self.max_evaluations = max_evaluations
-        self.seen: set[str] = set()
-        self.records: list[dict] = []
-        self.beam: list[BeamCandidate] = []
-
-    @property
-    def remaining(self) -> int:
-        return self.max_evaluations - len(self.records)
-
-    def reserve(self, sequence: str, *, generation: int, parent_id: int | None) -> int | None:
-        if sequence in self.seen or self.remaining == 0:
-            return None
-        evaluation_id = len(self.records)
-        self.seen.add(sequence)
-        self.records.append({
-            "evaluation_id": evaluation_id, "sequence": sequence,
-            "generation": generation, "parent_id": parent_id,
-            "status": "running", "score": None, "structure_path": None, "metrics": {},
-            "entered_beam": None, "in_final_beam": False,
-        })
-        return evaluation_id
-
-    def complete(self, evaluation_id: int, *, score: float, structure_path: str, metrics: dict | None = None) -> BeamCandidate:
-        score = float(score)
-        if not math.isfinite(score):
-            raise ValueError(f"Non-finite score for evaluation {evaluation_id}: {score}")
-        row = self.records[evaluation_id]
-        if row["status"] != "running":
-            raise ValueError(f"Evaluation {evaluation_id} is already complete")
-        metrics = dict(metrics or {})
-        row.update(status="completed", score=score, structure_path=str(structure_path), metrics=metrics)
-        return BeamCandidate(evaluation_id, row["sequence"], score, str(structure_path),
-                             row["generation"], row["parent_id"], metrics)
-
-    def select(self, children: list[BeamCandidate]) -> list[BeamCandidate]:
-        candidates = {c.sequence: c for c in self.beam}
-        for child in children:
-            previous = candidates.get(child.sequence)
-            if previous is None or (-child.score, child.evaluation_id) < (-previous.score, previous.evaluation_id):
-                candidates[child.sequence] = child
-        self.beam = sorted(candidates.values(), key=lambda c: (-c.score, c.evaluation_id))[:self.beam_width]
-        selected = {c.evaluation_id for c in self.beam}
-        for child in children:
-            self.records[child.evaluation_id]["entered_beam"] = child.evaluation_id in selected
-        for row in self.records:
-            row["in_final_beam"] = row["evaluation_id"] in selected
-        return self.beam
+_RNA_PREPARED_CODEC = DataclassCodec(
+    _RNAPreparedCheckpoint,
+    "astrolabe.rna-beam.prepared/v1",
+    nested_types=(Blob, Key),
+)
 
 
 def _single_component(terms, expected_type: str) -> str:
@@ -142,33 +106,6 @@ def _expand_repeated_protomer(oligo: str) -> str:
         global_config.protomers[name] = proto
         global_config.mutable_protomers[name] = proto
     return physical_oligo
-
-
-def _restore_sequence(sequence: str, protomer, segments) -> None:
-    """Restore the unique shared sequence; repeated segment references update once."""
-    offset = 0
-    restored = set()
-    for name in protomer.components:
-        segment = segments[name]
-        if id(segment) in restored:
-            continue
-        restored.add(id(segment))
-        length = len(segment.sequence)
-        segment.sequence = sequence[offset:offset + length]
-        segment.clear_mutations()
-        segment.clean_up()
-        offset += length
-
-
-def _sequence_key(protomer, segments, *, mutated: bool = False) -> str:
-    seen = set()
-    parts = []
-    for name in protomer.components:
-        segment = segments[name]
-        if id(segment) not in seen:
-            parts.append(segment.mutated_sequence if mutated else segment.sequence)
-            seen.add(id(segment))
-    return "".join(parts)
 
 
 def _validate_bivalent_rna(protomers, segments, oligo: str) -> str:
@@ -233,21 +170,554 @@ def proposal_seed(run_seed: int, proposal_step: int) -> int:
     return (run_seed * 100003 + proposal_step) % 2147483647 or 1
 
 
+def _same_structure_representation(left: Path, right: Path) -> bool:
+    """Compare native structures except for canonical empty dummy metadata."""
+
+    left_bytes = left.read_bytes()
+    right_bytes = right.read_bytes()
+    suffixes = {left.suffix.lower(), right.suffix.lower()}
+    if suffixes & {".cif", ".mmcif"}:
+        if suffixes != {".cif", ".mmcif"} and (
+            left.suffix.lower() not in {".cif", ".mmcif"}
+            or right.suffix.lower() not in {".cif", ".mmcif"}
+        ):
+            return False
+        from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+
+        left_fields = dict(MMCIF2Dict(str(left)))
+        right_fields = dict(MMCIF2Dict(str(right)))
+        for fields, path in ((left_fields, left), (right_fields, right)):
+            marker = fields.pop("_dummy.title", None)
+            if marker not in (None, [""]):
+                raise ValueError(
+                    f"non-empty _dummy.title serialization marker in {path}: {marker!r}"
+                )
+        return left_bytes == right_bytes or left_fields == right_fields
+    return left_bytes == right_bytes
+
+
+def _resolve_bivalent_raw_output(
+    model_path: Path,
+    assembly: str,
+    raw_model_results_dir: Path,
+) -> _BivalentRawOutput:
+    """Resolve a restored structure to one atom-identical AF3 raw run."""
+
+    model_name = model_path.stem
+    if model_name.endswith("_model"):
+        model_name = model_name[: -len("_model")]
+    if not model_name:
+        raise ValueError("bivalent model path does not contain an output identifier")
+
+    candidates = [model_name]
+    if model_path.parent.name.startswith("measurement-input_"):
+        safe_assembly = re.sub(
+            r"[^A-Za-z0-9_.-]+",
+            "_",
+            assembly,
+        ).strip("._") or "assembly"
+        transport_prefix = f"{safe_assembly}-"
+        if model_name.startswith(transport_prefix):
+            stripped = model_name[len(transport_prefix) :]
+            if stripped and stripped not in candidates:
+                candidates.append(stripped)
+
+    matches = []
+    refreshed = model_path
+    raw_root = Path(raw_model_results_dir) / "alphafold3"
+    for identifier in candidates:
+        raw_model = raw_root / identifier / f"{identifier}_model.cif"
+        raw_confidence = (
+            raw_root / identifier / f"{identifier}_confidences.json"
+        )
+        if (
+            raw_model.is_file()
+            and raw_confidence.is_file()
+            and _same_structure_representation(raw_model, refreshed)
+        ):
+            matches.append(
+                _BivalentRawOutput(
+                    identifier=identifier,
+                    model_path=raw_model,
+                    confidence_path=raw_confidence,
+                )
+            )
+
+    if not matches:
+        raise ValueError(
+            "no content-matching AlphaFold 3 raw output for restored "
+            f"{model_path.name!r}; candidates={candidates!r}"
+        )
+    if len(matches) > 1:
+        raise ValueError(
+            "ambiguous AlphaFold 3 raw output for restored "
+            f"{model_path.name!r}; candidates={[match.identifier for match in matches]!r}"
+        )
+    return matches[0]
+
+
+def _measure_native_scores(
+    *,
+    scores,
+    candidate_label: str,
+    oligo: str,
+    raw_model_results_dir: Path,
+    objective_weights,
+    bivalent: bool,
+):
+    """Run the complete RNA measurement body over restored native scores."""
+
+    import shutil
+
+    import numpy as np
+
+    from astrolabe.analysis.rna_geometry import measure_bivalent_model
+    from astrolabe.design.native_refinement import NativeMeasurement
+
+    all_plddt = np.asarray(scores.plddt[oligo], dtype=float)
+    metrics = {
+        "mean_plddt": float(all_plddt.mean()),
+        "rna_sequence": candidate_label,
+    }
+    score = metrics["mean_plddt"]
+    if bivalent:
+        model_path = Path(scores.complex_paths[oligo])
+        raw_output = _resolve_bivalent_raw_output(
+            model_path,
+            oligo,
+            raw_model_results_dir,
+        )
+        metrics.update(
+            measure_bivalent_model(
+                raw_output.model_path,
+                raw_output.confidence_path,
+            )
+        )
+        sidecar = model_path.with_name(
+            f"{model_path.stem.removesuffix('_model')}_confidences.json"
+        )
+        shutil.copy2(raw_output.confidence_path, sidecar)
+        metrics["confidence_path"] = str(sidecar)
+        score = score_bivalent_rna(metrics, objective_weights)
+    return NativeMeasurement(
+        score=score,
+        metrics=metrics,
+        structure_path=str(scores.complex_paths[oligo]),
+    )
+
+
+def _propose_native_candidate(
+    mutator,
+    candidate,
+    scores,
+    *,
+    seed: int,
+    step: int,
+    generation: int,
+    parent_id: int,
+    proposal_index: int,
+    assemblies: tuple[str, ...],
+    state: str,
+    data,
+    label,
+    diagnostics: dict | None = None,
+):
+    """Run one complete native mutation proposal and capture its candidate."""
+
+    from astrolabe.argparser import set_random_seeds
+    from astrolabe.core import global_config
+    from astrolabe.design.native_refinement import NativeProposal
+
+    set_random_seeds(seed)
+    global_config.set_variable("step", step)
+    mutator.runner.extra_args["seed"] = seed
+    mutator.runner.job_name = (
+        f"generation_{generation:04d}_parent_{parent_id:04d}"
+        f"_proposal_{proposal_index:02d}"
+    )
+    if diagnostics is not None:
+        diagnostics["before_sequences"] = {
+            name: segment.sequence
+            for name, segment in global_config.segments.items()
+        }
+    mutator.mutate(global_config.protomers, scores, {})
+    if diagnostics is not None:
+        diagnostics["pending_mutations"] = {
+            name: list(segment.mutations or ())
+            for name, segment in global_config.segments.items()
+            if segment.mutations
+        }
+    finalize_pending_mutations()
+    if diagnostics is not None:
+        diagnostics["after_sequences"] = {
+            name: segment.sequence
+            for name, segment in global_config.segments.items()
+        }
+    child = capture_legacy_candidate(
+        assemblies=assemblies,
+        state=state,
+        data=data,
+    ).candidate
+    return NativeProposal(child, label(child))
+
+
 def beam_expansion_order(parents, proposals_per_parent):
     """Archived round-robin order keeps a partial final generation balanced."""
     return [(parent, index) for index in range(proposals_per_parent) for parent in parents]
 
 
-def _write_table(path: Path, state: BeamSearchState) -> None:
-    metric_names = sorted({key for row in state.records for key in row["metrics"]})
+def _rna_scientific_config(
+    args,
+    *,
+    seed: int,
+    beam_width: int,
+    proposals_per_parent: int,
+    max_evaluations: int,
+    objective_weights,
+    initialization: str,
+) -> dict:
+    from omegaconf import OmegaConf
+
+    raw = OmegaConf.to_container(args, resolve=False)
+    if not isinstance(raw, dict):
+        raise TypeError("RNA execution config must resolve to a mapping")
+    for name in (
+        "beam_search",
+        "debug",
+        "logging",
+        "out_dir",
+        "raw_model_results_dir",
+        "repeat_index",
+        "repeat_plan",
+        "repeats",
+        "resume",
+        "search",
+        "summary_format",
+        "task_name",
+    ):
+        raw.pop(name, None)
+    raw["seed"] = seed
+    configured_search = args.get("search") or args.get("beam_search")
+    proposal_request_budget = (
+        configured_search.get("max_proposal_requests")
+        if configured_search is not None
+        else None
+    )
+    raw["search"] = {
+        "algorithm": "branching",
+        "owner": "archived_refinement",
+        "width": beam_width,
+        "proposals_per_parent": proposals_per_parent,
+        "max_evaluations": max_evaluations,
+        "max_proposal_requests": proposal_request_budget,
+        "objective_weights": objective_weights,
+        "initialization": initialization,
+    }
+    return raw
+
+
+def _configured_path(value) -> Path | None:
+    if value in (None, "", "null", "None"):
+        return None
+    path = Path(str(value)).expanduser()
+    return path.resolve() if path.is_absolute() else (Path.cwd() / path).resolve()
+
+
+def _selected_mapping(value) -> dict:
+    from omegaconf import OmegaConf
+
+    if value is None:
+        return {}
+    if OmegaConf.is_config(value):
+        value = OmegaConf.to_container(value, resolve=False)
+    return dict(value) if isinstance(value, Mapping) else {}
+
+
+def _rna_selection_projection(
+    scientific_config,
+    *,
+    evaluator_alias: str,
+    mutator_alias: str,
+):
+    """Project the real RNA config into the selected-component helper schema.
+
+    This copy exists only while computing scientific and asset identities. It
+    never replaces or writes the configuration used to construct native models.
+    """
+    from omegaconf import OmegaConf, open_dict
+
+    projection = OmegaConf.create(copy.deepcopy(scientific_config))
+    projection._set_flag("allow_objects", True)
+    stages = _selected_mapping(projection.get("stages"))
+    default = _selected_mapping(stages.get("default"))
+    default["mutators"] = [mutator_alias]
+    default["evaluator"] = evaluator_alias
+    stages["default"] = default
+
+    mutator = _selected_mapping(projection.get("mutator"))
+    nampnn = _selected_mapping(mutator.get("NAMPNN"))
+    if nampnn.get("checkpoint") in (None, "", "null", "None"):
+        repo_path = _configured_path(nampnn.get("repo_path"))
+        if repo_path is not None:
+            # Materialize the runner's actual default checkpoint in the
+            # identity-only projection. The real mutator config is unchanged.
+            nampnn["checkpoint"] = str(
+                repo_path / "models" / "design_model" / "s_19137.pt"
+            )
+    if nampnn:
+        mutator["NAMPNN"] = nampnn
+
+    with open_dict(projection):
+        projection.stages = stages
+        if mutator:
+            projection.mutator = mutator
+    return projection
+
+
+def _rna_selected_scientific_identity(
+    scientific_config,
+    *,
+    evaluator_alias: str,
+    mutator_alias: str,
+) -> Key:
+    from astrolabe.design.configured_refinement import _scientific_config_payload
+
+    payload = _scientific_config_payload(
+        _rna_selection_projection(
+            scientific_config,
+            evaluator_alias=evaluator_alias,
+            mutator_alias=mutator_alias,
+        )
+    )
+    return key_for(("astrolabe.rna-beam.selected-config/v1", payload))
+
+
+def _rna_resource_content(
+    scientific_config,
+    *,
+    evaluator_alias: str,
+    mutator_alias: str,
+) -> Key:
+    from astrolabe.design.configured_refinement import (
+        _asset_manifest_identity,
+        _selected_asset_manifest,
+    )
+    from astrolabe.design.portable_native_builder import content_manifest
+
+    projection = _rna_selection_projection(
+        scientific_config,
+        evaluator_alias=evaluator_alias,
+        mutator_alias=mutator_alias,
+    )
+    manifest = _selected_asset_manifest(projection)
+    if not manifest.complete:
+        details = [
+            f"{item.role}: {item.detail}"
+            for item in manifest.components
+            if item.state == "unsupported"
+        ]
+        raise ValueError(
+            "RNA model assets cannot be content-verified: "
+            + "; ".join(details)
+        )
+
+    supplemental_paths: dict[str, Path] = {}
+    named_files = _selected_mapping(scientific_config.get("named_files"))
+    for role, value in named_files.items():
+        path = _configured_path(value)
+        if path is not None:
+            supplemental_paths[f"inputs/named-files/{role}"] = path
+    homologies = _selected_mapping(scientific_config.get("homologies"))
+    for role, value in homologies.items():
+        # Inline homology specifications are already covered by the complete
+        # scientific-config identity. Only external path-like values add file
+        # content to the resource identity.
+        if isinstance(value, Mapping):
+            continue
+        path = _configured_path(value)
+        if path is not None:
+            supplemental_paths[f"inputs/homologies/{role}"] = path
+    supplemental = content_manifest(supplemental_paths, prefix="asset")
+    return key_for(
+        (
+            "astrolabe.rna-beam.resources/v2",
+            _asset_manifest_identity(manifest),
+            key_for(("astrolabe.rna-beam.inputs/v1", supplemental)),
+        )
+    )
+
+
+def _rna_source_content():
+    import importlib
+
+    from astrolabe.design.portable_native_builder import source_manifest
+
+    root = Path(__file__).parent
+    design = root / "design"
+    return source_manifest(
+        importlib.import_module("run"),
+        {
+            "source/extra/rna_beam": Path(__file__),
+            "source/extra/model_execution": root / "model_execution.py",
+            "source/extra/runtime": design / "runtime.py",
+            "source/extra/control_journal": design / "control_journal.py",
+            "source/extra/branching": design / "branching.py",
+            "source/extra/store": design / "store.py",
+            "source/extra/legacy": design / "legacy.py",
+            "source/extra/operations": design / "operations.py",
+            "source/extra/native_support": design / "native_support.py",
+            "source/extra/native_scores": design / "native_scores.py",
+            "source/extra/native_refinement": design / "native_refinement.py",
+            "source/extra/native_refinement_runtime": (
+                design / "native_refinement_runtime.py"
+            ),
+            "source/extra/configured_refinement": (
+                design / "configured_refinement.py"
+            ),
+            "source/components/mutator_registry": root / "mutators" / "base.py",
+            "source/components/nampnn": root / "mutators" / "na_mpnn.py",
+            "source/components/nampnn_runner": (
+                root / "mutators" / "wrappers" / "na_mpnn_runner.py"
+            ),
+            "source/components/nampnn_daemon": (
+                root / "mutators" / "wrappers" / "na_mpnn_daemon.py"
+            ),
+            "source/components/evaluator_registry": root / "evaluators" / "utils.py",
+            "source/components/alphafold3": root / "evaluators" / "alphafold3.py",
+            "source/components/alphafold3_wrapper": (
+                root / "evaluators" / "wrappers" / "alphafold3.py"
+            ),
+            "source/core/protomer_config_parser": (
+                root / "core" / "protomer_config_parser.py"
+            ),
+            "source/core/global_config": root / "core" / "__init__.py",
+            "source/utils/base": root / "utils" / "base.py",
+            "source/argparser": root / "argparser.py",
+        },
+    )
+
+
+def _rna_protocol(
+    args,
+    *,
+    seed: int,
+    beam_width: int,
+    proposals_per_parent: int,
+    max_evaluations: int,
+    objective_weights,
+    initialization: str,
+    evaluator_alias: str,
+    mutator_alias: str,
+    requested_oligo: str,
+    oligo: str,
+) -> Key:
+    scientific_config = _rna_scientific_config(
+        args,
+        seed=seed,
+        beam_width=beam_width,
+        proposals_per_parent=proposals_per_parent,
+        max_evaluations=max_evaluations,
+        objective_weights=objective_weights,
+        initialization=initialization,
+    )
+    config_identity = key_for(
+        (
+            "astrolabe.rna-beam.scientific-config/v2",
+            scientific_config,
+            _rna_selected_scientific_identity(
+                scientific_config,
+                evaluator_alias=evaluator_alias,
+                mutator_alias=mutator_alias,
+            ),
+        )
+    )
+    source_identity = key_for(
+        ("astrolabe.rna-beam.source/v1", _rna_source_content())
+    )
+    resource_identity = key_for(
+        (
+            "astrolabe.rna-beam.resources/v2",
+            _rna_resource_content(
+                scientific_config,
+                evaluator_alias=evaluator_alias,
+                mutator_alias=mutator_alias,
+            ),
+        )
+    )
+    return key_for(
+        (
+            "astrolabe.rna-beam/v2",
+            config_identity,
+            source_identity,
+            resource_identity,
+            seed,
+            beam_width,
+            proposals_per_parent,
+            max_evaluations,
+            objective_weights,
+            initialization,
+            requested_oligo,
+            oligo,
+        )
+    )
+
+
+def _write_table(path: Path, records: list[dict]) -> None:
+    metric_names = sorted({key for row in records for key in row["metrics"]})
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=[
             "evaluation_id", "proposal_step", "sequence", "generation", "parent_id", "status",
             "score", "structure_path", "entered_beam", "in_final_beam",
         ] + metric_names)
         writer.writeheader()
-        for row in state.records:
+        for row in records:
             writer.writerow({**{key: value for key, value in row.items() if key != "metrics"}, **row["metrics"]})
+
+
+def _validate_archived_search(cfg):
+    """Validate an explicitly selected scientific adapter on every entry."""
+    search = cfg.get("search")
+    if search is None:
+        return
+    from astrolabe.configuration import selected_search_target
+
+    if selected_search_target(cfg) != ("branching", "archived_refinement"):
+        raise ValueError("archived refinement requires search.owner=archived_refinement")
+    unknown = set(search) - {
+        "algorithm", "owner", "policy", "width", "proposals_per_parent",
+        "max_evaluations", "measurement", "initialization", "start",
+        "archived_starts", "archived_start", "objective_weights", "summary_format",
+        "resume", "max_proposal_requests",
+    }
+    if unknown:
+        raise ValueError(f"unsupported archived search fields: {sorted(unknown)!r}")
+    if cfg.get("beam_search"):
+        raise ValueError("legacy beam_search conflicts with explicit search")
+    summary_format = search.get("summary_format")
+    if summary_format is not None and str(summary_format).strip().lower() != "json":
+        raise ValueError("search.summary_format must be null or 'json'")
+    resume = search.get("resume", False)
+    if type(resume) is not bool:
+        raise ValueError("search.resume must be boolean")
+    proposal_request_budget = search.get("max_proposal_requests")
+    if proposal_request_budget is not None and (
+        type(proposal_request_budget) is not int
+        or proposal_request_budget < 1
+    ):
+        raise ValueError(
+            "search.max_proposal_requests must be a positive integer"
+        )
+    policy = search.get("policy")
+    if policy is None:
+        policy = {}
+    if not hasattr(policy, "get"):
+        raise TypeError("cfg.search.policy must be a mapping")
+    controls = {"width", "proposals_per_parent", "max_evaluations"}
+    if set(policy) - controls:
+        raise ValueError("cfg.search.policy contains unsupported controls")
+    for name in controls.intersection(search).intersection(policy):
+        if search[name] != policy[name]:
+            raise ValueError(f"conflicting cfg.search.{name} and policy.{name}")
 
 
 def run_rna_beam(
@@ -278,9 +748,15 @@ def run_rna_beam(
     03_final_beam.json, 04_config.yaml and native structures/raw_model_results.
     Predictor and proposal failures propagate unchanged, without replacement.
     """
-    return _run_native_rna_beam(cfg, out_dir=out_dir, seed=seed, beam_width=beam_width,
-                               proposals_per_parent=proposals_per_parent,
-                               max_evaluations=max_evaluations, objective_weights=None)
+    return _run_rna_scientific_composition(
+        cfg,
+        out_dir=out_dir,
+        seed=seed,
+        beam_width=beam_width,
+        proposals_per_parent=proposals_per_parent,
+        max_evaluations=max_evaluations,
+        objective_weights=None,
+    )
 
 
 def run_bivalent_rna_beam(
@@ -310,26 +786,67 @@ def run_bivalent_rna_beam(
     review flags; geometry flags do not silently reject evaluated candidates.
     """
     weights = validate_bivalent_objective_weights(objective_weights)
-    return _run_native_rna_beam(cfg, out_dir=out_dir, seed=seed, beam_width=beam_width,
-                               proposals_per_parent=proposals_per_parent,
-                               max_evaluations=max_evaluations, objective_weights=weights)
+    return _run_rna_scientific_composition(
+        cfg,
+        out_dir=out_dir,
+        seed=seed,
+        beam_width=beam_width,
+        proposals_per_parent=proposals_per_parent,
+        max_evaluations=max_evaluations,
+        objective_weights=weights,
+    )
 
 
-def _run_native_rna_beam(
+@scientific_session
+def _run_rna_scientific_composition(
     cfg, *, out_dir, seed, beam_width, proposals_per_parent, max_evaluations,
-    objective_weights,
+    objective_weights, persisted_config=None, resume: bool = False,
 ) -> dict:
+    if type(resume) is not bool:
+        raise TypeError("resume must be boolean")
     bivalent = objective_weights is not None
-    state = BeamSearchState(beam_width=beam_width, max_evaluations=max_evaluations)
     if type(proposals_per_parent) is not int or proposals_per_parent < 1:
         raise ValueError("proposals_per_parent must be a positive integer")
     if type(seed) is not int or not 1 <= seed <= 2**32 - 1:
         raise ValueError("seed must be an integer in 1..2**32-1")
 
+    _validate_archived_search(cfg)
+    if cfg.get("search") is not None and persisted_config is None:
+        from omegaconf import open_dict
+
+        selected = copy.deepcopy(cfg)
+        expected = "bivalent_geometry" if bivalent else "confidence"
+        if selected.search.get("measurement") != expected:
+            raise ValueError(f"selected measurement must be {expected!r}")
+        # Explicit public API controls override the corresponding config values;
+        # initialization and scientific options use the same configured adapter.
+        with open_dict(selected):
+            if "policy" in selected.search:
+                del selected.search.policy
+            selected.search.width = beam_width
+            selected.search.proposals_per_parent = proposals_per_parent
+            selected.search.max_evaluations = max_evaluations
+            if bivalent:
+                selected.search.objective_weights = objective_weights
+        return run_configured_refinement(
+            selected,
+            RepeatRun(index=0, total=1, seed=seed, output=Path(out_dir)),
+        )
+
     import numpy as np
     from omegaconf import OmegaConf, open_dict
     from astrolabe.argparser import set_random_seeds
     from astrolabe.core import global_config
+    from astrolabe.design.branching import BranchingPolicy
+    from astrolabe.design.legacy import LegacyContext, capture_legacy_candidate
+    from astrolabe.design.native_refinement import (
+        NativeMeasurement,
+        NativeProposal,
+        NativeRefinementSpec,
+        run_native_refinement,
+    )
+    from astrolabe.design.runtime import ContractConflict, Runtime
+    from astrolabe.design.store import DataStore, design_codec
     from astrolabe.evaluators.utils import construct_evaluators, _merge_conf_with_defaults
     from astrolabe.mutators.base import build_mutators
     from astrolabe.utils.base import construct_standard_input
@@ -367,19 +884,117 @@ def _run_native_rna_beam(
         args.evaluator.enabled_aliases = [evaluator_alias]
         if bivalent:
             args.seqs.A = _normalize_bivalent_sequence_statement(str(args.seqs.A))
+    oligos = args.get("oligo") or ["".join(str(name) for name in args.seqs)]
+    if len(oligos) != 1:
+        raise ValueError("RNA beam search refines exactly one configured oligomer")
+    requested_oligo = str(oligos[0])
+    oligo = (
+        "ABCDE"[: len(requested_oligo)]
+        if set(requested_oligo) == {"A"}
+        else requested_oligo
+    )
+    protocol = _rna_protocol(
+        args,
+        seed=seed,
+        beam_width=beam_width,
+        proposals_per_parent=proposals_per_parent,
+        max_evaluations=max_evaluations,
+        objective_weights=objective_weights,
+        initialization=initialization,
+        evaluator_alias=evaluator_alias,
+        mutator_alias=mutator_alias,
+        requested_oligo=requested_oligo,
+        oligo=oligo,
+    )
+
+    if resume:
+        if not output.is_dir():
+            raise FileNotFoundError(f"RNA resume root does not exist: {output}")
+        required = (
+            output / "01_evaluations.jsonl",
+            output / "04_config.yaml",
+            output / ".framework" / "journal.sqlite",
+        )
+        missing = [path for path in required if not path.is_file()]
+        if missing:
+            raise FileNotFoundError(
+                "RNA resume requires prior durable run files: "
+                + ", ".join(str(path) for path in missing)
+            )
+    else:
+        output.mkdir(parents=True, exist_ok=False)
+    args.raw_model_results_dir.mkdir(exist_ok=resume)
+    framework = output / ".framework"
+    data = DataStore(framework / "data")
+    data.register(_RNA_PREPARED_CODEC)
+    runtime = Runtime(
+        root=framework,
+        data=data,
+        scientific_contract=protocol,
+    )
+
+    if persisted_config is None:
+        persisted_config = copy.deepcopy(args)
+        legacy_search = args.get("beam_search", {})
+        with open_dict(persisted_config):
+            persisted_config.search = {
+                "algorithm": "branching",
+                "owner": "archived_refinement",
+                "width": beam_width,
+                "proposals_per_parent": proposals_per_parent,
+                "max_evaluations": max_evaluations,
+                "measurement": "bivalent_geometry" if bivalent else "confidence",
+                "initialization": initialization,
+                "resume": resume,
+            }
+            if bivalent:
+                persisted_config.search.objective_weights = objective_weights
+                if initialization == "archived":
+                    persisted_config.search.start = legacy_search.archived_starts[
+                        int(legacy_search.get("archived_start", 0))
+                    ]
+            for name in ("beam_search", "repeat_plan"):
+                if name in persisted_config:
+                    del persisted_config[name]
+            persisted_config.repeats = 1
+            persisted_config.out_dir = str(output)
+            persisted_config.raw_model_results_dir = str(args.raw_model_results_dir)
+    if not resume:
+        OmegaConf.save(persisted_config, output / "04_config.yaml")
+
+    prepared = runtime.load("rna/prepared", _RNA_PREPARED_CODEC)
+    if resume and prepared is None:
+        raise ContractConflict(
+            "RNA durable resume has no prepared checkpoint"
+        )
+    if prepared is not None and prepared.protocol != protocol:
+        raise ContractConflict(
+            "RNA scientific config, source or model assets changed on resume"
+        )
+
     global_config.reset()
     initialize_global_config(args)
     set_random_seeds(seed)
+    rng_before = runtime._capture_rng()
+    if prepared is not None:
+        runtime._restore_rng(prepared.rng_before)
     setup_protomers(args)
-    oligos = args.get("oligo") or ["".join(global_config.protomers)]
-    if len(oligos) != 1:
-        raise ValueError("RNA beam search refines exactly one configured oligomer")
     if bivalent:
-        requested_oligo = _validate_bivalent_rna(global_config.protomers, global_config.segments, str(oligos[0]))
-        oligo = requested_oligo
+        validated_requested = _validate_bivalent_rna(
+            global_config.protomers,
+            global_config.segments,
+            requested_oligo,
+        )
+        validated_oligo = validated_requested
     else:
-        requested_oligo = _validate_shared_rna(global_config.protomers, global_config.segments, str(oligos[0]))
-        oligo = _expand_repeated_protomer(requested_oligo)
+        validated_requested = _validate_shared_rna(
+            global_config.protomers,
+            global_config.segments,
+            requested_oligo,
+        )
+        validated_oligo = _expand_repeated_protomer(validated_requested)
+    if requested_oligo != validated_requested or oligo != validated_oligo:
+        raise ValueError("RNA structure-chain mapping changed during preparation")
     protomer = global_config.protomers["A"]
     initial_sequence = _sequence_key(protomer, global_config.segments)
     global_config.init_const("num_tokens", {oligo: sum(global_config.protomers[name].length for name in oligo)})
@@ -387,116 +1002,265 @@ def _run_native_rna_beam(
     global_config.set_variable("ignored_complexes", [])
     global_config.set_variable("negative_design_complexes", [])
     global_config.set_variable("mutation_num", sum(proto.mutable_length for proto in global_config.protomers.values()))
-    output.mkdir(parents=True, exist_ok=False)
-    args.raw_model_results_dir.mkdir()
-    OmegaConf.save(args, output / "04_config.yaml")
+    context = LegacyContext()
+    translation = context.capture_candidate(assemblies=(oligo,), data=data)
+    if prepared is not None:
+        saved_candidate = data.get(prepared.candidate, design_codec)
+        if saved_candidate != translation.candidate:
+            raise ContractConflict(
+                "RNA prepared candidate differs from deterministic replay"
+            )
+        initial_candidate = saved_candidate
+        runtime._restore_rng(prepared.rng_after)
+    else:
+        initial_candidate = translation.candidate
+        candidate_ref = data.put(initial_candidate, design_codec)
+        runtime.save(
+            "rna/prepared",
+            _RNAPreparedCheckpoint(
+                protocol,
+                candidate_ref,
+                rng_before,
+                runtime._capture_rng(),
+            ),
+            _RNA_PREPARED_CODEC,
+        )
+    aliases = {
+        alias: variable
+        for variable in translation.variables
+        for alias in variable.aliases
+    }
 
-    score_payloads = {}
-    generation = 0
-    proposal_count = 0
-    duplicate_count = 0
-    stop_reason = "budget_exhausted"
-    mutator = None
-    pending_children: list[BeamCandidate] = []
+    def label_candidate(candidate) -> str:
+        assignments = {
+            assignment.variable: assignment.value
+            for assignment in candidate.assignments
+        }
+        seen = set()
+        tokens = []
+        for component in protomer.components:
+            variable = aliases[str(component)]
+            if variable.identity in seen:
+                continue
+            seen.add(variable.identity)
+            value = assignments[variable.identity]
+            polymer_tokens = getattr(value, "tokens", None)
+            if polymer_tokens is None:
+                raise ValueError("RNA beam candidate contains a non-polymer variable")
+            tokens.extend(polymer_tokens)
+        return "".join(tokens)
 
-    with (output / "01_evaluations.jsonl").open("x", encoding="utf-8") as journal:
-        def event(kind: str, **data) -> None:
-            journal.write(json.dumps({"event": kind, **data}, allow_nan=False) + "\n")
+    def load_mutator():
+        value = build_mutators(args.mutator, args.raw_model_results_dir)[mutator_alias]
+        if value.position_selector not in (None, "None") or value.max_mutations_per_proto is not None:
+            raise ValueError("RNA proposals require all mutable positions; remove selector and mutation limits")
+        value.runner.batch_size = 1
+        value.runner.number_of_batches = 1
+        return value
+
+    def load_evaluator():
+        return construct_evaluators(
+            args.evaluator,
+            args.raw_model_results_dir,
+            [oligo],
+            enabled_aliases=[evaluator_alias],
+        )[evaluator_alias]
+
+    def propose(
+        mutator,
+        candidate,
+        scores,
+        *,
+        seed,
+        step,
+        generation,
+        parent_id,
+        proposal_index,
+        output,
+    ):
+        return _propose_native_candidate(
+            mutator,
+            candidate,
+            scores,
+            seed=seed,
+            step=step,
+            generation=generation,
+            parent_id=parent_id,
+            proposal_index=proposal_index,
+            assemblies=(oligo,),
+            state=translation.state,
+            data=data,
+            label=label_candidate,
+        )
+
+    def evaluate(
+        evaluator,
+        candidate,
+        *,
+        seed,
+        step,
+        assemblies,
+        output,
+        proposal_id,
+    ):
+        global_config.set_variable("step", step)
+        return evaluator.evaluate(
+            construct_standard_input(list(assemblies), seed),
+            {},
+        )
+
+    def measure(candidate, scores, job):
+        return _measure_native_scores(
+            scores=scores,
+            candidate_label=label_candidate(candidate),
+            oligo=oligo,
+            raw_model_results_dir=args.raw_model_results_dir,
+            objective_weights=objective_weights,
+            bivalent=bivalent,
+        )
+
+    proposal_request_budget = args.get("beam_search", {}).get(
+        "max_proposal_requests"
+    )
+    if proposal_request_budget is not None and (
+        type(proposal_request_budget) is not int
+        or proposal_request_budget < 1
+    ):
+        raise ValueError(
+            "beam_search.max_proposal_requests must be a positive integer"
+        )
+    policy = BranchingPolicy(
+        width=beam_width,
+        proposals_per_parent=proposals_per_parent,
+        max_evaluations=max_evaluations,
+        proposal_cap=10 * max_evaluations,
+        proposal_request_budget=proposal_request_budget,
+        seed=seed,
+        evaluation_seed=seed,
+        proposal_seed=proposal_seed,
+        quota_mode="attempts",
+        expansion="round_robin",
+        proposal_batch_size=1,
+        evaluation_width=1,
+        pipeline=False,
+        immediate_evaluation=True,
+        cap_error=True,
+    )
+
+    records: list[dict] = []
+    journal_path = output / "01_evaluations.jsonl"
+    prior_events = []
+    if resume:
+        prior_events = [
+            json.loads(line)
+            for line in journal_path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    prior_event_names = {str(item.get("event")) for item in prior_events}
+    with ExitStack() as stack:
+        stack.callback(runtime.close)
+        journal = stack.enter_context(
+            journal_path.open("a" if resume else "x", encoding="utf-8")
+        )
+        def event(
+            kind: str,
+            fields: dict | None = None,
+            **data,
+        ) -> None:
+            payload = {**(fields or {}), **data}
+            journal.write(json.dumps({"event": kind, **payload}, allow_nan=False) + "\n")
             journal.flush()
 
-        def evaluate(sequence: str, parent_id: int | None) -> BeamCandidate | None:
-            evaluation_id = state.reserve(sequence, generation=generation, parent_id=parent_id)
-            if evaluation_id is None:
-                return None
-            prediction_seed = seed
-            state.records[evaluation_id]["proposal_step"] = proposal_count
-            event("evaluation_started", **state.records[evaluation_id], seed=prediction_seed)
-            _restore_sequence(sequence, protomer, global_config.segments)
-            global_config.set_variable("step", proposal_count)
-            try:
-                scores = evaluator.evaluate(construct_standard_input([oligo], prediction_seed), {})
-                all_plddt = np.asarray(scores.plddt[oligo], dtype=float)
-                metrics = {"mean_plddt": float(all_plddt.mean()), "rna_sequence": protomer.sequence}
-                score = metrics["mean_plddt"]
-                if bivalent:
-                    import shutil
-                    from astrolabe.analysis.rna_geometry import measure_bivalent_model
-                    model_path = Path(scores.complex_paths[oligo])
-                    identifier = model_path.stem.removesuffix("_model")
-                    confidence_path = args.raw_model_results_dir / "alphafold3" / identifier / f"{identifier}_confidences.json"
-                    metrics.update(measure_bivalent_model(model_path, confidence_path))
-                    sidecar = model_path.parent / confidence_path.name
-                    shutil.copy2(confidence_path, sidecar)
-                    metrics["confidence_path"] = str(sidecar)
-                    score = score_bivalent_rna(metrics, objective_weights)
-                candidate = state.complete(evaluation_id, score=score,
-                                           structure_path=str(scores.complex_paths[oligo]), metrics=metrics)
-            except BaseException as exc:
-                state.records[evaluation_id]["status"] = "failed"
-                event("evaluation_failed", **state.records[evaluation_id], error=repr(exc))
-                raise
-            score_payloads[evaluation_id] = scores
-            event("evaluation_completed", **state.records[evaluation_id])
-            return candidate
-
-        def select_generation() -> None:
-            state.select(pending_children)
-            event("beam_selected", generation=generation,
-                  candidates=[c.evaluation_id for c in pending_children],
-                  beam=[asdict(c) for c in state.beam])
-            _write_table(output / "02_evaluations.csv", state)
-            keep = {c.evaluation_id for c in state.beam}
-            for evaluation_id in list(score_payloads):
-                if evaluation_id not in keep:
-                    del score_payloads[evaluation_id]
-
+        owner = None
         try:
-            mutator = build_mutators(args.mutator, args.raw_model_results_dir)[mutator_alias]
-            if mutator.position_selector not in (None, "None") or mutator.max_mutations_per_proto is not None:
-                raise ValueError("RNA proposals require all mutable positions; remove selector and mutation limits")
-            mutator.runner.batch_size = 1
-            mutator.runner.number_of_batches = 1
-            evaluator = construct_evaluators(args.evaluator, args.raw_model_results_dir,
-                                             [oligo], enabled_aliases=[evaluator_alias])[evaluator_alias]
-            event("search_started", seed=seed, beam_width=beam_width,
-                  proposals_per_parent=proposals_per_parent, max_evaluations=max_evaluations,
-                  oligo=requested_oligo, structure_chains=oligo, initial_sequence=initial_sequence,
-                  workflow="bivalent_rna" if bivalent else "rna_oligomer", objective_weights=objective_weights)
-            pending_children = [evaluate(initial_sequence, None)]
-            select_generation()
-
-            while state.remaining:
-                generation += 1
-                pending_children = []
-                for parent, proposal_index in beam_expansion_order(list(state.beam), proposals_per_parent):
-                    if not state.remaining:
-                        break
-                    proposal_count += 1
-                    if proposal_count > max_evaluations * 10:
-                        raise RuntimeError("Distinct-sequence search exhausted the archived 10x proposal cap")
-                    _restore_sequence(parent.sequence, protomer, global_config.segments)
-                    current_proposal_seed = proposal_seed(seed, proposal_count)
-                    set_random_seeds(current_proposal_seed)
-                    global_config.set_variable("step", proposal_count)
-                    mutator.runner.extra_args["seed"] = current_proposal_seed
-                    mutator.runner.job_name = f"generation_{generation:04d}_parent_{parent.evaluation_id:04d}_proposal_{proposal_index:02d}"
-                    mutator.mutate(global_config.protomers, score_payloads[parent.evaluation_id], {})
-                    sequence = _sequence_key(protomer, global_config.segments, mutated=True)
-                    candidate = evaluate(sequence, parent.evaluation_id)
-                    if candidate is None:
-                        duplicate_count += 1
-                        event("duplicate_proposal", generation=generation, parent_id=parent.evaluation_id,
-                              proposal_index=proposal_index, sequence=sequence, seed=current_proposal_seed)
-                    else:
-                        pending_children.append(candidate)
-                select_generation()
-
+            if "search_started" not in prior_event_names:
+                event("search_started", seed=seed, beam_width=beam_width,
+                      proposals_per_parent=proposals_per_parent, max_evaluations=max_evaluations,
+                      oligo=requested_oligo, structure_chains=oligo, initial_sequence=initial_sequence,
+                      workflow="bivalent_rna" if bivalent else "rna_oligomer", objective_weights=objective_weights)
+            spec = NativeRefinementSpec(
+                output=output,
+                seed=seed,
+                width=beam_width,
+                proposals_per_parent=proposals_per_parent,
+                max_evaluations=max_evaluations,
+                evaluator_alias=evaluator_alias,
+                mutator_alias=mutator_alias,
+                assemblies=(oligo,),
+                initial_candidate=initial_candidate,
+                context=context,
+                translation=translation,
+                data=data,
+                load_mutator=load_mutator,
+                load_evaluator=load_evaluator,
+                propose=propose,
+                evaluate=evaluate,
+                measure=measure,
+                label=label_candidate,
+                proposal_seed=proposal_seed,
+                on_event=event,
+            )
+            run = run_native_refinement(
+                spec,
+                policy=policy,
+                protocol=protocol,
+                runtime=runtime,
+            )
+            owner = run.owner
+            selected_ids = {member.id for member in run.selected}
+            member_rows = []
+            for evaluation_id, member in run.member_items():
+                metrics = run.metrics(member)
+                member_rows.append(
+                    {
+                        "evaluation_id": evaluation_id,
+                        "proposal_step": member.proposal_step,
+                        "sequence": member.label,
+                        "generation": member.generation,
+                        "parent_id": member.parent_id,
+                        "status": "completed",
+                        "score": member.score,
+                        "structure_path": member.structure_path,
+                        "entered_beam": evaluation_id in selected_ids,
+                        "in_final_beam": evaluation_id in selected_ids,
+                        "metrics": metrics,
+                    }
+                )
+            records = member_rows
+            _write_table(output / "02_evaluations.csv", records)
+            state = run.state
+            duplicates = int(getattr(state, "duplicates", 0))
+            stop_reason = getattr(state, "stop_reason", None) or "budget_exhausted"
+            selected = [
+                {
+                    "evaluation_id": member.id,
+                    "sequence": record.label,
+                    "score": member.score,
+                    "structure_path": record.structure_path,
+                    "generation": record.generation,
+                    "parent_id": record.parent_id,
+                    "metrics": run.metrics(record),
+                }
+                for member, record in zip(
+                    run.selected,
+                    run.members(),
+                    strict=True,
+                )
+            ]
+            if "search_completed" not in prior_event_names:
+                event(
+                    "search_completed",
+                    evaluations=len(records),
+                    proposals=run.proposals,
+                    duplicate_proposals=duplicates,
+                    budget_complete=len(records) >= max_evaluations,
+                )
             result = {"out_dir": str(output), "seed": seed, "oligo": requested_oligo,
                       "structure_chains": oligo,
                       "beam_width": beam_width, "proposals_per_parent": proposals_per_parent,
-                      "max_evaluations": max_evaluations, "evaluations": len(state.records),
-                      "proposals": proposal_count, "duplicate_proposals": duplicate_count,
-                      "stop_reason": stop_reason, "budget_complete": state.remaining == 0,
+                      "max_evaluations": max_evaluations, "evaluations": len(records),
+                      "proposals": run.proposals, "duplicate_proposals": duplicates,
+                      "stop_reason": stop_reason, "budget_complete": len(records) >= max_evaluations,
                       "score": "weighted_bivalent_score" if bivalent else "mean_plddt",
                       "score_scale": None if bivalent else [0, 1], "objective_weights": objective_weights,
                       "sequence_key_length": len(initial_sequence),
@@ -505,14 +1269,209 @@ def _run_native_rna_beam(
                       "score_aggregation": "ranking-selected sample contact/PAE objective" if bivalent else "mean pLDDT over all diffusion samples and residues",
                       "structure_selection": "AF3 ranking_score",
                       "proposal_order": "round_robin", "proposal_cap": 10 * max_evaluations,
-                      "beam": [asdict(c) for c in state.beam]}
+                      "proposal_request_budget": proposal_request_budget,
+                      "beam": selected}
             (output / "03_final_beam.json").write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")
-            _restore_sequence(state.beam[0].sequence, protomer, global_config.segments)
+            if not selected:
+                raise RuntimeError("generic branching search returned no selected members")
+            _restore_sequence(selected[0]["sequence"], protomer, global_config.segments)
             return result
         except BaseException as exc:
-            event("search_failed", generation=generation, evaluations=len(state.records), budget_complete=False, error=repr(exc))
+            event(
+                "search_failed",
+                evaluations=len(records),
+                budget_complete=False,
+                error=repr(exc),
+            )
             raise
         finally:
-            _write_table(output / "02_evaluations.csv", state)
-            if mutator is not None:
-                mutator.shutdown()
+            _write_table(output / "02_evaluations.csv", records)
+            if owner is not None:
+                owner.shutdown()
+
+
+def run_configured_refinement(cfg, repeat: RepeatRun) -> dict:
+    """Configured assembly adapter from canonical search fields to RNA science.
+
+    Routing/configuration owns selection of this factory. This function only
+    translates the fixed canonical RNA refinement fields into the existing
+    scientific adapter and invokes the same generic ``NativeRefinementSpec`` +
+    ``BranchingPolicy`` path as the legacy public entry points.
+    """
+
+    if not isinstance(repeat, RepeatRun):
+        raise TypeError("repeat must be a design.repeats.RepeatRun")
+    if cfg is None or not hasattr(cfg, "get"):
+        raise TypeError("cfg must be a composed configuration")
+    search = cfg.get("search")
+    if search is None:
+        raise ValueError("configured refinement requires cfg.search")
+    _validate_archived_search(cfg)
+
+    policy = search.get("policy", {})
+    if policy is None:
+        policy = {}
+    width = search.get("width", policy.get("width"))
+    proposals_per_parent = search.get(
+        "proposals_per_parent",
+        policy.get("proposals_per_parent"),
+    )
+    max_evaluations = search.get(
+        "max_evaluations",
+        policy.get("max_evaluations"),
+    )
+    proposal_request_budget = search.get("max_proposal_requests")
+    for name, value in (
+        ("width", width),
+        ("proposals_per_parent", proposals_per_parent),
+        ("max_evaluations", max_evaluations),
+    ):
+        if type(value) is not int or value < 1:
+            raise ValueError(f"cfg.search {name} must be a positive integer")
+
+    measurement = str(search.get("measurement", "")).strip().lower()
+    initialization = str(search.get("initialization", "configured")).strip().lower()
+    if initialization not in {"configured", "random", "archived"}:
+        raise ValueError(
+            "cfg.search.initialization must be configured, random, or archived"
+        )
+
+    translated = copy.deepcopy(cfg)
+    legacy_search = {"initialization": initialization}
+    if proposal_request_budget is not None:
+        legacy_search["max_proposal_requests"] = proposal_request_budget
+    start = repeat.start if repeat.start is not None else search.get("start")
+    archived_starts = search.get("archived_starts")
+    archived_start = search.get("archived_start", 0)
+    if start is not None and initialization != "archived":
+        raise ValueError("cfg.search.start is valid only for archived initialization")
+    if start is not None:
+        if isinstance(start, str):
+            archived_starts = [{"sequence": start}]
+        elif hasattr(start, "items"):
+            record = dict(start)
+            if "sequence" not in record and "seq" in record:
+                record["sequence"] = record["seq"]
+            if not isinstance(record.get("sequence"), str) or not record["sequence"]:
+                raise ValueError("cfg.search.start mapping requires a sequence")
+            archived_starts = [record]
+        else:
+            raise TypeError("cfg.search.start must be a sequence string or mapping")
+        archived_start = 0
+    if archived_starts is not None:
+        if isinstance(archived_starts, str):
+            archived_starts = [{"sequence": archived_starts}]
+            archived_start = 0
+        try:
+            items = list(archived_starts)
+        except TypeError as error:
+            raise TypeError("cfg.search.archived_starts must be a sequence") from error
+        if not items:
+            raise ValueError("cfg.search.archived_starts must not be empty")
+        archived_starts = []
+        for item in items:
+            if not hasattr(item, "items"):
+                raise TypeError(
+                    "cfg.search.archived_starts entries must be mappings"
+                )
+            record = dict(item)
+            if "sequence" not in record and "seq" in record:
+                record["sequence"] = record["seq"]
+            if not isinstance(record.get("sequence"), str) or not record["sequence"]:
+                raise ValueError(
+                    "cfg.search.archived_starts entries require a sequence"
+                )
+            archived_starts.append(record)
+        legacy_search["archived_starts"] = archived_starts
+        legacy_search["archived_start"] = archived_start
+
+    from omegaconf import OmegaConf, open_dict
+
+    with open_dict(translated):
+        if "search" in translated:
+            del translated.search
+        translated.beam_search = OmegaConf.create(legacy_search)
+        if repeat.initial_sequence is not None:
+            target = str(repeat.initial_sequence.get("target", ""))
+            value = repeat.initial_sequence.get("value")
+            if not target or not isinstance(value, str):
+                raise ValueError(
+                    "RepeatRun.initial_sequence requires target and string value"
+                )
+            if translated.get("seqs") is None:
+                translated.seqs = {}
+            translated.seqs[target] = value
+
+    if measurement == "confidence":
+        if initialization != "configured":
+            raise ValueError(
+                "RNA confidence refinement supports configured initialization only"
+            )
+        objective_weights = None
+    elif measurement == "bivalent_geometry":
+        if initialization == "archived" and archived_starts is None:
+            raise ValueError(
+                "archived bivalent_geometry refinement requires start or archived_starts"
+            )
+        objective_weights = validate_bivalent_objective_weights(
+            search.get("objective_weights")
+        )
+    else:
+        raise ValueError(
+            "cfg.search.measurement must be confidence or bivalent_geometry"
+        )
+
+    output = repeat.output
+    if output is None:
+        raise ValueError("RepeatRun.output is required for configured refinement")
+    resume = search.get("resume", False)
+    if type(resume) is not bool:
+        raise ValueError("search.resume must be boolean")
+    if resume and (repeat.total != 1 or repeat.index != 0):
+        raise ValueError("search.resume=true requires exactly one repeat")
+
+    persisted = copy.deepcopy(cfg)
+    selected_start = None
+    if initialization == "archived":
+        if start is not None:
+            selected_start = dict(archived_starts[0])
+        elif archived_starts is not None:
+            selected_start = dict(archived_starts[int(archived_start)])
+    with open_dict(persisted):
+        persisted.seed = repeat.seed
+        persisted.repeats = 1
+        persisted.repeat_index = repeat.index
+        persisted.out_dir = str(output)
+        if "repeat_plan" in persisted:
+            del persisted.repeat_plan
+        persisted.search.algorithm = str(
+            persisted.search.get("algorithm", "branching")
+        )
+        persisted.search.owner = str(
+            persisted.search.get("owner", "archived_refinement")
+        )
+        if selected_start is not None:
+            persisted.search.start = selected_start
+            persisted.search.archived_start = 0
+            persisted.search.archived_starts = [selected_start]
+        if repeat.initial_sequence is not None:
+            target = str(repeat.initial_sequence.get("target", ""))
+            value = repeat.initial_sequence.get("value")
+            if not target or not isinstance(value, str):
+                raise ValueError(
+                    "RepeatRun.initial_sequence requires target and string value"
+                )
+            if persisted.get("seqs") is None:
+                persisted.seqs = {}
+            persisted.seqs[target] = value
+    return _run_rna_scientific_composition(
+        translated,
+        out_dir=output,
+        seed=repeat.seed,
+        beam_width=width,
+        proposals_per_parent=proposals_per_parent,
+        max_evaluations=max_evaluations,
+        objective_weights=objective_weights,
+        persisted_config=persisted,
+        resume=resume,
+    )

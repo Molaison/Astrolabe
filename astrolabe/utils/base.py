@@ -445,12 +445,15 @@ def construct_standard_input(oligo_names, seed):
     for name, protomer in protomers.items():
         before_sequence = protomer.sequence
         after_sequence = protomer.mutated_sequence
-        mutation_markers = "".join(
-            [
-                " " if before_sequence[i] == after_sequence[i] else "|"
-                for i in range(len(before_sequence))
-            ]
-        )
+        if (len(before_sequence) != len(after_sequence)
+                or any(getattr(global_config.segments[component], "pending_sequence", None) is not None
+                       for component in getattr(protomer, "components", ()))):
+            mutation_markers = f"whole-sequence reconstruction: {len(before_sequence)} -> {len(after_sequence)} residues"
+        else:
+            mutation_markers = "".join(
+                " " if before == after else "|"
+                for before, after in zip(before_sequence, after_sequence)
+            )
 
         logging.debug("Before: %s", before_sequence)
         logging.debug("Mutate: %s", mutation_markers)

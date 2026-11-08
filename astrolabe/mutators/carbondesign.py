@@ -81,14 +81,15 @@ class CarbonDesignMutator(Mutator):
         return sanitized.strip("_") or "oligo"
 
     def _renumber_chain(self, chain):
-        """Ensure residue numbering is contiguous starting at 0 for protein residues."""
-        counter = 0
-        for residue in chain:
-            hetflag, _, icode = residue.id
-            if hetflag != " ":
-                continue
-            residue.id = (" ", counter, icode)
-            counter += 1
+        """Use native CarbonDesign's contiguous 1-based protein residue IDs."""
+        residues = [residue for residue in chain if residue.id[0] == " "]
+        # Vacate original IDs first, including for a chain originally starting at
+        # zero, so Bio.PDB's child lookup cannot lose residues on ID collisions.
+        temporary_start = min([0] + [residue.id[1] for residue in chain]) - len(residues)
+        for index, residue in enumerate(residues):
+            residue.id = (" ", temporary_start + index, residue.id[2])
+        for index, residue in enumerate(residues, start=1):
+            residue.id = (" ", index, residue.id[2])
 
     def _write_single_chain(self, structure, chain_id: str, out_path: pathlib.Path):
         chain = structure[chain_id]

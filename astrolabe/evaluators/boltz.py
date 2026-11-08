@@ -12,8 +12,10 @@ from Bio import PDB as PDB
 from Bio.PDB import MMCIFParser
 
 from astrolabe.core import global_config
+from astrolabe.evaluators.runtime_stages import local_evaluator_guard
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.structure_output import project_structure, structure_directory
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.boltz import cli, from_af3_to_boltz
 
 if __name__ == "__main__":
@@ -25,6 +27,10 @@ class BoltzEvaluator(Evaluator):
         self.model_runner = model_runner
         self.output_dir = output_dir
 
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runner)
+
+    @local_evaluator_guard("boltz1", "model_runner")
     def run_function(self, input_feat):
         for oligo_name, cplx_input in input_feat.items():
             self.model_runner.run_inference(cplx_input["data"], cplx_input["out_dir"])
@@ -53,7 +59,7 @@ class BoltzEvaluator(Evaluator):
     def prepare_output(self, output, inputs, runtime_config):
         step = global_config.step
         chain2proto = runtime_config.get("chain2proto") or {}
-        structure_path = global_config.out_dir / "structures"
+        structure_path = structure_directory(global_config.out_dir, getattr(self, "alias", None))
         plddt = {}
         ptm = {}
         iptm = {}
@@ -71,6 +77,7 @@ class BoltzEvaluator(Evaluator):
             complex_plddt, complex_paths[oligo_name] = self.rechain_structure(
                 best_model, chain2input_chain, oligo_name, step, structure_path
             )
+            project_structure(complex_paths[oligo_name], global_config.out_dir, getattr(self, "alias", None))
             input_obj = inputs[oligo_name]
 
             idx = 0

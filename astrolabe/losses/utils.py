@@ -7,6 +7,8 @@ from typing import Callable, Dict, List, Optional
 
 import numpy as np
 
+from astrolabe.design.operations import OperationOwner
+
 
 def pae_residue_aggregation(token_res_ids, token_chain_ids, pae_matrix):
     """Aggregate PAE data by residue level."""
@@ -42,10 +44,11 @@ class LossMetadata:
     supports_oligomer_specific: bool = False
 
 
-class LossRegistry:
+class LossRegistry(OperationOwner):
     """Registry for loss functions with decorator-based registration."""
 
     def __init__(self):
+        super().__init__()
         self._loss_functions: Dict[str, Callable] = {}
         self._metadata: Dict[str, LossMetadata] = {}
 

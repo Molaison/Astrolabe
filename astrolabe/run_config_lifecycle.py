@@ -317,8 +317,6 @@ def _prune_loss_section(
 ) -> None:
     if not isinstance(loss_cfg, dict):
         return
-    from astrolabe.losses.base import extract_loss_terms
-
     expressions = _collect_stage_expressions(stages_cfg)
     expression_terms = loss_cfg.get("expression_terms") or {}
     required_expression_terms: list[str] = []
@@ -327,30 +325,17 @@ def _prune_loss_section(
             expression_terms=expression_terms,
             expressions=expressions,
         )
-    included_loss_terms = set(
-        extract_loss_terms(
-            expressions=[
-                *expressions,
-                *[
-                    str(expression_terms[name])
-                    for name in required_expression_terms
-                    if name in expression_terms
-                ],
-            ],
-            excluded_terms=list(expression_terms.keys())
-            if isinstance(expression_terms, dict)
-            else None,
-        )
-    )
-
     kept: dict[str, Any] = {}
     for key, value in loss_cfg.items():
         if key == "loss_terms":
             if isinstance(value, dict):
+                # LossEngine evaluates every explicitly configured non-null loss,
+                # including terms used by hooks or only emitted in reports.
+                # Dropping them here changes the meaning of a saved run.
                 kept[key] = {
                     str(name): conf
                     for name, conf in value.items()
-                    if str(name) in included_loss_terms
+                    if conf is not None
                 }
             else:
                 kept[key] = value
@@ -371,8 +356,30 @@ def _prune_loss_section(
     loss_cfg.update(kept)
 
 
-def build_persisted_run_config(args: Any) -> Any:
-    raw = OmegaConf.to_container(args, resolve=False)
+def _portable_config_value(value: Any) -> Any:
+    """Keep persisted YAML readable by ordinary YAML loaders."""
+    if isinstance(value, os.PathLike):
+        return os.fspath(value)
+    if isinstance(value, dict):
+        return {key: _portable_config_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_portable_config_value(item) for item in value]
+    return value
+
+
+def _resolve_retained_config(shape: Any, node: Any) -> Any:
+    if isinstance(shape, dict):
+        return {key: _resolve_retained_config(value, node[key]) for key, value in shape.items()}
+    if isinstance(shape, list):
+        return [_resolve_retained_config(value, node[index]) for index, value in enumerate(shape)]
+    if OmegaConf.is_config(node):
+        node = OmegaConf.to_container(node, resolve=True, throw_on_missing=True, enum_to_str=True)
+    return _portable_config_value(node)
+
+
+def build_persisted_run_config(args: Any, *, resolve: bool = False) -> Any:
+    """Build the replay view; optionally resolve retained values in the original context."""
+    raw = _portable_config_value(OmegaConf.to_container(args, resolve=False))
     if not isinstance(raw, dict):
         return args
     _cleanup_legacy_root_fields(raw)
@@ -386,11 +393,24 @@ def build_persisted_run_config(args: Any) -> Any:
     _prune_component_section(
         raw.get("evaluator"),
         terms_key="evaluator_terms",
-        preserve_keys={"scheduling"},
+        preserve_keys={"scheduling", "initialization"},
     )
     if isinstance(raw.get("evaluator"), dict):
         raw["evaluator"].update(preserved_replay_cfg)
-    _prune_component_section(raw.get("mutator"), terms_key="mutator_terms")
+    mutator_cfg = raw.get("mutator")
+    mutator_preserve_keys: set[str] = set()
+    diagnostics = (
+        mutator_cfg.get("state_conflict_diagnostics")
+        if isinstance(mutator_cfg, dict)
+        else None
+    )
+    if isinstance(diagnostics, dict) and diagnostics.get("enabled") is True:
+        mutator_preserve_keys.add("state_conflict_diagnostics")
+    _prune_component_section(
+        mutator_cfg,
+        terms_key="mutator_terms",
+        preserve_keys=mutator_preserve_keys,
+    )
     predocker_cfg = raw.get("predocker")
     if isinstance(predocker_cfg, dict):
         predocker_cfg["enabled_aliases"] = _collect_enabled_predocker_aliases(raw)
@@ -400,6 +420,9 @@ def build_persisted_run_config(args: Any) -> Any:
         raw,
         replay_evaluator_types=replay_evaluator_types,
     )
+    if resolve:
+        context = OmegaConf.merge(args, raw)
+        raw = _resolve_retained_config(raw, context)
     return OmegaConf.create(raw)
 
 
@@ -729,9 +752,11 @@ def _identify_input_entries(values: Any) -> dict[str, Any] | None:
 def build_run_provenance(args: Any) -> dict[str, Any]:
     """Assemble the provenance record for the run directory described by `args`.
 
-    Limitations: the config digest covers the persisted `config.yaml` bytes (pruned,
-    interpolations unresolved) rather than the resolved in-memory config; timestamps are
-    UTC ISO-8601 with second resolution; `input_files` covers only explicit
+    The config digest covers persisted `config.yaml` bytes; `config.resolved` identifies
+    the resolved replay view at collection time, including its operational paths.
+    Unused fields are pruned without resolving them. A missing/unserializable retained
+    value leaves that digest unavailable without discarding the rest of the record.
+    Timestamps are UTC ISO-8601 with second resolution; `input_files` covers only explicit
     `named_files`/`homologies` entries, not every file a stage may read later; and the
     Git section follows :func:`collect_git_provenance` (source root only).
     """
@@ -751,6 +776,25 @@ def build_run_provenance(args: Any) -> dict[str, Any]:
             )
         else:
             config_record["reason"] = "config.yaml not found"
+    resolved_record: dict[str, Any] = {
+        "algorithm": "sha256",
+        "encoding": "canonical-json-v1",
+        "scope": "resolved persisted view at provenance collection; includes operational paths",
+        "sha256": None,
+        "reason": None,
+    }
+    try:
+        resolved = build_persisted_run_config(args, resolve=True)
+        payload = OmegaConf.to_container(resolved, resolve=True, throw_on_missing=True, enum_to_str=True)
+        encoded = json.dumps(
+            payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False,
+        ).encode("utf-8")
+        if json.loads(encoded) != payload:
+            raise ValueError("resolved configuration requires string mapping keys")
+        resolved_record["sha256"] = hashlib.sha256(encoded).hexdigest()
+    except Exception as exc:
+        resolved_record["reason"] = f"{type(exc).__name__}: {exc}"
+    config_record["resolved"] = resolved_record
     return {
         "schema_version": _PROVENANCE_SCHEMA_VERSION,
         "state": "started",

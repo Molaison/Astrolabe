@@ -12,6 +12,13 @@ from typing import Iterable
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 VENDOR_PATCHES = {
+    "na_mpnn": {
+        "default_root": REPO_ROOT / "vendor" / "na_mpnn",
+        "patch": REPO_ROOT / "patches" / "vendor" / "na_mpnn" / "resident_api.patch",
+        "sentinels": {
+            "inference/run.py": ("def load_model(", "def run_design(", "_resident_model"),
+        },
+    },
     "alphafold2": {
         "default_root": REPO_ROOT / "vendor" / "alphafold2",
         "patch": REPO_ROOT / "patches" / "vendor" / "alphafold2" / "gh-af2-cyclic-initial-recycle.patch",

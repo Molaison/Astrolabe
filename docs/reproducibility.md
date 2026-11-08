@@ -5,6 +5,15 @@ accompanying Astrolabe manuscript and the optional installation diagnostic. The 
 is 0.1.0. Save the exact source commit, resolved configuration and run provenance
 with any results.
 
+`provenance.json` keeps the byte digest of the saved YAML in `config.sha256`.
+New records also include `config.resolved`: a digest of the retained configuration
+resolved at collection time, with unused backend defaults excluded. This detects
+changes such as a different environment interpolation even when the YAML bytes
+stay the same. Operational paths are included, so this is not a cross-run
+scientific equivalence key. An unavailable digest carries a `reason`; older
+records may omit the field. Source, weights and input identities still require
+their own evidence. See the [developer contract](developer_guide.md#validation-evidence).
+
 ## System requirements and installation
 
 | Workflow | Requirements |
@@ -143,3 +152,28 @@ All paths below are relative to `outputs/cpu-example/`.
 
 The demo should produce one collected record and one selected structure. It
 preserves existing output directories by refusing to overwrite them.
+
+## Runtime recovery compatibility
+
+Resume is supported only when the persisted scientific configuration, input,
+model/weight and relevant source identities pass the native compatibility
+checks. There is no general migration guarantee between releases. Keep the
+original source, machine runtime and outputs for a running or interrupted job;
+changing the daily launcher does not migrate that job.
+
+The AF2 integration qualification exercised three boundaries: durable raw without
+Score continues scoring without replaying inference; durable Score without a
+member commit reuses the Score; an issued inference lacking a durable completion
+receipt stays unknown and is refused. Completed serial, shared Beam and physical
+Score runs were resumed without new evaluator calls or changed scientific
+outputs. Completed resume can still initialize owners and therefore has startup
+cost. These checks do not qualify arbitrary historical checkpoints or other
+backends.
+
+For a daily version change, validate the candidate against the project's common
+YAML with `astrolabe run --dry-run`, preserve the old checkout/runtime pair, and
+select the new source in the launcher only after the release checks pass. Run
+new work in a new output directory. Resume existing work with its original
+qualified source unless the native compatibility check and explicit comparison
+both succeed; do not edit receipts, bypass an unknown outcome, or change RNG
+protocols to make a checkpoint load.

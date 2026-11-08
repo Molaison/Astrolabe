@@ -7,6 +7,7 @@ DEFAULT_MUTATION_FRACTION = 0.1
 
 
 constants_names = [
+    "seed",
     "num_tokens",
     "PARSED_FILE",
     "predefined_statement",
@@ -49,6 +50,7 @@ constants_names = [
     "channel",
     "cyclization",
     "ligand_resnames",
+    "extra_residue_params",
     "nonstandard_aliases",
     "user_ccd",
     "structure_start",

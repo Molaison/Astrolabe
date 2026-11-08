@@ -1507,6 +1507,14 @@ class ProtenixRunner(object):
     # Adapted from runner.train.Trainer.evaluate
     @torch.no_grad()
     def predict(self, data: Mapping[str, Mapping[str, Any]]) -> dict[str, torch.Tensor]:
+        return self.predict_prepared(self.prepare_data(data))
+
+    @torch.no_grad()
+    def prepare_data(self, data: Mapping[str, Any]) -> Mapping[str, Any]:
+        return to_device(data, self.device)
+
+    @torch.no_grad()
+    def predict_prepared(self, data: Mapping[str, Any]) -> dict[str, torch.Tensor]:
         eval_precision = {
             "fp32": torch.float32,
             "bf16": torch.bfloat16,
@@ -1519,7 +1527,6 @@ class ProtenixRunner(object):
             else nullcontext()
         )
 
-        data = to_device(data, self.device)
         with enable_amp:
             prediction, _, _ = self.model(
                 input_feature_dict=data["input_feature_dict"],
@@ -1537,4 +1544,8 @@ class ProtenixRunner(object):
         logging.info(msg)
 
     def update_model_configs(self, new_configs: Any) -> None:
+        from omegaconf import OmegaConf
+
+        if OmegaConf.is_config(new_configs) or isinstance(new_configs, dict):
+            new_configs = _normalize_protenix_configs(new_configs)
         self.model.configs = new_configs

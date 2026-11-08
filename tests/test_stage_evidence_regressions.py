@@ -35,7 +35,7 @@ def test_failed_step0_reference_gate_audit_is_rejected(tmp_path, monkeypatch):
     monkeypatch.setattr(run, '_prepare_structure_start_runtime', prepare)
     loss = SimpleNamespace(compute_loss=lambda result, runtime: (1., {}))
     with pytest.raises(ValueError, match='step0 reference gate failed'):
-        run.run_optimization_loop(SimpleNamespace(steps=1), loss, scores(), cfg.stage_manager, {})
+        run._initialize_optimization_state(SimpleNamespace(steps=1), loss, scores(), cfg.stage_manager, {})
     decisions = cfg.get_const('decisions')
     assert decisions.row_history[0]['accepted'] is False
     report = build_execution_audit(run_id='review',status='failed',decisions=decisions,journal=journal)

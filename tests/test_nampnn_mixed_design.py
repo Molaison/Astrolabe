@@ -184,7 +184,8 @@ def test_nampnn_runner_reuses_job_dir_and_reads_current_structure_outputs(
         "subprocess.run",
         lambda cmd, **kwargs: calls.append((cmd, kwargs)),
     )
-    runner = NAMPNNRunner({"repo_path": str(repo)}, output_root=output_root)
+    runner = NAMPNNRunner({"repo_path": str(repo), "execution_mode": "subprocess"},
+                          output_root=output_root)
 
     result = runner.design_sequences(
         structure_path=structure_path,
@@ -495,6 +496,57 @@ def test_compute_mutation_accepts_full_chain_output_for_fixed_protein_designing_
     assert list(proto_sequences) == ["B"]
     assert proto_sequences["B"]["sequence"] == "ACGU"
     assert proto_sequences["B"]["sampling_probs"].shape == (1, 4, 4)
+
+
+def test_mutate_then_finalize_materializes_shared_rna_and_preserves_fixed_proteins(
+    tmp_path: Path,
+) -> None:
+    parent = "UGCAUGCAUGCAUGCAUGCA"
+    fixed_protein = "ACDE"
+    _init_runtime(
+        tmp_path,
+        {
+            "A": ("r", f"{parent}@repeat repeat"),
+            "B": ("p", f"+{fixed_protein}"),
+            "C": ("p", f"+{fixed_protein}"),
+        },
+    )
+    global_config.set_variable("mutation_num", 20)
+    scores = _scores(tmp_path, ["ABC"])
+    converted = "ACGU" * 10
+    mutator = NAMPNNMutator(
+        sequence_model_runner=SimpleNamespace(
+            na_shared_tokens=0,
+            job_name="shared_rna_job",
+            design_sequences=lambda **_kwargs: {
+                "sequence": "acgt" * 10,
+                "probabilities": _ppm_bundle(
+                    [f"A{index}" for index in range(1, 41)],
+                    [{"A": 1.0} if base == "A" else
+                     {"C": 1.0} if base == "C" else
+                     {"G": 1.0} if base == "G" else {"U": 1.0}
+                     for base in converted],
+                ),
+            },
+        )
+    )
+
+    mutator.mutate(
+        global_config.protomers,
+        scores,
+        {},
+    )
+    shared = global_config.segments["A_1"]
+    assert shared.mutations
+
+    mutator.finalize_pending_mutations()
+
+    assert global_config.segments["repeat"] is shared
+    assert global_config.segments["A_2"] is shared
+    assert shared.mutations == []
+    assert global_config.protomers["A"].sequence == converted
+    assert global_config.protomers["B"].sequence == fixed_protein
+    assert global_config.protomers["C"].sequence == fixed_protein
 
 
 def test_prepare_mutation_output_uses_mutable_length_budget_for_fixed_protein_design_rna(

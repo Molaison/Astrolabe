@@ -1567,8 +1567,24 @@ def _condition_non_wt_probabilities(
     aa_order: List[str],
     *,
     protomer_name: str,
+    distribution: str = "raw_log_probs",
 ) -> np.ndarray:
     original = np.asarray(probabilities, dtype=float)
+    if distribution == "sampling_probs":
+        if not np.isfinite(original).all() or np.any(original < 0):
+            raise ValueError("Sampling probabilities must be finite and nonnegative")
+        if original.ndim < 2 or original.shape != np.asarray(log_probabilities).shape or original.shape[-2] != len(sequence):
+            raise ValueError("Sampling probabilities/sequence correspondence differs")
+        conditioned = original.copy()
+        active = conditioned.sum(axis=-1) > 0
+        for position, aa in enumerate(sequence):
+            conditioned[..., position, aa_order.index(aa)] = 0.
+        totals = conditioned.sum(axis=-1, keepdims=True)
+        if np.any(active & (totals[..., 0] == 0)):
+            raise ValueError("No legal non-WT probability mass; cannot enforce mutation count")
+        return np.divide(conditioned, totals, out=np.zeros_like(conditioned), where=totals > 0)
+    if distribution != "raw_log_probs":
+        raise ValueError("Unknown enforced mutation distribution")
     adjusted_logits = np.asarray(log_probabilities, dtype=float).copy()
     if original.shape != adjusted_logits.shape:
         raise ValueError(
@@ -1625,6 +1641,7 @@ def sample_mutations_by_aa_probs(
     runtime_config: dict[str, Any] | None = None,
     entropy_cutoff: float | None = None,
     enforce_mutation_num: bool = False,
+    enforce_mutation_distribution: str = "raw_log_probs",
 ):
     if propagate_scores:
         per_proto_scores = aggregate_per_proto_scores(
@@ -1686,6 +1703,7 @@ def sample_mutations_by_aa_probs(
                 protomer.sequence,
                 aa_order,
                 protomer_name=name,
+                distribution=enforce_mutation_distribution,
             )
         protomer.propagating_probs(sorted_probs)
     mutations = global_config.segment_manager.collect_mutations()
