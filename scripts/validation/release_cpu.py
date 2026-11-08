@@ -67,7 +67,7 @@ RELEASE_CPU_TESTS = (
     "tests/test_design_variable_length.py",
     "tests/test_native_flow_parity.py",
     "tests/test_portable_decision_assessments.py",
-    "tests/test_portable_native_state.py",
+    "tests/test_portable_native_flow.py",
 )
 
 
