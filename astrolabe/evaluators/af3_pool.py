@@ -31,6 +31,7 @@ class DaemonPool:
         self.cursor=0;self.condition=threading.Condition()
         self.requests=0;self.quarantined=False;self.closed=False
         self._close_done=False;self._close_error=None
+        self._closing_thread=None
     def emit(self,event,**fields):
         try:self.on_event(event,**fields)
         except Exception:pass  # Logging cannot lose a charged inference or a capacity slot.
@@ -140,10 +141,13 @@ class DaemonPool:
     def close(self):
         with self.condition:
             if self.closed:
+                if not self._close_done and self._closing_thread is threading.current_thread():
+                    raise RuntimeError('AF3 pool is draining; reentrant close cannot confirm cleanup')
                 self.condition.wait_for(lambda:self._close_done)
                 if self._close_error is not None:raise RuntimeError('AF3 pool cleanup failed; owner retained') from self._close_error
                 return
             self.closed=True
+            self._closing_thread=threading.current_thread()
         try:
             with self.condition:
                 self.condition.wait_for(lambda:self.requests==0)
@@ -155,6 +159,7 @@ class DaemonPool:
         finally:
             with self.condition:
                 self._close_done=True
+                self._closing_thread=None
                 self.condition.notify_all()
         self.emit('pool_drained',completed=self.completed,failed=self.failed,pending=self.pending,
                   stage='evaluation_rpc',quarantined=self.quarantined)

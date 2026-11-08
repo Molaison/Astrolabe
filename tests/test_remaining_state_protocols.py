@@ -136,6 +136,50 @@ def test_m07_startup_fault_is_not_replaced_by_cleanup_fault(monkeypatch, tmp_pat
     assert owner.state["status"] == "startup_failed"
 
 
+@pytest.mark.parametrize("propagate", [False, True])
+def test_m08_controller_callback_reentry_is_unconfirmed_without_self_wait(propagate):
+    from astrolabe.evaluators.af3_pool import DaemonPool
+    reentries, failures = [], []
+
+    class Controller:
+        settings = SimpleNamespace(max_concurrency=1)
+
+        def close(self):
+            try:
+                pool.close()
+            except RuntimeError as error:
+                reentries.append(error)
+                assert not pool._close_done
+                assert pool._closing_thread is threading.current_thread()
+                if propagate:
+                    raise
+
+    pool = DaemonPool(["/unused/socket"], controller=Controller())
+
+    def close():
+        try:
+            pool.close()
+        except BaseException as error:
+            failures.append(error)
+
+    # A daemon thread keeps a regression from hanging the entire test process;
+    # the bounded join still fails deterministically on the old self-wait.
+    thread = threading.Thread(target=close, daemon=True)
+    thread.start()
+    thread.join(timeout=5)
+    assert not thread.is_alive(), "controller callback deadlocked in pool.close()"
+    assert len(reentries) == 1 and "draining" in str(reentries[0])
+    assert pool._close_done and pool._closing_thread is None
+    if propagate:
+        assert failures == [reentries[0]]
+        assert pool.quarantined and pool._close_error is reentries[0]
+        with pytest.raises(RuntimeError, match="cleanup failed"):
+            pool.close()
+    else:
+        assert failures == [] and not pool.quarantined and pool._close_error is None
+        pool.close()
+
+
 def test_m08_concurrent_close_waits_for_drain_and_does_not_hide_failure():
     from astrolabe.evaluators.af3_pool import DaemonPool
     entered, release, second_started = threading.Event(), threading.Event(), threading.Event()
