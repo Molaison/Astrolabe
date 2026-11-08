@@ -91,3 +91,32 @@ The raw optional `candidate_scores` assertion now requires `None`, matching the
 existing data class; this is not permission to persist finalized scores in raw.
 Cross-version state migration, DPLM proposal-cursor persistence and lifecycle
 qualification of every backend remain outside this P0 change.
+
+### Scientific state, initialization and remaining boundary repairs
+
+The subsequent P1 integration binds live restoration to one Runtime run and
+stages restore data before mutation. Pipeline and lazy model initialization
+retain failures, distinguish proof from residency, and reject ordinary replay.
+Loss extraction and startup validation use configuration revisions rather than
+object identity alone. Native PyRosetta initialization is process-owned;
+MSA loading is atomic; provider pollution survives reset.
+
+DPLM/pore/RFD4 expose validated scientific projections. Configured refinement
+stores them with the existing Runtime at the proposal boundary and restores
+before the next mutation, without rolling back rejection consumption or RNG.
+Shared DPLM response caches and incomplete predocker sidecars are rejected by
+the durable profile. Legacy live graphs, arbitrary stages/poses and unsupported
+cross-version records are not upgraded by these adapters.
+
+Posthoc PARTIAL/COMPLETE receipts, derivation reuse and records now commit
+together. Final content manifests identify filter/export/archive publication.
+Cleanup and publication failures preserve original errors/evidence. Remaining
+backend cleanup, shared Proton ownership, signal reentry, installation
+completion and download-stamp guards are repaired; the sixth reversible Proton
+patch records fork-pool and Squashfs cleanup changes. Unused vendor training
+protocols remain outside the application release.
+
+Release CPU checks include the new protocol suites and a configured-refinement
+cut after proposal terminal publication: the resumed next proposal matches the
+uninterrupted baseline. Native scientific canary, CI and deployed commit
+identities are recorded separately in release evidence.
