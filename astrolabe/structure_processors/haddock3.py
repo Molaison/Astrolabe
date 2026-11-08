@@ -438,6 +438,9 @@ class HADDOCK3NucleicDockingProcessor(StructureProcessor):
                     (metrics.contact_count, metrics.min_distance, reconstructed, anchor_chain)
                 )
             except Exception as exc:
+                from astrolabe.design.runtime import outcome_is_unknown
+                if outcome_is_unknown(exc):
+                    raise
                 failures.append(f"{anchor_chain}: {exc}")
                 logger.warning("HADDOCK3 anchor-chain run failed for %s: %s", anchor_chain, exc)
 

@@ -273,6 +273,9 @@ class RAPiDockPeptideDockingProcessor(StructureProcessor):
             return best_result
 
         except Exception as e:
+            from astrolabe.design.runtime import outcome_is_unknown
+            if outcome_is_unknown(e):
+                raise
             logging.error(
                 f"Peptide docking failed for {input_file}: {e}", exc_info=True
             )

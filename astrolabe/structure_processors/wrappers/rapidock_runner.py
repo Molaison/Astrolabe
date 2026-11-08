@@ -12,6 +12,9 @@ from typing import Any, Dict, List
 
 from astrolabe.model_daemon import RequestOutcomeUnknown
 from astrolabe.stdio_daemon import json_line_request, positive_timeout, stop_owned_stdio_process
+from astrolabe.mutators.state_protocol import (
+    ScientificState, digest, fields, natural, file_reference, validate_reference,
+)
 
 
 _CACHE_PAYLOAD_VERSION = 4
@@ -79,6 +82,55 @@ class RAPiDockRunner:
         self._cursor_mem: Dict[str, int] = {}
         self.last_runtime_status: Dict[str, Any] | None = None
         atexit.register(self.shutdown)
+
+    def _state_identity(self, binding):
+        if self._unknown is not None:
+            raise self._unknown
+        if self._cleanup_pending:
+            raise ValueError("RAPiDock cleanup is unresolved")
+        return {"binding": binding, "params": self._dock_params(),
+                "repo_path": str(self.repo_path), "model_dir": str(self.model_dir),
+                "ckpt": self.ckpt, "confidence_model_dir": self.confidence_model_dir,
+                "confidence_ckpt": self.confidence_ckpt, "device": self.device,
+                "response_cache": self.response_cache}
+
+    def snapshot_state(self, *, binding):
+        """Quiescent bank receipts; no daemon creation, ping or model loading.
+
+        Bank identity binds native cache identity and immutable output bytes.
+        Consumption identity is (bank_id, cursor), not another inference call.
+        Caller binding includes validated native assets and input identity.
+        """
+        with self._lock:
+            identity = self._state_identity(binding)
+            banks = {}
+            for key, candidates in self._response_cache_mem.items():
+                refs = [file_reference(path) for path in candidates]
+                banks[key] = {"samples": refs, "bank_id": digest([key, refs]),
+                              "cursor": self._cursor_mem.get(key, 0)}
+            return ScientificState.create("rapidock-bank", identity, {"banks": banks})
+
+    def export_state(self):
+        return self.snapshot_state(binding={}).to_dict()
+
+    def restore_state(self, state, *, binding=None):
+        binding = {} if binding is None else binding
+        with self._lock:
+            payload = ScientificState.validate(state, "rapidock-bank", self._state_identity(binding))
+            fields(payload, ("banks",))
+            if not isinstance(payload["banks"], dict):
+                raise ValueError("Invalid RAPiDock banks")
+            banks, cursors = {}, {}
+            for key, record in payload["banks"].items():
+                fields(record, ("samples", "bank_id", "cursor"))
+                if (not isinstance(key, str) or len(key) != 64
+                        or not isinstance(record["samples"], list)
+                        or record["bank_id"] != digest([key, record["samples"]])
+                        or natural(record["cursor"]) > len(record["samples"])):
+                    raise ValueError("Invalid RAPiDock bank/consumption binding")
+                banks[key] = [validate_reference(ref) for ref in record["samples"]]
+                cursors[key] = record["cursor"]
+            self._response_cache_mem, self._cursor_mem = banks, cursors
 
     def _get(self, key: str, default=None):
         if hasattr(self.args, key):

@@ -5,7 +5,7 @@ import os
 import pathlib
 import random
 import uuid
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 import numpy as np
@@ -14,6 +14,7 @@ from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import Protomer, ProtomerTypes
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.mutators.base import Mutator
+from astrolabe.mutators.state_protocol import ScientificState, digest, fields, natural, file_reference
 from astrolabe.mutators.capabilities import PROTEIN_ONLY, MutatorCapabilities
 from astrolabe.mutators.utils import prepare_exclude_sites
 from astrolabe.per_residue_scores import mutator_site_score
@@ -30,7 +31,20 @@ class _DplmPrefetchCache:
     masked_sequence: str
     mask_positions: list[int]
     mutation_quota: int
-    pending_samples: list[str]
+    samples: list[str]
+    cursor: int
+    native_inputs: dict
+    bank_id: str
+    generation: int
+
+    @property
+    def pending_samples(self):
+        return self.samples[self.cursor:]
+
+    def take(self):
+        sample = self.samples[self.cursor]
+        self.cursor += 1
+        return sample
 
 
 class DPLMMutator(Mutator):
@@ -74,6 +88,7 @@ class DPLMMutator(Mutator):
             runner_kwargs.get("quality_filter", {}) if isinstance(runner_kwargs.get("quality_filter", {}), dict) else {}
         )
         self._prefetch: dict[str, _DplmPrefetchCache] = {}
+        self._bank_serial = 0
         self.last_mutation_telemetry: dict[str, Any] = {
             "metrics": {
                 "entropy_norm": "N/A",
@@ -108,6 +123,77 @@ class DPLMMutator(Mutator):
     def _prefetch_dir(self) -> pathlib.Path:
         return pathlib.Path(self.runner.work_dir) / "prefetch"
 
+    def _state_identity(self, binding):
+        # A shared disk queue cannot be transactionally rewound by this owner.
+        if self.runner.response_cache:
+            raise ValueError("DPLM state requires response_cache=false before initialization")
+        self.runner._ensure_open()
+        return {"binding": binding, "runner": {
+            key: str(getattr(self.runner, key)) for key in
+            ("repo_path", "model_name", "device", "sampling_strategy", "max_iter",
+             "num_samples", "temperature", "python_bin", "script_path")},
+            "selector": self.position_selector, "mask_token": self.mask_token,
+            "script": file_reference(self.runner.script_path),
+            "invalidate": self._prefetch_invalidate_on_sequence_change,
+            "filter": [self._quality_filter_enable, self._quality_filter_fallback_to_raw,
+                       self._quality_filter_max_rounds, self._quality_filter_attempt_num_samples,
+                       asdict(self._quality_cfg)]}
+
+    def export_state(self):
+        """JSON-native projection for the enclosing Runtime proposal receipt."""
+        return self.snapshot_state(binding={}).to_dict()
+
+    def snapshot_state(self, *, binding):
+        """Export at the proposal boundary; reject never rewinds this cursor.
+
+        binding is the caller's validated native assets/input/topology identity.
+        Global Python/NumPy RNG belongs to the enclosing receipt, not this bank.
+        """
+        return ScientificState.create("dplm-prefetch", self._state_identity(binding), {
+            "serial": self._bank_serial,
+            "banks": {name: asdict(bank) for name, bank in self._prefetch.items()},
+            "telemetry": self.last_mutation_telemetry})
+
+    def restore_state(self, state, *, binding=None):
+        binding = {} if binding is None else binding
+        payload = ScientificState.validate(state, "dplm-prefetch", self._state_identity(binding))
+        fields(payload, ("serial", "banks", "telemetry"))
+        serial = natural(payload["serial"])
+        if not isinstance(payload["banks"], dict) or not isinstance(payload["telemetry"], dict):
+            raise ValueError("Invalid DPLM banks/telemetry")
+        banks = {}
+        for name, record in payload["banks"].items():
+            fields(record, _DplmPrefetchCache.__dataclass_fields__)
+            bank = _DplmPrefetchCache(**record)
+            native = bank.native_inputs
+            fields(native, ("oligo", "combined_sequence", "masked_sequence", "mask_positions",
+                            "mutation_quota", "mapping"))
+            if (not name or native["oligo"] != name or not isinstance(bank.combined_sequence, str)
+                    or not isinstance(native["combined_sequence"], str)
+                    or not isinstance(bank.mask_positions, list)
+                    or any(type(i) is not int or not 0 <= i < len(bank.combined_sequence)
+                           for i in bank.mask_positions)
+                    or len(set(bank.mask_positions)) != len(bank.mask_positions)
+                    or natural(bank.mutation_quota) != len(bank.mask_positions)
+                    or bank.mask_positions != native["mask_positions"]
+                    or bank.mutation_quota != native["mutation_quota"]
+                    or len(bank.combined_sequence) != len(native["combined_sequence"])
+                    or bank.masked_sequence != self._masked_sequence(bank.combined_sequence, bank.mask_positions)
+                    or native["masked_sequence"] != self._masked_sequence(native["combined_sequence"], bank.mask_positions)
+                    or not isinstance(bank.samples, list)
+                    or any(not isinstance(s, str) for s in bank.samples)
+                    or natural(bank.cursor) > len(bank.samples)
+                    or not 1 <= natural(bank.generation) <= serial
+                    or bank.bank_id != digest([bank.generation, native, bank.samples])
+                    or not isinstance(native["mapping"], list)
+                    or (native["mapping"] and len(native["mapping"]) != len(bank.combined_sequence))
+                    or (self._prefetch_invalidate_on_sequence_change
+                        and native["combined_sequence"] != bank.combined_sequence)):
+                raise ValueError("Invalid DPLM native bank/cursor")
+            banks[name] = bank
+        self._prefetch, self._bank_serial = banks, serial
+        self.last_mutation_telemetry = payload["telemetry"]
+
     def shutdown(self) -> None:
         self.runner.close()
 
@@ -136,6 +222,7 @@ class DPLMMutator(Mutator):
         return max(1, int(self._quality_filter_max_rounds or 0))
 
     def compute_mutation(self, mutation_input_features: Dict[str, Dict[str, Any]]):
+        self.runner._ensure_open()
         tasks: list[dict[str, Any]] = []
         cached_samples: dict[str, list[str]] = {}
         for oligo_name, features in mutation_input_features.items():
@@ -153,8 +240,10 @@ class DPLMMutator(Mutator):
                 and cache.masked_sequence == masked_sequence
                 and cache.mutation_quota == mutation_quota
                 and cache.pending_samples
+                and cache.mask_positions == list(mask_positions)
+                and cache.native_inputs["mapping"] == json.loads(json.dumps(features.get("mapping", [])))
             ):
-                cached_samples[oligo_name] = [cache.pending_samples.pop(0)]
+                cached_samples[oligo_name] = [cache.take()]
                 continue
 
             num_samples = self._request_num_samples()
@@ -245,14 +334,20 @@ class DPLMMutator(Mutator):
                     samples = raw_last.get(oligo_name, []) or []
                 if samples:
                     out_samples = [samples[0]]
-                leftover = list(samples[1:]) if len(samples) > 1 else []
+                self._bank_serial += 1
+                native_inputs = {"oligo": oligo_name, "combined_sequence": combined_sequence,
+                                 "masked_sequence": masked_sequence, "mask_positions": mask_positions,
+                                 "mutation_quota": mutation_quota,
+                                 "mapping": features.get("mapping", [])}
                 # Keep mask positions stable while the accepted sequence is unchanged.
                 self._prefetch[oligo_name] = _DplmPrefetchCache(
                     combined_sequence=combined_sequence,
                     masked_sequence=masked_sequence,
                     mask_positions=mask_positions,
                     mutation_quota=mutation_quota,
-                    pending_samples=leftover,
+                    samples=list(samples), cursor=min(1, len(samples)),
+                    native_inputs=json.loads(json.dumps(native_inputs)), generation=self._bank_serial,
+                    bank_id=digest([self._bank_serial, native_inputs, list(samples)]),
                 )
                 if self._prefetch_save and samples:
                     requested = self._request_num_samples()

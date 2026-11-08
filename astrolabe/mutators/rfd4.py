@@ -10,6 +10,9 @@ from pathlib import Path
 import tempfile
 
 from astrolabe.core import global_config
+from astrolabe.mutators.state_protocol import (
+    ScientificState, digest, fields, natural, file_reference, validate_reference,
+)
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.mutators.base import Mutator
 from astrolabe.mutators.capabilities import MutatorCapabilities, PROTEIN_ONLY
@@ -163,7 +166,7 @@ class RFD4Mutator(Mutator):
             raise ValueError("Proposal feedback requires enabled local repair without a fixed plan")
         self._failed_hbond_attempts = Counter()
         self._hbond_attempt_history = []
-        self._observed_requests = set()
+        self._observed_requests = {}
         # The ordinary CLI represents an absent selector with the literal
         # expression "None", while programmatic construction uses Python None.
         if isinstance(position_selector, str) and position_selector.strip() == "None":
@@ -403,7 +406,22 @@ class RFD4Mutator(Mutator):
     def _observe_hbond_attempt(self, request, generated):
         """Carry measured failed-goal evidence, not rejected coordinates, forward."""
         if (not self.feedback.get("repair_unsatisfied_attempts", False)
-                or not request.plan.hbonds or generated.request_digest in self._observed_requests):
+                or not request.plan.hbonds):
+            return
+        observation = {
+            "plan": asdict(request.plan),
+            "assembly": getattr(request, "assembly", None),
+            "chains": [asdict(c) for c in getattr(request, "chains", ())],
+            "seed": getattr(request, "seed", None),
+            "structure_digest": generated.structure_digest,
+            "structure_path": generated.structure_path,
+            "sequences": getattr(generated, "sequences", ()),
+        }
+        observation = digest(observation)
+        prior = self._observed_requests.get(generated.request_digest)
+        if prior is not None:
+            if prior != observation:
+                raise ValueError("Conflicting RFD4 observed request identity")
             return
         from astrolabe.mutators.rfd4_feedback import analyze_interface
         feedback = analyze_interface(generated.structure_path, self.binder_chains, self.target_chains,
@@ -428,9 +446,76 @@ class RFD4Mutator(Mutator):
             outcome["failed_attempts_after"] = self._failed_hbond_attempts[outcome["key"]]
         self._hbond_attempt_history.append({
             "request_digest": generated.request_digest,
+            "observation_identity": observation,
+            "generated_structure_path": generated.structure_path,
             "generated_structure_sha256": generated.structure_digest, "outcomes": outcomes,
         })
-        self._observed_requests.add(generated.request_digest)
+        self._observed_requests[generated.request_digest] = observation
+
+    def _state_identity(self, binding):
+        # Asset digests/environment are supplied by the durable owner; calling
+        # backend.fingerprint here would start a native CPU interpreter.
+        return {"binding": binding, "assembly": self.assembly,
+                "binder": self.binder_chains, "target": self.target_chains,
+                "feedback": self.feedback, "selector": self.position_selector,
+                "fixed_plan": file_reference(self.feedback["fixed_plan_path"])
+                if self.feedback.get("fixed_plan_path") else None,
+                "backend": {key: str(getattr(self.backend, key, None)) for key in
+                            ("python_bin", "source_dir", "model_dir", "max_fixed_atom_rmsd")},
+                "weight": self.mutation_weight, "seed": self.seed,
+                "generation": self.backend.generation}
+
+    def snapshot_state(self, *, binding):
+        references = {h["generated_structure_path"]: file_reference(h["generated_structure_path"])
+                      for h in self._hbond_attempt_history}
+        for h in self._hbond_attempt_history:
+            if references[h["generated_structure_path"]]["sha256"] != h["generated_structure_sha256"]:
+                raise ValueError("RFD4 observed structure changed")
+        return ScientificState.create("rfd4-feedback", self._state_identity(binding), {
+            "failures": dict(self._failed_hbond_attempts), "history": self._hbond_attempt_history,
+            "observed": self._observed_requests, "references": references})
+
+    def export_state(self):
+        return self.snapshot_state(binding={}).to_dict()
+
+    def restore_state(self, state, *, binding=None):
+        binding = {} if binding is None else binding
+        payload = ScientificState.validate(state, "rfd4-feedback", self._state_identity(binding))
+        fields(payload, ("failures", "history", "observed", "references"))
+        failures, history, observed, references = (payload[k] for k in
+                                                  ("failures", "history", "observed", "references"))
+        if (not all(isinstance(v, dict) for v in (failures, observed, references))
+                or not isinstance(history, list)):
+            raise ValueError("Invalid RFD4 feedback state")
+        counts, identities, paths = Counter(), {}, set()
+        for row in history:
+            fields(row, ("request_digest", "observation_identity", "generated_structure_path",
+                         "generated_structure_sha256", "outcomes"))
+            rid, path = row["request_digest"], row["generated_structure_path"]
+            if (not isinstance(rid, str) or not rid or rid in identities
+                    or not isinstance(path, str) or path not in references
+                    or references[path]["sha256"] != row["generated_structure_sha256"]
+                    or observed.get(rid) != row["observation_identity"]):
+                raise ValueError("Invalid RFD4 observation/reference binding")
+            identities[rid] = row["observation_identity"]
+            paths.add(path)
+            if not isinstance(row["outcomes"], list):
+                raise ValueError("Invalid RFD4 feedback outcomes")
+            for outcome in row["outcomes"]:
+                atom = outcome["atom"]
+                if (outcome["key"] != f"{atom['chain']}:{atom['position']}:{atom['atom']}"
+                        or type(outcome["satisfied"]) is not bool):
+                    raise ValueError("Invalid RFD4 failure identity")
+                if not outcome["satisfied"]:
+                    counts[outcome["key"]] += 1
+                if natural(outcome["failed_attempts_after"]) != counts[outcome["key"]]:
+                    raise ValueError("Invalid RFD4 failure history")
+        if dict(counts) != failures or identities != observed or paths != set(references):
+            raise ValueError("Incomplete RFD4 feedback state")
+        for ref in references.values():
+            validate_reference(ref)
+        self._failed_hbond_attempts = Counter(failures)
+        self._hbond_attempt_history, self._observed_requests = history, observed
 
     def prepare_native_mutation(self, protomers, evaluation_scores, runtime_config):
         request = self.prepare_generation(protomers, evaluation_scores, runtime_config)
