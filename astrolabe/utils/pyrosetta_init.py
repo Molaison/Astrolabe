@@ -76,6 +76,17 @@ class PyRosettaInitializationOwner:
         self.receipt: PyRosettaInitReceipt | None = None
         self.failure: BaseException | None = None
 
+    def _verify_initialized(self, module: Any) -> None:
+        try:
+            if not pyrosetta_was_initialized(module):
+                raise PyRosettaInitializationError(
+                    "PyRosetta native runtime is not initialized; use a fresh process"
+                )
+        except BaseException as exc:
+            self.state = "POISONED"
+            self.failure = exc
+            raise
+
     def ensure(
         self, module: Any, options: str, *, explicit: bool = False,
         params=(), require_attested: bool = False,
@@ -85,7 +96,9 @@ class PyRosettaInitializationOwner:
                 raise PyRosettaInitializationError(
                     f"PyRosetta initialization is {self.state}; use a fresh process"
                 ) from self.failure
-            if self.receipt is None and pyrosetta_was_initialized(module):
+            if self.receipt is not None:
+                self._verify_initialized(module)
+            elif pyrosetta_was_initialized(module):
                 self.state = "INITIALIZED_UNATTESTED"
                 self.receipt = PyRosettaInitReceipt(self.state, None, (),
                                                     _native_version(module), None)
@@ -119,6 +132,7 @@ class PyRosettaInitializationOwner:
                 self.state = "STARTING"
                 try:
                     module.init(options)
+                    self._verify_initialized(module)
                     receipt = PyRosettaInitReceipt(
                         "READY", tokens, identities, _native_version(module),
                         _database_identity(module, tokens),

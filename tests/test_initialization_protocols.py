@@ -85,6 +85,72 @@ def test_partial_init_poison_survives_native_initialized_flag_and_runtime_reset(
     assert native._OWNER.receipt is None
 
 
+@pytest.mark.parametrize("check_raises", [False, True])
+def test_init_return_requires_native_initialized_proof_before_ready(check_raises):
+    module, calls = fake_native()
+    options = "-mute all -constant_seed -jran 701"
+    check_error = RuntimeError("native status unavailable after init")
+
+    def unproven_init(received_options):
+        calls.append(received_options)
+        if check_raises:
+            def failed_check():
+                raise check_error
+            module.is_initialized = failed_check
+        # Return normally without initializing the native runtime.
+
+    module.init = unproven_init
+    rng = random.getstate()
+    error = RuntimeError if check_raises else native.PyRosettaInitializationError
+    with pytest.raises(error) as caught:
+        native.ensure_pyrosetta_initialized(module, options)
+    if check_raises:
+        assert caught.value is check_error
+    assert native._OWNER.state == "POISONED"
+    assert native._OWNER.receipt is None
+    assert native._OWNER.failure is caught.value
+    module.is_initialized = lambda: True
+    with pytest.raises(native.PyRosettaInitializationError, match="POISONED"):
+        native.ensure_pyrosetta_initialized(module, options)
+    assert calls == [options]
+    assert random.getstate() == rng
+
+
+@pytest.mark.parametrize("runtime", ["same", "replacement", "external"])
+@pytest.mark.parametrize("check_raises", [False, True])
+def test_receipt_cannot_authorize_uninitialized_or_unverifiable_runtime(runtime, check_raises):
+    original, original_calls = fake_native(initialized=runtime == "external")
+    options = "-mute all -constant_seed -jran 701"
+    receipt = native.ensure_pyrosetta_initialized(original, options)
+    if runtime == "replacement":
+        candidate, replacement_calls = fake_native()
+    else:
+        candidate, replacement_calls = original, []
+        candidate.initialized = False
+    check_error = RuntimeError("native status unavailable on reuse")
+    if check_raises:
+        def failed_check():
+            raise check_error
+        candidate.is_initialized = failed_check
+
+    rng = random.getstate()
+    error = RuntimeError if check_raises else native.PyRosettaInitializationError
+    with pytest.raises(error) as caught:
+        native.ensure_pyrosetta_initialized(candidate, options)
+    if check_raises:
+        assert caught.value is check_error
+    assert native._OWNER.state == "POISONED"
+    assert native._OWNER.receipt is receipt  # retain historical proof, not authorization
+    assert native._OWNER.failure is caught.value
+    original.is_initialized = lambda: True
+    global_config.reset()
+    with pytest.raises(native.PyRosettaInitializationError, match="POISONED"):
+        native.ensure_pyrosetta_initialized(original, options)
+    assert original_calls == ([] if runtime == "external" else [options])
+    assert replacement_calls == []
+    assert random.getstate() == rng
+
+
 def test_external_init_is_legacy_compatible_but_not_attested():
     module, calls = fake_native(initialized=True)
     receipt = native.ensure_pyrosetta_initialized(module, "-beta", explicit=True)
