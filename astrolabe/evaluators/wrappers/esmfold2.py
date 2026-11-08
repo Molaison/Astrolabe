@@ -624,6 +624,8 @@ class ESMFold2Runner:
         )
 
     def _ensure_daemon(self, identity: dict[str, Any]) -> Any:
+        if getattr(self, "_cleanup_pending", False):
+            raise RuntimeError("ESMFold2 daemon cleanup is unresolved")
         if self._daemon is not None and self._daemon_settings == identity:
             return self._daemon
         self.shutdown()
@@ -654,10 +656,12 @@ class ESMFold2Runner:
 
     def shutdown(self) -> None:
         daemon = self._daemon
-        self._daemon = None
-        self._daemon_settings = None
+        self._cleanup_pending = True
         if daemon is not None:
             daemon.shutdown()
+        self._daemon = None
+        self._daemon_settings = None
+        self._cleanup_pending = False
 
     def _run_daemon(
         self,

@@ -52,21 +52,24 @@ def first_signal_info() -> tuple[Optional[int], Optional[float]]:
 
 def _handle_signal(signum: int, _frame) -> None:  # type: ignore[no-untyped-def]
     logger = logging.getLogger(__name__)
-    with _LOCK:
-        global _STOP_REQUESTED, _FIRST_SIGNAL, _FIRST_SIGNAL_AT
-        if not _STOP_REQUESTED:
-            _STOP_REQUESTED = True
-            _FIRST_SIGNAL = signum
-            _FIRST_SIGNAL_AT = time.time()
-            logger.warning(
-                "Received signal %s; will exit after the current repeat finishes. "
-                "Send the signal again to force exit now.",
-                signum,
-            )
-            return
+    # Python delivers handlers on the main thread, including while that thread
+    # holds a reader/logging lock. Never acquire that lock inside the handler.
+    global _STOP_REQUESTED, _FIRST_SIGNAL, _FIRST_SIGNAL_AT
+    if not _STOP_REQUESTED:
+        _STOP_REQUESTED = True
+        _FIRST_SIGNAL = signum
+        _FIRST_SIGNAL_AT = time.time()
+        logger.warning(
+            "Received signal %s; will exit after the current repeat finishes. "
+            "Send the signal again to force exit now.",
+            signum,
+        )
+        return
 
     # Second signal: force exit now.
     prev = _PREV_HANDLERS.get(signum, signal.SIG_DFL)
+    if prev == signal.SIG_IGN:
+        prev = signal.SIG_DFL
     try:
         signal.signal(signum, prev)
     except Exception:

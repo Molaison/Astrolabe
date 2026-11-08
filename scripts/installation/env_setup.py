@@ -343,6 +343,53 @@ def _mark_step_done(state_root, env_name, state, step_name):
         _save_state(state_root, env_name, state)
 
 
+def _completion_receipt(env_spec, substitutions, prefix, manager):
+    """Bind an explicit ALL override to its selected spec and local artifacts.
+
+    This is installation evidence, not package/model scientific qualification.
+    Required files may be declared relative to the prefix; Python managers also
+    require their interpreter. Never run install commands to validate a receipt.
+    """
+    prefix = pathlib.Path(prefix).resolve()
+    if not prefix.is_dir():
+        raise RuntimeError("Completed installation prefix is missing: %s" % prefix)
+    selected = _apply_env_substitutions(json.dumps(env_spec, sort_keys=True), substitutions)
+    artifacts = {prefix}
+    if manager not in {"path", "asset"}:
+        python_bin = prefix / "bin" / "python"
+        if not _external_python_is_usable(python_bin):
+            raise RuntimeError("Completed installation interpreter is unusable: %s" % python_bin)
+        artifacts.add(python_bin)
+    for relative in env_spec.get("required_files") or []:
+        path = prefix / _apply_env_substitutions(str(relative), substitutions)
+        if not path.is_file():
+            raise RuntimeError("Required installation file is missing: %s" % path)
+        artifacts.add(path)
+    for repo in env_spec.get("repos") or []:
+        dest = repo.get("dest") or str(pathlib.Path(substitutions["CLONE_ROOT"]) / repo.get("name", "repo"))
+        dest = _expand_path(_apply_env_substitutions(dest, substitutions))
+        artifacts.add(dest)
+        for relative in repo.get("required_files") or []:
+            path = dest / _apply_env_substitutions(str(relative), substitutions)
+            if not path.is_file():
+                raise RuntimeError("Required installation file is missing: %s" % path)
+            artifacts.add(path)
+    records = {}
+    for path in sorted(artifacts):
+        info = path.stat()  # Missing artifacts must invalidate COMPLETE.
+        record = {"resolved": str(path.resolve()), "device": info.st_dev, "inode": info.st_ino}
+        if path.is_file():
+            digest = hashlib.sha256()
+            with path.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(8 * 1024 * 1024), b""):
+                    digest.update(chunk)
+            record.update(sha256=digest.hexdigest(), mode=info.st_mode)
+        elif not path.is_dir():
+            raise RuntimeError("Invalid installation artifact: %s" % path)
+        records[str(path)] = record
+    return {"spec_sha256": hashlib.sha256(selected.encode()).hexdigest(), "artifacts": records}
+
+
 def _render_env_summary(env_name, prefix, state):
     steps = state.get("completed_steps", [])
     return "%s  prefix=%s  steps_done=%d" % (env_name, prefix, len(steps))
@@ -1105,7 +1152,7 @@ def _setup_one_env(env_spec, ctx):
                         break
                 if not drop:
                     new_completed.append(s)
-            state["completed_steps"] = new_completed
+            state["completed_steps"] = [step for step in new_completed if step != "ALL"]
             fps = state.get("fingerprints") or {}
             if not isinstance(fps, dict):
                 fps = {}
@@ -1135,6 +1182,15 @@ def _setup_one_env(env_spec, ctx):
             )
         existing_prefix = _conda_find_env_prefix(conda_exe, env_name, env_spec.get("prefix"))
 
+    if "ALL" in state.get("completed_steps", []):
+        receipt = _completion_receipt(env_spec, substitutions, existing_prefix or prefix, manager)
+        if receipt != state.get("completion_receipt"):
+            raise RuntimeError(
+                "Completed installation fingerprint/artifacts changed or legacy ALL is unverified; "
+                "inspect the environment and explicitly rerun before marking done again."
+            )
+        return {"env": env_name, "status": "already_done", "prefix": str(prefix)}
+
     if existing_prefix and not ctx["force"]:
         action = ctx["decisions"].get(env_name)
         if action is None:
@@ -1153,8 +1209,10 @@ def _setup_one_env(env_spec, ctx):
         if action == "s":
             return {"env": env_name, "status": "skipped", "prefix": str(prefix)}
         if action == "m":
+            receipt = _completion_receipt(env_spec, substitutions, existing_prefix, manager)
             state["completed_steps"] = ["ALL"]
             state["prefix"] = str(existing_prefix)
+            state["completion_receipt"] = receipt
             _save_state(state_root, env_name, state)
             return {"env": env_name, "status": "marked_done", "prefix": str(prefix)}
         if action == "r":
@@ -1207,9 +1265,6 @@ def _setup_one_env(env_spec, ctx):
                 _save_state(state_root, env_name, state)
             else:
                 sprint("skip: %s already completed" % step_rm)
-
-    if "ALL" in state.get("completed_steps", []):
-        return {"env": env_name, "status": "already_done", "prefix": str(prefix)}
 
     # Step 0: ensure repos
     step_repos = "repos"
@@ -1588,10 +1643,7 @@ def _setup_one_env(env_spec, ctx):
 
     if step_cmds not in state["completed_steps"]:
         if ctx.get("skip_commands"):
-            state.setdefault("fingerprints", {})[step_cmds] = cmds_fp
-            _save_state(state_root, env_name, state)
-            _mark_step_done(state_root, env_name, state, step_cmds)
-            return {"env": env_name, "status": "ok", "prefix": str(prefix)}
+            return {"env": env_name, "status": "commands_skipped", "prefix": str(prefix)}
 
         cwd = env_spec.get("cwd")
         if cwd:

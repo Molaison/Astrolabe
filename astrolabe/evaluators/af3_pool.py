@@ -30,6 +30,7 @@ class DaemonPool:
         self.pending=[0]*len(self.backends);self.completed=[0]*len(self.backends);self.failed=[0]*len(self.backends)
         self.cursor=0;self.condition=threading.Condition()
         self.requests=0;self.quarantined=False;self.closed=False
+        self._close_done=False;self._close_error=None
     def emit(self,event,**fields):
         try:self.on_event(event,**fields)
         except Exception:pass  # Logging cannot lose a charged inference or a capacity slot.
@@ -122,11 +123,14 @@ class DaemonPool:
                           owners=list(self.owners),cursor=self.cursor,
                           pool_pending=list(self.pending),completed=list(self.completed),failed=list(self.failed),
                           quarantined=self.quarantined,active_requests=self.requests,closed=self.closed,
+                          cleanup_complete=self._close_done and self._close_error is None,
+                          cleanup_error=None if self._close_error is None else repr(self._close_error),
                           concurrency_certified=False)
             if self.controller is not None:snapshot['adaptive']=self.controller.snapshot()
             snapshot['runtime_lifecycle']=dict(
                 backend='alphafold3',pid=os.getpid(),residency='forwarding_only',
-                state=('stopped' if self.closed else 'quarantined' if self.quarantined else
+                state=('quarantined' if self.quarantined else 'stopped' if self._close_done else
+                       'draining' if self.closed else
                        'busy' if self.requests else 'ready'),
                 loader_count=0,weights_loaded=False,gpu_resident=False,
                 active_requests=self.requests,
@@ -135,10 +139,23 @@ class DaemonPool:
 
     def close(self):
         with self.condition:
-            if self.closed:return
+            if self.closed:
+                self.condition.wait_for(lambda:self._close_done)
+                if self._close_error is not None:raise RuntimeError('AF3 pool cleanup failed; owner retained') from self._close_error
+                return
             self.closed=True
-            self.condition.wait_for(lambda:self.requests==0)
-        if self.controller is not None:self.controller.close()
+        try:
+            with self.condition:
+                self.condition.wait_for(lambda:self.requests==0)
+            if self.controller is not None:self.controller.close()
+        except BaseException as error:
+            with self.condition:
+                self._close_error=error;self.quarantined=True
+            raise
+        finally:
+            with self.condition:
+                self._close_done=True
+                self.condition.notify_all()
         self.emit('pool_drained',completed=self.completed,failed=self.failed,pending=self.pending,
                   stage='evaluation_rpc',quarantined=self.quarantined)
 

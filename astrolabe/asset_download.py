@@ -88,16 +88,16 @@ def _stamp_matches(
                 recorded_device,
                 recorded_inode,
             ) = stamp.read_text(encoding="ascii").strip().split()
+            recorded_metadata = tuple(map(int, (recorded_size, recorded_mtime,
+                                                recorded_ctime, recorded_device,
+                                                recorded_inode)))
         except (FileNotFoundError, OSError, ValueError):
             continue
         if (
             version == "v2"
             and recorded_checksum == checksum
-            and int(recorded_size) == stat.st_size
-            and int(recorded_mtime) == stat.st_mtime_ns
-            and int(recorded_ctime) == stat.st_ctime_ns
-            and int(recorded_device) == stat.st_dev
-            and int(recorded_inode) == stat.st_ino
+            and recorded_metadata == (stat.st_size, stat.st_mtime_ns,
+                                      stat.st_ctime_ns, stat.st_dev, stat.st_ino)
         ):
             return True
     return False

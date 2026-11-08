@@ -239,6 +239,7 @@ class LocalModelPool:
         self._entries = []
         self._real_load_count = 0
         self._dependencies = {}
+        self._cleanup_errors = []
 
     def _check_process(self):
         _main_thread()
@@ -382,6 +383,8 @@ class LocalModelPool:
                 "real_load_count": self._real_load_count,
                 "hits": sum(entry.hits for entry in self._entries),
                 "closed": self._closed, "quarantined": self._quarantined,
+                "cleanup_complete": self._closed and not self._cleanup_errors,
+                "cleanup_errors": list(self._cleanup_errors),
                 "release_requires_process_exit": True,
                 "dependency_initializations": [
                     {"module": name, "source": getattr(row["module"], "__file__", None),
@@ -410,6 +413,8 @@ class LocalModelPool:
             try:
                 owner.shutdown()
             except BaseException as error:
+                self._quarantined = True
+                self._cleanup_errors.append(repr(error))
                 if first_error is None:
                     first_error = error
         # No unregister_model: shutdown cannot prove allocator/VRAM release.

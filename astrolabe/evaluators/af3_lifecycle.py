@@ -392,8 +392,7 @@ class OwnedAF3:
             self._startup_deadline = time.monotonic() + self.startup_timeout
             return str(self.socket_path)
         except BaseException as error:
-            self.state.update(status='startup_failed', error=repr(error))
-            self._stop(graceful=False)
+            self._startup_failed(error)
             raise
 
     def wait_ready(self):
@@ -432,9 +431,17 @@ class OwnedAF3:
                 f'diagnostics: {self.diagnostics_path}'
             )
         except BaseException as error:
-            self.state.update(status='startup_failed', error=repr(error))
-            self._stop(graceful=False)
+            self._startup_failed(error)
             raise
+
+    def _startup_failed(self, error):
+        self.state.update(status='startup_failed', error=repr(error))
+        try:
+            errors = self._stop(graceful=False)
+            if errors:
+                error.add_note(f'Owned AF3 startup cleanup unresolved: {errors}; see {self.state_path}')
+        except BaseException as cleanup_error:
+            error.add_note(f'Owned AF3 startup cleanup raised: {cleanup_error!r}; owner retained')
 
     def __enter__(self):
         self.start()

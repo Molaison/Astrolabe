@@ -1,0 +1,101 @@
+diff --git a/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py b/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
+index 70cdfbd..4a0998b 100644
+--- a/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
++++ b/vendor/proton_pottsmpnn/foundry/models/mpnn/src/mpnn/inference_engines/potts_mpnn_ph.py
+@@ -37,6 +37,7 @@ Conventions (unify the Potts energy head and the decoder log-prob field):
+ import copy
+ import multiprocessing as mp
+ import random
++import threading
+ from dataclasses import dataclass, field
+ from typing import Any, Callable, Dict, List, Optional, Sequence
+ 
+@@ -723,6 +724,8 @@ _POOL_ENGINE = None
+ _POOL_CRITERIA = None
+ _POOL_SEED = 0
+ _POOL_THREADLIMIT = None   # holds the threadpoolctl limiter so it isn't GC'd (which would restore threads)
++_POOL_OWNER = None
++_POOL_LOCK = threading.Lock()
+ 
+ 
+ def _pool_init():
+@@ -1176,15 +1179,37 @@ class PottsMPNNPHEngine(MPNNInferenceEngine):
+     def _run_tasks_parallel(self, ctx, criteria_list, seed, tasks, n_jobs) -> PHDesignSet:
+         """Fork a pool over the (criteria × seed) tasks, sharing ctx read-only via COW (set as module
+         globals before the fork). Returns all designs (order-independent; run_ph_redesign re-sorts)."""
+-        global _POOL_CTX, _POOL_ENGINE, _POOL_CRITERIA, _POOL_SEED
++        global _POOL_CTX, _POOL_ENGINE, _POOL_CRITERIA, _POOL_SEED, _POOL_OWNER
++        if not _POOL_LOCK.acquire(blocking=False):
++            raise RuntimeError("Proton fork pool is busy or cleanup is unresolved; context retained")
+         _POOL_CTX, _POOL_ENGINE, _POOL_CRITERIA, _POOL_SEED = ctx, self, criteria_list, seed
+         out = PHDesignSet()
++        error = None
+         try:
+-            with mp.get_context("fork").Pool(min(n_jobs, len(tasks)), initializer=_pool_init) as pool:
+-                for sub in pool.imap_unordered(_pool_task, tasks):
+-                    out.extend(sub)
++            _POOL_OWNER = mp.get_context("fork").Pool(min(n_jobs, len(tasks)), initializer=_pool_init)
++            for sub in _POOL_OWNER.imap_unordered(_pool_task, tasks):
++                out.extend(sub)
++        except BaseException as exc:
++            error = exc
++            raise
+         finally:
+-            _POOL_CTX = _POOL_ENGINE = _POOL_CRITERIA = None
++            # A failed join is not proof of worker exit. Retain the pool and
++            # inherited context, and fence future calls in this process.
++            if _POOL_OWNER is not None:
++                try:
++                    if error is None:
++                        _POOL_OWNER.close()
++                    else:
++                        _POOL_OWNER.terminate()
++                    _POOL_OWNER.join()
++                except BaseException as cleanup_error:
++                    if error is None:
++                        raise
++                    error.add_note(f"Proton fork cleanup unresolved: {cleanup_error!r}")
++                else:
++                    _POOL_CTX = _POOL_ENGINE = _POOL_CRITERIA = _POOL_OWNER = None
++                    _POOL_SEED = 0
++                    _POOL_LOCK.release()
+         return out
+ 
+     # ------------------------------------------------------------------ #
+diff --git a/vendor/proton_pottsmpnn/foundry/src/foundry/utils/squashfs.py b/vendor/proton_pottsmpnn/foundry/src/foundry/utils/squashfs.py
+index b2bc5a7..ba6e342 100644
+--- a/vendor/proton_pottsmpnn/foundry/src/foundry/utils/squashfs.py
++++ b/vendor/proton_pottsmpnn/foundry/src/foundry/utils/squashfs.py
+@@ -131,7 +131,8 @@ class SquashfsManager:
+             logger.info(f"Unmounted {sqfs_file}")
+         except (subprocess.CalledProcessError, OSError) as e:
+             logger.warning(f"Failed to unmount {sqfs_file}: {e}")
+-        finally:
++            raise RuntimeError(f"Failed to unmount {sqfs_file}; registration retained") from e
++        else:
+             del cls._mounts[sqfs_file]
+ 
+     @classmethod
+@@ -162,11 +163,20 @@ class SquashfsManager:
+         """
+         with cls._lock:
+             sqfs_files = list(cls._mounts.keys())
++            errors = []
+             for sqfs_file in sqfs_files:
+-                cls._unmount(sqfs_file)
++                try:
++                    cls._unmount(sqfs_file)
++                except RuntimeError as error:
++                    errors.append(str(error))
++            if errors:
++                raise RuntimeError("; ".join(errors))
+ 
+     @classmethod
+     def _cleanup_on_exit(cls) -> None:
+         """Cleanup hook called on program exit via atexit."""
+         logger.debug("Cleaning up squashfs mounts on exit")
+-        cls.unmount_all()
++        try:
++            cls.unmount_all()
++        except RuntimeError:
++            logger.exception("Squashfs cleanup failed; registrations retained")

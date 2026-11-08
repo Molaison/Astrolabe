@@ -194,6 +194,8 @@ class RF3RunnerService:
         return cached
 
     def _ensure_daemon(self) -> subprocess.Popen:
+        if getattr(self, "_cleanup_pending", False):
+            raise RuntimeError("RF3 daemon cleanup is unresolved")
         if self.python_bin is None:
             raise ValueError("RF3 daemon requires `python_bin`.")
         if self._proc is not None and self._proc.poll() is None:
@@ -314,21 +316,23 @@ class RF3RunnerService:
         return self._build_response(request)
 
     def shutdown(self) -> None:
-        proc = self._proc
-        if proc is None:
-            return
-        if proc.poll() is not None:
+        with self._lock:
+            proc = self._proc
+            if proc is None:
+                return
+            self._cleanup_pending = True
+            # Do not wait for an unbounded readline shutdown acknowledgement.
+            # Retain the owned handle unless bounded exit/reap succeeds.
+            if proc.poll() is None:
+                proc.terminate()
+                if proc.poll() is None:
+                    try:
+                        proc.wait(timeout=30)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait(timeout=5)
             self._proc = None
-            return
-        try:
-            self._daemon_request({"type": "shutdown"})
-        except Exception:
-            pass
-        try:
-            proc.terminate()
-        except Exception:
-            pass
-        self._proc = None
+            self._cleanup_pending = False
 
     def submit(self, request: RF3RunnerRequest) -> RF3RunnerResponse:
         output_dir = Path(request.output_dir)
