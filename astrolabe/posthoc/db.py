@@ -4,6 +4,7 @@ import json
 import os
 import sqlite3
 import time
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, Optional
 
@@ -34,9 +35,35 @@ def open_db(path: str | Path) -> sqlite3.Connection:
     db_path = Path(path).expanduser().resolve()
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
-    conn.row_factory = sqlite3.Row
-    _init_schema(conn)
+    try:
+        conn.row_factory = sqlite3.Row
+        _init_schema(conn)
+    except BaseException as exc:
+        _close_db(conn, error=exc)
+        raise
     return conn
+
+
+def _close_db(conn: sqlite3.Connection, *, error: BaseException | None = None) -> None:
+    try:
+        conn.close()
+    except BaseException as cleanup_error:
+        if error is None:
+            raise
+        error.add_note(f"Posthoc DB close failed: {type(cleanup_error).__name__}: {cleanup_error}")
+
+
+@contextmanager
+def owned_db(path: str | Path) -> Iterator[sqlite3.Connection]:
+    conn = open_db(path)
+    error = None
+    try:
+        yield conn
+    except BaseException as exc:
+        error = exc
+        raise
+    finally:
+        _close_db(conn, error=error)
 
 
 def set_meta(conn: sqlite3.Connection, *, key: str, value: str) -> None:

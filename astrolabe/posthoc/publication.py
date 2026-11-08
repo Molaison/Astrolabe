@@ -65,6 +65,7 @@ class Publication:
         self.stage = Path(tempfile.mkdtemp(prefix=".posthoc-stage-", dir=manifest.parent))
         self.files: dict[Path, Path] = {}
         self.promoting = False
+        self.retain_stage = False
 
     def path(self, final: Path) -> Path:
         # Replace an output symlink itself, never its possibly original input.
@@ -87,20 +88,42 @@ class Publication:
 
     def failed(self, exc: BaseException) -> None:
         # An old manifest remains authoritative only while its files are intact.
-        intact = False
-        if self.manifest.is_file() and not self.promoting:
+        payload = {
+            "version": 1, "status": "PARTIAL", "outputs": [],
+            "error": f"{type(exc).__name__}: {exc}",
+        }
+        try:
+            intact = False
+            if self.manifest.is_file() and not self.promoting:
+                try:
+                    prior = json.loads(self.manifest.read_text())
+                    intact = (prior.get("status") == "COMPLETE"
+                              and all(content_digest(Path(item["path"])) == item["sha256"]
+                                      for item in prior["outputs"]))
+                except (OSError, ValueError, KeyError, TypeError):
+                    pass
+            if not intact:
+                _write_manifest(self.manifest, payload)
+        except BaseException as proof_error:
+            # Evidence cleanup must not turn a scientific failure into an I/O
+            # failure or discard the only remaining partial output/proof.
+            self.retain_stage = True
+            payload.update(
+                manifest=str(self.manifest), promoting=self.promoting,
+                proof_error=f"{type(proof_error).__name__}: {proof_error}",
+                staged_outputs=[{"path": str(final), "staged_path": str(staged)}
+                                for final, staged in self.files.items()],
+            )
+            evidence = self.stage / "partial_manifest.json"
             try:
-                prior = json.loads(self.manifest.read_text())
-                intact = (prior.get("status") == "COMPLETE"
-                          and all(content_digest(Path(item["path"])) == item["sha256"]
-                                  for item in prior["outputs"]))
-            except (OSError, ValueError, KeyError, TypeError):
-                pass
-        if not intact:
-            _write_manifest(self.manifest, {
-                "version": 1, "status": "PARTIAL", "outputs": [],
-                "error": f"{type(exc).__name__}: {exc}",
-            })
+                evidence.write_text(json.dumps(payload, sort_keys=True, indent=2) + "\n")
+            except BaseException as evidence_error:
+                exc.add_note(f"Partial evidence write failed: {type(evidence_error).__name__}: {evidence_error}")
+            exc.add_note(
+                f"Publication proof write failed: {type(proof_error).__name__}: {proof_error}; "
+                f"retained staging evidence at {self.stage} (manifest {self.manifest})"
+            )
 
     def close(self) -> None:
-        shutil.rmtree(self.stage, ignore_errors=True)
+        if not self.retain_stage:
+            shutil.rmtree(self.stage, ignore_errors=True)

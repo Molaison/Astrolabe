@@ -16,6 +16,7 @@ from astrolabe.posthoc.db import (
     get_collection_receipt,
     merge_out_roots,
     open_db,
+    owned_db,
 )
 from astrolabe.posthoc.derive import (
     derive_af3,
@@ -462,7 +463,22 @@ def collect_scores(
         filtered.append(run_dir)
     run_dirs = filtered
 
-    conn = open_db(db_path)
+    with owned_db(db_path) as conn:
+        return _collect_runs(
+            conn=conn, roots=roots, run_dirs=run_dirs, db_path=db_path,
+            workers=workers, binder_chain=binder_chain, target_chain=target_chain,
+            required_keys=required_keys, export_csv=export_csv, archive_dir=archive_dir,
+            archive_workers=archive_workers, archive_overwrite=archive_overwrite,
+            fail_on_missing_required=fail_on_missing_required,
+        )
+
+
+def _collect_runs(
+    *, conn: Any, roots: list[Path], run_dirs: list[Path], db_path: Path,
+    workers: int, binder_chain: str, target_chain: str, required_keys: list[str],
+    export_csv: Path | None, archive_dir: Path | None, archive_workers: int,
+    archive_overwrite: bool, fail_on_missing_required: bool,
+) -> dict[str, Any]:
     merge_out_roots(conn, roots=[str(root) for root in roots])
     collection_context = _collection_context(
         binder_chain=binder_chain,
@@ -898,7 +914,6 @@ def collect_scores(
         export_csv = Path(export_csv).expanduser().resolve()
         export_records_to_csv(db_path=db_path, csv_path=export_csv)
         summary["export_csv"] = str(export_csv)
-    conn.close()
     return summary
 
 

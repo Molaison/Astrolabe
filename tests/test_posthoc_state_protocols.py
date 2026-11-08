@@ -333,3 +333,168 @@ def test_collect_csv_gate_and_archive_content_proof(source, tmp_path):
     raw.write_text("def")
     os.utime(raw, ns=(stat.st_atime_ns, stat.st_mtime_ns))
     assert collect.collect_scores(**arguments, archive_dir=tmp_path / "archive")["archived_created"] == 1
+
+
+@pytest.fixture
+def tracked_connections(monkeypatch):
+    real_connect = sqlite3.connect
+    opened = []
+
+    class TrackedConnection(sqlite3.Connection):
+        close_error = None
+        close_calls = 0
+
+        def close(self):
+            self.close_calls += 1
+            super().close()
+            if self.close_error is not None:
+                raise self.close_error
+
+    def connect(*args, **kwargs):
+        connection = real_connect(*args, factory=TrackedConnection, **kwargs)
+        opened.append(connection)
+        return connection
+
+    monkeypatch.setattr(db.sqlite3, "connect", connect)
+    return opened, TrackedConnection
+
+
+def assert_closed(connections):
+    assert connections
+    for connection in connections:
+        assert connection.close_calls == 1
+        with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+            connection.execute("SELECT 1")
+
+
+@pytest.mark.parametrize("exit_path", ["success", "skipped", "partial", "future", "identity", "required", "export"])
+def test_collection_db_closed_on_every_exit(source, tracked_connections, monkeypatch, tmp_path, exit_path):
+    _, arguments, _ = source
+    connections, _ = tracked_connections
+    error = RuntimeError("injected derivation future failure")
+
+    def fail(*args, **kwargs):
+        raise error
+
+    if exit_path == "skipped":
+        collect.collect_scores(**arguments)
+    elif exit_path == "partial":
+        monkeypatch.setattr(collect, "derive_boltz", fail)
+    elif exit_path == "future":
+        monkeypatch.setattr(collect, "_load_run_evaluator_context", fail)
+    elif exit_path == "identity":
+        identities = iter(["before", "after"])
+        monkeypatch.setattr(collect, "_collection_input_identity", lambda *args: next(identities))
+    elif exit_path == "required":
+        arguments["required_metrics"] = ["absent"]
+    elif exit_path == "export":
+        arguments["export_csv"] = tmp_path / "export.csv"
+        monkeypatch.setattr(collect, "export_records_to_csv", fail)
+
+    if exit_path in {"future", "identity", "required", "export"}:
+        with pytest.raises(RuntimeError) as caught:
+            collect.collect_scores(**arguments)
+        if exit_path in {"future", "export"}:
+            assert caught.value is error
+        elif exit_path == "identity":
+            assert "inputs changed" in str(caught.value)
+        else:
+            assert isinstance(caught.value, collect.MissingRequiredMetricsError)
+    else:
+        result = collect.collect_scores(**arguments)
+        assert result["status"] == ("PARTIAL" if exit_path == "partial" else "COMPLETE")
+        if exit_path == "skipped":
+            assert result["runs_skipped"] == 1
+    assert_closed(connections)
+
+
+@pytest.mark.parametrize("primary", [False, True])
+def test_collection_close_failure_preserves_original_error(source, tracked_connections, monkeypatch, primary):
+    _, arguments, _ = source
+    connections, connection_type = tracked_connections
+    cleanup_error = OSError("injected close failure")
+    connection_type.close_error = cleanup_error
+    error = RuntimeError("original derivation failure")
+
+    def fail(*args, **kwargs):
+        raise error
+
+    if primary:
+        monkeypatch.setattr(collect, "_load_run_evaluator_context", fail)
+    with pytest.raises((RuntimeError, OSError)) as caught:
+        collect.collect_scores(**arguments)
+    assert caught.value is (error if primary else cleanup_error)
+    if primary:
+        assert any("close failure" in note for note in error.__notes__)
+    assert_closed(connections)
+
+
+def test_db_schema_and_close_dual_failure_preserves_schema_error(tracked_connections, monkeypatch, tmp_path):
+    connections, connection_type = tracked_connections
+    connection_type.close_error = OSError("injected schema cleanup failure")
+    error = RuntimeError("original schema failure")
+
+    def fail(*args, **kwargs):
+        raise error
+
+    monkeypatch.setattr(db, "_init_schema", fail)
+    with pytest.raises(RuntimeError) as caught:
+        db.open_db(tmp_path / "schema.sqlite")
+    assert caught.value is error
+    assert any("schema cleanup failure" in note for note in error.__notes__)
+    assert_closed(connections)
+
+
+@pytest.mark.parametrize("evidence_failure", [False, True])
+def test_publication_dual_failure_retains_staging_and_original_exception(tmp_path, monkeypatch, evidence_failure):
+    bundle = publication.Publication(tmp_path / "bundle_manifest.json")
+    staged = bundle.path(tmp_path / "output.csv")
+    staged.write_text("partial scientific output\n")
+    error = RuntimeError("original scientific failure")
+    proof_error = OSError("injected manifest write failure")
+
+    def fail(*args, **kwargs):
+        raise proof_error
+
+    monkeypatch.setattr(publication, "_write_manifest", fail)
+    if evidence_failure:
+        monkeypatch.setattr(Path, "write_text", fail)
+    try:
+        try:
+            raise error
+        except BaseException as original:
+            bundle.failed(original)
+            raise
+        finally:
+            bundle.close()
+    except RuntimeError as caught:
+        assert caught is error
+    assert bundle.stage.is_dir()
+    assert staged.read_text() == "partial scientific output\n"
+    assert any("manifest write failure" in note and str(bundle.stage) in note for note in error.__notes__)
+    if evidence_failure:
+        assert any("Partial evidence write failed" in note for note in error.__notes__)
+    else:
+        evidence = json.loads((bundle.stage / "partial_manifest.json").read_text())
+        assert evidence["status"] == "PARTIAL"
+        assert "original scientific failure" in evidence["error"]
+        assert "manifest write failure" in evidence["proof_error"]
+        assert evidence["staged_outputs"][0]["staged_path"] == str(staged)
+    assert not bundle.manifest.exists()
+
+
+def test_filter_metric_and_manifest_dual_failure_retains_partial_evidence(filter_input, monkeypatch):
+    def fail(*args, **kwargs):
+        raise OSError("injected proof failure")
+
+    monkeypatch.setattr(publication, "_write_manifest", fail)
+    with pytest.raises(filtering.MissingRequiredMetricsError, match="absent") as caught:
+        filtering.filter_structures(**{**filter_input, "filter_expr": "absent > 0"})
+    stages = list(filter_input["dst_dir"].glob(".posthoc-stage-*"))
+    assert len(stages) == 1
+    evidence = json.loads((stages[0] / "partial_manifest.json").read_text())
+    assert evidence["status"] == "PARTIAL"
+    assert "absent" in evidence["error"]
+    assert any(Path(item["staged_path"]).is_file() for item in evidence["staged_outputs"])
+    assert any("proof failure" in note for note in caught.value.__notes__)
+    assert not (filter_input["dst_dir"] / "filter_report.csv").exists()
