@@ -25,7 +25,6 @@ import math
 import copy
 import os
 import pathlib
-import pickle
 import random
 import shutil
 import sys
@@ -2455,14 +2454,15 @@ def perform_evaluation(
 def load_or_evaluate_initial(
     args, evaluator, inputs: Dict, runtime_config: Dict, task_name: str, loss_computer: LossEngine | None = None
 ):
-    """Load cached evaluation results or perform initial evaluation."""
-    eval_file = f"{task_name}_eval_rslt.pkl"
-    is_debug = os.getenv("DEBUG") == "1"
-
-    # Load from cache if in debug mode and file exists
-    generated_coordinates = getattr(evaluator, "preserves_generated_coordinates", False)
-    if is_debug and not generated_coordinates and os.path.exists(eval_file):
-        logging.info(f"Loading cached evaluation results from {eval_file}")
+    """Reuse only proven stateless raw results; hooks/finalization run normally."""
+    cache = None
+    if os.getenv("DEBUG") == "1":
+        from astrolabe.evaluators.debug_cache import InitialDebugCache
+        cache = InitialDebugCache.prepare(task_name, evaluator, args, inputs, runtime_config)
+    evaluation_result = cache.load() if cache is not None else None
+    if evaluation_result is not None:
+        eval_file = str(cache.path)
+        logging.info(f"Loading validated debug evaluation results from {eval_file}")
         log_event(
             logger=logger,
             level=logging.INFO,
@@ -2476,27 +2476,22 @@ def load_or_evaluate_initial(
             detail_level="summary",
             detail="initial_cache",
         )
-        with open(eval_file, "rb") as f:
-            evaluation_result = pickle.load(f)
-            journal = _evaluation_journal()
-            if journal is not None:
-                try:
-                    journal.cache_reuses.append({
-                        "kind": "debug_initial_evaluation_cache", "step": 0,
-                        "artifact": str(pathlib.Path(eval_file).resolve()),
-                        "backend_alias": _evaluator_event_alias(evaluator),
-                        "origin_invocation_ids": list(dict.fromkeys(
-                            record.invocation_id
-                            for record in (getattr(evaluation_result, "evaluation_records", None) or ())
-                        )),
-                        "executed_backend": False,
-                    })
-                except Exception as exc:
-                    journal.record_error("cache_origin_observation", exc)
-                    logger.exception("Could not observe cached evaluation origin")
-            # evaluation_result.complex_poses = ComplexPoses.construct_complex_poses(
-            #     evaluation_result
-            # )
+        journal = _evaluation_journal()
+        if journal is not None:
+            try:
+                journal.cache_reuses.append({
+                    "kind": "debug_initial_evaluation_cache", "step": 0,
+                    "artifact": str(pathlib.Path(eval_file).resolve()),
+                    "backend_alias": _evaluator_event_alias(evaluator),
+                    "origin_invocation_ids": list(dict.fromkeys(
+                        record.invocation_id
+                        for record in (getattr(evaluation_result, "evaluation_records", None) or ())
+                    )),
+                    "executed_backend": False,
+                })
+            except Exception as exc:
+                journal.record_error("cache_origin_observation", exc)
+                logger.exception("Could not observe cached evaluation origin")
     else:
         # Perform evaluation
         logging.info("Performing initial evaluation")
@@ -2508,20 +2503,12 @@ def load_or_evaluate_initial(
             oligo_names=list(inputs.keys()) if isinstance(inputs, dict) else None,
             detail="initial",
         )
-        evaluation_result = _apply_post_eval_hooks(
-            args,
-            evaluation_result,
-            runtime_config=runtime_config,
-            loss_computer=loss_computer,
-            evaluator=evaluator,
-        )
-
-        # Cache results if in debug mode
-        if is_debug and not generated_coordinates:
-            with open(eval_file, "wb") as f:
-                pickle.dump(evaluation_result, f)
-            logging.info(f"Cached evaluation results to {eval_file}")
-
+        if cache is not None:
+            cache.publish(evaluation_result)
+    evaluation_result = _apply_post_eval_hooks(
+        args, evaluation_result, runtime_config=runtime_config,
+        loss_computer=loss_computer, evaluator=evaluator,
+    )
     return _finalize_evaluation_result(args, evaluation_result, loss_computer)
 
 

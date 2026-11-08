@@ -108,6 +108,20 @@ Shared DPLM response caches and incomplete predocker sidecars are rejected by
 the durable profile. Legacy live graphs, arbitrary stages/poses and unsupported
 cross-version records are not upgraded by these adapters.
 
+Score memoization now requires the native raw content identity, including array
+bytes and referenced structure contents, as well as run/configuration bindings.
+It returns caller-owned mappings; values without a full codec bypass reuse.
+Masked arrays and unencoded array metadata cannot silently lose state in a
+native snapshot. Lazy native owners reject access until readiness is bound,
+including the construction-to-registration interval.
+
+The optional initial DEBUG cache has a separate stateless evaluator contract.
+It binds source/config/input/global RNG and verifies raw output contents before
+reuse; evaluation that advances global RNG cannot publish a reusable entry.
+Hooks and finalization run on both paths. Native backends without this contract
+and legacy unbound pickles are excluded. Cache write/cleanup errors remain
+observational and cannot turn a successful model operation into a retry.
+
 Posthoc PARTIAL/COMPLETE receipts, derivation reuse and records now commit
 together. Final content manifests identify filter/export/archive publication.
 Cleanup and publication failures preserve original errors/evidence. Remaining

@@ -249,6 +249,10 @@ def _encode_value(
         import numpy as np
 
         if isinstance(value, np.ndarray):
+            if type(value) is not np.ndarray or value.dtype.metadata:
+                raise UnsupportedNativeScoresState(
+                    "score array subclass/metadata requires an explicit native codec"
+                )
             if value.dtype.hasobject:
                 raise UnsupportedNativeScoresState(
                     "object-dtype score arrays have no safe native codec"
@@ -257,6 +261,10 @@ def _encode_value(
                 "$array": _blob_record(data.put(value, ArrayCodec())),
             }
         if isinstance(value, np.generic):
+            if value.dtype.fields or value.dtype.metadata:
+                raise UnsupportedNativeScoresState(
+                    "structured/metadata numpy scalars require an explicit native codec"
+                )
             if value.dtype.hasobject:
                 raise UnsupportedNativeScoresState(
                     "object-dtype numpy scalars are unsupported"

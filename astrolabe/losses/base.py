@@ -1,10 +1,12 @@
 import ast
 import copy
 import functools
+import hashlib
 import logging
 import math
 from collections import defaultdict
 from dataclasses import dataclass
+from pathlib import PurePath
 from typing import Dict, List, Any
 
 import numpy as np
@@ -36,6 +38,7 @@ class ScoreBinding:
     configuration: Any
     working_sequences: Any
     dynamic_binding_site: Any
+    raw_identity: Any = None
 
 
 def extract_loss_terms(
@@ -112,30 +115,32 @@ def build_loss_specs(
 
 
 def _freeze_cache_value(value):
+    if isinstance(value, np.ndarray):
+        if (type(value) is not np.ndarray or value.dtype.hasobject
+                or value.dtype.fields or value.dtype.metadata):
+            raise TypeError("Array has no complete score cache identity")
+        return ("ndarray", value.dtype.str, value.shape,
+                hashlib.sha256(value.tobytes()).hexdigest())
+    if isinstance(value, np.generic):
+        if value.dtype.hasobject or value.dtype.fields or value.dtype.metadata:
+            raise TypeError("Scalar has no complete score cache identity")
+        return ("numpy-scalar", value.dtype.str, value.tobytes())
+    if isinstance(value, PurePath):
+        return ("path", type(value).__name__, str(value))
     if isinstance(value, DictConfig):
-        return tuple(
-            sorted(
-                (
-                    str(key),
-                    _freeze_cache_value(value[key]),
-                )
-                for key in value.keys()
-            )
-        )
+        value = dict(value)
     if isinstance(value, dict):
-        return tuple(
-            sorted(
-                (str(key), _freeze_cache_value(item))
-                for key, item in value.items()
-            )
-        )
+        return ("dict", frozenset(
+            (_freeze_cache_value(key), _freeze_cache_value(item))
+            for key, item in value.items()
+        ))
     if isinstance(value, (list, tuple)):
-        return tuple(_freeze_cache_value(item) for item in value)
-    if isinstance(value, set):
-        return tuple(sorted(_freeze_cache_value(item) for item in value))
+        return (type(value).__name__, tuple(_freeze_cache_value(item) for item in value))
+    if isinstance(value, (set, frozenset)):
+        return (type(value).__name__, frozenset(_freeze_cache_value(item) for item in value))
     if isinstance(value, (str, int, float, bool, type(None))):
-        return value
-    return repr(value)
+        return (type(value).__name__, value)
+    raise TypeError("Opaque parameters do not have a score cache identity")
 
 
 class LossEngine:
@@ -712,15 +717,26 @@ class LossEngine:
         """Extract scores using registered loss functions."""
         # Native loss functions still include process-global consumers.
         self.runtime_context.require_current()
-        return self._extract_scores_with_registry_cached(
-            eval_result,
-            self._score_cache_token(),
-        )
+        from astrolabe.design.native_scores import snapshot_scores
+        from astrolabe.design.store import DataStore
+
+        try:
+            # Reuse the native score codec: arrays, evidence and referenced
+            # structure bytes all enter the identity. No file is persisted.
+            raw_identity = snapshot_scores(eval_result, DataStore()).identity
+            binding = self._score_cache_token(raw_identity)
+        except (TypeError, ValueError, OSError, RecursionError):
+            # Live poses/opaque values have no complete revision contract.
+            # Recompute rather than treating their object address as proof.
+            return self._extract_scores_from_specs(eval_result, self.loss_specs)
+        result = self._extract_scores_with_registry_cached(eval_result, binding)
+        # Callers own their result mappings, never the memoized instance.
+        return copy.deepcopy(result)
 
     def _clear_score_cache(self) -> None:
         self._extract_scores_with_registry_cached.cache_clear()
 
-    def _score_cache_token(self):
+    def _score_cache_token(self, raw_identity=None):
         # Sequence-dependent losses read the current working protomers rather
         # than the scores object, which may intentionally be reused while a
         # mutation stack proposes a new sequence.
@@ -746,6 +762,7 @@ class LossEngine:
             dynamic_binding_site=_freeze_cache_value(
                 self.runtime_context.get_const("dynamic_binding_site", None)
             ) if uses_dynamic_binding else None,
+            raw_identity=raw_identity,
         )
 
     @functools.lru_cache(maxsize=4)
@@ -954,7 +971,10 @@ _VALID_LOSSES = (
 
 class LossTerms(dict):
     def __getattr__(self, item):
-        return self[item]
+        try:
+            return self[item]
+        except KeyError as error:
+            raise AttributeError(item) from error
 
     def __setattr__(self, key, value):
         self[key] = value

@@ -7,6 +7,9 @@ from astrolabe.evaluators.utils import StandardScores
 class SequenceEvaluator(Evaluator):
     """Expose input assemblies for sequence losses without predicting structures."""
 
+    def debug_cache_identity(self):
+        return {"sequence_evaluator": "v1"}
+
     def evaluate(self, inputs=None, runtime_config=None):
         return StandardScores(
             names=list(inputs or {}),

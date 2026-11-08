@@ -227,12 +227,16 @@ def test_observer_failure_never_changes_completed_backend_result(tmp_path, monke
 def test_cached_origin_is_explicit_and_never_relabelled_a_fresh_prediction(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("DEBUG", "1")
+    (tmp_path / "A.pdb").write_text("retained structure bytes")
     monkeypatch.setattr(run, "_apply_post_eval_hooks", lambda args, result, **kwargs: result)
     monkeypatch.setattr(run, "_finalize_evaluation_result", lambda args, result, loss: result)
     calls = []
 
     class Backend:
         alias = "backend"
+        def debug_cache_identity(self):
+            return {"fixture": "stateless/v1"}
+
         def evaluate(self, outgoing, runtime):
             calls.append("predicted")
             return _scores()
@@ -248,7 +252,7 @@ def test_cached_origin_is_explicit_and_never_relabelled_a_fresh_prediction(tmp_p
     assert second_journal.invocations == []
     assert second_journal.cache_reuses == [{
         "kind": "debug_initial_evaluation_cache", "step": 0,
-        "artifact": str(tmp_path / "cache_case_eval_rslt.pkl"),
+        "artifact": str(tmp_path / "cache_case_initial_debug.cache"),
         "backend_alias": "backend", "origin_invocation_ids": [origin],
         "executed_backend": False,
     }]
