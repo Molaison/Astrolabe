@@ -19,7 +19,8 @@ except ModuleNotFoundError:  # pragma: no cover
 RnaChainTypes = (RnaChain,) if AF3RnaChain is None else (RnaChain, AF3RnaChain)
 
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.structure_output import project_structure, structure_directory
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.core import global_config
 from rhofold.data.balstn import BLASTN
 from rhofold.model.rna_fm.data import get_rna_fm_token
@@ -34,15 +35,20 @@ class RhoFoldEvaluator(Evaluator):
 
     def __init__(self, model_runner, output_dir, config):
         self.config = config or {}
-        self.model_runner = model_runner.to(config.device)
+        parent_device = (
+            "cpu" if getattr(model_runner, "native_daemon", False) else config.device
+        )
+        self.model_runner = model_runner.to(parent_device)
         self.output_dir = Path(output_dir)
+
+    def shutdown(self) -> None:
+        shutdown_model_handles(self.model_runner)
 
     def prepare_output(self, output, inputs, runtime_config):
         step = runtime_config.get("step", 0)
         plddt = {}
         complex_paths = {}
-        structure_dir = Path(global_config.out_dir) / "structures"
-        structure_dir.mkdir(parents=True, exist_ok=True)
+        structure_dir = structure_directory(global_config.out_dir, getattr(self, "alias", None))
         for oligo_name, input in inputs.items():
             oligo_output = output[oligo_name]
             jobname = f"step_{step:03d}_{oligo_name}"
@@ -76,13 +82,19 @@ class RhoFoldEvaluator(Evaluator):
 
             # The last cords prediction
             node_cords_pred = oligo_output["cord_tns_pred"][-1].squeeze(0)
-            self.model_runner.structure_module.converter.export_pdb_file(
-                input.chains[0].sequence,
-                node_cords_pred.data.cpu().numpy(),
-                path=unrelaxed_model,
-                chain_id=None,
-                confidence=oligo_output["plddt"][0].data.cpu().numpy(),
-            )
+            export_arguments = {
+                "sequence": input.chains[0].sequence,
+                "coordinates": node_cords_pred.data.cpu().numpy(),
+                "path": unrelaxed_model,
+                "chain_id": None,
+                "confidence": oligo_output["plddt"][0].data.cpu().numpy(),
+            }
+            if hasattr(self.model_runner, "export_pdb_file"):
+                self.model_runner.export_pdb_file(**export_arguments)
+            else:
+                self.model_runner.structure_module.converter.export_pdb_file(
+                    **export_arguments
+                )
             final_model = structure_dir / f"{jobname}_model.pdb"
 
             # Amber relaxation
@@ -107,6 +119,7 @@ class RhoFoldEvaluator(Evaluator):
                     shutil.copy2(unrelaxed_model, final_model)
             else:
                 shutil.copy2(unrelaxed_model, final_model)
+            project_structure(final_model, global_config.out_dir, getattr(self, "alias", None))
             complex_paths[oligo_name] = final_model
         return StandardScores(
             names=list(inputs.keys()),
@@ -168,9 +181,13 @@ class RhoFoldEvaluator(Evaluator):
         result = {}
         with torch.no_grad():
             for oligo_name, feat in input_feat.items():
-                result[oligo_name] = self.model_runner(
-                    tokens=feat["tokens"].to(self.config.device),
-                    rna_fm_tokens=feat["rna_fm_tokens"].to(self.config.device),
-                    seq=feat["seq"],
-                )[-1]
+                model_arguments = {
+                    "tokens": feat["tokens"].to(self.config.device),
+                    "rna_fm_tokens": feat["rna_fm_tokens"].to(self.config.device),
+                    "seq": feat["seq"],
+                }
+                if hasattr(self.model_runner, "forward"):
+                    result[oligo_name] = self.model_runner.forward(**model_arguments)
+                else:
+                    result[oligo_name] = self.model_runner(**model_arguments)[-1]
         return result

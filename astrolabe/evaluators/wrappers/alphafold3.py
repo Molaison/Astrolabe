@@ -8,7 +8,10 @@ import logging
 import os
 import pathlib
 import string
+import threading
+import time
 import typing
+import uuid
 from collections import Counter, defaultdict
 from typing import Sequence, Callable
 
@@ -69,6 +72,14 @@ class ModelRunner:
         self._model_config = config
         self._device = device
         self._model_dir = model_dir
+        self._resident_executables = None
+        self._compile_lock = threading.Lock()
+        self._launch_lock = threading.Lock()
+
+    def enable_resident_execution(self):
+        """Called once at readiness; weights and loaded executables stay here."""
+        if self._resident_executables is None:
+            self._resident_executables = {}
 
     def set_cyclic_asym_ids(self, cyclic_asym_ids: Sequence[int] | None) -> None:
         ids = tuple(int(x) for x in (cyclic_asym_ids or ()))
@@ -78,6 +89,8 @@ class ModelRunner:
         )
         if current == ids:
             return
+        if hasattr(self, "_inference_owner_settings"):
+            raise ValueError("Staged AF3 requires the immutable owner cyclic configuration")
         self._model_config.global_config.cyclic_asym_ids = ids
         self.__dict__.pop("_model", None)
 
@@ -95,6 +108,8 @@ class ModelRunner:
         )
         if current == patches:
             return
+        if hasattr(self, "_inference_owner_settings"):
+            raise ValueError("Staged AF3 requires the immutable owner cyclic configuration")
         self._model_config.global_config.cyclic_relative_patches = patches
         self.__dict__.pop("_model", None)
 
@@ -113,22 +128,107 @@ class ModelRunner:
         def forward_fn(batch):
             return model.Model(self._model_config)(batch)
 
+        # Place weights during owner readiness. Passing host NumPy parameters
+        # into the JIT would otherwise hide their H2D transfer inside infer.
+        device_params = jax.device_put(self.model_params, self._device)
+        jax.block_until_ready(device_params)
         return functools.partial(
-            jax.jit(forward_fn.apply, device=self._device), self.model_params
+            jax.jit(forward_fn.apply, device=self._device), device_params
         )
 
     def run_inference(
         self, featurised_example: features.BatchDict, rng_key: jnp.ndarray
     ) -> model.ModelResult:
-        """Computes a forward pass of the model on a featurised example."""
-        featurised_example = jax.device_put(
-            jax.tree_util.tree_map(
-                jnp.asarray, utils.remove_invalidly_typed_feats(featurised_example)
-            ),
+        """Synchronous compatibility entrypoint to the shared evaluator stages."""
+        return self._inference_kernel(self._inference_request(
+            featurised_example, rng_key=rng_key))
+
+    @functools.cached_property
+    def _inference_kernel(self):
+        from astrolabe.evaluators.af3_pipeline import evaluator_stages
+        from astrolabe.evaluators.runtime_stages import DirectKernel
+
+        def loader(settings):
+            # Readiness, not per-request inference. Shape-dependent first JIT
+            # compilation still occurs at the native model call.
+            self.model_params
+            self._model
+            return evaluator_stages(self, allow_extraction=True), {
+                "backend": "alphafold3", "device": str(self._device),
+                "owner_configuration": "immutable_cyclic",
+                "cold_shape_jit": "inside_native_model_call",
+            }
+
+        cpu = self._device.platform == "cpu"
+        device = "cpu" if cpu else f"cuda:{self._device.id}"
+        return DirectKernel({}, loader, lifecycle={
+            "backend": "alphafold3", "device": device,
+            "resource": "cpu" if cpu else "gpu", "residency": "resident_model",
+            "weights_loaded": True, "concurrency_certified": False,
+        })
+
+    def _inference_request(self, batch, **fields):
+        owner = self._model_config.global_config
+        return dict(model="alphafold3", features=batch,
+                    cyclic_asym_ids=tuple(getattr(owner, "cyclic_asym_ids", ())),
+                    cyclic_relative_patches=tuple(getattr(owner, "cyclic_relative_patches", ())),
+                    **fields)
+
+    def run_inference_and_extract_for_seed(self, batch, seed, target_name):
+        return self._inference_kernel(self._inference_request(
+            batch, rng_seed=int(seed), target_name=target_name))
+
+    def prepare_features(self, featurised_example: features.BatchDict):
+        """CPU feature filtering, before any JAX device conversion."""
+        return utils.remove_invalidly_typed_feats(featurised_example)
+
+    def upload_features(self, cleaned_features):
+        """Preserve the original JAX conversions and chosen device placement."""
+        return jax.device_put(
+            jax.tree_util.tree_map(jnp.asarray, cleaned_features),
             self._device,
         )
 
-        result = self._model(rng_key, featurised_example)
+    def run_model(self, device_features, rng_key):
+        """Dispatch the cached JIT model; returned arrays may still be in flight."""
+        if self._resident_executables is not None:
+            from astrolabe.evaluators.inference_service import mark
+            leaves, tree = jax.tree_util.tree_flatten((rng_key, device_features))
+            signature = (tree, tuple((tuple(x.shape), str(x.dtype), bool(getattr(x, "weak_type", False)))
+                                     for x in leaves))
+            # One compilation/load for a new shape. Requests use the same
+            # in-memory executable thereafter, with private inputs/RNG/outputs.
+            with self._compile_lock:
+                executable = self._resident_executables.get(signature)
+                if executable is None:
+                    started = time.monotonic()
+                    compiled_model = self._model
+                    executable = compiled_model.func.lower(
+                        *compiled_model.args, rng_key, device_features).compile()
+                    self._resident_executables[signature] = executable
+                    mark("resident_executable_loaded", elapsed_s=time.monotonic() - started,
+                         executable_count=len(self._resident_executables),
+                         executable_id=id(executable))
+            # This PJRT backend submits all work for a device to one compute
+            # stream. Concurrent host RunAsync calls can interleave the mutable
+            # thunk/control-flow state of an executable; more Python launchers
+            # do not create independent GPU streams. Keep host submission
+            # ordered while retaining asynchronous device completion and
+            # request-local upload/materialization outside this boundary.
+            waiting = time.monotonic()
+            with self._launch_lock:
+                started = time.monotonic()
+                mark("resident_executable_dispatch", executable_id=id(executable),
+                     launch_wait_s=started - waiting, thread_id=threading.get_ident())
+                result = executable(*self._model.args, rng_key, device_features)
+                mark("resident_executable_enqueued", executable_id=id(executable),
+                     host_dispatch_s=time.monotonic() - started,
+                     thread_id=threading.get_ident())
+                return result
+        return self._model(rng_key, device_features)
+
+    def materialize_result(self, result) -> model.ModelResult:
+        """Host arrays with the native bfloat16 conversion and model identifier."""
         result = jax.tree.map(np.asarray, result)
         result = jax.tree.map(
             lambda x: x.astype(jnp.float32) if x.dtype == jnp.bfloat16 else x,
@@ -138,6 +238,46 @@ class ModelRunner:
         identifier = self.model_params["__meta__"]["__identifier__"].tobytes()
         result["__identifier__"] = identifier
         return result
+
+    def inference_stages(self, rng_key, *, target_name=None):
+        """CPU -> transfer -> GPU -> CPU, optionally followed by extraction.
+
+        Submit the original featurised batch to these stages. The executor must
+        supply ``cpu``, ``transfer`` and a single-thread ``gpu`` resource. Keep
+        model configuration fixed until its accepted requests have drained.
+        The JIT model itself remains one explicit device stage.
+        """
+        from astrolabe.inference_backends import jax_pending
+        from astrolabe.inference_pipeline import Stage
+
+        def prepare(batch):
+            return dict(batch=batch, cleaned=self.prepare_features(batch))
+
+        def upload(item):
+            item['device_features'] = self.upload_features(item.pop('cleaned'))
+            item['rng_key'] = jax.device_put(rng_key, self._device)
+            return jax_pending(item, wait_for=(item['device_features'], item['rng_key']),
+                               keepalive=(item['batch'], rng_key))
+
+        def dispatch(item):
+            item['device_result'] = self.run_model(item['device_features'], item['rng_key'])
+            return jax_pending(item, wait_for=item['device_result'],
+                               keepalive=(item['device_features'], item['rng_key']))
+
+        def materialize(item):
+            result = self.materialize_result(item.pop('device_result'))
+            if target_name is None:
+                return result
+            return item['batch'], result
+
+        stages = [Stage('af3_features', 'cpu', prepare),
+                  Stage('af3_upload', 'transfer', upload),
+                  Stage('af3_model', 'gpu', dispatch),
+                  Stage('af3_materialize', 'cpu', materialize)]
+        if target_name is not None:
+            stages.append(Stage('af3_extract', 'cpu', lambda pair: self.extract_structures(
+                pair[0], pair[1], target_name)))
+        return tuple(stages)
 
     def extract_structures(
         self,
@@ -163,6 +303,105 @@ class ModelRunner:
         if "pair_embeddings" in result:
             embeddings["pair_embeddings"] = result["pair_embeddings"]
         return embeddings or None
+
+
+def service_model_settings(config) -> dict:
+    """Model-defining options which must agree with the shared owner."""
+    return {
+        "model_dir": str(config.model_dir),
+        "flash_attention_implementation": str(config.flash_attention_implementation),
+        "num_samples": int(config.num_samples),
+        "num_recycles": int(config.num_recycles),
+        "save_embeddings": bool(config.save_embeddings),
+    }
+
+
+class RemoteModelRunner:
+    """Inference-only proxy; extraction and scoring remain in each CPU worker."""
+
+    extract_structures = ModelRunner.extract_structures
+    extract_embeddings = ModelRunner.extract_embeddings
+
+    def __init__(self, config):
+        self._socket = str(config.service_socket)
+        self._opaque_rpc = bool(getattr(config, "service_opaque_rpc", False))
+        self._transport = str(getattr(config, "service_transport", "pickle"))
+        if self._transport not in {"pickle", "buffers"}:
+            raise ValueError("AF3 service_transport must be pickle or buffers")
+        self._settings = service_model_settings(config)
+        self._cyclic_asym_ids = tuple(int(x) for x in getattr(config, "cyclic_asym_ids", ()))
+        self._cyclic_relative_patches = tuple(tuple(int(y) for y in x) for x in
+                                             getattr(config, "cyclic_relative_patches", ()))
+
+    def set_cyclic_asym_ids(self, cyclic_asym_ids):
+        self._cyclic_asym_ids = tuple(int(x) for x in (cyclic_asym_ids or ()))
+
+    def set_cyclic_relative_patches(self, cyclic_relative_patches):
+        self._cyclic_relative_patches = tuple(
+            tuple(int(y) for y in x) for x in (cyclic_relative_patches or ())
+        )
+
+    def run_inference(self, featurised_example, rng_key):
+        from astrolabe.evaluators.inference_service import call
+
+        if self._transport == "buffers":
+            from astrolabe.evaluators.af3_buffers import infer
+            return infer(self._socket, self._buffer_request(), {
+                "features": utils.remove_invalidly_typed_feats(featurised_example),
+                "rng_key": np.asarray(rng_key),
+            })
+        request = {
+            "model": "alphafold3",
+            "identity": {
+                "trajectory": os.environ.get("PH_TRAJECTORY_ID"),
+                "pid": os.getpid(),
+                "request_uuid": uuid.uuid4().hex,
+            },
+            "settings": self._settings,
+            "features": jax.tree.map(np.asarray, featurised_example),
+            "rng_key": np.asarray(rng_key),
+            "cyclic_asym_ids": self._cyclic_asym_ids,
+            "cyclic_relative_patches": self._cyclic_relative_patches,
+        }
+        return call(self._socket, request, opaque=True) if self._opaque_rpc else call(self._socket, request)
+
+    def _buffer_request(self):
+        return {
+            "model": "alphafold3", "settings": dict(self._settings),
+            "identity": {"trajectory": os.environ.get("PH_TRAJECTORY_ID"),
+                         "pid": os.getpid(), "request_uuid": uuid.uuid4().hex},
+            "cyclic_asym_ids": self._cyclic_asym_ids,
+            "cyclic_relative_patches": self._cyclic_relative_patches,
+        }
+
+    def run_inference_and_extract_for_seed(self, batch, seed, target_name):
+        from astrolabe.evaluators.inference_service import call
+
+        if self._transport == "buffers":
+            from astrolabe.evaluators.af3_buffers import infer
+            from astrolabe.evaluators.inference_service import mark
+            import time
+            request = dict(self._buffer_request(), rng_seed=int(seed))
+            result = infer(self._socket, request, {
+                "features": utils.remove_invalidly_typed_feats(batch),
+            })
+            # Full native batch never leaves this CPU consumer. Same extractor,
+            # same result, same downstream write/score/selection ordering.
+            started = time.monotonic()
+            extracted = self.extract_structures(batch, result, target_name)
+            mark("buffer_local_extracted", elapsed_s=time.monotonic() - started,
+                 identity=request["identity"])
+            return extracted
+        request = {
+            "model": "alphafold3", "settings": dict(self._settings),
+            "features": jax.tree.map(np.asarray, batch), "rng_seed": int(seed),
+            "target_name": target_name,
+            "identity": {"trajectory": os.environ.get("PH_TRAJECTORY_ID"),
+                         "pid": os.getpid(), "request_uuid": uuid.uuid4().hex},
+            "cyclic_asym_ids": self._cyclic_asym_ids,
+            "cyclic_relative_patches": self._cyclic_relative_patches,
+        }
+        return call(self._socket, request, opaque=True) if self._opaque_rpc else call(self._socket, request)
 
 
 def make_model_config(
@@ -481,63 +720,33 @@ def extract_plddt(atom2res, atom2bfactor):
     return [per_res_plddt[i] for i in range(len(per_res_plddt))]
 
 
-def _configure_refstructure_env(config) -> None:
-    """Apply RefStructure featurisation knobs via environment variables.
-
-    These env vars are consumed inside the vendored AlphaFold3 codebase.
-    Keeping them here allows Hydra/YAML config to control featurisation
-    behaviour without requiring users to manually export env vars.
-    """
-
-    workers = getattr(config, "refstructure_workers", None)
-    if workers is not None:
-        try:
-            os.environ["ALPHAFOLD3_REFSTRUCTURE_WORKERS"] = str(int(workers))
-        except (TypeError, ValueError):
-            logging.warning("Ignoring invalid refstructure_workers=%r", workers)
-
-    cache = getattr(config, "refstructure_cache", None)
-    if cache is not None:
-        os.environ["ALPHAFOLD3_REFSTRUCTURE_CACHE"] = "1" if bool(cache) else "0"
-
-    max_entries = getattr(config, "refstructure_cache_max_entries", None)
-    if max_entries is not None:
-        try:
-            os.environ["ALPHAFOLD3_REFSTRUCTURE_CACHE_MAX_ENTRIES"] = str(
-                int(max_entries)
-            )
-        except (TypeError, ValueError):
-            logging.warning(
-                "Ignoring invalid refstructure_cache_max_entries=%r", max_entries
-            )
-
-
-def _configure_msa_env(config) -> None:
-    """Apply MSA featurisation cache knobs via environment variables."""
-
-    cache = getattr(config, "msa_cache", None)
-    if cache is not None:
-        os.environ["ALPHAFOLD3_MSA_CACHE"] = "1" if bool(cache) else "0"
-
-    max_entries = getattr(config, "msa_cache_max_entries", None)
-    if max_entries is not None:
-        try:
-            os.environ["ALPHAFOLD3_MSA_CACHE_MAX_ENTRIES"] = str(int(max_entries))
-        except (TypeError, ValueError):
-            logging.warning("Ignoring invalid msa_cache_max_entries=%r", max_entries)
+from astrolabe.af3_featurisation_settings import (
+    _configure_refstructure_env,
+    _configure_msa_env,
+)
 
 
 def alphafold3_setup(config):
+    from astrolabe.evaluators.runtime_stages import configured_device_hint
+
     _configure_refstructure_env(config)
     _configure_msa_env(config)
+    if getattr(config, "service_socket", None):
+        return RemoteModelRunner(config)
+    device_hint = configured_device_hint(config)
     try:
-        devices = jax.local_devices(backend="gpu")
+        devices = jax.local_devices(backend="cpu" if device_hint == "cpu" else "gpu")
     except Exception as exc:
+        if device_hint is not None and device_hint != "cpu":
+            raise RuntimeError(f"Configured AF3 device {device_hint} is unavailable") from exc
         logging.warning(
             "JAX GPU backend unavailable (%s); falling back to CPU for AlphaFold3.",
             exc,
         )
         devices = jax.local_devices(backend="cpu")
+    device_index = int(device_hint.split(":", 1)[1]) if device_hint and device_hint.startswith("cuda:") else 0
+    if device_index >= len(devices):
+        raise ValueError(f"Configured AF3 device {device_hint} is not visible to JAX")
     cache_dir = getattr(config, "jax_compilation_cache_dir", None)
     if cache_dir:
         cache_dir_path = pathlib.Path(os.path.expanduser(str(cache_dir)))
@@ -573,9 +782,13 @@ def alphafold3_setup(config):
             num_recycles=config.num_recycles,
             return_embeddings=config.save_embeddings,
         ),
-        device=devices[0],
+        device=devices[device_index],
         model_dir=pathlib.Path(config.model_dir),
     )
+    if getattr(config, "cyclic_asym_ids", ()):
+        model_runner.set_cyclic_asym_ids(config.cyclic_asym_ids)
+    if getattr(config, "cyclic_relative_patches", ()):
+        model_runner.set_cyclic_relative_patches(config.cyclic_relative_patches)
     return model_runner
 
 

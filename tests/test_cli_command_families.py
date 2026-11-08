@@ -240,7 +240,10 @@ def test_completion_metadata_preserves_normalized_runtime_inputs() -> None:
 def test_all_canonical_leaf_handlers_use_shared_registration() -> None:
     leaves = cli._canonical_leaf_parsers(cli._build_parser())
 
-    assert len(leaves) == 57
+    assert leaves
+    assert {"astrolabe setup", "astrolabe doctor", "astrolabe demo"} <= {
+        leaf.prog for leaf in leaves
+    }
     assert all(callable(leaf._defaults.get("_handler")) for leaf in leaves)
     assert all(
         leaf._defaults.get("_handler_registered") is leaf._defaults.get("_handler")

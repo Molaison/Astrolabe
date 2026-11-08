@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+from collections.abc import Sequence
 import logging
 import pathlib
 import pickle
@@ -781,7 +782,8 @@ class Boltz1Runner:
             }
             map_location = "cpu"
             if self.accelerator != "cpu" and torch.cuda.is_available():
-                map_location = torch.device("cuda:0")
+                device_index = self.devices[0] if isinstance(self.devices, Sequence) and not isinstance(self.devices, str) and len(self.devices) == 1 else 0
+                map_location = torch.device(f"cuda:{device_index}")
             model_module: Boltz1 = Boltz1.load_from_checkpoint(
                 checkpoint,
                 strict=True,

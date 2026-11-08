@@ -12,6 +12,12 @@ from astrolabe.core import global_config
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.losses.base import LossEngine
 from astrolabe.stage_manager import StageManager
+from native_flow_test_support import native_flow_test_projections
+
+
+@pytest.fixture(autouse=True)
+def _native_flow_test_projections(native_flow_test_projections):
+    return native_flow_test_projections
 
 
 def _reset_runtime(tmp_path: Path | None = None) -> LossEngine:

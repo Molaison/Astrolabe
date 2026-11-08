@@ -82,7 +82,7 @@ def test_explicit_store_drives_real_stage_and_loss_consumers_and_thread():
     assert manager.runtime_context.state is state
 
 
-def test_validation_and_legacy_private_monkeypatch_use_one_store(monkeypatch):
+def test_validation_and_legacy_private_assignments_use_one_store():
     global_config.reset()
     context = global_config.build_runtime_context()
     with pytest.raises(ValueError):
@@ -93,9 +93,12 @@ def test_validation_and_legacy_private_monkeypatch_use_one_store(monkeypatch):
     global_config.init_const("protomers", {"a": 1})
     with pytest.raises(RuntimeError):
         global_config.init_const("protomers", {"different": 1})
-    monkeypatch.setattr(global_config, "_protomers", {"patched": 2})
+    # These compatibility attributes are virtual and intentionally absent from
+    # the module dictionary. Exercise their setters directly: newer pytest
+    # monkeypatch versions restore module attributes using __dict__ alone.
+    global_config._protomers = {"patched": 2}
     assert context.protomers == {"patched": 2}
-    monkeypatch.setattr(global_config, "_step", 4)
+    global_config._step = 4
     assert context.step == 4
     assert "_protomers" not in vars(global_config)
     assert "_step" not in vars(global_config)

@@ -35,7 +35,7 @@ def test_failed_step0_reference_gate_audit_is_rejected(tmp_path, monkeypatch):
     monkeypatch.setattr(run, '_prepare_structure_start_runtime', prepare)
     loss = SimpleNamespace(compute_loss=lambda result, runtime: (1., {}))
     with pytest.raises(ValueError, match='step0 reference gate failed'):
-        run.run_optimization_loop(SimpleNamespace(steps=1), loss, scores(), cfg.stage_manager, {})
+        run._initialize_optimization_state(SimpleNamespace(steps=1), loss, scores(), cfg.stage_manager, {})
     decisions = cfg.get_const('decisions')
     assert decisions.row_history[0]['accepted'] is False
     report = build_execution_audit(run_id='review',status='failed',decisions=decisions,journal=journal)
@@ -61,6 +61,48 @@ def test_seed_gate_invocation_reports_target_stage(tmp_path, monkeypatch):
 class Backend:
     def evaluate(self, inputs, runtime):
         return scores()
+
+
+def test_accepted_preupdate_survives_later_stage_entry_failure(tmp_path, monkeypatch):
+    from astrolabe.core.protomer_config_parser import Segment, SegmentManager
+
+    setup_journal(tmp_path)
+    segments = SegmentManager()
+    segment = Segment("AAA", ptm_dict={})
+    segments.add_segment("A", segment)
+    cfg.init_const("segment_manager", segments)
+    manager = cfg.stage_manager
+    manager.current_mutators = []
+    manager.current_evaluator = Backend()
+    manager.current_oligo = ["A"]
+    manager.current_transition_input_scores = None
+    decisions = SimpleNamespace(scores_detail={}, last_accepted=0)
+
+    def mutate(*args):
+        segments.begin_pre_update_step()
+        segment.add_mutations((0, "A", "G", 0.1, 0.0))
+        segments.preapply_pending_mutations()
+
+    def accept(*args):
+        decisions.last_accepted = 1
+        return False, scores(), True
+
+    def fail_stage(**kwargs):
+        raise ValueError("stage observation failed")
+
+    monkeypatch.setattr(run, "execute_mutation_step", mutate)
+    monkeypatch.setattr(run, "perform_evaluation", lambda *a, **k: scores())
+    monkeypatch.setattr(run, "_prepare_structure_start_runtime", lambda value, **k: value)
+    monkeypatch.setattr(run, "_make_native_decision", accept)
+    monkeypatch.setattr(run, "_handle_stage_entry", fail_stage)
+    with pytest.raises(ValueError, match="stage observation failed"):
+        run._advance_optimization_state(
+            SimpleNamespace(steps=2), None, scores(), manager,
+            {"mutator_stack_pre_update": True}, decisions, 1,
+        )
+    assert decisions.last_accepted == 1
+    assert segment.sequence == "GAA"
+    assert segments._pre_update_snapshot is None
 
 
 def test_single_dispatch_candidates_appear_in_assessment_audit(tmp_path):

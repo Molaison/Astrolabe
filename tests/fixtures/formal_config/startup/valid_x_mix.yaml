@@ -1,0 +1,32 @@
+task_name: formal_config
+out_dir: null
+steps: 1
+seed: 17
+types:
+  A: p
+seqs:
+  A: ACDEFGHIKLMNPQRSTVWY
+enable_pyrosetta: false
+skip_complex_poses: true
+initializer:
+  mode: x_mix
+  x_fraction: 0.8
+evaluator:
+  evaluator_terms:
+    check:
+      _type: sequence
+mutator:
+  mutator_terms:
+    m:
+      _type: mcmc
+loss:
+  loss_terms: {}
+stages:
+  default:
+    evaluator: check
+    mutators:
+    - m
+    oligo:
+    - A
+    mutation_num: 1
+    weighted_score_expression: '0'

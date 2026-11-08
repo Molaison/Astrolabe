@@ -1,0 +1,25 @@
+# Native structure/directory interface optimization task.
+defaults:
+- binder_interface_beam
+- _self_
+stages:
+  default:
+    mutation_num: 4
+protein_beam:
+  max_total_mutations: 4
+  root_calibration:
+    enabled: true
+    original_ca_delta: 0.25
+    original_interface_bb_delta: 0.15
+  af3_call_budget:
+    max_total: 7
+  service:
+    startup_timeout_s: 600
+    shutdown_timeout_s: 120
+    terminate_timeout_s: 10
+    max_pending: 4
+    concurrency_mode: process_pool
+mutator:
+  mutator_terms:
+    LigandMPNN_itf:
+      position_selector: "interface(mode='buried_sasa', buried_sasa_cutoff=10.0)"

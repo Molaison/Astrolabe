@@ -23,10 +23,12 @@ setup(
     packages=find_packages(include=["astrolabe", "astrolabe.*"])
     + find_namespace_packages(include=["config", "config.*", "resources",
                                        "data", "data.framework_fastas", "data.framework_homologies",
+                                       "examples.input",
                                        "examples.paper", "examples.paper.*"]),
     py_modules=["run"],
     include_package_data=True,
     install_requires=[
+        "jsonschema>=4,<5",
         "absl-py>=2.1,<3",
         "biopython>=1.84,<2",
         "filelock>=3.12,<4",
@@ -34,6 +36,7 @@ setup(
         "matplotlib>=3.8,<4",
         "numpy>=1.26,<3",
         "omegaconf>=2.3,<2.4",
+        "pandas>=2,<3",
         "prompt-toolkit>=3.0,<4",
     ],
     extras_require={
@@ -41,11 +44,12 @@ setup(
             "pytest>=7.0",
             "build>=1",
             "setuptools>=70.1",
+            "scipy==1.17.0",
         ],
     },
     entry_points={
         "console_scripts": [
-            "astrolabe=astrolabe.cli:main",
+            "astrolabe=astrolabe.launcher:main",
         ]
     },
 )

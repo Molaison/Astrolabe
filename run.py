@@ -5,6 +5,17 @@ This module orchestrates the mutation and evaluation process for protein design,
 using configured structure predictors, sequence mutators and stage objectives.
 """
 
+if __name__ == "__main__":
+    import hydra
+    from astrolabe.cli import _run_from_config
+
+    @hydra.main(version_base=None)
+    def _compatibility_main(cfg):
+        _run_from_config(cfg, autoselect_gpu=False)
+
+    _compatibility_main()
+    raise SystemExit(0)
+
 import functools
 from contextlib import nullcontext
 import hashlib
@@ -17,6 +28,9 @@ import pickle
 import random
 import shutil
 import time
+import threading
+from concurrent.futures import ThreadPoolExecutor
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple
 
@@ -41,6 +55,10 @@ from astrolabe.evaluators.evidence import (
 from astrolabe.execution_audit import EvaluationJournal, write_execution_audit
 from astrolabe.runtime_support import ResourceOwner, ordered_cpu_overlap
 from astrolabe.argparser import parse_arguments
+from astrolabe.configuration import (
+    dispatch_selected_search,
+    validate_execution_selection,
+)
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import (
     MutableTypes,
@@ -50,6 +68,13 @@ from astrolabe.core.protomer_config_parser import (
 )
 from astrolabe.decision_context import passes_stage_entry_acceptance_gate
 from astrolabe.decision_maker import Decisions
+from astrolabe.design.native_flow import native_call, native_phase
+from astrolabe.design.owner import scientific_session
+from astrolabe.design.repeats import (
+    RepeatRun,
+    materialize_repeat,
+    plan_repeat_runs,
+)
 from astrolabe.evaluators.utils import ComplexPoses, StandardScores, construct_evaluators
 from astrolabe.graceful_shutdown import install_handlers, stop_requested
 from astrolabe.initializers import (
@@ -311,10 +336,15 @@ def _suppress_external_logging() -> None:
     os.environ["GLOG_minloglevel"] = "3"
 
     # Optional: make ProDy quiet if available (used by some docking utilities).
+    from astrolabe.runtime.model_pool import (
+        LifecycleDependencyError, import_lifecycle_dependency,
+    )
     try:
-        import prody  # type: ignore
+        prody = import_lifecycle_dependency("prody")
 
         prody.utilities.logger.PackageLogger.verbosity = None
+    except LifecycleDependencyError:
+        raise
     except Exception:
         pass
 
@@ -341,6 +371,12 @@ def initialize_global_config(args) -> None:
             if user_ccd
             else direct_user_ccd
         )
+    use_metropolis_acceptance = bool(
+        getattr(args, "use_metropolis_acceptance", False)
+    )
+    initial_temperature = (
+        args.initial_temperature if use_metropolis_acceptance else None
+    )
     config_items = {
         "exclude_AA": args.exclude_AA,
         "covalent_bonds": getattr(args, "covalent_bonds", None),
@@ -349,11 +385,11 @@ def initialize_global_config(args) -> None:
         "named_files": named_files,
         "mutable_protomers": {},
         "segment_manager": SegmentManager(),
-        "initial_temperature": args.initial_temperature,
+        "initial_temperature": initial_temperature,
         "out_dir": args.out_dir,
         "raw_model_results_dir": args.raw_model_results_dir,
         "is_debug": getattr(args, "debug", False),
-        "use_metropolis_acceptance": args.use_metropolis_acceptance,
+        "use_metropolis_acceptance": use_metropolis_acceptance,
         "enable_pyrosetta": getattr(args, "enable_pyrosetta", False),
         "skip_complex_poses": getattr(args, "skip_complex_poses", False),
         "allow_mmcif_pdb_fallback": getattr(args, "allow_mmcif_pdb_fallback", False),
@@ -1215,42 +1251,33 @@ def reinitialize_random_segments_with_dplm(args) -> None:
 def build_initializer(args, *, mutators=None):
     """Build the configured initializer implementation."""
     mode = _resolve_initializer_mode(args)
-    if mode == "random":
-        return RandomInitializer()
-    if mode == "dplm":
-        return DPLMInitializer(functools.partial(_apply_dplm_initializer, args))
-    if mode == "aa_set":
-        return AminoAcidSetInitializer(functools.partial(_apply_aa_set_initializer, args))
-    if mode == "mask_mix":
-        return MaskMixInitializer(functools.partial(_apply_mask_mix_initializer, args))
-    if mode == "all_a":
-        return AllAInitializer(
-            functools.partial(
-                _apply_aa_set_initializer,
-                args,
-                fixed_residue_set=["A"],
-            )
+    from astrolabe.initializers.registry import (
+        InitializerRegistry,
+        construct_initializer,
+    )
+
+    registration = InitializerRegistry.get(mode)
+    if registration.requires_mutators and mutators is None:
+        raise ValueError(
+            f"initializer.mode={mode!r} requires initialized mutators."
         )
-    if mode == "pssm":
-        return PSSMInitializer(functools.partial(_apply_pssm_initializer, args))
-    if mode == "x_mix":
-        return XMixInitializer(functools.partial(_apply_x_mix_initializer, args))
-    if mode in {"structure", "rfd3"}:
-        if mutators is None:
-            raise ValueError(
-                f"initializer.mode={mode!r} requires initialized mutators."
-            )
-        initializer_cls = (
-            ExistingStructureInitializer if mode == "structure" else RFD3Initializer
-        )
-        return initializer_cls(
-            args=args,
-            mutators=mutators,
-            segment_plan=_collect_mutable_protein_segments(),
-        )
-    raise ValueError(
-        f"Unknown initializer.mode={mode!r}. Expected one of: random, dplm, aa_set, "
-        "mask_mix, pssm, all_a, x_mix, structure, rfd3."
+    segment_plan = (
+        _collect_mutable_protein_segments()
+        if registration.uses_segment_plan
+        else {}
+    )
+    return construct_initializer(
+        mode,
+        args=args,
+        mutators=mutators,
+        segment_plan=segment_plan,
+        callbacks={
+            "dplm": _apply_dplm_initializer,
+            "aa_set": _apply_aa_set_initializer,
+            "mask_mix": _apply_mask_mix_initializer,
+            "pssm": _apply_pssm_initializer,
+            "x_mix": _apply_x_mix_initializer,
+        },
     )
 
 
@@ -1283,7 +1310,7 @@ def apply_initializer(args, *, mutators=None):
         return result
 
 
-def _uses_alphafold3_evaluator(args, stage_manager) -> bool:
+def _uses_alphafold3_evaluator(args, stage_manager, *, current_only=False) -> bool:
     evaluator = getattr(args, "evaluator", None)
     if evaluator is None:
         return False
@@ -1305,7 +1332,12 @@ def _uses_alphafold3_evaluator(args, stage_manager) -> bool:
     used_aliases: set[str] = set()
     default_alias = getattr(stage_manager.default_setting, "evaluator", None)
 
-    for unit in getattr(stage_manager, "stage_args", {}).values():
+    units = (
+        [stage_manager.current_setting]
+        if current_only
+        else getattr(stage_manager, "stage_args", {}).values()
+    )
+    for unit in units:
         alias = getattr(unit, "evaluator", None) or default_alias
         if alias:
             used_aliases.add(str(alias))
@@ -1470,38 +1502,13 @@ def _init_pyrosetta_runtime(structure_files=None) -> None:
                 )
                 init_opts = f"-ignore_zero_occupancy false -mute all -beta{extra_res}"
 
-                # Some PyRosetta-based metrics require a DAlphaBall executable.
-                # Prefer an explicit override via GH_DALPHABALL; otherwise fall back
-                # to the bundled binary when available.
-                dalpha = os.environ.get("GH_DALPHABALL", "").strip()
-                dalpha_path: pathlib.Path | None = None
-                if dalpha:
-                    expanded = os.path.expanduser(os.path.expandvars(dalpha))
-                    p = pathlib.Path(expanded)
-                    if p.exists():
-                        dalpha_path = p
-                else:
-                    bundled = (
-                        pathlib.Path(__file__).resolve().parent
-                        / "astrolabe"
-                        / "assets"
-                        / "DAlphaBall.gcc"
-                    )
-                    if bundled.exists():
-                        dalpha_path = bundled
+                from astrolabe.startup_dependencies import dalphaball_init_options
 
-                if dalpha_path is not None:
-                    try:
-                        mode = dalpha_path.stat().st_mode
-                        if (mode & 0o100) == 0:
-                            dalpha_path.chmod(mode | 0o100)
-                    except Exception:
-                        pass
-                    init_opts = f"{init_opts} -holes:dalphaball {dalpha_path}"
+                init_opts = dalphaball_init_options(init_opts)
 
                 pyrosetta.init(init_opts)
     except Exception as exc:
-        raise RuntimeError("PyRosetta init failed") from exc
+        raise RuntimeError(f"PyRosetta init failed: {type(exc).__name__}: {exc}") from exc
 
 
 def _loss_computer_needs_complex_poses(loss_computer: LossEngine | None) -> bool:
@@ -1651,7 +1658,10 @@ def _apply_post_eval_hooks(
     *,
     runtime_config: Dict,
     loss_computer: LossEngine | None = None,
+    evaluator=None,
 ):
+    if getattr(evaluator, "preserves_generated_coordinates", False):
+        return evaluation_result
     hook_config = _post_eval_hook_config(args, loss_computer)
     if hook_config is None:
         return evaluation_result
@@ -1769,61 +1779,96 @@ def _should_evaluate_oligomers_incrementally(
     return _post_eval_hook_config(args, loss_computer) is not None
 
 
-def initialize_pipeline_components(args) -> Tuple[Any, Any, Any, Dict[str, "Input"]]:
-    """Initialize all core pipeline components."""
+@dataclass(frozen=True)
+class PreparedPipelineState:
+    """Model-free legacy preparation shared by both initialization paths."""
+
+    runtime_context: Any
+    initializer_mode: str
+    mutators: Any = None
+    initializer_result: Any = None
+    initializer_pending: bool = False
+
+
+def prepare_pipeline_state(
+    args,
+    *,
+    apply_initialization: bool = True,
+) -> PreparedPipelineState:
+    """Run the legacy prelude without constructing evaluators or predictors."""
+
     initialize_global_config(args)
     resource_owner = ResourceOwner()
     global_config.init_const("resource_owner", resource_owner)
+    global_config.init_const(
+        "evaluation_journal", EvaluationJournal(str(pathlib.Path(args.out_dir).resolve()))
+    )
     runtime_context = global_config.build_runtime_context()
     setup_protomers(args)
     apply_cyclization(args)
 
-    mutators = None
-    if _resolve_initializer_mode(args) in {"structure", "rfd3"}:
-        mutators = build_mutators(args.mutator, args.raw_model_results_dir, resource_owner=resource_owner)
-        global_config.init_const("mutators", mutators)
+    mode = _resolve_initializer_mode(args)
+    from astrolabe.initializers.registry import InitializerRegistry
+
+    registration = InitializerRegistry.get(mode)
+    if registration.requires_mutators:
+        return PreparedPipelineState(
+            runtime_context=runtime_context,
+            initializer_mode=mode,
+            initializer_pending=True,
+        )
+
     initializer_result = (
         apply_initializer(args)
-        if mutators is None
-        else apply_initializer(args, mutators=mutators)
+        if apply_initialization
+        else None
     )
     global_config.init_const("initializer_result", initializer_result)
+    return PreparedPipelineState(
+        runtime_context=runtime_context,
+        initializer_mode=mode,
+        initializer_result=initializer_result,
+    )
 
-    # Initialize components
-    if mutators is None:
-        mutators = build_mutators(args.mutator, args.raw_model_results_dir, resource_owner=resource_owner)
-        global_config.init_const("mutators", mutators)
-    loss_computer = LossEngine(args.loss, runtime_context=runtime_context)
+
+def _initialize_pipeline_math(args, prepared):
+    """Build loss and stage math without constructing model owners."""
+    loss_computer = LossEngine(
+        args.loss,
+        runtime_context=prepared.runtime_context,
+    )
     global_config.init_const("loss_computer", loss_computer)
     stage_manager = StageManager(
         args.stages,
         loss_computer=loss_computer,
-        runtime_context=runtime_context,
+        runtime_context=prepared.runtime_context,
     )
     _sync_enable_pyrosetta_from_loss_computer(args, loss_computer)
     global_config.init_const("stage_manager", stage_manager)
     _validate_nonstandard_backend_compat(args, stage_manager)
-    evaluators = construct_evaluators(
-        args.evaluator,
-        args.raw_model_results_dir,
-        stage_manager.all_oligos,
-        enabled_aliases=getattr(args.evaluator, "enabled_aliases", None),
-        resource_owner=resource_owner,
-    )
-    global_config.init_const("evaluators", evaluators)
+    return loss_computer, stage_manager
 
+
+def _initialize_pipeline_inputs(
+    args, loss_computer, stage_manager, *, include_predockers=True
+):
+    """Initialize inputs and tool context after the selected scientific prelude."""
     inputs = construct_standard_input(stage_manager.current_oligo, args.seed)
 
     # Setup token numbers
     num_tokens = {}
-    if _uses_alphafold3_evaluator(args, stage_manager):
+    if _uses_alphafold3_evaluator(args, stage_manager, current_only=True):
         num_tokens = calculate_token_numbers(
             construct_standard_input(stage_manager.all_oligos, args.seed)
         )
     global_config.init_const("num_tokens", num_tokens)
     global_config.set_variable("step", 0)
 
-    initialize_predockers(args.predocker, resource_owner=resource_owner)
+    if include_predockers:
+        initialize_predockers(args.predocker,
+                              resource_owner=global_config.get_const("resource_owner"))
+    else:
+        global_config.init_const("predockers", {})
     # -------------------------
     global_config.init_const("obabel_path", args.obabel_path)
     needs_molfile_to_params = _needs_molfile_to_params(args)
@@ -1855,10 +1900,122 @@ def initialize_pipeline_components(args) -> Tuple[Any, Any, Any, Dict[str, "Inpu
     if needs_molfile_to_params:
         setup_extra_residues(ligand_resnames=getattr(args, "ligand_resnames", None))
 
-    # assign_predocker_to_mutators(mutators, args.predocker)
+    return inputs
+
+
+def prepare_pipeline_math(args, prepared):
+    """Prepare static native math while model initialization remains deferred."""
+    if prepared.initializer_pending:
+        raise ValueError("Model-dependent initializer must finish before pipeline math")
+    predocker = getattr(args, "predocker", None)
+    if predocker is not None and predocker.get("predocker_terms"):
+        raise ValueError("Deferred pipeline math requires an empty predocker selection")
+    loss_computer, stage_manager = _initialize_pipeline_math(args, prepared)
+    inputs = _initialize_pipeline_inputs(
+        args, loss_computer, stage_manager, include_predockers=False
+    )
     return loss_computer, stage_manager, inputs
 
 
+class LazyEvaluatorMap(Mapping):
+    """Keep configured aliases available and construct each evaluator on demand."""
+
+    def __init__(self, evaluator_conf, raw_model_results_dir, oligo_names, *, enabled_aliases=None):
+        self._config = evaluator_conf
+        self._output_dir = raw_model_results_dir
+        self._oligo_names = oligo_names
+        enabled = set(enabled_aliases) if enabled_aliases is not None else None
+        self._aliases = tuple(
+            alias
+            for alias, conf in evaluator_conf.evaluator_terms.items()
+            if conf is not None
+            and conf.get("_type")
+            and (enabled is None or alias in enabled)
+        )
+        self._instances = {}
+        self._construction_lock = threading.RLock()
+
+    def __getitem__(self, alias):
+        if alias not in self._aliases:
+            raise KeyError(alias)
+        with self._construction_lock:
+            if alias not in self._instances:
+                from astrolabe.evaluator_startup import initialization_options
+
+                _workers, initialization_seed = initialization_options(self._config)
+                try:
+                    resource_owner = global_config.get_const("resource_owner")
+                except RuntimeError:
+                    resource_owner = None
+                self._instances.update(construct_evaluators(
+                    self._config,
+                    self._output_dir,
+                    self._oligo_names,
+                    enabled_aliases=list(self._aliases) if initialization_seed is not None else [alias],
+                    resource_owner=resource_owner,
+                ))
+            return self._instances[alias]
+
+    def __iter__(self):
+        return iter(self._aliases)
+
+    def __len__(self):
+        return len(self._aliases)
+
+    def __contains__(self, alias):
+        return alias in self._aliases
+
+    def constructed_items(self):
+        """Enumerate live resources without constructing unused evaluators."""
+        with self._construction_lock:
+            return tuple(self._instances.items())
+
+
+def load_pipeline_components(
+    args,
+    prepared: PreparedPipelineState,
+    *,
+    evaluator_factory=None,
+) -> Tuple[Any, Any, Any, Dict[str, "Input"]]:
+    """Construct the remaining pipeline components in the legacy order."""
+
+    if not isinstance(prepared, PreparedPipelineState):
+        raise TypeError("prepared must be a PreparedPipelineState")
+
+    mutators = prepared.mutators
+    if prepared.initializer_pending:
+        mutators = build_mutators(args.mutator, args.raw_model_results_dir,
+                                  resource_owner=global_config.get_const("resource_owner"))
+        global_config.init_const("mutators", mutators)
+        initializer_result = apply_initializer(args, mutators=mutators)
+        global_config.init_const("initializer_result", initializer_result)
+
+    # Initialize components
+    if mutators is None:
+        mutators = build_mutators(args.mutator, args.raw_model_results_dir,
+                                  resource_owner=global_config.get_const("resource_owner"))
+        global_config.init_const("mutators", mutators)
+    loss_computer, stage_manager = _initialize_pipeline_math(args, prepared)
+    evaluators = (evaluator_factory or LazyEvaluatorMap)(
+        args.evaluator,
+        args.raw_model_results_dir,
+        stage_manager.all_oligos,
+        enabled_aliases=getattr(args.evaluator, "enabled_aliases", None),
+    )
+    global_config.init_const("evaluators", evaluators)
+
+    inputs = _initialize_pipeline_inputs(args, loss_computer, stage_manager)
+    return loss_computer, stage_manager, inputs
+
+
+def initialize_pipeline_components(args) -> Tuple[Any, Any, Any, Dict[str, "Input"]]:
+    """Initialize all core pipeline components."""
+
+    prepared = prepare_pipeline_state(args)
+    return load_pipeline_components(args, prepared)
+
+
+@native_phase("prepare")
 def _prepare_structure_start_runtime(
     evaluation_result,
     *,
@@ -2001,6 +2158,7 @@ def _finalize_evaluation_result_item(
         result_item.evaluation_result,
         runtime_config=result_item.work_item.runtime_config,
         loss_computer=loss_computer,
+        evaluator=result_item.work_item.evaluator,
     )
     evaluation_result = _finalize_evaluation_result(
         args,
@@ -2165,6 +2323,7 @@ def _execution_stage_name():
     return getattr(gate, "target_stage", None) if gate is not None else _current_stage_name()
 
 
+@native_phase("prediction")
 def _evaluate_with_observability(
     evaluator: Any,
     inputs: Dict,
@@ -2250,7 +2409,8 @@ def load_or_evaluate_initial(
     is_debug = os.getenv("DEBUG") == "1"
 
     # Load from cache if in debug mode and file exists
-    if is_debug and os.path.exists(eval_file):
+    generated_coordinates = getattr(evaluator, "preserves_generated_coordinates", False)
+    if is_debug and not generated_coordinates and os.path.exists(eval_file):
         logging.info(f"Loading cached evaluation results from {eval_file}")
         log_event(
             logger=logger,
@@ -2302,10 +2462,11 @@ def load_or_evaluate_initial(
             evaluation_result,
             runtime_config=runtime_config,
             loss_computer=loss_computer,
+            evaluator=evaluator,
         )
 
         # Cache results if in debug mode
-        if "DEBUG" in os.environ:
+        if "DEBUG" in os.environ and not generated_coordinates:
             with open(eval_file, "wb") as f:
                 pickle.dump(evaluation_result, f)
             logging.info(f"Cached evaluation results to {eval_file}")
@@ -2406,6 +2567,12 @@ def execute_mutation_step(
     mutators, evaluation_result, runtime_config: Dict, step: int
 ) -> None:
     """Execute mutation for all mutators."""
+    # Never carry a prior proposal forward, including sequence-identical proposals.
+    runtime_config["generated_structure_records"] = {}
+    if len(mutators) > 1 and any(
+        getattr(mutator, "requires_exclusive_mutation", False) for mutator in mutators
+    ):
+        raise ValueError("The selected joint mutator cannot run in a mutation stack")
     secondary_structure_by_proto = extract_secondary_structure_by_proto(evaluation_result)
     runtime_config["mutator_selector_score_contexts"] = []
     pre_update = bool(runtime_config.get("mutator_stack_pre_update", False))
@@ -2436,9 +2603,27 @@ def execute_mutation_step(
             step=step,
             detail=getattr(mutator, "name", mutator.__class__.__name__),
         ) as span:
-            mutator.mutate(
+            mutation_result = native_call("mutation", mutator.mutate,
                 global_config.mutable_protomers, evaluation_result, runtime_config
             )
+            from astrolabe.design.generated_structure import publish_generated_structure
+            from astrolabe.mutators.rfd4_types import GenerationResult
+
+            attempt = f"{step}:{runtime_config['current_mutator_alias']}"
+            generated_index = None
+            if isinstance(mutation_result, GenerationResult):
+                generated_index = publish_generated_structure(
+                    mutation_result, pathlib.Path(global_config.out_dir) / "generated_structures",
+                    attempt=attempt,
+                )
+            if generated_index is not None:
+                runtime_config["generated_structure_records"][mutation_result.assembly] = {
+                    "step": int(step),
+                    "attempt": attempt,
+                    "index_path": str(generated_index.resolve()),
+                    "request_digest": mutation_result.generated.request_digest,
+                    "structure_digest": mutation_result.generated.structure_digest,
+                }
             after_sequences = {
                 name: protomer.mutated_sequence
                 for name, protomer in global_config.protomers.items()
@@ -2485,6 +2670,10 @@ def _finalize_mutator_stack_pre_update(runtime_config: Dict, accepted: bool) -> 
     if not bool(runtime_config.get("mutator_stack_pre_update", False)):
         return
     global_config.segment_manager.finish_pre_update_step(accepted=bool(accepted))
+
+
+def _make_native_decision(decisions, *args, **kwargs):
+    return native_call("decision", decisions.make_mutation_decision, *args, **kwargs)
 
 
 def _clone_eval_result(eval_result):
@@ -2688,6 +2877,7 @@ def _handle_direct_stage_entry(
     )
 
 
+@native_phase("stage")
 def _handle_stage_entry(
     *,
     args,
@@ -2753,14 +2943,14 @@ def _handle_stage_entry(
                 logger.exception("Could not observe stage entry; scientific outcome is preserved")
 
 
-def run_optimization_loop(
+def _initialize_optimization_state(
     args,
     loss_computer: LossEngine,
     initial_evaluation_result,
     stage_manager,
     runtime_config: Dict,
-) -> Any:
-    """Execute the main optimization loop."""
+) -> Tuple[Decisions, Any]:
+    """Initialize the root evaluation, decisions and step-zero stage state."""
     initial_evaluation_result = _prepare_structure_start_runtime(
         initial_evaluation_result,
         timing="step0",
@@ -2806,151 +2996,184 @@ def run_optimization_loop(
     if int(args.steps) <= 1:
         decisions.dump_results(global_config.out_dir, incremental=False)
 
-    step = 1
-    while step < args.steps:
-        clear_transition_gate_runtime(runtime_config)
-        runtime_config.pop("reference_gate_result", None)
-        logging.info(
-            build_step_start_message(
-                step=step,
-                total_steps=args.steps,
-                stage_name=getattr(stage_manager, "current_stage", None),
-            )
-        )
-        global_config.set_variable("step", step)
-        mutation_input_scores = (
-            stage_manager.current_transition_input_scores
-            if getattr(stage_manager, "transition_consistency_gate_context", None)
-            is not None
-            and getattr(stage_manager, "current_transition_input_scores", None) is not None
-            else evaluation_result
-        )
-        # Mutation phase
-        is_accepted = False
-        try:
-            execute_mutation_step(
-                stage_manager.current_mutators, mutation_input_scores, runtime_config, step
-            )
+    return decisions, evaluation_result
 
-            # Evaluation phase
-            evaluation_result = perform_evaluation(
-                args,
-                stage_manager.current_evaluator,
+
+def _decide_evaluated_optimization_state(
+    args, loss_computer, evaluation_result, stage_manager, runtime_config, decisions, step,
+    *, finalize_mutations: bool = True,
+):
+    """Apply native acceptance and stage entry to an already evaluated proposal."""
+    is_accepted = False
+    try:
+        # Decision making
+        gate_active = (
+            getattr(stage_manager, "transition_consistency_gate_context", None)
+            is not None
+        )
+        if gate_active:
+            gate_attempt = begin_active_transition_gate_attempt(
                 runtime_config,
-                step,
-                stage_manager.current_oligo,
-                loss_computer=loss_computer,
-            )
-            evaluation_result = _prepare_structure_start_runtime(
+                stage_manager,
                 evaluation_result,
-                timing="pre_accept",
+            )
+            is_early_stop, evaluation_result, is_accepted = (
+                _make_native_decision(
+                    decisions,
+                    step,
+                    evaluation_result,
+                    loss_computer,
+                    runtime_config,
+                )
+            )
+            active_decision = finish_active_transition_gate_decision(
+                runtime_config,
+                stage_manager,
+                gate_attempt,
+                step=step,
+                evaluation_result=evaluation_result,
+                is_accepted=is_accepted,
+                decisions=decisions,
+            )
+            evaluation_result = resolve_active_transition_gate_decision(
+                active_decision,
+                evaluate_target=lambda: _perform_stage_reevaluation(
+                    args=args,
+                    stage_manager=stage_manager,
+                    stage_unit=gate_attempt.plan.target_stage_unit,
+                    runtime_config=runtime_config,
+                    step=step,
+                    oligo=gate_attempt.plan.target_oligo,
+                    loss_computer=loss_computer,
+                ),
+                recompute_last_score=lambda target_result: decisions.recompute_last_score(
+                    loss_computer,
+                    runtime_config,
+                    target_result,
+                ),
+                dump_results=lambda: decisions.dump_results(
+                    global_config.out_dir,
+                    incremental=False,
+                ),
+            )
+        else:
+            is_early_stop, evaluation_result, is_accepted = (
+                _make_native_decision(
+                    decisions,
+                    step,
+                    evaluation_result,
+                    loss_computer,
+                    runtime_config,
+                )
+            )
+            prefix_early_stop = bool(
+                (getattr(decisions, "scores_detail", {}) or {})
+                .get(step, {})
+                .get("prefix_early_stop_triggered", 0.0)
+            )
+            stage_entry_result = _handle_stage_entry(
+                args=args,
+                step=step,
+                evaluation_result=evaluation_result,
+                decisions=decisions,
                 loss_computer=loss_computer,
                 runtime_config=runtime_config,
+                stage_manager=stage_manager,
             )
-
-            # Decision making
-            gate_active = (
-                getattr(stage_manager, "transition_consistency_gate_context", None)
-                is not None
-            )
-            if gate_active:
-                gate_attempt = begin_active_transition_gate_attempt(
-                    runtime_config,
-                    stage_manager,
-                    evaluation_result,
-                )
-                is_early_stop, evaluation_result, is_accepted = (
-                    decisions.make_mutation_decision(
-                        step, evaluation_result, loss_computer, runtime_config
+            if stage_entry_result is not None:
+                evaluation_result = stage_entry_result
+                if (
+                    getattr(stage_manager, "transition_consistency_gate_context", None)
+                    is not None
+                ):
+                    is_early_stop = prefix_early_stop
+                else:
+                    scores_detail = getattr(decisions, "scores_detail", {})
+                    latest_detail = scores_detail.get(
+                        getattr(decisions, "last_accepted", None),
+                        {},
                     )
-                )
-                active_decision = finish_active_transition_gate_decision(
-                    runtime_config,
-                    stage_manager,
-                    gate_attempt,
-                    step=step,
-                    evaluation_result=evaluation_result,
-                    is_accepted=is_accepted,
-                    decisions=decisions,
-                )
-                evaluation_result = resolve_active_transition_gate_decision(
-                    active_decision,
-                    evaluate_target=lambda: _perform_stage_reevaluation(
-                        args=args,
-                        stage_manager=stage_manager,
-                        stage_unit=gate_attempt.plan.target_stage_unit,
-                        runtime_config=runtime_config,
-                        step=step,
-                        oligo=gate_attempt.plan.target_oligo,
-                        loss_computer=loss_computer,
-                    ),
-                    recompute_last_score=lambda target_result: decisions.recompute_last_score(
-                        loss_computer,
-                        runtime_config,
-                        target_result,
-                    ),
-                    dump_results=lambda: decisions.dump_results(
-                        global_config.out_dir,
-                        incremental=False,
-                    ),
-                )
-            else:
-                is_early_stop, evaluation_result, is_accepted = (
-                    decisions.make_mutation_decision(
-                        step, evaluation_result, loss_computer, runtime_config
+                    is_early_stop = bool(
+                        prefix_early_stop
+                        or getattr(
+                            loss_computer,
+                            "is_early_stopping",
+                            lambda _detail: False,
+                        )(
+                            latest_detail
+                        )
                     )
-                )
-                prefix_early_stop = bool(
-                    (getattr(decisions, "scores_detail", {}) or {})
-                    .get(step, {})
-                    .get("prefix_early_stop_triggered", 0.0)
-                )
-                stage_entry_result = _handle_stage_entry(
-                    args=args,
-                    step=step,
-                    evaluation_result=evaluation_result,
-                    decisions=decisions,
-                    loss_computer=loss_computer,
-                    runtime_config=runtime_config,
-                    stage_manager=stage_manager,
-                )
-                if stage_entry_result is not None:
-                    evaluation_result = stage_entry_result
-                    if (
-                        getattr(stage_manager, "transition_consistency_gate_context", None)
-                        is not None
-                    ):
-                        is_early_stop = prefix_early_stop
-                    else:
-                        scores_detail = getattr(decisions, "scores_detail", {})
-                        latest_detail = scores_detail.get(
-                            getattr(decisions, "last_accepted", None),
-                            {},
-                        )
-                        is_early_stop = bool(
-                            prefix_early_stop
-                            or getattr(
-                                loss_computer,
-                                "is_early_stopping",
-                                lambda _detail: False,
-                            )(
-                                latest_detail
-                            )
-                        )
-        finally:
+        return evaluation_result, is_accepted, is_early_stop
+    finally:
+        if finalize_mutations:
             _finalize_mutator_stack_pre_update(runtime_config, accepted=is_accepted)
 
-        if is_early_stop:
-            logging.info("Metrics have converged. Early stopping triggered.")
-            logging.info(
-                build_step_outcome_message(
-                    step=step,
-                    accepted=is_accepted,
-                    early_stop=is_early_stop,
-                    stage_name=getattr(stage_manager, "current_stage", None),
-                )
-            )
-            break
+
+def _advance_optimization_state(
+    args,
+    loss_computer: LossEngine,
+    evaluation_result,
+    stage_manager,
+    runtime_config: Dict,
+    decisions: Decisions,
+    step: int,
+) -> Tuple[Any, bool, bool]:
+    """Advance one mutation, evaluation, decision and stage-entry step."""
+    clear_transition_gate_runtime(runtime_config)
+    runtime_config.pop("reference_gate_result", None)
+    logging.info(
+        build_step_start_message(
+            step=step,
+            total_steps=args.steps,
+            stage_name=getattr(stage_manager, "current_stage", None),
+        )
+    )
+    global_config.set_variable("step", step)
+    mutation_input_scores = (
+        stage_manager.current_transition_input_scores
+        if getattr(stage_manager, "transition_consistency_gate_context", None)
+        is not None
+        and getattr(stage_manager, "current_transition_input_scores", None) is not None
+        else evaluation_result
+    )
+    # Mutation phase
+    is_accepted = False
+    try:
+        execute_mutation_step(
+            stage_manager.current_mutators, mutation_input_scores, runtime_config, step
+        )
+
+        # Evaluation phase
+        evaluation_result = perform_evaluation(
+            args,
+            stage_manager.current_evaluator,
+            runtime_config,
+            step,
+            stage_manager.current_oligo,
+            loss_computer=loss_computer,
+        )
+        evaluation_result = _prepare_structure_start_runtime(
+            evaluation_result,
+            timing="pre_accept",
+            loss_computer=loss_computer,
+            runtime_config=runtime_config,
+        )
+
+    except BaseException:
+        _finalize_mutator_stack_pre_update(runtime_config, accepted=False)
+        raise
+
+    # Decision owns finalization once it can accept the mutation. A later
+    # stage-entry failure must not undo that already committed acceptance.
+    evaluation_result, is_accepted, is_early_stop = (
+        _decide_evaluated_optimization_state(
+            args, loss_computer, evaluation_result, stage_manager,
+            runtime_config, decisions, step,
+        )
+    )
+
+    if is_early_stop:
+        logging.info("Metrics have converged. Early stopping triggered.")
         logging.info(
             build_step_outcome_message(
                 step=step,
@@ -2959,8 +3182,40 @@ def run_optimization_loop(
                 stage_name=getattr(stage_manager, "current_stage", None),
             )
         )
-        step += 1
-    return evaluation_result
+    else:
+        logging.info(
+            build_step_outcome_message(
+                step=step,
+                accepted=is_accepted,
+                early_stop=is_early_stop,
+                stage_name=getattr(stage_manager, "current_stage", None),
+            )
+        )
+    return evaluation_result, is_accepted, is_early_stop
+
+
+def run_optimization_loop(
+    args,
+    loss_computer: LossEngine,
+    initial_evaluation_result,
+    stage_manager,
+    runtime_config: Dict,
+    *,
+    initial_loader=None,
+) -> Any:
+    """Delegate the canonical optimization lifecycle to the native flow owner."""
+    from astrolabe.design.native_flow import run_native_optimization
+
+    return run_native_optimization(
+        args=args,
+        loss_computer=loss_computer,
+        stage_manager=stage_manager,
+        runtime_config=runtime_config,
+        initial_evaluation_result=initial_evaluation_result,
+        initial_loader=initial_loader,
+        initialize=_initialize_optimization_state,
+        advance=_advance_optimization_state,
+    )
 
 
 def _shutdown_pipeline_resources() -> None:
@@ -2975,7 +3230,9 @@ def _shutdown_pipeline_resources() -> None:
             components = global_config.get_const(family)
         except RuntimeError:
             continue
-        for alias, component in (components or {}).items():
+        items = (components.constructed_items() if isinstance(components, LazyEvaluatorMap)
+                 else (components or {}).items())
+        for alias, component in items:
             owner.add(component, f"{family}.{alias}")
     owner.close()
 
@@ -3002,53 +3259,75 @@ def _finish_run_provenance(
 def _run_pipeline(cfg) -> None:
     """Execute a single astrolabe run."""
     args = None
+    recipe = None
     succeeded = False
     try:
-        args = parse_arguments(cfg)
-        setup_logging(args.out_dir, getattr(args, "logging", None))
-        logging.info("Starting protein astrolabe pipeline")
+        recovery = (
+            cfg.get("recovery") if hasattr(cfg, "get")
+            else getattr(cfg, "recovery", None)
+        )
+        if recovery is not None:
+            evaluator_conf = _config_get(cfg, "evaluator", None)
+            terms = _config_get(evaluator_conf, "evaluator_terms", {}) or {}
+            if any(str(_config_get(term, "_type", "")).strip().lower() == "generated_structure"
+                   for term in terms.values()):
+                raise ValueError(
+                    "generated_structure evaluator does not support recovery; "
+                    "use the ordinary run path with explicit initial_structures"
+                )
+            mutator_conf = _config_get(cfg, "mutator", None)
+            mutator_terms = _config_get(mutator_conf, "mutator_terms", {}) or {}
+            if any(str(_config_get(term, "_type", "")).strip().lower() == "rfd4"
+                   for term in mutator_terms.values()):
+                raise ValueError("RFD4 CLI recovery is unsupported")
+            from astrolabe.design.portable_native_builder import build_portable_native_recipe
+            from astrolabe.design.portable_native_math import build_portable_native_math
+            import sys
 
-        # Initialize components
-        loss_computer, stage_manager, inputs = initialize_pipeline_components(args)
-        global_config.init_const(
-            "evaluation_journal", EvaluationJournal(str(pathlib.Path(args.out_dir).resolve()))
-        )
-        runtime_config = {}
-        runtime_config["mutator_stack_pre_update"] = bool(
-            getattr(getattr(args, "mutator", None), "stack_pre_update", False)
-        )
-        runtime_config["state_conflict_diagnostics"] = getattr(
-            getattr(args, "mutator", None),
-            "state_conflict_diagnostics",
-            None,
-        )
-        max_entropy = getattr(
-            getattr(args, "mutator", None),
-            "stack_pre_update_max_entropy",
-            None,
-        )
-        if max_entropy not in (None, "null", "None"):
-            runtime_config["mutator_stack_pre_update_max_entropy"] = float(max_entropy)
+            recipe = build_portable_native_recipe(
+                cfg, math_factory=build_portable_native_math,
+                run_module=sys.modules[__name__],
+            )
+            args = recipe.args
+            setup_logging(args.out_dir, getattr(args, "logging", None))
+            logging.info("Starting durable Astrolabe design pipeline")
+            recipe.run()
+        else:
+            args = parse_arguments(cfg)
+            setup_logging(args.out_dir, getattr(args, "logging", None))
+            logging.info("Starting Astrolabe design pipeline")
 
-        # Initial evaluation
-        initial_result = load_or_evaluate_initial(
-            args,
-            stage_manager.current_evaluator,
-            inputs,
-            runtime_config,
-            args.task_name,
-            loss_computer=loss_computer,
-        )
+            # Initialize components
+            loss_computer, stage_manager, inputs = initialize_pipeline_components(args)
+            runtime_config = {}
+            runtime_config["mutator_stack_pre_update"] = bool(
+                getattr(getattr(args, "mutator", None), "stack_pre_update", False)
+            )
+            runtime_config["state_conflict_diagnostics"] = getattr(
+                getattr(args, "mutator", None),
+                "state_conflict_diagnostics",
+                None,
+            )
+            max_entropy = getattr(
+                getattr(args, "mutator", None),
+                "stack_pre_update_max_entropy",
+                None,
+            )
+            if max_entropy not in (None, "null", "None"):
+                runtime_config["mutator_stack_pre_update_max_entropy"] = float(max_entropy)
 
-        # Run optimization
-        run_optimization_loop(
-            args,
-            loss_computer,
-            initial_result,
-            stage_manager,
-            runtime_config,
-        )
-
+            # The common coordinator owns the root evaluation and all advances.
+            run_optimization_loop(
+                args,
+                loss_computer,
+                None,
+                stage_manager,
+                runtime_config,
+                initial_loader=lambda: load_or_evaluate_initial(
+                    args, stage_manager.current_evaluator, inputs, runtime_config,
+                    args.task_name, loss_computer=loss_computer,
+                ),
+            )
         logging.info("Pipeline completed successfully")
         succeeded = True
 
@@ -3065,8 +3344,12 @@ def _run_pipeline(cfg) -> None:
     else:
         _finish_run_provenance(args, "completed")
     finally:
-        _shutdown_pipeline_resources()
-        _cleanup_auto_managed_raw_dir(args=args, succeeded=succeeded)
+        try:
+            if recipe is not None:
+                recipe.close()
+        finally:
+            _shutdown_pipeline_resources()
+            _cleanup_auto_managed_raw_dir(args=args, succeeded=succeeded)
 
 
 def _cleanup_auto_managed_raw_dir(*, args, succeeded: bool) -> None:
@@ -3116,89 +3399,68 @@ def _cleanup_auto_managed_raw_dir(*, args, succeeded: bool) -> None:
 
 
 
+@scientific_session
 def run_repeats(
     base_cfg: Any,
     *,
     on_stop_requested: Callable[[int, int], None] | None = None,
 ) -> None:
-    """Run `_run_pipeline` for configured repeats with unified seed/reset semantics."""
-    base_obj = OmegaConf.to_container(base_cfg, resolve=False)
-    lifecycle_cfg = OmegaConf.create(base_obj)
+    """Validate first, then own resources around the scientific repeat lifecycle."""
+    from astrolabe.startup_validation import validate_startup_config
+    from astrolabe.runtime.session import resource_session
 
-    # Resolve only fields required to schedule the lifecycle. Per-repeat configs
-    # continue to be cloned from the unresolved base object below.
-    repeats_raw = lifecycle_cfg.get("repeats", 1)
-    repeats_is_decimal_string = False
-    if type(repeats_raw) is str:
-        digits = repeats_raw[1:] if repeats_raw[:1] in "+-" else repeats_raw
-        repeats_is_decimal_string = (
-            bool(digits) and digits.isascii() and digits.isdecimal()
-        )
-    if type(repeats_raw) is not int and not repeats_is_decimal_string:
-        raise ValueError(
-            f"Invalid repeats={repeats_raw!r}; expected a positive decimal integer."
-        )
-    repeats = int(repeats_raw)
-    if repeats <= 0:
-        raise ValueError(
-            f"Invalid repeats={repeats_raw!r}; expected a positive decimal integer."
-        )
+    validate_startup_config(base_cfg, require_inputs=True)
+    execution = base_cfg.get("execution") if hasattr(base_cfg, "get") else None
+    if OmegaConf.is_config(execution):
+        execution = OmegaConf.to_container(execution, resolve=True)
+    with resource_session(execution):
+        _run_repeats_owned(base_cfg, on_stop_requested=on_stop_requested)
 
-    raw_seed = lifecycle_cfg.get("seed")
-    base_seed = None
-    if raw_seed is not None:
-        seed_is_decimal_string = False
-        if type(raw_seed) is str:
-            digits = raw_seed[1:] if raw_seed[:1] in "+-" else raw_seed
-            seed_is_decimal_string = (
-                bool(digits) and digits.isascii() and digits.isdecimal()
+
+def _run_repeats_owned(
+    base_cfg: Any,
+    *,
+    on_stop_requested: Callable[[int, int], None] | None = None,
+) -> None:
+    """Preserve configured repeats, seeds and graceful-stop boundaries."""
+    search = base_cfg.get("search") if hasattr(base_cfg, "get") else None
+    if search is not None:
+        resume = search.get("resume", False)
+        if type(resume) is not bool:
+            raise ValueError("search.resume must be boolean")
+        if resume:
+            repeats = base_cfg.get("repeats", 1)
+            repeat_plan = base_cfg.get("repeat_plan")
+            planned = (
+                repeat_plan.get("count")
+                if repeat_plan is not None and hasattr(repeat_plan, "get")
+                else None
             )
-        if type(raw_seed) is not int and not seed_is_decimal_string:
-            raise ValueError(
-                f"Invalid seed value {raw_seed!r}; expected null or a decimal integer."
-            )
-        base_seed = int(raw_seed)
-        last_seed = base_seed + repeats - 1
-        if base_seed < 1 or last_seed > 2**32 - 1:
-            raise ValueError(
-                "Invalid seed sequence: explicit seeds must stay within "
-                f"1..{2**32 - 1}, got {base_seed}..{last_seed}."
-            )
+            if type(repeats) is not int or repeats != 1 or planned not in (None, 1):
+                raise ValueError("search.resume=true requires exactly one repeat")
+    validate_execution_selection(base_cfg)
+    repeats = plan_repeat_runs(base_cfg)
 
     install_handlers()
 
-    for repeat_idx in range(repeats):
-        run_cfg = OmegaConf.create(base_obj)
-        run_cfg.repeats = repeats
-        run_cfg.repeat_index = repeat_idx
-        if base_seed is None:
-            task_name = str(run_cfg.get("task_name") or "")
-            digest = hashlib.sha256(
-                f"{task_name}:{repeat_idx}".encode("utf-8")
-            ).hexdigest()
-            run_cfg.seed = (int(digest[:8], 16) % 1_000_000) + 1
-        else:
-            run_cfg.seed = base_seed + repeat_idx
-
-        raw_dir = run_cfg.get("raw_model_results_dir")
-        if raw_dir not in (None, "", "null", "None"):
-            run_cfg.raw_model_results_dir = (
-                pathlib.Path(str(raw_dir)).expanduser()
-                / f"repeat_{repeat_idx + 1:03d}"
-            )
-
+    for repeat in repeats:
+        run_cfg = materialize_repeat(base_cfg, repeat)
+        validate_execution_selection(run_cfg)
         global_config.reset()
-        print(f"=== Repeat {repeat_idx + 1}/{repeats} ===")
-        _run_pipeline(run_cfg)
+        print(f"=== Repeat {repeat.number}/{repeat.total} ===")
+        from astrolabe.model_execution import model_run_scope
+        with model_run_scope():
+            if not dispatch_selected_search(run_cfg, repeat):
+                _run_pipeline(run_cfg)
         if stop_requested():
             if on_stop_requested is None:
                 logging.warning(
                     "Graceful stop requested; exiting after repeat %d/%d.",
-                    repeat_idx + 1,
-                    repeats,
+                    repeat.number,
+                    repeat.total,
                 )
             else:
-                on_stop_requested(repeat_idx + 1, repeats)
+                on_stop_requested(repeat.number, repeat.total)
             break
 
 
@@ -3207,11 +3469,3 @@ def main(args) -> None:
     """Main entry point for the protein astrolabe pipeline."""
     os.environ["XLA_PYTHON_CLIENT_PREALLOCATE"] = "false"
     run_repeats(args)
-
-
-if __name__ == "__main__":
-    print(
-        "[DEPRECATED] `python run.py` is a compatibility path. Use `gh run ...` instead.",
-        file=os.sys.stderr,
-    )
-    main()

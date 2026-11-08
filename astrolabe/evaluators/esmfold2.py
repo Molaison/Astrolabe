@@ -9,6 +9,7 @@ import numpy as np
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.base import Evaluator
+from astrolabe.evaluators.structure_output import project_structure, structure_directory
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.evaluators.wrappers.esmfold2 import ESMFold2Runner
 
@@ -18,7 +19,9 @@ def _as_array(value: Any) -> np.ndarray:
 
 
 class ESMFold2Evaluator(Evaluator):
-    """Subprocess evaluator for the independent Biohub ESMFold2 model."""
+    """Evaluator for the independent, natively staged Biohub ESMFold2 model."""
+
+    _staged_evaluation = True
 
     def __init__(
         self,
@@ -36,12 +39,17 @@ class ESMFold2Evaluator(Evaluator):
         num_sampling_steps: int = 50,
         num_diffusion_samples: int = 1,
         seed: int | None = None,
-        lm_dropout: float | None = 0.0,
-        msa_max_depth: int | None = 1024,
-        msa_column_mask_rate: float = 0.1,
+        lm_dropout: float | None = None,
+        msa_max_depth: int | None = None,
+        msa_column_mask_rate: float | None = None,
+        noise_scale: float | None = None,
+        step_scale: float | None = None,
+        max_inference_sigma: int | None = None,
+        early_exit: bool = False,
         chunk_size: int | None = 64,
         local_files_only: bool = False,
         timeout_seconds: float | None = None,
+        execution_mode: str = "daemon",
     ) -> None:
         self._model_name = model_name
         self._device = device
@@ -61,9 +69,14 @@ class ESMFold2Evaluator(Evaluator):
             lm_dropout=lm_dropout,
             msa_max_depth=msa_max_depth,
             msa_column_mask_rate=msa_column_mask_rate,
+            noise_scale=noise_scale,
+            step_scale=step_scale,
+            max_inference_sigma=max_inference_sigma,
+            early_exit=early_exit,
             chunk_size=chunk_size,
             local_files_only=local_files_only,
             timeout_seconds=timeout_seconds,
+            execution_mode=execution_mode,
         )
 
     def prepare_input(self, inputs, runtime_config):
@@ -77,7 +90,15 @@ class ESMFold2Evaluator(Evaluator):
             chains = []
             for chain_id, chain in zip(oligo_name, folding_input.protein_chains):
                 chains.append({"id": chain_id, "sequence": chain.sequence})
-            jobs.append({"name": oligo_name, "chains": chains})
+            job = {"name": oligo_name, "chains": chains}
+            seeds = tuple(folding_input.rng_seeds)
+            if len(seeds) > 1:
+                raise ValueError("ESMFold2 supports one input RNG seed per assembly")
+            if seeds:
+                # The independent model process does not inherit the caller's
+                # RNG state. Carry the standard input seed with its own job.
+                job["seed"] = int(seeds[0])
+            jobs.append(job)
         return jobs
 
     def run_function(self, input_feat):
@@ -89,8 +110,7 @@ class ESMFold2Evaluator(Evaluator):
 
     def prepare_output(self, output, inputs, runtime_config):
         names = [job["name"] for job in output["jobs"]]
-        structure_dir = global_config.out_dir / "structures"
-        structure_dir.mkdir(parents=True, exist_ok=True)
+        structure_dir = structure_directory(global_config.out_dir, getattr(self, "alias", None))
 
         complex_paths = {}
         plddt = {}
@@ -105,7 +125,21 @@ class ESMFold2Evaluator(Evaluator):
             jobname = f"step_{global_config.step:03d}_{oligo_name}"
             source_path = Path(job["structure_path"])
             target_path = structure_dir / f"{jobname}_model.cif"
-            target_path.write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8")
+            # Biohub omits occupancy for its single-conformer predictions, but
+            # downstream structure readers require it. Keep the native file
+            # untouched and preserve every existing CIF value (no float rewrite).
+            from Bio.PDB import MMCIFIO
+            from Bio.PDB.MMCIF2Dict import MMCIF2Dict
+
+            cif = MMCIF2Dict(str(source_path))
+            if "_atom_site.id" in cif and "_atom_site.occupancy" not in cif:
+                cif["_atom_site.occupancy"] = ["1.0"] * len(cif["_atom_site.id"])
+                writer = MMCIFIO()
+                writer.set_dict(cif)
+                writer.save(str(target_path))
+            else:
+                target_path.write_text(source_path.read_text(encoding="utf-8"), encoding="utf-8")
+            project_structure(target_path, global_config.out_dir, getattr(self, "alias", None))
             complex_paths[oligo_name] = target_path
 
             residue_plddt = _as_array(job["plddt"])

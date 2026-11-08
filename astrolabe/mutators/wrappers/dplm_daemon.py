@@ -21,6 +21,8 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from astrolabe.mutators.wrappers.dplm_infer import _resolve_model_name
+from astrolabe.model_execution import KernelStages, host_result
+from astrolabe.mutators.runtime_stages import mutator_kernel_handler, protocol_infer, device_resource
 
 
 def _ensure_byprot_on_path() -> None:
@@ -116,22 +118,67 @@ def _write(obj: Dict[str, Any]) -> None:
     sys.stdout.flush()
 
 
+def create_handler(settings):
+    def load(config):
+        _ensure_byprot_on_path()
+        from byprot.models.dplm.dplm import DiffusionProteinLanguageModel
+        device = _select_device(config.get("device", "auto"))
+        _seed_everything(random.randint(0, 1_000_000))
+        model = DiffusionProteinLanguageModel.from_pretrained(
+            _resolve_model_name(config.get("model_name", "airkingbd/dplm_150m"))
+        ).to(device)
+        model.eval()
+        tokenizer = model.tokenizer
+        def prepare(message):
+            tasks = []
+            for task in message.get("tasks", []) or []:
+                name, sequence = task.get("name"), task.get("masked_sequence")
+                if name is None or sequence is None:
+                    continue
+                count = int(task.get("num_samples", config.get("num_samples", 1)) or 0)
+                tokens = None
+                if count > 0:
+                    tokens = tokenizer.batch_encode_plus(
+                        [str(sequence)] * count, add_special_tokens=True,
+                        padding=True, return_tensors="pt",
+                    )["input_ids"]
+                tasks.append((name, tokens))
+            return message, tasks
+        def execute(prepared):
+            import torch
+            message, tasks = prepared
+            results = []
+            for name, tokens in tasks:
+                if tokens is None:
+                    results.append((name, None))
+                    continue
+                input_ids = tokens.to(device)
+                partial_masks = input_ids.ne(model.mask_id)
+                with torch.no_grad():
+                    outputs = model.generate(
+                        input_tokens=input_ids, tokenizer=tokenizer,
+                        max_iter=int(message.get("max_iter", config.get("max_iter", 500))),
+                        sampling_strategy=str(message.get("sampling_strategy", config.get("sampling_strategy", "gumbel_argmax"))),
+                        temperature=float(message.get("temperature", config.get("temperature", 1.0))),
+                        partial_masks=partial_masks,
+                    )
+                results.append((name, host_result(outputs)))
+            return results
+        def finalize(results):
+            return [{"name": name, "samples": [] if outputs is None else [
+                _clean_sequence(seq) for seq in tokenizer.batch_decode(outputs, skip_special_tokens=True)
+            ]} for name, outputs in results]
+        return KernelStages(prepare, execute, finalize, resource=device_resource(device)), {
+            "device": device, "model_name": config.get("model_name", "airkingbd/dplm_150m"),
+            "weights_loaded": True,
+        }
+    return mutator_kernel_handler(settings, load, backend="dplm",
+                                  torch_device=_select_device(settings.get("device", "auto")))
+
+
 def main() -> int:
     args = _parse_args()
-
-    # Lazy import (keeps `gh doctor` light if someone imports this module).
-    _ensure_byprot_on_path()
-    from byprot.models.dplm.dplm import DiffusionProteinLanguageModel
-
-    device = _select_device(args.device)
-    _seed_everything(random.randint(0, 1_000_000))
-
-    model = DiffusionProteinLanguageModel.from_pretrained(
-        _resolve_model_name(args.model_name)
-    )
-    model = model.to(device)
-    model.eval()
-    tokenizer = model.tokenizer
+    handler = create_handler(vars(args))
 
     for raw in sys.stdin:
         line = raw.strip()
@@ -154,27 +201,10 @@ def main() -> int:
         req_id = msg.get("id")
         _seed_everything(msg.get("seed"))
 
-        tasks: List[Dict[str, Any]] = msg.get("tasks", []) or []
-        results: List[Dict[str, Any]] = []
-        for task in tasks:
-            name = task.get("name")
-            masked_sequence = task.get("masked_sequence")
-            if name is None or masked_sequence is None:
-                continue
-            num_samples = int(task.get("num_samples", args.num_samples) or 0)
-            samples = _run_generation(
-                model=model,
-                tokenizer=tokenizer,
-                masked_sequence=str(masked_sequence),
-                num_samples=num_samples,
-                max_iter=int(msg.get("max_iter", args.max_iter)),
-                sampling_strategy=str(msg.get("sampling_strategy", args.sampling_strategy)),
-                temperature=float(msg.get("temperature", args.temperature)),
-                device=device,
-            )
-            results.append({"name": name, "samples": samples})
-
-        _write({"type": "result", "id": req_id, "results": results})
+        results = protocol_infer(handler, msg)
+        metadata = handler({"operation": "describe"})["metadata"]
+        _write({"type": "result", "id": req_id, "results": results,
+                "metadata": metadata, "runtime": handler.last_runtime})
 
     return 0
 

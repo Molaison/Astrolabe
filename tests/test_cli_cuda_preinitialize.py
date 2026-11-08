@@ -15,7 +15,7 @@ def _run_main(argv: list[str] | None) -> int:
     return int(excinfo.value.code)
 
 
-def test_successful_gpu_path_parses_then_initializes_then_enters_handler(
+def test_successful_gpu_run_validates_before_initializing_then_loads_application(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     events: list[str] = []
@@ -33,7 +33,8 @@ def test_successful_gpu_path_parses_then_initializes_then_enters_handler(
         return 0
 
     def _handler(_ns: argparse.Namespace) -> int:
-        events.append("handler/model import")
+        events.append("compose config")
+        cli._run_from_config({"steps": 1}, autoselect_gpu=False)
         return 0
 
     monkeypatch.setenv("GH_CUDA_PREINITIALIZE", "1")
@@ -44,9 +45,18 @@ def test_successful_gpu_path_parses_then_initializes_then_enters_handler(
         lambda _name: SimpleNamespace(cuInit=_cu_init),
     )
     monkeypatch.setattr(cli, "_cmd_run", _handler)
+    from astrolabe import app, startup_validation
+
+    def _validate_config(cfg, *, require_inputs=False):
+        assert require_inputs is True
+        events.append("validate")
+
+    monkeypatch.setattr(startup_validation, "validate_startup_config",
+                        _validate_config)
+    monkeypatch.setattr(app, "run_from_cfg", lambda cfg: events.append("application/model import"))
 
     assert _run_main(["run", "--task", "demo"]) == 0
-    assert events == ["parse", "cuInit", "handler/model import"]
+    assert events == ["parse", "compose config", "validate", "cuInit", "application/model import"]
 
 
 @pytest.mark.parametrize(

@@ -21,7 +21,8 @@ from omegaconf import OmegaConf
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import DnaChain, Input, Ligand, ProteinChain, RnaChain
 from astrolabe.evaluators.base import Evaluator
-from astrolabe.evaluators.utils import StandardScores
+from astrolabe.evaluators.structure_output import project_structure, structure_directory
+from astrolabe.evaluators.utils import StandardScores, shutdown_model_handles
 from astrolabe.evaluators.wrappers.rf3 import RF3RunnerRequest, RF3RunnerResponse
 
 
@@ -936,8 +937,7 @@ class RoseTTAFold3Evaluator(Evaluator):
         self.rf3_conf = rf3_conf or OmegaConf.create({})
 
     def shutdown(self) -> None:
-        """Release the existing runner using its idempotent shutdown contract."""
-        self.model_runner.shutdown()
+        shutdown_model_handles(self.model_runner)
 
     def prepare_input(self, inputs, runtime_config=None):
         runtime_config = runtime_config or {}
@@ -1046,8 +1046,7 @@ class RoseTTAFold3Evaluator(Evaluator):
         complex_paths: dict[str, Path] = {}
         per_proto_scores: dict[str, list[np.ndarray]] = defaultdict(list)
         chain_pair_scores: dict[str, dict[str, list[np.ndarray]]] = {}
-        structures_dir = Path(global_config.out_dir) / "structures"
-        structures_dir.mkdir(parents=True, exist_ok=True)
+        structures_dir = structure_directory(global_config.out_dir, getattr(self, "alias", None))
         fixed_ligands = dict(_normalize_rf3_conf_container(self.rf3_conf).get("fixed_ligands", {}) or {})
 
         for oligo_name, response in outputs.items():
@@ -1104,6 +1103,7 @@ class RoseTTAFold3Evaluator(Evaluator):
 
             canonical_path = structures_dir / f"{response.request_id}_model{Path(response.predicted_structure_path).suffix}"
             shutil.copy(str(response.predicted_structure_path), str(canonical_path))
+            project_structure(canonical_path, global_config.out_dir, getattr(self, "alias", None))
             complex_paths[oligo_name] = canonical_path
             chain_pair_score_payload = _coerce_chain_pair_scores(summary)
             if chain_pair_score_payload is not None:

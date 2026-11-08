@@ -32,7 +32,7 @@ def test_profiles_expand_without_duplicates() -> None:
 
 
 def test_dependency_closure_is_explicit() -> None:
-    assert resolve_software(("dynamicmpnn",)) == ("dynamicmpnn", "ligandmpnn")
+    assert resolve_software(("dynamicmpnn",)) == ("dynamicmpnn",)
     assert resolve_software(("autodock-gpu",)) == (
         "autodock-gpu",
         "autodock-vina",

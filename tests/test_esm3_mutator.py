@@ -27,6 +27,7 @@ def _install_dummy_esm3(monkeypatch):
         def from_pretrained(cls, model_name: str, device=None):
             calls["model_name"] = model_name
             calls["device"] = device
+            calls["model_data_root"] = sys.modules["esm3.pretrained"].data_root("esm3")
             return _DummyRunner()
 
     class _DummyESMProtein:
@@ -60,9 +61,11 @@ def _install_dummy_esm3(monkeypatch):
     esm3_mod.ESM3 = _DummyESM3
     api_mod.ESMProtein = _DummyESMProtein
     api_mod.LogitsConfig = _DummyLogitsConfig
-    tokenization_mod.get_esm3_model_tokenizers = lambda _name: types.SimpleNamespace(
-        sequence=_DummyTokenizer()
-    )
+    def get_tokenizers(_name):
+        calls["tokenizer_data_root"] = constants_mod.data_root("esm3")
+        return types.SimpleNamespace(sequence=_DummyTokenizer())
+
+    tokenization_mod.get_esm3_model_tokenizers = get_tokenizers
 
     for name, module in {
         "esm3": esm3_pkg,
@@ -86,7 +89,11 @@ def test_esm3_mutator_passes_requested_device_to_from_pretrained(monkeypatch) ->
 
     from astrolabe.mutators.esm3 import ESM3Mutator
 
-    mutator = ESM3Mutator(model_name="esm3-open", device="cpu")
+    mutator = ESM3Mutator(
+        model_name="esm3-open",
+        device="cpu",
+        execution_mode="in_process",
+    )
 
     assert calls["model_name"] == "esm3-open"
     assert calls["device"] == torch.device("cpu")
@@ -95,16 +102,24 @@ def test_esm3_mutator_passes_requested_device_to_from_pretrained(monkeypatch) ->
 
 
 def test_esm3_uses_pinned_snapshot_data_root(monkeypatch, tmp_path: Path) -> None:
-    _install_dummy_esm3(monkeypatch)
+    calls = _install_dummy_esm3(monkeypatch)
+    pretrained = sys.modules["esm3.pretrained"]
+    constants = sys.modules["esm3.utils.constants.esm3"]
+    original_roots = (pretrained.data_root, constants.data_root)
     snapshot = tmp_path / "snapshots" / "fixed-revision"
     snapshot.mkdir(parents=True)
     monkeypatch.setenv("GH_ESM3_MODEL_SNAPSHOT", str(snapshot))
 
     from astrolabe.mutators.esm3 import ESM3Mutator
 
-    ESM3Mutator(model_name="esm3-open", device="cpu")
+    ESM3Mutator(
+        model_name="esm3-open",
+        device="cpu",
+        execution_mode="in_process",
+    )
 
-    pretrained = sys.modules["esm3.pretrained"]
-    constants = sys.modules["esm3.utils.constants.esm3"]
-    assert pretrained.data_root("esm3") == snapshot.resolve()
-    assert constants.data_root("esm3") == snapshot.resolve()
+    # Pinning is scoped to native loading, not a process-wide vendor mutation.
+    assert calls["model_data_root"] == snapshot.resolve()
+    assert calls["tokenizer_data_root"] == snapshot.resolve()
+    assert pretrained.data_root is original_roots[0]
+    assert constants.data_root is original_roots[1]

@@ -1,0 +1,564 @@
+[
+  {
+    "id": "valid_minimal",
+    "file": "valid_minimal.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "unknown_evaluator",
+    "file": "unknown_evaluator.yaml",
+    "expected_error": "unknown evaluator",
+    "parameters": [
+      "evaluator.evaluator_terms.check._type"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "unknown_mutator",
+    "file": "unknown_mutator.yaml",
+    "expected_error": "unknown mutator",
+    "parameters": [
+      "mutator.mutator_terms.m._type"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "missing_evaluator_alias",
+    "file": "missing_evaluator_alias.yaml",
+    "expected_error": "evaluator.evaluator_terms.missing",
+    "parameters": [
+      "stages.default.evaluator"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "missing_mutator_alias",
+    "file": "missing_mutator_alias.yaml",
+    "expected_error": "mutator.mutator_terms.missing",
+    "parameters": [
+      "stages.default.mutators"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "disabled_evaluator",
+    "file": "disabled_evaluator.yaml",
+    "expected_error": "evaluator.enabled_aliases",
+    "parameters": [
+      "evaluator.enabled_aliases"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "disabled_mutator",
+    "file": "disabled_mutator.yaml",
+    "expected_error": "mutator.enabled_aliases",
+    "parameters": [
+      "mutator.enabled_aliases"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "init_workers_zero",
+    "file": "init_workers_zero.yaml",
+    "expected_error": "evaluator.initialization.workers",
+    "parameters": [
+      "evaluator.initialization.workers"
+    ],
+    "valid_control": "valid_parallel_plan.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "init_workers_bool",
+    "file": "init_workers_bool.yaml",
+    "expected_error": "evaluator.initialization.workers",
+    "parameters": [
+      "evaluator.initialization.workers"
+    ],
+    "valid_control": "valid_parallel_plan.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "init_seed_negative",
+    "file": "init_seed_negative.yaml",
+    "expected_error": "evaluator.initialization.seed",
+    "parameters": [
+      "evaluator.initialization.seed"
+    ],
+    "valid_control": "valid_parallel_plan.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "init_workers_without_seed",
+    "file": "init_workers_without_seed.yaml",
+    "expected_error": "evaluator.initialization.seed",
+    "parameters": [
+      "evaluator.initialization.workers"
+    ],
+    "valid_control": "valid_parallel_plan.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "selected_interpolation_missing",
+    "file": "selected_interpolation_missing.yaml",
+    "expected_error": "missing.formal_value",
+    "parameters": [
+      "evaluator.evaluator_terms.check.label"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "selected_mandatory_missing",
+    "file": "selected_mandatory_missing.yaml",
+    "expected_error": "Missing mandatory value",
+    "parameters": [
+      "evaluator.evaluator_terms.check.label"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "loss_unknown",
+    "file": "loss_unknown.yaml",
+    "expected_error": "unknown loss",
+    "parameters": [
+      "loss.loss_terms.score"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "loss_required_parameter",
+    "file": "loss_required_parameter.yaml",
+    "expected_error": "score.protomer_b",
+    "parameters": [
+      "loss.loss_terms.score"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "loss_parameter_typo",
+    "file": "loss_parameter_typo.yaml",
+    "expected_error": "score.interface_distnace",
+    "parameters": [
+      "loss.loss_terms.score"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "loss_expression_cycle",
+    "file": "loss_expression_cycle.yaml",
+    "expected_error": "cyclic dependency",
+    "parameters": [
+      "loss.expression_terms",
+      "stages.default.weighted_score_expression"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "score_expression_syntax",
+    "file": "score_expression_syntax.yaml",
+    "expected_error": "weighted_score_expression",
+    "parameters": [
+      "stages.default.weighted_score_expression"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "acceptance_gate_syntax",
+    "file": "acceptance_gate_syntax.yaml",
+    "expected_error": "acceptance_gate",
+    "parameters": [
+      "stages.default.acceptance_gate"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "early_stopping_syntax",
+    "file": "early_stopping_syntax.yaml",
+    "expected_error": "early_stopping",
+    "parameters": [
+      "stages.default.early_stopping"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "entrance_missing",
+    "file": "entrance_missing.yaml",
+    "expected_error": "stages.next._entrance",
+    "parameters": [
+      "stages.next"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "active_loss_unknown",
+    "file": "active_loss_unknown.yaml",
+    "expected_error": "unknown loss alias",
+    "parameters": [
+      "stages.default.active_loss_terms"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "mutation_num_nan",
+    "file": "mutation_num_nan.yaml",
+    "expected_error": "mutation_num",
+    "parameters": [
+      "stages.default.mutation_num"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "mutation_num_list",
+    "file": "mutation_num_list.yaml",
+    "expected_error": "mutation_num",
+    "parameters": [
+      "stages.default.mutation_num"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "selector_typo",
+    "file": "selector_typo.yaml",
+    "expected_error": "unknown selector",
+    "parameters": [
+      "mutator.mutator_terms.m.position_selector"
+    ],
+    "valid_control": "valid_selector.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "initializer_mode_typo",
+    "file": "initializer_mode_typo.yaml",
+    "expected_error": "initializer.mode",
+    "parameters": [
+      "initializer.mode"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "initializer_aa_set_empty",
+    "file": "initializer_aa_set_empty.yaml",
+    "expected_error": "initializer.aa_set",
+    "parameters": [
+      "initializer.mode",
+      "initializer.aa_set"
+    ],
+    "valid_control": "valid_aa_set.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "initializer_mask_fraction",
+    "file": "initializer_mask_fraction.yaml",
+    "expected_error": "initializer.mask_fraction",
+    "parameters": [
+      "initializer.mode",
+      "initializer.mask_fraction"
+    ],
+    "valid_control": "valid_mask_mix.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "initializer_x_fraction",
+    "file": "initializer_x_fraction.yaml",
+    "expected_error": "initializer.x_fraction",
+    "parameters": [
+      "initializer.mode",
+      "initializer.x_fraction"
+    ],
+    "valid_control": "valid_x_mix.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "initializer_dplm_alias",
+    "file": "initializer_dplm_alias.yaml",
+    "expected_error": "initializer.dplm_alias",
+    "parameters": [
+      "initializer.mode",
+      "initializer.dplm_alias"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "search_unknown",
+    "file": "search_unknown.yaml",
+    "expected_error": "Unknown selected search",
+    "parameters": [
+      "search"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "valid_unused_defaults",
+    "file": "valid_unused_defaults.yaml",
+    "expected_error": null,
+    "parameters": [
+      "evaluator.alphafold3.model_dir"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "valid_merge_override",
+    "file": "valid_merge_override.yaml",
+    "expected_error": null,
+    "parameters": [
+      "evaluator.sequence.label",
+      "evaluator.evaluator_terms.check.label"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "valid_negative_mutation_semantics",
+    "file": "valid_negative_mutation_semantics.yaml",
+    "expected_error": null,
+    "parameters": [
+      "stages.default.mutation_num"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/startup_validation.py",
+      "astrolabe/evaluator_startup.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "malformed_yaml",
+    "file": "malformed_yaml.yaml",
+    "expected_error": "while parsing",
+    "parameters": [
+      "yaml.syntax"
+    ],
+    "valid_control": "valid_minimal.yaml",
+    "source": [
+      "astrolabe/cli.py:_cmd_run"
+    ]
+  },
+  {
+    "id": "valid_aa_set",
+    "file": "valid_aa_set.yaml",
+    "expected_error": null,
+    "parameters": [
+      "initializer.mode",
+      "initializer.aa_set"
+    ],
+    "valid_control": "valid_aa_set.yaml",
+    "source": [
+      "config/base.yaml",
+      "astrolabe/startup_validation.py"
+    ]
+  },
+  {
+    "id": "valid_mask_mix",
+    "file": "valid_mask_mix.yaml",
+    "expected_error": null,
+    "parameters": [
+      "initializer.mode",
+      "initializer.mask_fraction"
+    ],
+    "valid_control": "valid_mask_mix.yaml",
+    "source": [
+      "config/base.yaml",
+      "astrolabe/startup_validation.py"
+    ]
+  },
+  {
+    "id": "valid_x_mix",
+    "file": "valid_x_mix.yaml",
+    "expected_error": null,
+    "parameters": [
+      "initializer.mode",
+      "initializer.x_fraction"
+    ],
+    "valid_control": "valid_x_mix.yaml",
+    "source": [
+      "config/base.yaml",
+      "astrolabe/startup_validation.py"
+    ]
+  },
+  {
+    "id": "valid_selector",
+    "file": "valid_selector.yaml",
+    "expected_error": null,
+    "parameters": [
+      "mutator.mutator_terms.m.position_selector"
+    ],
+    "valid_control": "valid_selector.yaml",
+    "source": [
+      "config/base.yaml",
+      "astrolabe/startup_validation.py"
+    ]
+  },
+  {
+    "id": "valid_parallel_plan",
+    "file": "valid_parallel_plan.yaml",
+    "expected_error": null,
+    "parameters": [
+      "evaluator.evaluator_terms.check._type",
+      "evaluator.evaluator_terms.check.model_dir",
+      "evaluator.initialization"
+    ],
+    "valid_control": "valid_parallel_plan.yaml",
+    "source": [
+      "config/base.yaml",
+      "astrolabe/startup_validation.py"
+    ]
+  }
+]

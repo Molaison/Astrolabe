@@ -17,6 +17,15 @@ from pathlib import Path
 from typing import Any
 
 
+_ASTROLABE_ROOT = Path(__file__).resolve().parents[3]
+if str(_ASTROLABE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ASTROLABE_ROOT))
+from astrolabe.model_execution import KernelStages
+from astrolabe.mutators.runtime_stages import (
+    mutator_kernel_handler, protocol_infer, guarded_device,
+)
+
+
 AA_ORDER = "ACDEFGHIKLMNPQRSTVWY"
 AA3_TO_1 = {
     "ALA": "A",
@@ -88,6 +97,7 @@ def _seed_everything(seed: int) -> None:
     torch.cuda.manual_seed_all(seed)
 
 
+@guarded_device("surfpro", phase="load")
 def _load_runtime(args: argparse.Namespace) -> Runtime:
     repo_path = Path(args.repo_path).resolve()
     sys.path.insert(0, str(repo_path))
@@ -427,7 +437,8 @@ def _decode_sequence(
     src_lengths,
     native_sequence: str,
     fixed_indices: set[int],
-) -> tuple[list[list[float]], str]:
+    *, _raw=False,
+):
     torch = runtime.torch
     dictionary = runtime.dictionary
     aa_token_indices = [dictionary.get_idx(aa) for aa in AA_ORDER]
@@ -451,22 +462,29 @@ def _decode_sequence(
             aa_logits.float() / runtime.logit_temperature,
             dim=-1,
         )
-        probabilities.append(aa_probabilities[0].cpu().tolist())
+        probabilities.append(aa_probabilities[0].cpu())
 
         if position in fixed_indices:
             next_token = native_token
         else:
             aa_choice = int(torch.argmax(aa_logits, dim=-1).item())
             next_token = aa_token_indices[aa_choice]
-        generated.append(dictionary.get_tok(next_token))
+        generated.append(next_token)
         next_tensor = torch.tensor(
             [[next_token]], dtype=torch.long, device=runtime.device
         )
         prev_tokens = torch.cat((prev_tokens, next_tensor), dim=1)
-    return probabilities, "".join(generated)
+    raw = probabilities, generated
+    return raw if _raw else _finalize_decode(runtime, raw)
 
 
-def _infer(
+def _finalize_decode(runtime, raw):
+    probabilities, generated = raw
+    return ([row.tolist() for row in probabilities],
+            "".join(runtime.dictionary.get_tok(token) for token in generated))
+
+
+def _prepare(
     runtime: Runtime,
     surface_builder: SurfaceBuilder,
     pdb_path: Path,
@@ -481,6 +499,12 @@ def _infer(
     fixed_indices = _fixed_flat_indices(
         fixed_residues, protein.chain_order, protein.chain_lengths
     )
+    return protein, coordinates, aa_indices, fixed_indices
+
+
+@guarded_device("surfpro")
+def _execute(runtime, prepared):
+    protein, coordinates, aa_indices, fixed_indices = prepared
     with runtime.torch.no_grad():
         encoder_out, src_lengths = _encode_surface(
             runtime, coordinates, aa_indices
@@ -491,26 +515,42 @@ def _infer(
             src_lengths,
             protein.sequence,
             fixed_indices,
+            _raw=True,
         )
+
+
+def _infer(runtime, surface_builder, pdb_path, fixed_residues, seed):
+    return _finalize_decode(runtime, _execute(runtime, _prepare(runtime, surface_builder, pdb_path, fixed_residues, seed)))
+
+
+def create_handler(settings):
+    def load(config):
+        args = argparse.Namespace(**config)
+        runtime = _load_runtime(args)
+        builder = SurfaceBuilder(
+            repo_path=Path(args.repo_path).resolve(), work_dir=Path(args.work_dir),
+            msms_bin=Path(args.msms_bin), pdb_to_xyzrn_bin=Path(args.pdb_to_xyzrn_bin),
+            max_surface_vertices=args.max_surface_vertices,
+        )
+        return KernelStages(
+            lambda msg: _prepare(runtime, builder, Path(msg["pdb_path"]).resolve(),
+                                 str(msg.get("fixed_residues") or ""), int(msg.get("seed", 0))),
+            lambda prepared: _execute(runtime, prepared),
+            lambda raw: _finalize_decode(runtime, raw),
+        ), {"device": runtime.device, "weights_loaded": True,
+            "stage_limitations": "autoregressive host decisions remain in device subgraph"}
+    return mutator_kernel_handler(settings, load, backend="surfpro",
+                                  torch_device=settings.get("device", "cuda"))
 
 
 def main() -> int:
     args = _parse_args()
     protocol_out = sys.stdout
-    repo_path = Path(args.repo_path).resolve()
     with contextlib.redirect_stdout(sys.stderr):
-        runtime = _load_runtime(args)
-        surface_builder = SurfaceBuilder(
-            repo_path=repo_path,
-            work_dir=Path(args.work_dir),
-            msms_bin=Path(args.msms_bin),
-            pdb_to_xyzrn_bin=Path(args.pdb_to_xyzrn_bin),
-            max_surface_vertices=args.max_surface_vertices,
-        )
-    _write(
-        protocol_out,
-        {"type": "ready", "pid": os.getpid(), "model_load_count": 1},
-    )
+        handler = create_handler(vars(args))
+    metadata = handler({"operation": "describe"})["metadata"]
+    _write(protocol_out, {"type": "ready", "pid": os.getpid(),
+                          "model_load_count": 1, "metadata": metadata})
 
     request_count = 0
     for raw in sys.stdin:
@@ -526,13 +566,7 @@ def main() -> int:
         seed = int(message.get("seed", 0))
         _seed_everything(seed)
         with contextlib.redirect_stdout(sys.stderr):
-            probabilities, sequence = _infer(
-                runtime,
-                surface_builder,
-                Path(message["pdb_path"]).resolve(),
-                str(message.get("fixed_residues") or ""),
-                seed,
-            )
+            probabilities, sequence = protocol_infer(handler, message)
         _write(
             protocol_out,
             {
@@ -541,6 +575,7 @@ def main() -> int:
                 "pid": os.getpid(),
                 "model_load_count": 1,
                 "request_count": request_count,
+                "runtime": handler.last_runtime,
                 "probabilities": probabilities,
                 "sequence": sequence,
             },

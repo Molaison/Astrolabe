@@ -6,6 +6,7 @@ import io
 import json
 import multiprocessing
 import os
+import re
 import socket
 import tarfile
 import threading
@@ -15,6 +16,8 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -1793,13 +1796,32 @@ def test_container_runtime_lock_is_complete_and_hash_pinned() -> None:
         encoding="utf-8"
     )
 
-    locked_packages = [
-        line for line in lock.splitlines() if line and line[0].isalnum() and "==" in line
-    ]
-    assert len(locked_packages) == 179
-    for dep in ("torch==2.7.1", "triton==3.3.1", "jax==0.4.34"):
-        assert dep in lock
-    assert lock.count("--hash=sha256:") > 300
+    locked = {}
+    current = None
+    for line in lock.splitlines():
+        if line and line[0].isalnum():
+            requirement = Requirement(line.rstrip("\\").strip())
+            name = canonicalize_name(requirement.name)
+            assert name not in locked
+            specifiers = list(requirement.specifier)
+            assert len(specifiers) == 1 and specifiers[0].operator == "=="
+            current = {"version": specifiers[0].version, "hashes": []}
+            locked[name] = current
+        elif line.strip().startswith("--hash="):
+            assert current is not None
+            hashes = re.findall(r"--hash=sha256:([0-9a-f]{64})(?:\s|$)", line)
+            assert hashes, line
+            current["hashes"].extend(hashes)
+    assert locked and all(entry["hashes"] for entry in locked.values())
+    for name, version in (("torch", "2.7.1"), ("triton", "3.3.1"), ("jax", "0.4.34")):
+        assert locked[name]["version"] == version
+    inputs = (REPO_ROOT / "container/requirements.runtime.in").read_text(encoding="utf-8")
+    for line in inputs.splitlines():
+        if not line.strip() or line.lstrip().startswith("#"):
+            continue
+        requirement = Requirement(line)
+        entry = locked[canonicalize_name(requirement.name)]
+        assert entry["version"] in requirement.specifier
 
 
 def test_download_public_assets_uses_stdlib_for_af2_and_protenix(tmp_path: Path, monkeypatch) -> None:

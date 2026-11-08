@@ -1,0 +1,38 @@
+# Explicit common task configuration; no runtime-generated mutations.
+seqs:
+  A: ACDEFGHIKLMNPQRSTVWY
+types:
+  A: p
+homologies: {}
+named_files: null
+seed: 17
+steps: 2
+repeats: 1
+debug: 0
+enable_pyrosetta: false
+skip_complex_poses: true
+use_metropolis_acceptance: false
+initial_temperature: 0.05
+initializer:
+  mode: random
+evaluator:
+  evaluator_terms:
+    Sequence:
+      _type: sequence
+mutator:
+  selector_expression: null
+  mutator_terms:
+    MCMC:
+      _type: mcmc
+loss:
+  loss_terms: {}
+  expression_terms: {}
+stages:
+  default:
+    oligo:
+    - A
+    evaluator: Sequence
+    mutators:
+    - MCMC
+    mutation_num: 1
+    weighted_score_expression: '0'

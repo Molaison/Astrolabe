@@ -21,9 +21,24 @@ import sys
 
 
 ROOT = Path(__file__).resolve().parents[2]
-SOURCE = ROOT / "vendor" / "uplifting-biomolecular-modeling"
-DEFAULT_APPTAINER = Path(shutil.which("apptainer") or str(Path.home() / ".gh_container/envs/_gh_apptainer/bin/apptainer"))
-KITS = ("af3_jax", "protenix_v2", "boltz2", "chai1", "esm_if1", "esmfold2", "opendde")
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from astrolabe.optimized_backends import (  # noqa: E402
+    kit_names,
+    load_manifest,
+    verify_source_checkout,
+)
+
+
+DEFAULT_APPTAINER = Path(
+    shutil.which("apptainer")
+    or str(Path.home() / ".gh_container/envs/_gh_apptainer/bin/apptainer")
+)
+
+
+def available_kits(manifest: dict | None = None) -> tuple[str, ...]:
+    return kit_names(manifest or load_manifest())
 
 
 def logical_lines(path: Path) -> list[str]:
@@ -62,8 +77,16 @@ def dockerfile_to_def(
     runtime_file: Path | None = None,
     install_cuda_toolkit: bool = False,
     cuda_repo: str = "debian12",
+    manifest: dict | None = None,
 ) -> str:
-    dockerfile = SOURCE / kit / "environment" / "Dockerfile"
+    manifest_data = manifest or load_manifest()
+    if kit not in kit_names(manifest_data):
+        raise SystemExit(f"unknown Anthropic kit: {kit}")
+    source = verify_source_checkout(
+        ROOT / manifest_data["source"]["path"],
+        str(manifest_data["source"]["revision"]),
+    )
+    dockerfile = source / kit / "environment" / "Dockerfile"
     base = None
     post: list[str] = ["set -e"]
     if base_sif:
@@ -140,12 +163,12 @@ def dockerfile_to_def(
                 continue
             if len(source_tokens) != 1:
                 raise SystemExit(f"multiple-source COPY is unsupported: {dockerfile}: {stripped}")
-            source = (SOURCE / source_tokens[0]).resolve()
-            if not source.exists():
-                raise SystemExit(f"COPY source is missing: {source}")
+            copy_source = (source / source_tokens[0]).resolve()
+            if not copy_source.exists():
+                raise SystemExit(f"COPY source is missing: {copy_source}")
             destination = destination.replace("/tmp/stock", "/opt/anthropic-assets/stock")
             destination = destination.replace("/tmp/requirements.lock", "/opt/anthropic-assets/requirements.lock")
-            copy_rows.append((source, destination))
+            copy_rows.append((copy_source, destination))
         elif stripped.startswith("RUN "):
             if base_sif and not keep_base_apt and any(
                 marker in stripped
@@ -252,9 +275,15 @@ def dockerfile_to_def(
 
 
 def main() -> int:
+    manifest = load_manifest()
+    kits = available_kits(manifest)
+    revision = str(manifest["source"]["revision"])
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--kit", action="append", choices=KITS, required=True)
-    parser.add_argument("--output-root", default=str(Path.home() / ".gh_anthropic_kits/f4f62fa6592ae4938d49b1757bea0cfeff9f468e"))
+    parser.add_argument("--kit", action="append", required=True)
+    parser.add_argument(
+        "--output-root",
+        default=str(Path.home() / ".gh_anthropic_kits" / revision),
+    )
     parser.add_argument("--apptainer-bin", default=os.environ.get("APPTAINER_BIN", str(DEFAULT_APPTAINER)))
     parser.add_argument("--base-sif", help="Use an existing SIF as the localimage base; Docker system RUNs are skipped unless --keep-base-apt is set")
     parser.add_argument(
@@ -297,6 +326,9 @@ def main() -> int:
     parser.add_argument("--definitions-only", action="store_true", help="Write definitions without starting an Apptainer build")
     parser.add_argument("--force", action="store_true")
     args = parser.parse_args()
+    unknown = set(args.kit) - set(kits)
+    if unknown:
+        parser.error(f"unknown Anthropic kit(s): {', '.join(sorted(unknown))}")
 
     apptainer = Path(args.apptainer_bin).expanduser().resolve()
     if not apptainer.is_file() or not os.access(apptainer, os.X_OK):
@@ -353,6 +385,7 @@ def main() -> int:
                 runtime_file=runtime_file,
                 install_cuda_toolkit=args.install_cuda_toolkit,
                 cuda_repo=args.cuda_repo,
+                manifest=manifest,
             ),
             encoding="utf-8",
         )

@@ -13,6 +13,8 @@ import uuid
 import weakref
 from typing import Any, Dict, Iterable, Iterator, List, Sequence
 
+from astrolabe.mutators.runtime_stages import device_guard
+
 
 def _terminate_process(proc: subprocess.Popen) -> None:
     """Best-effort cleanup for a DPLM daemon without retaining the runner."""
@@ -41,6 +43,7 @@ class DPLMRunner:
         self.num_samples = int(self._get("num_samples", 1))
         self.temperature = float(self._get("temperature", 1.0))
         self.daemon = bool(self._get("daemon", True))
+        self.model_metadata = {"backend": "dplm", "residency": "resident_model" if self.daemon else "one_shot", "device": "unknown"}
         self.response_cache = bool(self._get("response_cache", True))
         work_dir = self._get("work_dir")
         if work_dir is None:
@@ -300,6 +303,7 @@ class DPLMRunner:
         resp = self._daemon_request(req)
         if resp.get("type") != "result" or resp.get("id") != request_id:
             raise RuntimeError(f"Unexpected DPLM daemon response: {resp}")
+        self.model_metadata = resp.get("metadata", self.model_metadata)
         results = {}
         for item in resp.get("results", []) or []:
             name = item.get("name")
@@ -366,12 +370,13 @@ class DPLMRunner:
         env = self._build_host_subprocess_env()
 
         try:
-            subprocess.run(
-                args=cmd,
-                check=True,
-                cwd=str(self.repo_path),
-                env=env,
-            )
+            with device_guard("dplm", device=self.device, identity=str(self.model_name)):
+                subprocess.run(
+                    args=cmd,
+                    check=True,
+                    cwd=str(self.repo_path),
+                    env=env,
+                )
         except subprocess.CalledProcessError as exc:  # pragma: no cover - runtime error path
             raise RuntimeError(
                 f"DPLM runner failed with exit code {exc.returncode}. Command: {' '.join(cmd)}"

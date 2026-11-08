@@ -58,11 +58,16 @@ class RFD3Initializer(StructureSequenceInitializer):
         self.runner = runner_cls(plan.engine_config)
 
     def prepare_structure(self) -> PreparedStructure:
-        outputs = self.runner.run(
-            specification=self.specification,
-            output_dir=self.output_dir,
-            n_batches=self.n_batches,
-        )
+        try:
+            outputs = self.runner.run(
+                specification=self.specification,
+                output_dir=self.output_dir,
+                n_batches=self.n_batches,
+            )
+        finally:
+            shutdown = getattr(self.runner, "shutdown", None)
+            if callable(shutdown):
+                shutdown()
         if self.sample_index >= len(outputs):
             raise ValueError(
                 f"initializer.rfd3.sample_index={self.sample_index} is out of range for "

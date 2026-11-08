@@ -1,0 +1,3114 @@
+{
+  "cases": [
+    {
+      "id": "task.invalid_active_loss_entry",
+      "file": "invalid_active_loss_entry.yaml",
+      "expected_error": "stages.default.active_loss_terms",
+      "parameters": [
+        "stages.default.active_loss_terms"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_allow_mmcif_pdb_fallback_integer",
+      "file": "invalid_allow_mmcif_pdb_fallback_integer.yaml",
+      "expected_error": "allow_mmcif_pdb_fallback",
+      "parameters": [
+        "allow_mmcif_pdb_fallback"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_allow_mmcif_pdb_fallback_null",
+      "file": "invalid_allow_mmcif_pdb_fallback_null.yaml",
+      "expected_error": "allow_mmcif_pdb_fallback",
+      "parameters": [
+        "allow_mmcif_pdb_fallback"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_allow_mmcif_pdb_fallback_string",
+      "file": "invalid_allow_mmcif_pdb_fallback_string.yaml",
+      "expected_error": "allow_mmcif_pdb_fallback",
+      "parameters": [
+        "allow_mmcif_pdb_fallback"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_budget_ledger_type",
+      "file": "invalid_beam_budget_ledger_type.yaml",
+      "expected_error": "protein_beam.af3_call_budget.ledger",
+      "parameters": [
+        "protein_beam.af3_call_budget"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_budget_mapping",
+      "file": "invalid_beam_budget_mapping.yaml",
+      "expected_error": "protein_beam.af3_call_budget",
+      "parameters": [
+        "protein_beam.af3_call_budget"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_budget_missing",
+      "file": "invalid_beam_budget_missing.yaml",
+      "expected_error": "protein_beam.af3_call_budget.max_total",
+      "parameters": [
+        "protein_beam.af3_call_budget"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_budget_zero",
+      "file": "invalid_beam_budget_zero.yaml",
+      "expected_error": "protein_beam.af3_call_budget.max_total",
+      "parameters": [
+        "protein_beam.af3_call_budget"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_gate_group",
+      "file": "invalid_beam_gate_group.yaml",
+      "expected_error": "protein_beam.gates.unknown",
+      "parameters": [
+        "protein_beam.gates.unknown"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_gate_mapping",
+      "file": "invalid_beam_gate_mapping.yaml",
+      "expected_error": "protein_beam.gates.geometry_max",
+      "parameters": [
+        "protein_beam.gates.geometry_max"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_gate_metric",
+      "file": "invalid_beam_gate_metric.yaml",
+      "expected_error": "protein_beam.gates.root_metric_max_ratio.missing",
+      "parameters": [
+        "protein_beam.gates.root_metric_max_ratio.missing"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_gate_nan",
+      "file": "invalid_beam_gate_nan.yaml",
+      "expected_error": "protein_beam.gates.root_metric_max_ratio.interface_ipae",
+      "parameters": [
+        "protein_beam.gates.root_metric_max_ratio.interface_ipae"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_gate_zero",
+      "file": "invalid_beam_gate_zero.yaml",
+      "expected_error": "protein_beam.gates.geometry_max.binder_pose_ca_rmsd",
+      "parameters": [
+        "protein_beam.gates.geometry_max.binder_pose_ca_rmsd"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_gates_mapping",
+      "file": "invalid_beam_gates_mapping.yaml",
+      "expected_error": "protein_beam.gates",
+      "parameters": [
+        "protein_beam.gates"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_holes_ranking",
+      "file": "invalid_beam_holes_ranking.yaml",
+      "expected_error": "protein_beam.holes_ranking",
+      "parameters": [
+        "protein_beam.holes_ranking"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_in_flight",
+      "file": "invalid_beam_in_flight.yaml",
+      "expected_error": "protein_beam.in_flight",
+      "parameters": [
+        "protein_beam.in_flight"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_max_evaluations",
+      "file": "invalid_beam_max_evaluations.yaml",
+      "expected_error": "protein_beam.max_evaluations",
+      "parameters": [
+        "protein_beam.max_evaluations"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_max_generations",
+      "file": "invalid_beam_max_generations.yaml",
+      "expected_error": "protein_beam.max_generations",
+      "parameters": [
+        "protein_beam.max_generations"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_max_total_mutations",
+      "file": "invalid_beam_max_total_mutations.yaml",
+      "expected_error": "protein_beam.max_total_mutations",
+      "parameters": [
+        "protein_beam.max_total_mutations"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_pipeline_type",
+      "file": "invalid_beam_pipeline_type.yaml",
+      "expected_error": "protein_beam.pipeline_proposals",
+      "parameters": [
+        "protein_beam.pipeline_proposals"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_proposal_batch_size",
+      "file": "invalid_beam_proposal_batch_size.yaml",
+      "expected_error": "protein_beam.proposal_batch_size",
+      "parameters": [
+        "protein_beam.proposal_batch_size"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_proposals_per_parent",
+      "file": "invalid_beam_proposals_per_parent.yaml",
+      "expected_error": "protein_beam.proposals_per_parent",
+      "parameters": [
+        "protein_beam.proposals_per_parent"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_selection",
+      "file": "invalid_beam_selection.yaml",
+      "expected_error": "protein_beam.selection",
+      "parameters": [
+        "protein_beam.selection"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_width",
+      "file": "invalid_beam_width.yaml",
+      "expected_error": "protein_beam.width",
+      "parameters": [
+        "protein_beam.width"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_width_boolean",
+      "file": "invalid_beam_width_boolean.yaml",
+      "expected_error": "protein_beam.width",
+      "parameters": [
+        "protein_beam.width"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_width_fractional",
+      "file": "invalid_beam_width_fractional.yaml",
+      "expected_error": "protein_beam.width",
+      "parameters": [
+        "protein_beam.width"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_beam_workers",
+      "file": "invalid_beam_workers.yaml",
+      "expected_error": "protein_beam.workers",
+      "parameters": [
+        "protein_beam.workers"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_debug_integer",
+      "file": "invalid_debug_integer.yaml",
+      "expected_error": "debug",
+      "parameters": [
+        "debug"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_debug_null",
+      "file": "invalid_debug_null.yaml",
+      "expected_error": "debug",
+      "parameters": [
+        "debug"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_debug_string",
+      "file": "invalid_debug_string.yaml",
+      "expected_error": "debug",
+      "parameters": [
+        "debug"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_dynamic_binding_site_enabled_integer",
+      "file": "invalid_dynamic_binding_site_enabled_integer.yaml",
+      "expected_error": "dynamic_binding_site_enabled",
+      "parameters": [
+        "dynamic_binding_site_enabled"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_dynamic_binding_site_enabled_null",
+      "file": "invalid_dynamic_binding_site_enabled_null.yaml",
+      "expected_error": "dynamic_binding_site_enabled",
+      "parameters": [
+        "dynamic_binding_site_enabled"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_dynamic_binding_site_enabled_string",
+      "file": "invalid_dynamic_binding_site_enabled_string.yaml",
+      "expected_error": "dynamic_binding_site_enabled",
+      "parameters": [
+        "dynamic_binding_site_enabled"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_enable_pyrosetta_integer",
+      "file": "invalid_enable_pyrosetta_integer.yaml",
+      "expected_error": "enable_pyrosetta",
+      "parameters": [
+        "enable_pyrosetta"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_enable_pyrosetta_null",
+      "file": "invalid_enable_pyrosetta_null.yaml",
+      "expected_error": "enable_pyrosetta",
+      "parameters": [
+        "enable_pyrosetta"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_enable_pyrosetta_string",
+      "file": "invalid_enable_pyrosetta_string.yaml",
+      "expected_error": "enable_pyrosetta",
+      "parameters": [
+        "enable_pyrosetta"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_evaluator_alias_type",
+      "file": "invalid_evaluator_alias_type.yaml",
+      "expected_error": "stages.default.evaluator",
+      "parameters": [
+        "stages.default.evaluator"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_capacity",
+      "file": "invalid_execution_capacity.yaml",
+      "expected_error": "search.execution.in_flight",
+      "parameters": [
+        "search.execution.in_flight"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_in_flight_boolean",
+      "file": "invalid_execution_in_flight_boolean.yaml",
+      "expected_error": "search.execution.in_flight",
+      "parameters": [
+        "search.execution.in_flight"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_in_flight_fractional",
+      "file": "invalid_execution_in_flight_fractional.yaml",
+      "expected_error": "search.execution.in_flight",
+      "parameters": [
+        "search.execution.in_flight"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_in_flight_string",
+      "file": "invalid_execution_in_flight_string.yaml",
+      "expected_error": "search.execution.in_flight",
+      "parameters": [
+        "search.execution.in_flight"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_in_flight_zero",
+      "file": "invalid_execution_in_flight_zero.yaml",
+      "expected_error": "search.execution.in_flight",
+      "parameters": [
+        "search.execution.in_flight"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_resume_type",
+      "file": "invalid_execution_resume_type.yaml",
+      "expected_error": "search.execution.resume",
+      "parameters": [
+        "search.execution.resume"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_retry_interrupted_type",
+      "file": "invalid_execution_retry_interrupted_type.yaml",
+      "expected_error": "search.execution.retry_interrupted",
+      "parameters": [
+        "search.execution.retry_interrupted"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_retry_without_resume",
+      "file": "invalid_execution_retry_without_resume.yaml",
+      "expected_error": "search.execution.retry_interrupted",
+      "parameters": [
+        "search.execution.retry_interrupted"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_socket_type",
+      "file": "invalid_execution_socket_type.yaml",
+      "expected_error": "search.execution.socket_path",
+      "parameters": [
+        "search.execution.socket_path"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_workers_boolean",
+      "file": "invalid_execution_workers_boolean.yaml",
+      "expected_error": "search.execution.workers",
+      "parameters": [
+        "search.execution.workers"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_workers_fractional",
+      "file": "invalid_execution_workers_fractional.yaml",
+      "expected_error": "search.execution.workers",
+      "parameters": [
+        "search.execution.workers"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_workers_string",
+      "file": "invalid_execution_workers_string.yaml",
+      "expected_error": "search.execution.workers",
+      "parameters": [
+        "search.execution.workers"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_workers_zero",
+      "file": "invalid_execution_workers_zero.yaml",
+      "expected_error": "search.execution.workers",
+      "parameters": [
+        "search.execution.workers"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_expression_mapping",
+      "file": "invalid_expression_mapping.yaml",
+      "expected_error": "stages.default.weighted_score_expression",
+      "parameters": [
+        "stages.default.weighted_score_expression"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_homologies_list",
+      "file": "invalid_homologies_list.yaml",
+      "expected_error": "homologies",
+      "parameters": [
+        "homologies"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_homologies_null",
+      "file": "invalid_homologies_null.yaml",
+      "expected_error": "homologies",
+      "parameters": [
+        "homologies"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_homology_boolean",
+      "file": "invalid_homology_boolean.yaml",
+      "expected_error": "homologies.A",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_homology_empty",
+      "file": "invalid_homology_empty.yaml",
+      "expected_error": "homologies.A",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_homology_extension",
+      "file": "invalid_homology_extension.yaml",
+      "expected_error": "homologies.A",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_homology_integer",
+      "file": "invalid_homology_integer.yaml",
+      "expected_error": "homologies.A",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_homology_json_empty_chain",
+      "file": "invalid_homology_json_empty_chain.yaml",
+      "expected_error": "homologies.A",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_homology_json_without_chain",
+      "file": "invalid_homology_json_without_chain.yaml",
+      "expected_error": "homologies.A",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_homology_missing_a3m",
+      "file": "invalid_homology_missing_a3m.yaml",
+      "expected_error": "homologies.A",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_inherited_weights_length",
+      "file": "invalid_inherited_weights_length.yaml",
+      "expected_error": "stages.later.mutator_weights",
+      "parameters": [
+        "stages.later"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_initializer_alias_type",
+      "file": "invalid_initializer_alias_type.yaml",
+      "expected_error": "initializer.dplm_alias",
+      "parameters": [
+        "initializer.mode",
+        "initializer.dplm_alias"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/initializers/registry.py:construct_initializer",
+        "astrolabe/startup_validation.py:validate_startup_config (initializer)",
+        "config/base.yaml:initializer"
+      ]
+    },
+    {
+      "id": "task.invalid_initializer_mode_type",
+      "file": "invalid_initializer_mode_type.yaml",
+      "expected_error": "initializer.mode",
+      "parameters": [
+        "initializer.mode"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/initializers/registry.py:construct_initializer",
+        "astrolabe/startup_validation.py:validate_startup_config (initializer)",
+        "config/base.yaml:initializer"
+      ]
+    },
+    {
+      "id": "task.invalid_loss_expression_list",
+      "file": "invalid_loss_expression_list.yaml",
+      "expected_error": "loss.expression_terms.score",
+      "parameters": [
+        "loss.expression_terms.score"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/losses/base.py:LossEngine.setup",
+        "config/benchmark_binder_v1_4.yaml:loss"
+      ]
+    },
+    {
+      "id": "task.invalid_mandatory_homologies_A",
+      "file": "invalid_mandatory_homologies_A.yaml",
+      "expected_error": "homologies.A",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_mandatory_seqs_A",
+      "file": "invalid_mandatory_seqs_A.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_mandatory_types_A",
+      "file": "invalid_mandatory_types_A.yaml",
+      "expected_error": "types.A",
+      "parameters": [
+        "types.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.invalid_mask_mutable_type",
+      "file": "invalid_mask_mutable_type.yaml",
+      "expected_error": "homologies.A.maskMutableResidues",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_metropolis_temperature_boolean",
+      "file": "invalid_metropolis_temperature_boolean.yaml",
+      "expected_error": "initial_temperature",
+      "parameters": [
+        "use_metropolis_acceptance",
+        "initial_temperature"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.invalid_metropolis_temperature_infinite",
+      "file": "invalid_metropolis_temperature_infinite.yaml",
+      "expected_error": "initial_temperature",
+      "parameters": [
+        "use_metropolis_acceptance",
+        "initial_temperature"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.invalid_metropolis_temperature_mapping",
+      "file": "invalid_metropolis_temperature_mapping.yaml",
+      "expected_error": "initial_temperature",
+      "parameters": [
+        "use_metropolis_acceptance",
+        "initial_temperature"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.invalid_metropolis_temperature_nan",
+      "file": "invalid_metropolis_temperature_nan.yaml",
+      "expected_error": "initial_temperature",
+      "parameters": [
+        "use_metropolis_acceptance",
+        "initial_temperature"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.invalid_metropolis_temperature_null",
+      "file": "invalid_metropolis_temperature_null.yaml",
+      "expected_error": "initial_temperature",
+      "parameters": [
+        "use_metropolis_acceptance",
+        "initial_temperature"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.invalid_metropolis_temperature_text",
+      "file": "invalid_metropolis_temperature_text.yaml",
+      "expected_error": "initial_temperature",
+      "parameters": [
+        "use_metropolis_acceptance",
+        "initial_temperature"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.invalid_mutation_boolean",
+      "file": "invalid_mutation_boolean.yaml",
+      "expected_error": "stages.default.mutation_num",
+      "parameters": [
+        "stages.default.mutation_num"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_mutation_infinite_percent",
+      "file": "invalid_mutation_infinite_percent.yaml",
+      "expected_error": "stages.default.mutation_num",
+      "parameters": [
+        "stages.default.mutation_num"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_mutation_mapping",
+      "file": "invalid_mutation_mapping.yaml",
+      "expected_error": "stages.default.mutation_num",
+      "parameters": [
+        "stages.default.mutation_num"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_mutation_nan",
+      "file": "invalid_mutation_nan.yaml",
+      "expected_error": "stages.default.mutation_num",
+      "parameters": [
+        "stages.default.mutation_num"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_mutators_mapping_entry",
+      "file": "invalid_mutators_mapping_entry.yaml",
+      "expected_error": "stages.default.mutators",
+      "parameters": [
+        "stages.default.mutators"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_mutators_scalar",
+      "file": "invalid_mutators_scalar.yaml",
+      "expected_error": "stages.default.mutators",
+      "parameters": [
+        "stages.default.mutators"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_named_file_directory",
+      "file": "invalid_named_file_directory.yaml",
+      "expected_error": "named_files.input",
+      "parameters": [
+        "named_files.input"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_named_file_empty",
+      "file": "invalid_named_file_empty.yaml",
+      "expected_error": "named_files.input",
+      "parameters": [
+        "named_files.input"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_named_file_integer",
+      "file": "invalid_named_file_integer.yaml",
+      "expected_error": "named_files.input",
+      "parameters": [
+        "named_files.input"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_named_file_list",
+      "file": "invalid_named_file_list.yaml",
+      "expected_error": "named_files.input",
+      "parameters": [
+        "named_files.input"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_named_file_mapping",
+      "file": "invalid_named_file_mapping.yaml",
+      "expected_error": "named_files.input",
+      "parameters": [
+        "named_files.input"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_named_file_missing",
+      "file": "invalid_named_file_missing.yaml",
+      "expected_error": "named_files.input",
+      "parameters": [
+        "named_files.input"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_named_file_null",
+      "file": "invalid_named_file_null.yaml",
+      "expected_error": "named_files.input",
+      "parameters": [
+        "named_files.input"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_named_files_list",
+      "file": "invalid_named_files_list.yaml",
+      "expected_error": "named_files",
+      "parameters": [
+        "named_files"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_named_files_scalar",
+      "file": "invalid_named_files_scalar.yaml",
+      "expected_error": "named_files",
+      "parameters": [
+        "named_files"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (named_files)",
+        "astrolabe/core/protomer_config_parser.py:register_files;ProteinFileHandler.handle",
+        "config/base.yaml:named_files"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_digits",
+      "file": "invalid_oligo_digits.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_duplicate",
+      "file": "invalid_oligo_duplicate.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_empty_string",
+      "file": "invalid_oligo_empty_string.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_numbers",
+      "file": "invalid_oligo_numbers.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_permuted_duplicate",
+      "file": "invalid_oligo_permuted_duplicate.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "seqs.B",
+        "types.B",
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs",
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types",
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_prefix",
+      "file": "invalid_oligo_prefix.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_prefix_only",
+      "file": "invalid_oligo_prefix_only.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_prefixed_duplicate",
+      "file": "invalid_oligo_prefixed_duplicate.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_scalar",
+      "file": "invalid_oligo_scalar.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_undefined",
+      "file": "invalid_oligo_undefined.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_oligo_whitespace",
+      "file": "invalid_oligo_whitespace.yaml",
+      "expected_error": "stages.default.oligo",
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_pairedMsa_list",
+      "file": "invalid_pairedMsa_list.yaml",
+      "expected_error": "homologies.A.pairedMsa",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_pairedMsa_type",
+      "file": "invalid_pairedMsa_type.yaml",
+      "expected_error": "homologies.A.pairedMsa",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_protein_beam_mapping",
+      "file": "invalid_protein_beam_mapping.yaml",
+      "expected_error": "protein_beam",
+      "parameters": [
+        "protein_beam"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:validate_config;run_beam",
+        "astrolabe/design/quotas.py:reserve_calls",
+        "config/binder_interface_beam.yaml:protein_beam"
+      ]
+    },
+    {
+      "id": "task.invalid_protomer_identifier",
+      "file": "invalid_protomer_identifier.yaml",
+      "expected_error": "seqs.AB",
+      "parameters": [
+        "seqs.A",
+        "seqs.AB"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_repeats_boolean",
+      "file": "invalid_repeats_boolean.yaml",
+      "expected_error": "repeats",
+      "parameters": [
+        "repeats"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_repeats_negative",
+      "file": "invalid_repeats_negative.yaml",
+      "expected_error": "repeats",
+      "parameters": [
+        "repeats"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_repeats_zero",
+      "file": "invalid_repeats_zero.yaml",
+      "expected_error": "repeats",
+      "parameters": [
+        "repeats"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_search_execution_list",
+      "file": "invalid_search_execution_list.yaml",
+      "expected_error": "search.execution",
+      "parameters": [
+        "search.execution"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_search_execution_scalar",
+      "file": "invalid_search_execution_scalar.yaml",
+      "expected_error": "search.execution",
+      "parameters": [
+        "search.execution"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_search_list",
+      "file": "invalid_search_list.yaml",
+      "expected_error": "search",
+      "parameters": [
+        "search"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_search_missing_algorithm",
+      "file": "invalid_search_missing_algorithm.yaml",
+      "expected_error": "search.algorithm",
+      "parameters": [
+        "search"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_search_missing_owner",
+      "file": "invalid_search_missing_owner.yaml",
+      "expected_error": "search.owner",
+      "parameters": [
+        "search"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_search_owner_type",
+      "file": "invalid_search_owner_type.yaml",
+      "expected_error": "search.owner",
+      "parameters": [
+        "search"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_search_resume_type",
+      "file": "invalid_search_resume_type.yaml",
+      "expected_error": "search.resume",
+      "parameters": [
+        "search"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_search_scalar",
+      "file": "invalid_search_scalar.yaml",
+      "expected_error": "search",
+      "parameters": [
+        "search"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_search_summary_format",
+      "file": "invalid_search_summary_format.yaml",
+      "expected_error": "search.summary_format",
+      "parameters": [
+        "search"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+        "astrolabe/protein_beam.py:_configured_branching_execution;_execution_int;_execution_bool",
+        "config/binder_interface_beam.yaml:search"
+      ]
+    },
+    {
+      "id": "task.invalid_seed_boolean",
+      "file": "invalid_seed_boolean.yaml",
+      "expected_error": "seed",
+      "parameters": [
+        "seed"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_seed_negative",
+      "file": "invalid_seed_negative.yaml",
+      "expected_error": "seed",
+      "parameters": [
+        "seed"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_seed_range",
+      "file": "invalid_seed_range.yaml",
+      "expected_error": "seed",
+      "parameters": [
+        "seed"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_seed_zero",
+      "file": "invalid_seed_zero.yaml",
+      "expected_error": "seed",
+      "parameters": [
+        "seed"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_selected_position_selector_type",
+      "file": "invalid_selected_position_selector_type.yaml",
+      "expected_error": "mutator.mutator_terms.MCMC.position_selector",
+      "parameters": [
+        "mutator.mutator_terms.MCMC.position_selector"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (selector_expression)",
+        "astrolabe/selectors/registry.py:SelectorRegistry",
+        "config/benchmark_binder_v1_4.yaml:mutator"
+      ]
+    },
+    {
+      "id": "task.invalid_selector_type",
+      "file": "invalid_selector_type.yaml",
+      "expected_error": "mutator.selector_expression",
+      "parameters": [
+        "mutator.selector_expression"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (selector_expression)",
+        "astrolabe/selectors/registry.py:SelectorRegistry",
+        "config/benchmark_binder_v1_4.yaml:mutator"
+      ]
+    },
+    {
+      "id": "task.invalid_seqs_empty",
+      "file": "invalid_seqs_empty.yaml",
+      "expected_error": "seqs",
+      "parameters": [
+        "seqs"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_seqs_list",
+      "file": "invalid_seqs_list.yaml",
+      "expected_error": "seqs",
+      "parameters": [
+        "seqs"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_seqs_null",
+      "file": "invalid_seqs_null.yaml",
+      "expected_error": "seqs",
+      "parameters": [
+        "seqs"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_seqs_scalar",
+      "file": "invalid_seqs_scalar.yaml",
+      "expected_error": "seqs",
+      "parameters": [
+        "seqs"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_bad_range",
+      "file": "invalid_sequence_bad_range.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_bare_range",
+      "file": "invalid_sequence_bare_range.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_boolean",
+      "file": "invalid_sequence_boolean.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_empty",
+      "file": "invalid_sequence_empty.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_integer",
+      "file": "invalid_sequence_integer.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_list",
+      "file": "invalid_sequence_list.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_literal",
+      "file": "invalid_sequence_literal.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_mapping",
+      "file": "invalid_sequence_mapping.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_null",
+      "file": "invalid_sequence_null.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_reverse_range",
+      "file": "invalid_sequence_reverse_range.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_sequence_unknown_file",
+      "file": "invalid_sequence_unknown_file.yaml",
+      "expected_error": "seqs.A",
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.invalid_skip_complex_poses_integer",
+      "file": "invalid_skip_complex_poses_integer.yaml",
+      "expected_error": "skip_complex_poses",
+      "parameters": [
+        "skip_complex_poses"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_skip_complex_poses_null",
+      "file": "invalid_skip_complex_poses_null.yaml",
+      "expected_error": "skip_complex_poses",
+      "parameters": [
+        "skip_complex_poses"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_skip_complex_poses_string",
+      "file": "invalid_skip_complex_poses_string.yaml",
+      "expected_error": "skip_complex_poses",
+      "parameters": [
+        "skip_complex_poses"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_steps_boolean",
+      "file": "invalid_steps_boolean.yaml",
+      "expected_error": "steps",
+      "parameters": [
+        "steps"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_steps_fractional",
+      "file": "invalid_steps_fractional.yaml",
+      "expected_error": "steps",
+      "parameters": [
+        "steps"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_steps_negative",
+      "file": "invalid_steps_negative.yaml",
+      "expected_error": "steps",
+      "parameters": [
+        "steps"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_steps_text",
+      "file": "invalid_steps_text.yaml",
+      "expected_error": "steps",
+      "parameters": [
+        "steps"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_template_entry",
+      "file": "invalid_template_entry.yaml",
+      "expected_error": "homologies.A.0",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_template_index_boolean",
+      "file": "invalid_template_index_boolean.yaml",
+      "expected_error": "homologies.A.0.queryIndices",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_template_index_length",
+      "file": "invalid_template_index_length.yaml",
+      "expected_error": "homologies.A.0",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_template_missing_indices",
+      "file": "invalid_template_missing_indices.yaml",
+      "expected_error": "homologies.A.0.queryIndices",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_template_mmcif_type",
+      "file": "invalid_template_mmcif_type.yaml",
+      "expected_error": "homologies.A.0.mmcif",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_template_type",
+      "file": "invalid_template_type.yaml",
+      "expected_error": "homologies.A.templates",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_type_empty",
+      "file": "invalid_type_empty.yaml",
+      "expected_error": "types.A",
+      "parameters": [
+        "types.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.invalid_type_integer",
+      "file": "invalid_type_integer.yaml",
+      "expected_error": "types.A",
+      "parameters": [
+        "types.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.invalid_type_list",
+      "file": "invalid_type_list.yaml",
+      "expected_error": "types.A",
+      "parameters": [
+        "types.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.invalid_type_null",
+      "file": "invalid_type_null.yaml",
+      "expected_error": "types.A",
+      "parameters": [
+        "types.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.invalid_type_unknown",
+      "file": "invalid_type_unknown.yaml",
+      "expected_error": "types.A",
+      "parameters": [
+        "types.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.invalid_types_list",
+      "file": "invalid_types_list.yaml",
+      "expected_error": "types",
+      "parameters": [
+        "types"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.invalid_types_scalar",
+      "file": "invalid_types_scalar.yaml",
+      "expected_error": "types",
+      "parameters": [
+        "types"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.invalid_unpairedMsa_list",
+      "file": "invalid_unpairedMsa_list.yaml",
+      "expected_error": "homologies.A.unpairedMsa",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_unpairedMsa_type",
+      "file": "invalid_unpairedMsa_type.yaml",
+      "expected_error": "homologies.A.unpairedMsa",
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.invalid_use_metropolis_acceptance_integer",
+      "file": "invalid_use_metropolis_acceptance_integer.yaml",
+      "expected_error": "use_metropolis_acceptance",
+      "parameters": [
+        "use_metropolis_acceptance"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_use_metropolis_acceptance_null",
+      "file": "invalid_use_metropolis_acceptance_null.yaml",
+      "expected_error": "use_metropolis_acceptance",
+      "parameters": [
+        "use_metropolis_acceptance"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_use_metropolis_acceptance_string",
+      "file": "invalid_use_metropolis_acceptance_string.yaml",
+      "expected_error": "use_metropolis_acceptance",
+      "parameters": [
+        "use_metropolis_acceptance"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_boolean",
+      "file": "invalid_weights_boolean.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_empty",
+      "file": "invalid_weights_empty.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_infinite",
+      "file": "invalid_weights_infinite.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_mismatch",
+      "file": "invalid_weights_mismatch.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_nan",
+      "file": "invalid_weights_nan.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_negative",
+      "file": "invalid_weights_negative.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_scalar",
+      "file": "invalid_weights_scalar.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_string",
+      "file": "invalid_weights_string.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_sum_overflow",
+      "file": "invalid_weights_sum_overflow.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "mutator.mutator_terms.Other",
+        "stages.default.mutators",
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (selector_expression)",
+        "astrolabe/selectors/registry.py:SelectorRegistry",
+        "config/benchmark_binder_v1_4.yaml:mutator",
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_text",
+      "file": "invalid_weights_text.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_weights_zero",
+      "file": "invalid_weights_zero.yaml",
+      "expected_error": "stages.default.mutator_weights",
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_default_types",
+      "file": "valid_default_types.yaml",
+      "expected_error": null,
+      "parameters": [
+        "types"
+      ],
+      "valid_control": "valid_default_types.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.valid_disabled_stage",
+      "file": "valid_disabled_stage.yaml",
+      "expected_error": null,
+      "parameters": [
+        "stages.unused"
+      ],
+      "valid_control": "valid_disabled_stage.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_inactive_homology",
+      "file": "valid_inactive_homology.yaml",
+      "expected_error": null,
+      "parameters": [
+        "homologies.unselected"
+      ],
+      "valid_control": "valid_inactive_homology.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.valid_inactive_temperature",
+      "file": "valid_inactive_temperature.yaml",
+      "expected_error": null,
+      "parameters": [
+        "initial_temperature"
+      ],
+      "valid_control": "valid_inactive_temperature.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.valid_inline_msa",
+      "file": "valid_inline_msa.yaml",
+      "expected_error": null,
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_inline_msa.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.valid_minimal",
+      "file": "valid_minimal.yaml",
+      "expected_error": null,
+      "parameters": [
+        "seqs.A",
+        "types.A",
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs",
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types",
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_negative_metropolis_temperature",
+      "file": "valid_negative_metropolis_temperature.yaml",
+      "expected_error": null,
+      "parameters": [
+        "initial_temperature",
+        "use_metropolis_acceptance"
+      ],
+      "valid_control": "valid_negative_metropolis_temperature.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.valid_negative_mutations",
+      "file": "valid_negative_mutations.yaml",
+      "expected_error": null,
+      "parameters": [
+        "stages.default.mutation_num"
+      ],
+      "valid_control": "valid_negative_mutations.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_new_stage_weights_not_inherited",
+      "file": "valid_new_stage_weights_not_inherited.yaml",
+      "expected_error": null,
+      "parameters": [
+        "mutator.mutator_terms.Other",
+        "stages.default.mutator_weights",
+        "stages.default.mutators",
+        "stages.later"
+      ],
+      "valid_control": "valid_new_stage_weights_not_inherited.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (selector_expression)",
+        "astrolabe/selectors/registry.py:SelectorRegistry",
+        "config/benchmark_binder_v1_4.yaml:mutator",
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_null_homology",
+      "file": "valid_null_homology.yaml",
+      "expected_error": null,
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_null_homology.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.valid_null_seed",
+      "file": "valid_null_seed.yaml",
+      "expected_error": null,
+      "parameters": [
+        "seed"
+      ],
+      "valid_control": "valid_null_seed.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.valid_numeric_weights",
+      "file": "valid_numeric_weights.yaml",
+      "expected_error": null,
+      "parameters": [
+        "stages.default.mutator_weights"
+      ],
+      "valid_control": "valid_numeric_weights.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_partial_types",
+      "file": "valid_partial_types.yaml",
+      "expected_error": null,
+      "parameters": [
+        "types.A"
+      ],
+      "valid_control": "valid_partial_types.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.valid_percentage_mutations",
+      "file": "valid_percentage_mutations.yaml",
+      "expected_error": null,
+      "parameters": [
+        "stages.default.mutation_num"
+      ],
+      "valid_control": "valid_percentage_mutations.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_polymers_and_ligands",
+      "file": "valid_polymers_and_ligands.yaml",
+      "expected_error": null,
+      "parameters": [
+        "seqs.A",
+        "seqs.C",
+        "seqs.D",
+        "seqs.R",
+        "seqs.S",
+        "stages.default.oligo",
+        "types.A",
+        "types.C",
+        "types.D",
+        "types.R",
+        "types.S"
+      ],
+      "valid_control": "valid_polymers_and_ligands.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs",
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages",
+        "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+        "astrolabe/argparser.py:parse_arguments (types fallback)",
+        "config/release_protein.yaml:types",
+        "config/benchmark_ligand_v1.yaml:types"
+      ]
+    },
+    {
+      "id": "task.valid_prefixed_oligos",
+      "file": "valid_prefixed_oligos.yaml",
+      "expected_error": null,
+      "parameters": [
+        "stages.default.oligo"
+      ],
+      "valid_control": "valid_prefixed_oligos.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_scalar_boundaries",
+      "file": "valid_scalar_boundaries.yaml",
+      "expected_error": null,
+      "parameters": [
+        "seed",
+        "steps"
+      ],
+      "valid_control": "valid_scalar_boundaries.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+        "run.py:initialize_global_config",
+        "astrolabe/design/repeats.py:plan_repeat_runs",
+        "config/base.yaml",
+        "config/release_protein.yaml"
+      ]
+    },
+    {
+      "id": "task.valid_sequence_segments",
+      "file": "valid_sequence_segments.yaml",
+      "expected_error": null,
+      "parameters": [
+        "seqs.A"
+      ],
+      "valid_control": "valid_sequence_segments.yaml",
+      "source": [
+        "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+        "run.py:setup_protomers",
+        "config/benchmark_binder_v1_4.yaml:seqs",
+        "config/benchmark_ligand_v1.yaml:seqs"
+      ]
+    },
+    {
+      "id": "task.valid_stage_inheritance",
+      "file": "valid_stage_inheritance.yaml",
+      "expected_error": null,
+      "parameters": [
+        "stages.default.mutator_weights",
+        "stages.later"
+      ],
+      "valid_control": "valid_stage_inheritance.yaml",
+      "source": [
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.valid_template_list",
+      "file": "valid_template_list.yaml",
+      "expected_error": null,
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_template_list.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.valid_template_mapping",
+      "file": "valid_template_mapping.yaml",
+      "expected_error": null,
+      "parameters": [
+        "homologies.A"
+      ],
+      "valid_control": "valid_template_mapping.yaml",
+      "source": [
+        "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+        "run.py:setup_protomers",
+        "config/benchmark_oligomer_v4_refine.yaml:homologies",
+        "config/benchmark_binder_v1_4.yaml:homologies"
+      ]
+    },
+    {
+      "id": "task.valid_zero_metropolis_temperature",
+      "file": "valid_zero_metropolis_temperature.yaml",
+      "expected_error": null,
+      "parameters": [
+        "initial_temperature",
+        "use_metropolis_acceptance"
+      ],
+      "valid_control": "valid_zero_metropolis_temperature.yaml",
+      "source": [
+        "astrolabe/utils/base.py:calculate_temperature",
+        "astrolabe/decision_maker.py:Decisions",
+        "config/base.yaml:initial_temperature"
+      ]
+    },
+    {
+      "id": "task.valid_zero_weight",
+      "file": "valid_zero_weight.yaml",
+      "expected_error": null,
+      "parameters": [
+        "mutator.mutator_terms.Other",
+        "stages.default.mutator_weights",
+        "stages.default.mutators"
+      ],
+      "valid_control": "valid_zero_weight.yaml",
+      "source": [
+        "astrolabe/argparser.py:parse_arguments (selector_expression)",
+        "astrolabe/selectors/registry.py:SelectorRegistry",
+        "config/benchmark_binder_v1_4.yaml:mutator",
+        "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+        "astrolabe/stage_config.py:resolve_mutation_num",
+        "config/benchmark_oligomer_v4_refine.yaml:stages",
+        "config/benchmark_binder_v1_4.yaml:stages"
+      ]
+    },
+    {
+      "id": "task.invalid_missing_seqs",
+      "file": "invalid_missing_seqs.yaml",
+      "expected_error": "seqs: required for a built-in sequence-driven workflow",
+      "parameters": [
+        "seqs"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/cli.py:_run_from_config",
+        "run.py:setup_protomers",
+        "astrolabe/configuration.py:SEARCH_FACTORY_CATALOG",
+        "config/base.yaml",
+        "config/release_protein.yaml:seqs"
+      ],
+      "native_only": true
+    },
+    {
+      "id": "task.invalid_missing_stages",
+      "file": "invalid_missing_stages.yaml",
+      "expected_error": "stages.default: required for a built-in sequence-driven workflow",
+      "parameters": [
+        "stages"
+      ],
+      "valid_control": "valid_minimal.yaml",
+      "source": [
+        "astrolabe/cli.py:_run_from_config",
+        "astrolabe/stage_manager.py:StageManager.__init__",
+        "astrolabe/configuration.py:SEARCH_FACTORY_CATALOG",
+        "config/release_protein.yaml:stages.default"
+      ],
+      "native_only": true
+    },
+    {
+      "id": "task.valid_execution_bound",
+      "file": "valid_execution_bound.yaml",
+      "expected_error": null,
+      "parameters": [
+        "search.execution.socket_path",
+        "search.execution.workers",
+        "search.execution.in_flight",
+        "search.execution.resume",
+        "search.execution.retry_interrupted"
+      ],
+      "valid_control": "valid_execution_bound.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:_EXECUTION_FIELDS;_configured_branching_execution;run_configured_branching",
+        "config/binder_interface_beam.yaml:search.execution"
+      ]
+    },
+    {
+      "id": "task.valid_execution_unbound_composition",
+      "file": "valid_execution_unbound_composition.yaml",
+      "expected_error": null,
+      "parameters": [
+        "search.execution.socket_path"
+      ],
+      "valid_control": "valid_execution_unbound_composition.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:_EXECUTION_FIELDS;_configured_branching_execution;run_configured_branching",
+        "config/binder_interface_beam.yaml:search.execution"
+      ],
+      "dry_run": true
+    },
+    {
+      "id": "task.invalid_execution_missing",
+      "file": "invalid_execution_missing.yaml",
+      "expected_error": "search.execution: required execution mapping",
+      "parameters": [
+        "search.execution"
+      ],
+      "valid_control": "valid_execution_bound.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:_EXECUTION_FIELDS;_configured_branching_execution;run_configured_branching",
+        "config/binder_interface_beam.yaml:search.execution"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_null",
+      "file": "invalid_execution_null.yaml",
+      "expected_error": "search.execution: expected an execution mapping",
+      "parameters": [
+        "search.execution"
+      ],
+      "valid_control": "valid_execution_bound.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:_EXECUTION_FIELDS;_configured_branching_execution;run_configured_branching",
+        "config/binder_interface_beam.yaml:search.execution"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_empty",
+      "file": "invalid_execution_empty.yaml",
+      "expected_error": "search.execution.in_flight: required execution field",
+      "parameters": [
+        "search.execution"
+      ],
+      "valid_control": "valid_execution_bound.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:_EXECUTION_FIELDS;_configured_branching_execution;run_configured_branching",
+        "config/binder_interface_beam.yaml:search.execution"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_partial",
+      "file": "invalid_execution_partial.yaml",
+      "expected_error": "search.execution.retry_interrupted: required execution field",
+      "parameters": [
+        "search.execution.retry_interrupted"
+      ],
+      "valid_control": "valid_execution_bound.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:_EXECUTION_FIELDS;_configured_branching_execution;run_configured_branching",
+        "config/binder_interface_beam.yaml:search.execution"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_unknown",
+      "file": "invalid_execution_unknown.yaml",
+      "expected_error": "search.execution.worker_count: unknown execution field",
+      "parameters": [
+        "search.execution.worker_count"
+      ],
+      "valid_control": "valid_execution_bound.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:_EXECUTION_FIELDS;_configured_branching_execution;run_configured_branching",
+        "config/binder_interface_beam.yaml:search.execution"
+      ]
+    },
+    {
+      "id": "task.invalid_execution_unbound_actual_run",
+      "file": "invalid_execution_unbound_actual_run.yaml",
+      "expected_error": "search.execution.socket_path: required non-empty socket path",
+      "parameters": [
+        "search.execution.socket_path"
+      ],
+      "valid_control": "valid_execution_bound.yaml",
+      "source": [
+        "astrolabe/protein_beam.py:_EXECUTION_FIELDS;_configured_branching_execution;run_configured_branching",
+        "config/binder_interface_beam.yaml:search.execution"
+      ],
+      "native_only": true
+    }
+  ]
+}

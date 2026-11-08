@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
 from astrolabe.stage_transaction import (
     begin_active_transition_gate_attempt,
     begin_direct_stage_entry,
@@ -1009,6 +1011,31 @@ def test_rollback_direct_stage_entry_returns_to_source_stage() -> None:
 
     assert stage_manager.current_stage == "default"
     assert stage_manager.stage_set_calls == ["stage_1", "default"]
+
+
+def test_target_evaluation_failure_restores_source_stage_and_allows_retry() -> None:
+    stage_manager = _StageManager()
+    plan = plan_stage_transaction(stage_manager, "stage_1")
+    source = SimpleNamespace(name="source")
+
+    def fail():
+        raise RuntimeError("target evaluation failed")
+
+    with pytest.raises(RuntimeError, match="target evaluation failed"):
+        begin_direct_stage_entry(
+            stage_manager, plan, previous_stage_result=source,
+            evaluate_target=fail, clone_result=lambda result: result,
+        )
+    assert stage_manager.current_stage == "default"
+    assert stage_manager.current_setting is stage_manager.default_setting
+
+    target = SimpleNamespace(name="target")
+    attempt = begin_direct_stage_entry(
+        stage_manager, plan, previous_stage_result=source,
+        evaluate_target=lambda: target, clone_result=lambda result: result,
+    )
+    assert attempt.evaluation_result is target
+    assert stage_manager.current_stage == "stage_1"
 
 
 def test_finish_direct_stage_entry_decision_accepts_target_result() -> None:

@@ -10,6 +10,12 @@ from typing import Any
 
 import numpy as np
 
+# This entrypoint is also launched by absolute filename in a separate vendor
+# interpreter. Its cwd alone does not make the Astrolabe package importable.
+_ASTROLABE_ROOT = str(Path(__file__).resolve().parents[3])
+if _ASTROLABE_ROOT not in sys.path:
+    sys.path.insert(0, _ASTROLABE_ROOT)
+
 _REQUEST_ONLY_META_KEYS = frozenset(
     {
         "template_selection",
@@ -130,12 +136,12 @@ def main() -> int:
             cached = engine_cache.get(cache_key)
             if cached is None:
                 engine_cls = _load_rf3_inference_engine(repo_path)
-                engine = engine_cls(**config)
-                initialize = getattr(engine, "initialize", None)
-                if callable(initialize):
-                    initialize()
+                from astrolabe.evaluators.runtime_stages import resident_engine_kernel
+
+                engine, kernel = resident_engine_kernel(engine_cls, config)
                 cached = {
                     "engine": engine,
+                    "kernel": kernel,
                     "post_init_rng_state": _capture_rng_state(),
                 }
                 engine_cache[cache_key] = cached
@@ -154,7 +160,7 @@ def main() -> int:
                 run_kwargs["add_missing_atoms"] = bool(
                     message.get("add_missing_atoms", True)
                 )
-            cached["engine"].run(**run_kwargs)
+            cached["kernel"](run_kwargs)
             _write({"type": "result", "id": request_id, "status": "success"})
         except Exception as exc:
             _write(

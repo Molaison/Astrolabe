@@ -1,0 +1,47 @@
+task_name: "daily_task_control"
+out_dir: null
+seqs:
+  A: "ACDEFGHIKLMNPQRSTVWY"
+types:
+  A: "p"
+homologies: {}
+named_files: null
+seed: 17
+steps: 2
+repeats: 1
+debug: false
+enable_pyrosetta: false
+skip_complex_poses: true
+use_metropolis_acceptance: false
+initial_temperature: 0.05
+initializer:
+  mode: "random"
+evaluator:
+  evaluator_terms:
+    Sequence:
+      _type: "sequence"
+mutator:
+  selector_expression: null
+  mutator_terms:
+    MCMC:
+      _type: "mcmc"
+loss:
+  loss_terms: {}
+  expression_terms: {}
+stages:
+  default:
+    oligo: ["A"]
+    evaluator: "Sequence"
+    mutators: ["MCMC"]
+    mutation_num: 1
+    weighted_score_expression: "0"
+
+search:
+  algorithm: "branching"
+  owner: "native_refinement"
+  width: 2
+  proposals_per_parent: 2
+  max_evaluations: 0
+  proposal_cap: 3
+  resume: false
+  summary_format: "json"

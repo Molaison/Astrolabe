@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "profiles": [
+    {
+      "command": [
+        "refine",
+        "interface"
+      ],
+      "engine": "/absolute/path/to/apptainer",
+      "image": "/absolute/path/to/astrolabe.sif",
+      "binds": [
+        "/absolute/path/to/af3-weights:/models/alphafold3:ro",
+        "/absolute/path/to/ligandmpnn-weights:/models/ligandmpnn:ro"
+      ],
+      "env": {
+        "GH_WEIGHT_AF3": "/models/alphafold3",
+        "GH_WEIGHT_LIGANDMPNN": "/models/ligandmpnn",
+        "GH_CUDA_PREINITIALIZE": "0",
+        "XLA_PYTHON_CLIENT_PREALLOCATE": "false",
+        "OMP_NUM_THREADS": "1"
+      },
+      "forward_env": [
+        "PROTEIN_BEAM_CPU_SET"
+      ]
+    }
+  ]
+}

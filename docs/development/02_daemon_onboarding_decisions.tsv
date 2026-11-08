@@ -1,0 +1,7 @@
+ts	phase	decision	why	evidence	result
+2026-10-31T05:18:07Z	frame	Preserve the dirty checkout and record its initial state	Existing interface work is unrelated to this migration	/tmp/astrolabe-initial-dirty.json	baseline saved
+2026-10-31T05:18:07Z	ground	Reuse the pinned Anthropic kit manifest	Model changes must not silently change scientific recipes	config/anthropic_kits.yaml	compatibility boundary established
+2026-10-31T05:18:07Z	baseline	Run focused CPU regressions before implementation	Separate prior fixture failures from regressions	tests/test_af3_lifecycle.py	145 passed and 4 missing-fixture failures
+2026-10-31T05:24:00Z	design	Choose explicit resident factories at the runner boundary	Two designs and independent review reject transferring trajectory globals	docs/development/01_daemon_onboarding_plan.md	implementation started
+2026-10-31T05:24:00Z	packaging	Move software metadata into the installed package and keep a script shim	Setup plans need one catalog in both a checkout and wheel	astrolabe/software_catalog.py	ready for CLI integration
+2026-10-31T05:45:58.527601+00:00	domain	Separate shared scientific contracts from model execution	Scores from multiple producers and shared segments need explicit identity and state ownership	docs/development/01_daemon_onboarding_plan.md	design proposal recorded

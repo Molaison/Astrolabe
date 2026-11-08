@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -14,12 +15,15 @@ from typing import Any, Dict, Iterable, Iterator, List, Mapping, Optional, Seque
 
 from omegaconf import OmegaConf
 
+from astrolabe.design.collection import Job, JobResult
+from astrolabe.design.fixed_list import FixedTask, run_fixed_task_list
 from astrolabe.core import global_config
 from astrolabe.core.nonstandard_residues import build_nonstandard_aliases_and_user_ccd
 from astrolabe.core.protomer_config_parser import Protomer, ProtomerTypes, SegmentManager
 from astrolabe.evaluators.utils import construct_evaluators
 from astrolabe.posthoc import refold_backends
 from astrolabe.posthoc import refold_plan
+from astrolabe.posthoc import refold_receipts
 from astrolabe.posthoc.db import iter_records, open_db
 from astrolabe.posthoc.filtering import (
     apply_filter_expression,
@@ -675,6 +679,12 @@ def refold_from_db(
         "ran_protenix": int(run_summary.get("ran_protenix", 0)),
         "reused_af3": int(run_summary.get("reused_af3", 0)),
         "reused_protenix": int(run_summary.get("reused_protenix", 0)),
+        "receipt_cache_hits_af3": int(
+            run_summary.get("receipt_cache_hits_af3", 0)
+        ),
+        "receipt_cache_hits_protenix": int(
+            run_summary.get("receipt_cache_hits_protenix", 0)
+        ),
         "groups": int(run_summary.get("groups", 0)),
         "resource_groups": int(run_summary.get("resource_groups", 0)),
         "evaluator_cache_hits": int(run_summary.get("evaluator_cache_hits", 0)),
@@ -973,32 +983,57 @@ def _load_refold_runtime_signature_if_available(
         return None
 
 
-def _can_reuse_source_backend_outputs(
+def _backend_output_roots(
+    run_dir: Path,
     *,
     backend: str,
-    source_run_dir: Path,
-    target_config_path: Path | None,
-    item: Mapping[str, Any] | None = None,
+    step: int,
+    oligo: str,
+) -> tuple[Path, ...]:
+    backend_name = _canonical_refold_backend_name(backend)
+    if backend_name == "af3":
+        raw_dir = _af3_done_marker(
+            run_dir,
+            step=step,
+            oligo=oligo,
+        ).parent
+        return (
+            raw_dir,
+            Path(run_dir)
+            / "structures"
+            / f"step_{step:03d}_{oligo}_model.cif",
+        )
+    if backend_name == "protenix":
+        return (
+            _protenix_done_marker(
+                run_dir,
+                step=step,
+                oligo=oligo,
+            ),
+        )
+    raise ValueError(f"Unsupported refold receipt backend: {backend!r}")
+
+
+def _backend_outputs_present(
+    run_dir: Path,
+    *,
+    backend: str,
+    step: int,
+    oligo: str,
 ) -> bool:
-    source_cfg_path = Path(source_run_dir) / "config.yaml"
-    if target_config_path is None:
-        target_config_path = source_cfg_path
-    target_cfg_path = Path(target_config_path).expanduser().resolve()
-    source_cfg_path = source_cfg_path.expanduser().resolve()
-    if (
-        source_cfg_path == target_cfg_path
-        and not (item and ("cyclization" in item or "nonstandard_residues" in item))
-    ):
-        return True
-    source_signature = _load_refold_runtime_signature_if_available(source_cfg_path, backend)
-    target_signature = _load_refold_runtime_signature_if_available(
-        target_cfg_path,
-        backend,
-        item=item,
-    )
-    if source_signature is None or target_signature is None:
-        return False
-    return _hash_manifest_inputs(source_signature) == _hash_manifest_inputs(target_signature)
+    backend_name = _canonical_refold_backend_name(backend)
+    if backend_name == "af3":
+        marker = _af3_done_marker(run_dir, step=step, oligo=oligo)
+        structure = (
+            Path(run_dir)
+            / "structures"
+            / f"step_{step:03d}_{oligo}_model.cif"
+        )
+        return marker.exists() or marker.parent.exists() or structure.exists()
+    if backend_name == "protenix":
+        base = _protenix_done_marker(run_dir, step=step, oligo=oligo)
+        return base.exists() and any(base.rglob("*"))
+    raise ValueError(f"Unsupported refold receipt backend: {backend!r}")
 
 
 def _reuse_source_backend_outputs(
@@ -1086,17 +1121,74 @@ def _repo_root_for_refold() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
-def _merge_worker_outputs(*, worker_out_root: Path, out_root: Path) -> None:
-    for child in Path(worker_out_root).iterdir():
-        if child.name == "refold_failures.jsonl":
-            continue
-        if not child.is_dir():
-            continue
-        _mirror_tree(child, out_root / child.name)
+@dataclass(frozen=True)
+class _RefoldShardJob:
+    index: int
+    command: tuple[str, ...]
+    failure_path: Path
+    summary_path: Path
 
 
-def _append_worker_failures(*, worker_out_root: Path, failure_lines: list[str]) -> None:
-    path = Path(worker_out_root) / "refold_failures.jsonl"
+@dataclass(frozen=True)
+class _RefoldSlotJob:
+    item_index: int
+    backend: str
+    item: Mapping[str, Any]
+    identity: Mapping[str, Any]
+    dst_run_dir: Path
+    source_run_dir: Path | None
+    src_config: Path
+    selected_config: Mapping[str, Any]
+    cfg: Any
+    seqs: Mapping[str, Any]
+    types: Mapping[str, Any]
+    homologies: Mapping[str, Any]
+    runtime_overrides: Mapping[str, Any]
+    input_context: Mapping[str, Any]
+    seed: int
+    dry_run: bool
+
+    @property
+    def step(self) -> int:
+        return int(self.item["step"])
+
+    @property
+    def oligo(self) -> str:
+        return str(self.item["oligo"])
+
+
+@dataclass(frozen=True)
+class _RefoldSlotOutcome:
+    item_index: int
+    backend: str
+    outcome: str
+    source_note: str | None = None
+    metrics: Mapping[str, Any] | None = None
+    error_type: str | None = None
+    error: str | None = None
+
+
+@dataclass
+class _RefoldItemPlan:
+    group_index: int
+    item: dict[str, Any]
+    dst_run_dir: Path
+    step: int
+    job_ids: tuple[str, ...]
+    dry_preview: bool = False
+    blocked: bool = False
+
+
+@dataclass
+class _RefoldGroupPlan:
+    dst_run_dir: Path
+    rows_by_step: dict[int, Dict[str, Any]]
+    records: list[_RefoldItemPlan]
+    write_scores: bool = False
+
+
+def _append_failure_records(path: Path, failure_lines: list[str]) -> None:
+    path = Path(path)
     if not path.exists():
         return
     failure_lines.extend([line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()])
@@ -1165,9 +1257,32 @@ def _run_refold_parallel(
 ) -> dict[str, Any]:
     worker_count = max(1, min(int(workers), len(plan.groups)))
     parallel_root = out_root / "_parallel_workers"
-    if parallel_root.exists():
-        shutil.rmtree(parallel_root)
     parallel_root.mkdir(parents=True, exist_ok=True)
+    for entry in parallel_root.iterdir():
+        generation_path = entry / "generation.json"
+        if not entry.is_dir() or not generation_path.is_file():
+            raise refold_receipts.RefoldReceiptConflict(
+                "Existing parallel refold work uses a legacy temporary-output "
+                f"layout without a parent-safe receipt: {entry}"
+            )
+        generation = json.loads(generation_path.read_text(encoding="utf-8"))
+        if generation.get("schema") != "astrolabe.posthoc-refold.parallel-generation/v1":
+            raise refold_receipts.RefoldReceiptConflict(
+                f"Parallel refold generation has an unsupported schema: {entry}"
+            )
+    generation_root = Path(
+        tempfile.mkdtemp(prefix="run_", dir=parallel_root)
+    ).resolve()
+    refold_receipts._atomic_json(
+        generation_root / "generation.json",
+        {
+            "schema": "astrolabe.posthoc-refold.parallel-generation/v1",
+            "out_root": str(out_root.resolve()),
+            "parent_pid": os.getpid(),
+            "created_unix_s": time.time(),
+            "workers": worker_count,
+        },
+    )
 
     shards, resource_group_count = refold_plan.assign_refold_plan_to_worker_shards(
         plan=plan,
@@ -1197,15 +1312,16 @@ def _run_refold_parallel(
         "    config_yaml=(Path(sys.argv[10]) if sys.argv[10] else None),\n"
         "    dry_run=False,\n"
         "    workers=1,\n"
+        "    _failure_report_path=Path(sys.argv[11]),\n"
         ")\n"
-        "Path(sys.argv[11]).write_text(json.dumps(summary, sort_keys=True), encoding='utf-8')\n"
+        "Path(sys.argv[12]).write_text(json.dumps(summary, sort_keys=True), encoding='utf-8')\n"
     )
 
-    procs: list[tuple[subprocess.Popen[str], Path, Path]] = []
+    shard_jobs: list[FixedTask] = []
     for idx, shard_items in enumerate(shards, start=1):
-        shard_manifest = parallel_root / f"worker_{idx}.manifest.jsonl"
-        shard_out_root = parallel_root / f"worker_{idx}.out"
-        shard_summary = parallel_root / f"worker_{idx}.summary.json"
+        shard_manifest = generation_root / f"worker_{idx}.manifest.jsonl"
+        shard_failures = generation_root / f"worker_{idx}.failures.jsonl"
+        shard_summary = generation_root / f"worker_{idx}.summary.json"
         with shard_manifest.open("w", encoding="utf-8") as f:
             for item in shard_items:
                 f.write(json.dumps(item, ensure_ascii=False) + "\n")
@@ -1215,7 +1331,7 @@ def _run_refold_parallel(
             worker_code,
             str(repo_root),
             str(shard_manifest),
-            str(shard_out_root),
+            str(out_root),
             json.dumps(list(evaluators)),
             str(binder_chain),
             str(target_chain),
@@ -1223,21 +1339,67 @@ def _run_refold_parallel(
             json.dumps(list(path_map)),
             "1" if keep_protenix_structures else "0",
             str(config_yaml) if config_yaml else "",
+            str(shard_failures),
             str(shard_summary),
         ]
-        procs.append((subprocess.Popen(cmd, text=True), shard_out_root, shard_summary))
+        shard_jobs.append(
+            FixedTask(
+                job_id=f"shard_{idx:04d}",
+                payload=_RefoldShardJob(
+                    index=idx,
+                    command=tuple(cmd),
+                    failure_path=shard_failures,
+                    summary_path=shard_summary,
+                ),
+            )
+        )
 
-    for proc, shard_out_root, shard_summary in procs:
-        rc = proc.wait()
+    def _run_shard(job: Job) -> JobResult:
+        shard = job.payload
+        if not isinstance(shard, _RefoldShardJob):
+            raise TypeError("fixed refold shard job has the wrong payload")
+        process = subprocess.Popen(list(shard.command), text=True)
+        rc = process.wait()
         if rc != 0:
-            raise RuntimeError(f"Refold worker exited with status {rc}: {shard_out_root}")
-        worker_summaries.append(json.loads(shard_summary.read_text(encoding="utf-8")))
-        _merge_worker_outputs(worker_out_root=shard_out_root, out_root=out_root)
-        _append_worker_failures(worker_out_root=shard_out_root, failure_lines=failure_lines)
+            return JobResult(
+                job=job,
+                status="failed",
+                payload=shard,
+                error=(
+                    f"Refold worker exited with status {rc}; "
+                    f"inspect {generation_root}"
+                ),
+            )
+        return JobResult(
+            job=job,
+            status="completed",
+            score=0.0,
+            payload=shard,
+        )
+
+    fixed_run = run_fixed_task_list(
+        shard_jobs,
+        _run_shard,
+        max_in_flight=worker_count,
+    )
+    for result in fixed_run.results:
+        shard = result.payload
+        if result.status == "failed":
+            raise RuntimeError(result.error or "refold shard failed")
+        if not isinstance(shard, _RefoldShardJob):
+            raise TypeError("fixed refold result has the wrong payload")
+        worker_summaries.append(
+            json.loads(shard.summary_path.read_text(encoding="utf-8"))
+        )
+        _append_failure_records(shard.failure_path, failure_lines)
 
     if failure_lines:
         failure_jsonl = out_root / "refold_failures.jsonl"
-        failure_jsonl.write_text("\n".join(failure_lines) + "\n", encoding="utf-8")
+        temporary = failure_jsonl.with_suffix(
+            failure_jsonl.suffix + f".{os.getpid()}.tmp"
+        )
+        temporary.write_text("\n".join(failure_lines) + "\n", encoding="utf-8")
+        os.replace(temporary, failure_jsonl)
         failure_report = str(failure_jsonl)
     else:
         failure_report = None
@@ -1253,6 +1415,14 @@ def _run_refold_parallel(
         "ran_protenix": sum(int(item.get("ran_protenix", 0)) for item in worker_summaries),
         "reused_af3": sum(int(item.get("reused_af3", 0)) for item in worker_summaries),
         "reused_protenix": sum(int(item.get("reused_protenix", 0)) for item in worker_summaries),
+        "receipt_cache_hits_af3": sum(
+            int(item.get("receipt_cache_hits_af3", 0))
+            for item in worker_summaries
+        ),
+        "receipt_cache_hits_protenix": sum(
+            int(item.get("receipt_cache_hits_protenix", 0))
+            for item in worker_summaries
+        ),
         "groups": len(plan.groups),
         "resource_groups": resource_group_count,
         "evaluator_cache_hits": sum(int(item.get("evaluator_cache_hits", 0)) for item in worker_summaries),
@@ -1260,6 +1430,7 @@ def _run_refold_parallel(
         "dry_run": False,
         "workers_requested": int(workers),
         "workers": worker_count,
+        "parallel_generation": str(generation_root),
         "binder_chain": str(binder_chain),
         "target_chain": str(target_chain),
         "config_yaml": str(config_yaml) if config_yaml is not None else None,
@@ -1282,6 +1453,7 @@ def run_refold(
     config_yaml: Path | None = None,
     workers: int = 1,
     dry_run: bool = False,
+    _failure_report_path: Path | None = None,
 ) -> dict[str, Any]:
     """
     Execute second-pass prediction for each manifest record, writing GH-like run folders:
@@ -1291,6 +1463,11 @@ def run_refold(
         structures/step_###_<oligo>_model.cif         (canonical: AF3)
         raw_model_results/alphafold3/step_###_<oligo>/...
         raw_model_results/protenix/step_###/<oligo>/seed_*/predictions/...
+
+    Backend completion markers are not cache proofs.  A marker is reusable only
+    when its slot has a committed receipt matching the current scientific
+    identity and output contract.  Issued receipts and uncommitted legacy
+    outputs fail closed instead of being replayed or overwritten.
     """
 
     evaluator_backends = refold_backends.refold_backend_names(evaluators)
@@ -1340,13 +1517,27 @@ def run_refold(
     ran_protenix = 0
     reused_af3 = 0
     reused_protenix = 0
+    receipt_cache_hits_af3 = 0
+    receipt_cache_hits_protenix = 0
     evaluator_cache_hits = 0
     evaluator_cache_misses = 0
     evaluator_cache: dict[tuple[str, str], Any] = {}
     failure_records: list[dict[str, Any]] = []
-    failure_jsonl = out_root / "refold_failures.jsonl"
+    failure_jsonl = (
+        Path(_failure_report_path).expanduser().resolve()
+        if _failure_report_path is not None
+        else out_root / "refold_failures.jsonl"
+    )
+    config_cache: dict[Path, Any] = {}
+    receipt_asset_cache: dict[tuple[Path, str], dict[str, Any]] = {}
+    receipt_numeric_cache: dict[str, dict[str, Any]] = {}
 
-    def _record_failure(it: dict[str, Any], *, reason: str, exc: Exception | None = None) -> None:
+    def _record_failure(
+        it: dict[str, Any],
+        *,
+        reason: str,
+        exc: Exception | None = None,
+    ) -> None:
         nonlocal failed
         failed += 1
         rec = {
@@ -1363,7 +1554,57 @@ def run_refold(
             rec["error"] = str(exc)
         failure_records.append(rec)
 
-    for group in plan.groups:
+    def _receipt_identity(
+        *,
+        backend: str,
+        item: Mapping[str, Any],
+        config_path: Path,
+        selected_config: Mapping[str, Any],
+        compiled_input_context: Mapping[str, Any],
+        runtime_config: Mapping[str, Any],
+        homologies: Mapping[str, Any],
+        seed: int,
+    ) -> dict[str, Any]:
+        backend_name = _canonical_refold_backend_name(backend)
+        if backend_name is None:
+            raise ValueError(f"Unsupported refold backend: {backend!r}")
+        config_path = Path(config_path).expanduser().resolve()
+        cache_key = (config_path, backend_name)
+        asset_record = receipt_asset_cache.get(cache_key)
+        if asset_record is None:
+            asset_record = refold_receipts.selected_asset_record(
+                backend=backend_name,
+                selected_config=selected_config,
+            )
+            receipt_asset_cache[cache_key] = asset_record
+        numeric_source = receipt_numeric_cache.get(backend_name)
+        if numeric_source is None:
+            numeric_source = refold_receipts.numeric_source_record(
+                backend_name,
+                repo_root=_repo_root_for_refold(),
+            )
+            receipt_numeric_cache[backend_name] = numeric_source
+        receipt_item = dict(item)
+        receipt_item["_receipt_seed"] = int(seed)
+        return refold_receipts.build_scientific_identity(
+            backend=backend_name,
+            item=receipt_item,
+            config_path=config_path,
+            selected_config=selected_config,
+            compiled_input_context=compiled_input_context,
+            runtime_config=runtime_config,
+            homologies=homologies,
+            asset_record=asset_record,
+            numeric_source=numeric_source,
+        )
+
+    group_plans: list[_RefoldGroupPlan] = []
+    slot_tasks: list[FixedTask] = []
+    slot_jobs: dict[str, _RefoldSlotJob] = {}
+    slot_number = 0
+    item_index = 0
+
+    for group_index, group in enumerate(plan.groups):
         task, _run, _src_run_dir = group.key
         items = group.manifest_items()
         dst_run_name = group.output_run_name
@@ -1371,9 +1612,13 @@ def run_refold(
         dst_run_dir.mkdir(parents=True, exist_ok=True)
         (dst_run_dir / "raw_model_results").mkdir(parents=True, exist_ok=True)
         (dst_run_dir / "structures").mkdir(parents=True, exist_ok=True)
+        group_plan = _RefoldGroupPlan(
+            dst_run_dir=dst_run_dir,
+            rows_by_step={},
+            records=[],
+        )
+        group_plans.append(group_plan)
 
-        # Track per-step scores rows (write once per run dir).
-        rows_by_step: dict[int, Dict[str, Any]] = {}
         for it in sorted(items, key=lambda x: (int(x["step"]), str(x["oligo"]))):
             step = int(it["step"])
             oligo = str(it["oligo"])
@@ -1382,84 +1627,54 @@ def run_refold(
                 _record_failure(it, reason="missing_or_invalid_seqs")
                 continue
 
-            # Ensure a base scores row exists for this step (even if evaluators are skipped).
             base_row: Dict[str, Any] = {
                 "src_run_dir": str(it.get("src_run_dir", "")),
             }
-            for c, s in seqs.items():
-                if not isinstance(c, str) or not isinstance(s, str):
+            for chain, sequence in seqs.items():
+                if not isinstance(chain, str) or not isinstance(sequence, str):
                     continue
-                if len(c) == 1 and c.isalpha() and s:
-                    base_row[f"p{c}_sequence"] = s
-                    base_row[f"{c}_length"] = len(s)
-            rows_by_step.setdefault(step, {}).update(base_row)
+                if len(chain) == 1 and chain.isalpha() and sequence:
+                    base_row[f"p{chain}_sequence"] = sequence
+                    base_row[f"{chain}_length"] = len(sequence)
+            group_plan.rows_by_step.setdefault(step, {}).update(base_row)
 
-            # Resume checks (do not require loading evaluator stacks).
             needed_backends = _item_needed_backends(it, requested_backends)
             want_af3 = "af3" in requested_backends and "af3" in needed_backends
             want_px = "protenix" in requested_backends and "protenix" in needed_backends
-            af3_done = _af3_done_marker(dst_run_dir, step=step, oligo=oligo).exists()
-            px_done = _protenix_done_marker(dst_run_dir, step=step, oligo=oligo).exists() and any(
-                _protenix_done_marker(dst_run_dir, step=step, oligo=oligo).glob("seed_*/predictions/*_summary_confidence_sample_*.json")
-            )
-            src_run_dir = refold_plan.refold_source_run_dir_path(it)
-            target_config_path = refold_plan.refold_target_config_path(
-                item=it,
-                config_yaml=config_yaml,
-            )
-            if (
-                want_af3
-                and not af3_done
-                and src_run_dir is not None
-                and src_run_dir.exists()
-                and _can_reuse_source_backend_outputs(
-                    backend="af3",
-                    source_run_dir=src_run_dir,
-                    target_config_path=target_config_path,
-                    item=it,
+            wanted = [
+                backend
+                for backend, enabled in (
+                    ("protenix", want_px),
+                    ("af3", want_af3),
                 )
-                and _reuse_source_backend_outputs(
-                    backend="af3",
-                    source_run_dir=src_run_dir,
-                    dst_run_dir=dst_run_dir,
-                    step=step,
-                    oligo=oligo,
-                )
-            ):
-                af3_done = True
-                reused_af3 += 1
-                _append_refold_backend(rows_by_step.setdefault(step, {}), "af3", action="reuse-source")
-            if (
-                want_px
-                and not px_done
-                and src_run_dir is not None
-                and src_run_dir.exists()
-                and _can_reuse_source_backend_outputs(
-                    backend="protenix",
-                    source_run_dir=src_run_dir,
-                    target_config_path=target_config_path,
-                    item=it,
-                )
-                and _reuse_source_backend_outputs(
-                    backend="protenix",
-                    source_run_dir=src_run_dir,
-                    dst_run_dir=dst_run_dir,
-                    step=step,
-                    oligo=oligo,
-                )
-            ):
-                px_done = True
-                reused_protenix += 1
-                _append_refold_backend(rows_by_step.setdefault(step, {}), "protenix", action="reuse-source")
-
-            if (not want_af3 or af3_done) and (not want_px or px_done):
-                skipped += 1
-                continue
-
+                if enabled
+            ]
             if dry_run:
-                processed += 1
-                continue
+                untouched = True
+                for backend in wanted:
+                    slot = refold_receipts.RefoldReceiptSlot(
+                        dst_run_dir,
+                        backend,
+                        step,
+                        oligo,
+                    )
+                    with slot.lock():
+                        if (
+                            slot.receipt_path.exists()
+                            or _backend_outputs_present(
+                                dst_run_dir,
+                                backend=backend,
+                                step=step,
+                                oligo=oligo,
+                            )
+                        ):
+                            untouched = False
+                if untouched:
+                    group_plan.write_scores = True
+                    processed += 1
+                    continue
 
+            src_run_dir = refold_plan.refold_source_run_dir_path(it)
             src_config = refold_plan.refold_target_config_path(
                 item=it,
                 config_yaml=config_yaml,
@@ -1467,22 +1682,29 @@ def run_refold(
             if src_config is None:
                 _record_failure(it, reason="missing_src_config")
                 continue
-            cfg = _load_cfg_for_refold(src_config)
+            src_config = Path(src_config).expanduser().resolve()
+            cfg = config_cache.get(src_config)
+            if cfg is None:
+                cfg = _load_cfg_for_refold(src_config)
+                config_cache[src_config] = cfg
 
             af3_cfg = None
             px_cfg = None
             try:
-                if want_af3 and not af3_done:
+                if want_af3:
                     af3_cfg = _load_eval_subcfg(cfg, "alphafold3")
-                if want_px and not px_done:
+                if want_px:
                     px_cfg = _load_eval_subcfg(cfg, "protenix")
                 runtime_overrides = _load_refold_runtime_overrides(cfg)
                 input_context = _load_refold_input_context(cfg, item=it)
-            except Exception as e:
-                _record_failure(it, reason="evaluator_config_resolution_failed", exc=e)
+            except Exception as exc:
+                _record_failure(
+                    it,
+                    reason="evaluator_config_resolution_failed",
+                    exc=exc,
+                )
                 continue
 
-            # Resolve homology paths again at runtime to allow path-map/relpath-base overrides.
             homologies = it.get("homologies") or {}
             try:
                 homologies = _resolve_homology_value(
@@ -1491,40 +1713,308 @@ def run_refold(
                     path_maps=maps,
                     require_abs=True,
                 ) or {}
-            except Exception as e:
-                _record_failure(it, reason="homology_path_resolution_failed", exc=e)
+            except Exception as exc:
+                _record_failure(
+                    it,
+                    reason="homology_path_resolution_failed",
+                    exc=exc,
+                )
                 continue
 
             types = it.get("types") or {}
+            seed = int(getattr(cfg, "seed", 0) or 0)
+            prepared = _RefoldItemPlan(
+                group_index=group_index,
+                item=it,
+                dst_run_dir=dst_run_dir,
+                step=step,
+                job_ids=(),
+            )
+            receipt_conflict = None
+            for backend, selected_config in (
+                ("protenix", px_cfg),
+                ("af3", af3_cfg),
+            ):
+                enabled = want_px if backend == "protenix" else want_af3
+                if not enabled or selected_config is None:
+                    continue
+                if receipt_conflict is not None:
+                    break
+                try:
+                    identity = _receipt_identity(
+                        backend=backend,
+                        item=it,
+                        config_path=src_config,
+                        selected_config=selected_config,
+                        compiled_input_context=input_context,
+                        runtime_config=runtime_overrides,
+                        homologies=homologies,
+                        seed=seed,
+                    )
+                except refold_receipts.RefoldReceiptConflict as exc:
+                    receipt_conflict = exc
+                    break
+                slot_number += 1
+                job_id = f"slot_{slot_number:06d}"
+                slot_job = _RefoldSlotJob(
+                    item_index=item_index,
+                    backend=backend,
+                    item=it,
+                    identity=identity,
+                    dst_run_dir=dst_run_dir,
+                    source_run_dir=(
+                        src_run_dir
+                        if src_run_dir is not None and src_run_dir.exists()
+                        else None
+                    ),
+                    src_config=src_config,
+                    selected_config=selected_config,
+                    cfg=cfg,
+                    seqs=seqs,
+                    types=types,
+                    homologies=homologies,
+                    runtime_overrides=runtime_overrides,
+                    input_context=input_context,
+                    seed=seed,
+                    dry_run=bool(dry_run),
+                )
+                slot_jobs[job_id] = slot_job
+                slot_tasks.append(FixedTask(job_id=job_id, payload=slot_job))
+                prepared.job_ids = prepared.job_ids + (job_id,)
 
-            # Run Protenix first to avoid overwriting canonical AF3 structure file.
-            if want_px and not px_done and px_cfg is not None:
-                tmp_out = dst_run_dir / "_refold_tmp_protenix"
+            item_index += 1
+            group_plan.records.append(prepared)
+            if receipt_conflict is not None:
+                prepared.blocked = True
+                _record_failure(
+                    it,
+                    reason="refold_receipt_conflict",
+                    exc=receipt_conflict,
+                )
+
+    raw_errors: dict[str, BaseException] = {}
+    admission_source_notes: dict[str, str] = {}
+    slot_conflicts: dict[int, refold_receipts.RefoldReceiptConflict] = {}
+    completion_conflicts: dict[int, refold_receipts.RefoldReceiptConflict] = {}
+
+    def _target_slot(payload: _RefoldSlotJob):
+        return refold_receipts.RefoldReceiptSlot(
+            payload.dst_run_dir,
+            payload.backend,
+            payload.step,
+            payload.oligo,
+        )
+
+    def _target_outputs(payload: _RefoldSlotJob) -> tuple[Path, ...]:
+        return _backend_output_roots(
+            payload.dst_run_dir,
+            backend=payload.backend,
+            step=payload.step,
+            oligo=payload.oligo,
+        )
+
+    def _admission(job: Job) -> JobResult | None:
+        payload = job.payload
+        if not isinstance(payload, _RefoldSlotJob):
+            raise TypeError("fixed refold slot job has the wrong payload")
+        if payload.item_index in slot_conflicts:
+            return JobResult(
+                job=job,
+                status="completed",
+                score=0.0,
+                payload=_RefoldSlotOutcome(
+                    item_index=payload.item_index,
+                    backend=payload.backend,
+                    outcome="skipped-after-conflict",
+                ),
+            )
+        slot = _target_slot(payload)
+        try:
+            with slot.lock():
+                decision = slot.inspect(
+                    payload.identity,
+                    marker_present=_backend_outputs_present(
+                        payload.dst_run_dir,
+                        backend=payload.backend,
+                        step=payload.step,
+                        oligo=payload.oligo,
+                    ),
+                    output_roots=_target_outputs(payload),
+                )
+                if decision == "reusable":
+                    return JobResult(
+                        job=job,
+                        status="completed",
+                        score=0.0,
+                        payload=_RefoldSlotOutcome(
+                            item_index=payload.item_index,
+                            backend=payload.backend,
+                            outcome="cached",
+                        ),
+                    )
+
+                if payload.dry_run:
+                    return JobResult(
+                        job=job,
+                        status="completed",
+                        score=0.0,
+                        payload=_RefoldSlotOutcome(
+                            item_index=payload.item_index,
+                            backend=payload.backend,
+                            outcome="would-run",
+                        ),
+                    )
+
+                source_note = None
+                if payload.source_run_dir is not None:
+                    source_run_dir = payload.source_run_dir
+                    if source_run_dir != payload.dst_run_dir.resolve():
+                        source_outputs = _backend_output_roots(
+                            source_run_dir,
+                            backend=payload.backend,
+                            step=payload.step,
+                            oligo=payload.oligo,
+                        )
+                        source_slot = refold_receipts.RefoldReceiptSlot(
+                            source_run_dir,
+                            payload.backend,
+                            payload.step,
+                            payload.oligo,
+                        )
+                        source_decision = None
+                        try:
+                            with source_slot.lock():
+                                try:
+                                    source_decision = source_slot.inspect(
+                                        payload.identity,
+                                        marker_present=_backend_outputs_present(
+                                            source_run_dir,
+                                            backend=payload.backend,
+                                            step=payload.step,
+                                            oligo=payload.oligo,
+                                        ),
+                                        output_roots=source_outputs,
+                                        allow_legacy=True,
+                                    )
+                                except refold_receipts.RefoldReceiptUnknown:
+                                    raise
+                                except refold_receipts.RefoldReceiptConflict:
+                                    source_decision = "unproven"
+                                    source_note = (
+                                        "source receipt did not prove the target "
+                                        "scientific identity; source reuse was "
+                                        "abandoned"
+                                    )
+                                if source_decision == "reusable":
+                                    slot.issue(
+                                        payload.identity,
+                                        origin="source-reuse",
+                                    )
+                                    if not _reuse_source_backend_outputs(
+                                        backend=payload.backend,
+                                        source_run_dir=source_run_dir,
+                                        dst_run_dir=payload.dst_run_dir,
+                                        step=payload.step,
+                                        oligo=payload.oligo,
+                                    ):
+                                        raise refold_receipts.RefoldReceiptConflict(
+                                            "Source receipt matched but backend "
+                                            "outputs could not be copied from "
+                                            f"{source_run_dir}"
+                                        )
+                                    slot.complete(
+                                        identity=payload.identity,
+                                        output_roots=_target_outputs(payload),
+                                    )
+                                    return JobResult(
+                                        job=job,
+                                        status="completed",
+                                        score=0.0,
+                                        payload=_RefoldSlotOutcome(
+                                            item_index=payload.item_index,
+                                            backend=payload.backend,
+                                            outcome="reused-source",
+                                        ),
+                                    )
+                        except refold_receipts.RefoldReceiptUnknown:
+                            raise
+                        except refold_receipts.RefoldReceiptConflict:
+                            if source_decision is not None:
+                                raise
+                            source_decision = "unproven"
+                            source_note = (
+                                "source receipt slot could not be locked; source "
+                                "reuse was abandoned"
+                            )
+                        if source_decision == "legacy":
+                            source_note = (
+                                "legacy source outputs have no receipt; source reuse "
+                                "was abandoned"
+                            )
+
+                if source_note:
+                    admission_source_notes[job.job_id] = source_note
+                slot.issue(payload.identity, origin="inference")
+                return None
+        except refold_receipts.RefoldReceiptConflict as exc:
+            slot_conflicts[payload.item_index] = exc
+            return JobResult(
+                job=job,
+                status="failed",
+                payload=_RefoldSlotOutcome(
+                    item_index=payload.item_index,
+                    backend=payload.backend,
+                    outcome="failed",
+                    error_type=type(exc).__name__,
+                    error=str(exc),
+                ),
+                error=str(exc),
+            )
+
+    def _run_slot(job: Job) -> JobResult:
+        nonlocal evaluator_cache_hits, evaluator_cache_misses
+        payload = job.payload
+        if not isinstance(payload, _RefoldSlotJob):
+            raise TypeError("fixed refold slot job has the wrong payload")
+        try:
+            if payload.backend == "protenix":
+                tmp_out = payload.dst_run_dir / "_refold_tmp_protenix"
                 _init_refold_global_config(
                     out_dir=tmp_out,
-                    **runtime_overrides,
-                    **input_context,
+                    **payload.runtime_overrides,
+                    **payload.input_context,
                 )
-                _build_protomers(seqs=seqs, types=types, homologies=homologies)
-                global_config.set_variable("step", step)
-                inputs = construct_standard_input([oligo], seed=int(getattr(cfg, "seed", 0) or 0))
-
+                _build_protomers(
+                    seqs=payload.seqs,
+                    types=payload.types,
+                    homologies=payload.homologies,
+                )
+                global_config.set_variable("step", payload.step)
+                inputs = construct_standard_input([payload.oligo], seed=payload.seed)
                 cache_key = _refold_backend_resource_key(
-                    item=it,
+                    item=payload.item,
                     backend="protenix",
                     config_yaml=config_yaml,
                 )
                 evals = evaluator_cache.get(cache_key)
                 if evals is None:
                     evaluator_payload = {
-                        "evaluator_terms": {"Protenix": {"_type": "Protenix"}},
-                        "protenix": px_cfg,
+                        "evaluator_terms": {
+                            "Protenix": {"_type": "Protenix"}
+                        },
+                        "protenix": payload.selected_config,
                     }
-                    weight_path_cfg = _load_optional_cfg_node(cfg, "weight_path")
+                    weight_path_cfg = _load_optional_cfg_node(
+                        payload.cfg,
+                        "weight_path",
+                    )
                     if weight_path_cfg is not None:
                         evaluator_payload["weight_path"] = weight_path_cfg
-                    evaluator_conf = OmegaConf.create(evaluator_payload)
-                    evals = construct_evaluators(evaluator_conf, dst_run_dir / "raw_model_results", oligo_names=[oligo])
+                    evals = construct_evaluators(
+                        OmegaConf.create(evaluator_payload),
+                        payload.dst_run_dir / "raw_model_results",
+                        oligo_names=[payload.oligo],
+                    )
                     evaluator_cache[cache_key] = evals
                     evaluator_cache_misses += 1
                 else:
@@ -1532,26 +2022,32 @@ def run_refold(
                 _retarget_refold_evaluators(
                     evals=evals,
                     backend="protenix",
-                    dst_run_dir=dst_run_dir,
+                    dst_run_dir=payload.dst_run_dir,
                 )
                 evals["Protenix"].evaluate(inputs, runtime_config={})
-                ran_protenix += 1
-                _append_refold_backend(rows_by_step.setdefault(step, {}), "protenix", action="run")
                 if not keep_protenix_structures:
                     shutil.rmtree(str(tmp_out), ignore_errors=True)
-
-            if want_af3 and not af3_done and af3_cfg is not None:
-                _init_refold_global_config(
-                    out_dir=dst_run_dir,
-                    **runtime_overrides,
-                    **input_context,
+                outcome = _RefoldSlotOutcome(
+                    item_index=payload.item_index,
+                    backend="protenix",
+                    outcome="ran",
+                    source_note=admission_source_notes.get(job.job_id),
                 )
-                _build_protomers(seqs=seqs, types=types, homologies=homologies)
-                global_config.set_variable("step", step)
-                inputs = construct_standard_input([oligo], seed=int(getattr(cfg, "seed", 0) or 0))
-
+            elif payload.backend == "af3":
+                _init_refold_global_config(
+                    out_dir=payload.dst_run_dir,
+                    **payload.runtime_overrides,
+                    **payload.input_context,
+                )
+                _build_protomers(
+                    seqs=payload.seqs,
+                    types=payload.types,
+                    homologies=payload.homologies,
+                )
+                global_config.set_variable("step", payload.step)
+                inputs = construct_standard_input([payload.oligo], seed=payload.seed)
                 cache_key = _refold_backend_resource_key(
-                    item=it,
+                    item=payload.item,
                     backend="af3",
                     config_yaml=config_yaml,
                 )
@@ -1559,11 +2055,17 @@ def run_refold(
                 if evals is None:
                     evaluator_conf = OmegaConf.create(
                         {
-                            "evaluator_terms": {"Alphafold3": {"_type": "Alphafold3"}},
-                            "alphafold3": af3_cfg,
+                            "evaluator_terms": {
+                                "Alphafold3": {"_type": "Alphafold3"}
+                            },
+                            "alphafold3": payload.selected_config,
                         }
                     )
-                    evals = construct_evaluators(evaluator_conf, dst_run_dir / "raw_model_results", oligo_names=[oligo])
+                    evals = construct_evaluators(
+                        evaluator_conf,
+                        payload.dst_run_dir / "raw_model_results",
+                        oligo_names=[payload.oligo],
+                    )
                     evaluator_cache[cache_key] = evals
                     evaluator_cache_misses += 1
                 else:
@@ -1571,59 +2073,224 @@ def run_refold(
                 _retarget_refold_evaluators(
                     evals=evals,
                     backend="af3",
-                    dst_run_dir=dst_run_dir,
+                    dst_run_dir=payload.dst_run_dir,
                 )
-                std_scores = evals["Alphafold3"].evaluate(inputs, runtime_config={})
-                ran_af3 += 1
-                _append_refold_backend(rows_by_step.setdefault(step, {}), "af3", action="run")
-
-                # Populate a minimal scores row for downstream posthoc collection.
-                row: Dict[str, Any] = {
-                    "src_run_dir": str(it.get("src_run_dir", "")),
+                std_scores = evals["Alphafold3"].evaluate(
+                    inputs,
+                    runtime_config={},
+                )
+                metrics: Dict[str, Any] = {
+                    "src_run_dir": str(payload.item.get("src_run_dir", "")),
                 }
                 try:
                     iptm = None
                     ptm = None
                     plddt = None
-                    if getattr(std_scores, "iptm", None) and oligo in std_scores.iptm:
-                        iptm = std_scores.iptm[oligo][0]
-                    if getattr(std_scores, "ptm", None) and oligo in std_scores.ptm:
-                        ptm = std_scores.ptm[oligo][0]
-                    if getattr(std_scores, "plddt", None) and oligo in std_scores.plddt:
-                        # AF3 evaluator returns scalar plddt list; keep first.
-                        plddt = std_scores.plddt[oligo][0]
+                    if getattr(std_scores, "iptm", None) and payload.oligo in std_scores.iptm:
+                        iptm = std_scores.iptm[payload.oligo][0]
+                    if getattr(std_scores, "ptm", None) and payload.oligo in std_scores.ptm:
+                        ptm = std_scores.ptm[payload.oligo][0]
+                    if getattr(std_scores, "plddt", None) and payload.oligo in std_scores.plddt:
+                        plddt = std_scores.plddt[payload.oligo][0]
                     if iptm is not None:
-                        row["AB.iptm"] = float(iptm)
-                        row["iptm"] = float(iptm)
-                        row["af3_iptm"] = float(iptm)
+                        metrics["AB.iptm"] = float(iptm)
+                        metrics["iptm"] = float(iptm)
+                        metrics["af3_iptm"] = float(iptm)
                     if ptm is not None:
-                        row["AB.ptm"] = float(ptm)
-                        row["ptm"] = float(ptm)
-                        row["af3_ptm"] = float(ptm)
+                        metrics["AB.ptm"] = float(ptm)
+                        metrics["ptm"] = float(ptm)
+                        metrics["af3_ptm"] = float(ptm)
                     if plddt is not None:
-                        try:
-                            row["AB.plddt"] = float(plddt)
-                            row["plddt"] = float(plddt)
-                            row["af3_plddt"] = float(plddt)
-                        except Exception:
-                            pass
+                        metrics["AB.plddt"] = float(plddt)
+                        metrics["plddt"] = float(plddt)
+                        metrics["af3_plddt"] = float(plddt)
                 except Exception:
                     pass
-                rows_by_step.setdefault(step, {}).update(row)
+                outcome = _RefoldSlotOutcome(
+                    item_index=payload.item_index,
+                    backend="af3",
+                    outcome="ran",
+                    source_note=admission_source_notes.get(job.job_id),
+                    metrics=metrics,
+                )
+            else:
+                raise ValueError(f"Unsupported refold backend: {payload.backend!r}")
+            return JobResult(
+                job=job,
+                status="completed",
+                score=0.0,
+                payload=outcome,
+            )
+        except BaseException as exc:
+            raw_errors[job.job_id] = exc
+            raise
 
-            processed += 1
+    def _terminal_observed(job: Job, result: JobResult) -> None:
+        payload = job.payload
+        if not isinstance(payload, _RefoldSlotJob):
+            raise TypeError("fixed refold slot job has the wrong payload")
+        if result.status == "failed":
+            error = raw_errors.get(job.job_id)
+            if error is not None:
+                raise error
+            raise RuntimeError(result.error or f"{job.job_id} failed")
+        outcome = result.payload
+        if not isinstance(outcome, _RefoldSlotOutcome):
+            raise TypeError("fixed refold slot result has the wrong payload")
+        if outcome.outcome != "ran":
+            return
+        slot = _target_slot(payload)
+        try:
+            with slot.lock():
+                slot.complete(
+                    identity=payload.identity,
+                    output_roots=_target_outputs(payload),
+                )
+        except refold_receipts.RefoldReceiptConflict as exc:
+            completion_conflicts[payload.item_index] = exc
 
-        # Always ensure a scores.csv for this run dir (even if empty), for consistent scanning.
-        if rows_by_step:
+    fixed_run = run_fixed_task_list(
+        slot_tasks,
+        _run_slot,
+        max_in_flight=1,
+        worker_execution="synchronous",
+        admission=_admission,
+        terminal_observed=_terminal_observed,
+    )
+    slot_results = {
+        result.job_id: result
+        for result in fixed_run.results
+    }
+
+    for group_plan in group_plans:
+        for prepared in group_plan.records:
+            it = prepared.item
+            if prepared.blocked:
+                continue
+            job_outcomes: list[_RefoldSlotOutcome] = []
+            receipt_conflict = completion_conflicts.get(
+                next(
+                    (
+                        slot_jobs[job_id].item_index
+                        for job_id in prepared.job_ids
+                    ),
+                    -1,
+                )
+            )
+            for job_id in prepared.job_ids:
+                result = slot_results[job_id]
+                payload = slot_jobs[job_id]
+                if result.status == "failed":
+                    outcome = result.payload
+                    if isinstance(outcome, _RefoldSlotOutcome):
+                        receipt_conflict = receipt_conflict or (
+                            refold_receipts.RefoldReceiptConflict(
+                                outcome.error or "refold receipt conflict"
+                            )
+                        )
+                    continue
+                outcome = result.payload
+                if not isinstance(outcome, _RefoldSlotOutcome):
+                    raise TypeError("fixed refold slot result has the wrong payload")
+                if outcome.outcome in {"cached", "reused-source"}:
+                    slot = _target_slot(payload)
+                    if not slot.receipt_path.is_file():
+                        raise refold_receipts.RefoldReceiptConflict(
+                            "Admission returned cached refold work without a "
+                            f"committed receipt: {slot.receipt_path}"
+                        )
+                job_outcomes.append(outcome)
+
+            if receipt_conflict is not None:
+                _record_failure(
+                    it,
+                    reason="refold_receipt_conflict",
+                    exc=receipt_conflict,
+                )
+                continue
+
+            executed = 0
+            for outcome in job_outcomes:
+                if outcome.source_note:
+                    _append_refold_note(
+                        group_plan.rows_by_step.setdefault(prepared.step, {}),
+                        outcome.source_note,
+                    )
+                if outcome.outcome == "skipped-after-conflict":
+                    continue
+                if outcome.backend == "protenix":
+                    if outcome.outcome in {"ran", "would-run"}:
+                        executed += 1
+                        if outcome.outcome == "ran":
+                            ran_protenix += 1
+                            _append_refold_backend(
+                                group_plan.rows_by_step.setdefault(
+                                    prepared.step,
+                                    {},
+                                ),
+                                "protenix",
+                                action="run",
+                            )
+                    elif outcome.outcome == "cached":
+                        receipt_cache_hits_protenix += 1
+                    elif outcome.outcome == "reused-source":
+                        reused_protenix += 1
+                        group_plan.write_scores = True
+                        _append_refold_backend(
+                            group_plan.rows_by_step.setdefault(prepared.step, {}),
+                            "protenix",
+                            action="reuse-source",
+                        )
+                elif outcome.backend == "af3":
+                    if outcome.outcome in {"ran", "would-run"}:
+                        executed += 1
+                        if outcome.outcome == "ran":
+                            ran_af3 += 1
+                            _append_refold_backend(
+                                group_plan.rows_by_step.setdefault(
+                                    prepared.step,
+                                    {},
+                                ),
+                                "af3",
+                                action="run",
+                            )
+                            if outcome.metrics:
+                                group_plan.rows_by_step.setdefault(
+                                    prepared.step,
+                                    {},
+                                ).update(outcome.metrics)
+                    elif outcome.outcome == "cached":
+                        receipt_cache_hits_af3 += 1
+                    elif outcome.outcome == "reused-source":
+                        reused_af3 += 1
+                        group_plan.write_scores = True
+                        _append_refold_backend(
+                            group_plan.rows_by_step.setdefault(prepared.step, {}),
+                            "af3",
+                            action="reuse-source",
+                        )
+
+            if executed:
+                group_plan.write_scores = True
+                processed += 1
+            else:
+                skipped += 1
+
+        # Pure receipt cache hits leave the existing paid output tree untouched.
+        if group_plan.rows_by_step and group_plan.write_scores:
             _merge_backend_metrics_into_rows(
-                rows_by_step=rows_by_step,
-                run_dir=dst_run_dir,
+                rows_by_step=group_plan.rows_by_step,
+                run_dir=group_plan.dst_run_dir,
                 binder_chain=binder_chain,
                 target_chain=target_chain,
             )
-            _ensure_scores_csv(run_dir=dst_run_dir, rows_by_step=rows_by_step)
+            _ensure_scores_csv(
+                run_dir=group_plan.dst_run_dir,
+                rows_by_step=group_plan.rows_by_step,
+            )
 
     if failure_records:
+        failure_jsonl.parent.mkdir(parents=True, exist_ok=True)
         tmp = failure_jsonl.with_suffix(failure_jsonl.suffix + ".tmp")
         with tmp.open("w", encoding="utf-8") as f:
             for rec in failure_records:
@@ -1641,6 +2308,8 @@ def run_refold(
         "ran_protenix": ran_protenix,
         "reused_af3": reused_af3,
         "reused_protenix": reused_protenix,
+        "receipt_cache_hits_af3": receipt_cache_hits_af3,
+        "receipt_cache_hits_protenix": receipt_cache_hits_protenix,
         "groups": len(plan.groups),
         "resource_groups": resource_group_count,
         "evaluator_cache_hits": evaluator_cache_hits,

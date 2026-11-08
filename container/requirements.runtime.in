@@ -24,6 +24,7 @@ jax-cuda12-pjrt==0.4.34
 jax-cuda12-plugin[with-cuda]==0.4.34
 jax-triton==0.2.0
 jaxtyping==0.2.34
+jsonschema==4.26.0
 lightning-fabric==2.5.0
 mashumaro==3.14
 matplotlib==3.10.8

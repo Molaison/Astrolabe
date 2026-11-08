@@ -193,14 +193,16 @@ def _ligand_atom_names(path: Path, *, chain_id: str, resname: str) -> list[str]:
 
 
 def test_construct_evaluators_registers_rf3(monkeypatch, tmp_path: Path) -> None:
+    checkpoint = tmp_path / "rf3.ckpt"
+    checkpoint.touch()
     class _EvalConf:
         evaluator_terms = {
             "RF3": {"_type": "rf3"},
         }
         rf3 = OmegaConf.create(
             {
-                "repo_path": "/tmp/foundry",
-                "ckpt_path": "/tmp/rf3.ckpt",
+                "repo_path": str(tmp_path),
+                "ckpt_path": str(checkpoint),
                 "num_steps": 40,
             }
         )
@@ -221,7 +223,7 @@ def test_construct_evaluators_registers_rf3(monkeypatch, tmp_path: Path) -> None
     evaluator = evaluators["RF3"]
     assert isinstance(evaluator, RoseTTAFold3Evaluator)
     assert evaluator.model_runner is sentinel_runner
-    assert evaluator.output_dir == tmp_path / "raw_model_results" / "rf3"
+    assert evaluator.output_dir == tmp_path / "raw_model_results" / "evaluators" / "alias-RF3" / "rf3"
 
 
 def test_benchmark_channel_config_exposes_top_level_rf3_defaults() -> None:

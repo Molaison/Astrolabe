@@ -1,0 +1,48 @@
+# Startup-only fixture: validation must not create the intended cache directory.
+task_name: backend_formal_fixture
+out_dir: /tmp/astrolabe-backend-formal-fixture
+steps: 1
+seed: 17
+types:
+  A: p
+seqs:
+  A: AAAA
+enable_pyrosetta: false
+skip_complex_poses: true
+evaluator:
+  evaluator_terms:
+    backend:
+      _type: boltz
+      cache: tests/fixtures/formal_config/backend/assets/__new_boltz_cache_directory__
+      checkpoint: null
+      devices: 1
+      accelerator: cpu
+      recycling_steps: 0
+      sampling_steps: 1
+      diffusion_samples: 1
+      num_workers: 0
+      output_format: mmcif
+      write_full_pae: true
+      write_full_pde: false
+      use_msa_server: false
+      msa_server_url: null
+      msa_pairing_strategy: greedy
+mutator:
+  mutator_terms:
+    mcmc:
+      _type: mcmc
+      mutation_method: frequency_adjusted
+      select_positions: random
+loss:
+  loss_terms: {}
+stages:
+  default:
+    evaluator: backend
+    oligo:
+    - A
+    mutators:
+    - mcmc
+    mutation_num: 1
+    weighted_score_expression: '0'
+    acceptance_threshold: null
+    early_stopping: null

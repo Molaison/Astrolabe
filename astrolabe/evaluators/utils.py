@@ -27,6 +27,62 @@ from astrolabe.utils.mmcif_fallback import (
 )
 
 
+def _execution_controls(conf) -> tuple[typing.Any, dict[str, typing.Any]]:
+    from astrolabe.model_execution import execution_mode
+
+    if conf is None:
+        return execution_mode(), {}
+    canonical = conf.pop("execution_mode", None) if "execution_mode" in conf else None
+    legacy = conf.pop("execution", None) if "execution" in conf else None
+    if (
+        canonical is not None
+        and legacy is not None
+        and execution_mode(canonical) is not execution_mode(legacy)
+    ):
+        raise ValueError(
+            "execution_mode and its legacy execution alias disagree; specify one value."
+        )
+    value = canonical if canonical is not None else legacy
+    options: dict[str, typing.Any] = {}
+    for config_key, option_key in (
+        ("execution_python_bin", "python_bin"),
+        ("execution_cwd", "cwd"),
+        ("execution_env", "env"),
+        ("execution_request_timeout", "request_timeout"),
+        ("execution_max_frame_bytes", "max_frame_bytes"),
+    ):
+        if config_key in conf:
+            options[option_key] = conf.pop(config_key)
+    if options.get("env") is not None:
+        options["env"] = {
+            str(key): str(value) for key, value in dict(options["env"]).items()
+        }
+    return execution_mode(value), options
+
+
+def shutdown_model_handles(*values: typing.Any) -> None:
+    seen: set[int] = set()
+
+    def shutdown(value: typing.Any) -> None:
+        if value is None or id(value) in seen:
+            return
+        seen.add(id(value))
+        if isinstance(value, dict):
+            for item in value.values():
+                shutdown(item)
+            return
+        if isinstance(value, (list, tuple)):
+            for item in value:
+                shutdown(item)
+            return
+        close = getattr(value, "shutdown", None)
+        if callable(close):
+            close()
+
+    for value in values:
+        shutdown(value)
+
+
 def _resolve_alphafold2_import_root(data_dir: str | pathlib.Path | None) -> pathlib.Path | None:
     vendor_root = pathlib.Path(__file__).resolve().parents[2] / "vendor" / "alphafold2"
     if not data_dir:
@@ -43,6 +99,10 @@ def _resolve_alphafold2_import_root(data_dir: str | pathlib.Path | None) -> path
             ):
                 return vendor_root
             return candidate
+    # Installed environments commonly keep only params/ in data_dir.
+    # Prefer the pinned, patched source over an unrelated site-package fallback.
+    if (vendor_root / "alphafold" / "common" / "protein.py").exists():
+        return vendor_root
     return None
 
 
@@ -69,35 +129,14 @@ def _merge_conf_with_defaults(
     *,
     alias: str,
 ):
-    base_conf = getattr(evaluator_conf, evaluator_name, None)
-    if isinstance(base_conf, dict):
-        base_container = dict(base_conf)
-        base_container.pop("_type", None)
-        base_conf = OmegaConf.create(base_container)
-    override_cfg = None
+    from astrolabe.component_config import merge_component_config
 
-    if override_conf is not None:
-        if isinstance(override_conf, dict):
-            override_container: typing.Any = dict(override_conf)
-        else:
-            try:
-                override_container = OmegaConf.to_container(override_conf, resolve=True)
-            except Exception as exc:
-                raise ValueError(
-                    f"Failed to resolve evaluator config for alias {alias!r}: {exc}"
-                ) from exc
-
-        if isinstance(override_container, dict):
-            override_container.pop("_type", None)
-            if override_container:
-                override_cfg = OmegaConf.create(override_container)
-
-    configs = [cfg for cfg in (base_conf, override_cfg) if cfg is not None]
-    if not configs:
-        return None
-    if len(configs) == 1:
-        return configs[0]
-    return OmegaConf.merge(*configs)
+    try:
+        merged = merge_component_config(evaluator_conf, evaluator_name, override_conf)
+        merged.pop("_type", None)
+        return merged
+    except Exception as exc:
+        raise ValueError(f"Invalid evaluator config for alias {alias!r}: {exc}") from exc
 
 
 def construct_evaluators(
@@ -108,70 +147,99 @@ def construct_evaluators(
     enabled_aliases: list[str] | None = None,
     resource_owner: ResourceOwner | None = None,
 ):
-    """Build evaluators; a shared owner is closed if construction fails."""
-    if isinstance(evaluator_conf, list):
-        raise NotImplementedError("Multiple evaluators are not supported yet")
-    selected_aliases = (
-        {str(a) for a in enabled_aliases} if enabled_aliases is not None else None
-    )
-
-    evaluators = {}
     owner = resource_owner if resource_owner is not None else ResourceOwner()
     try:
-        for alias, conf in evaluator_conf.evaluator_terms.items():
+        from astrolabe.evaluator_startup import initialization_options, initialize_plan
+
+        if isinstance(evaluator_conf, list):
+            raise NotImplementedError("Multiple evaluators are not supported yet")
+        workers, seed = initialization_options(evaluator_conf)
+        selected_aliases = (
+            {str(a) for a in enabled_aliases} if enabled_aliases is not None else None
+        )
+
+        plan = []
+        terms = evaluator_conf.evaluator_terms
+        if selected_aliases is not None:
+            missing = sorted(alias for alias in selected_aliases if terms.get(alias) is None)
+            if missing:
+                raise ValueError(f"Selected evaluator aliases are undefined or disabled: {missing}")
+        for alias, conf in terms.items():
             # Allow turning off evaluators via config overlays by setting them to null.
             if conf is None:
                 continue
             if selected_aliases is not None and str(alias) not in selected_aliases:
                 continue
             name = conf.get("_type") if hasattr(conf, "get") else None
-            if not name:
-                continue
-
-            # Factories expect a config without the `_type` discriminator.
-            term_conf = conf
-            if isinstance(conf, dict):
-                term_container: typing.Any = dict(conf)
-            else:
-                try:
-                    term_container = OmegaConf.to_container(conf, resolve=True)
-                except Exception as exc:
-                    raise ValueError(
-                        f"Failed to resolve evaluator config for alias {alias!r}: {exc}"
-                    ) from exc
-            if isinstance(term_container, dict):
-                term_container.pop("_type", None)
-                term_conf = OmegaConf.create(term_container)
+            if not isinstance(name, str) or not name.strip():
+                raise ValueError(f"evaluator.evaluator_terms.{alias}._type: expected a non-empty evaluator type")
+            name = name.strip().lower()
 
             try:
                 factory = EvaluatorRegistry.get(name)
             except KeyError as exc:
                 available = ", ".join(EvaluatorRegistry.list_available()) or "<none>"
                 raise ValueError(
-                    f"Unknown evaluator name {name!r}. Available evaluator types: {available}"
+                    f"Unknown evaluator name {name!r} for alias {alias!r}. Available evaluator types: {available}"
                 ) from exc
+
+            try:
+                term_conf = _merge_conf_with_defaults(evaluator_conf, name, conf, alias=alias)
+                from astrolabe.backend_startup import validate_backend_settings
+
+                errors = validate_backend_settings(
+                    "evaluator", name, OmegaConf.to_container(term_conf),
+                    path=f"evaluator.evaluator_terms.{alias}", check_paths=True,
+                )
+                if errors:
+                    raise ValueError("; ".join(errors))
+                _execution_controls(OmegaConf.create(OmegaConf.to_container(term_conf)))
+            except Exception as exc:
+                raise ValueError(f"Invalid evaluator config for alias {alias!r} ({name}): {exc}") from exc
+            plan.append((alias, name, factory, term_conf))
+
+        def build(entry):
+            alias, _name, factory, term_conf = entry
+            from urllib.parse import quote
 
             evaluator = factory(
                 term_conf,
                 alias=alias,
-                raw_model_results_dir=raw_model_results_dir,
+                raw_model_results_dir=pathlib.Path(raw_model_results_dir) / "evaluators" / ("alias-" + quote(str(alias), safe="")),
                 oligo_names=oligo_names,
                 evaluator_conf=evaluator_conf,
             )
             owner.add(evaluator, f"evaluators.{alias}")
             setattr(evaluator, "alias", str(alias))
-            evaluators[alias] = evaluator
+            return evaluator
+
+        evaluators = initialize_plan(
+            # initialize_plan drains all constructors before propagating failure.
+            # This owner then closes every returned object, including one whose
+            # alias assignment failed, once across all component families.
+            plan, build, lambda value: None, workers=workers, seed=seed
+        )
+        return evaluators
     except BaseException:
-        # ResourceOwner marks an object closed before calling it. If even a
-        # BaseException escapes a closer, retry to finish the other objects.
         while True:
             try:
                 owner.close()
                 break
             except BaseException:
-                logging.exception("Failed to clean up evaluators after construction error")
+                logging.exception("Failed to clean up resources after construction error")
         raise
-    return evaluators
+
+
+@register_evaluator_factory("bioemu2")
+def _build_bioemu2_evaluator(term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf):
+    from astrolabe.evaluators.bioemu2 import BioEmu2Evaluator
+
+    conf = _merge_conf_with_defaults(evaluator_conf, "bioemu2", term_conf, alias=alias)
+    options = OmegaConf.to_container(conf, resolve=True) if conf is not None else {}
+    for field in ("execution_mode", "execution"):
+        if options.pop(field, "subprocess") != "subprocess":
+            raise ValueError("BioEmu2 supports only per-request subprocess execution")
+    return BioEmu2Evaluator(output_dir=raw_model_results_dir / "bioemu2" / str(alias), **options)
 
 
 @register_evaluator_factory("alphafold3")
@@ -185,13 +253,24 @@ def _build_alphafold3_evaluator(
 ):
     from astrolabe.evaluators.alphafold3 import AlphaFold3Evaluator
     from astrolabe.evaluators.wrappers.alphafold3 import alphafold3_setup
+    from astrolabe.af3_featurisation_settings import featurisation_environment
 
     af3_conf = _merge_conf_with_defaults(
         evaluator_conf, "alphafold3", term_conf, alias=alias
     )
     if af3_conf is None:
         raise ValueError("AlphaFold3 configuration is missing.")
-    model_runner = alphafold3_setup(af3_conf)
+    mode, execution_options = _execution_controls(af3_conf)
+    if getattr(af3_conf, "service_socket", None):
+        with featurisation_environment(af3_conf):
+            model_runner = alphafold3_setup(af3_conf)
+    elif mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeAF3Runner
+
+        model_runner = NativeAF3Runner(af3_conf, **execution_options)
+    else:
+        with featurisation_environment(af3_conf):
+            model_runner = alphafold3_setup(af3_conf)
     evaluator = AlphaFold3Evaluator(model_runner, raw_model_results_dir / "alphafold3", af3_conf)
     evaluator.pre_eval_hooks_config = getattr(evaluator_conf, "pre_eval_hooks", None)
     return evaluator
@@ -212,6 +291,9 @@ def _build_rf3_evaluator(
     rf3_conf = _merge_conf_with_defaults(evaluator_conf, "rf3", term_conf, alias=alias)
     if rf3_conf is None:
         raise ValueError("RF3 configuration is missing.")
+    mode, _ = _execution_controls(rf3_conf)
+    if mode.value == "daemon" and not rf3_conf.get("python_bin"):
+        rf3_conf.python_bin = sys.executable
     model_runner = rf3_setup(rf3_conf)
     return RoseTTAFold3Evaluator(model_runner, raw_model_results_dir / "rf3", rf3_conf)
 
@@ -231,18 +313,29 @@ def _build_alphafold2_evaluator(
     af2_conf = _merge_conf_with_defaults(
         evaluator_conf, "alphafold2", term_conf, alias=alias
     )
+    mode, execution_options = _execution_controls(af2_conf)
     af2_kwargs = {}
     if af2_conf is not None:
         af2_kwargs = OmegaConf.to_container(af2_conf, resolve=True)
     _ensure_alphafold2_import_path(af2_kwargs.get("data_dir"))
 
     from astrolabe.evaluators.alphafold2 import AlphaFold2Evaluator
-    from astrolabe.evaluators.wrappers.alphafold import alphafold_setup
 
-    model_runner = alphafold_setup(
-        oligo_names=oligo_names,
-        **af2_kwargs,
-    )
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import build_af2_daemon_runners
+
+        model_runner = build_af2_daemon_runners(
+            list(oligo_names),
+            af2_kwargs,
+            **execution_options,
+        )
+    else:
+        from astrolabe.evaluators.wrappers.alphafold import alphafold_setup
+
+        model_runner = alphafold_setup(
+            oligo_names=oligo_names,
+            **af2_kwargs,
+        )
     return AlphaFold2Evaluator(model_runner, raw_model_results_dir / "alphafold2")
 
 
@@ -290,6 +383,7 @@ def _esmfold2_kwargs_from_config(config) -> dict[str, typing.Any]:
         "chunk_size",
         "local_files_only",
         "timeout_seconds",
+        "execution_mode",
     }
     if isinstance(container, dict):
         kwargs.update({k: v for k, v in container.items() if k in allowed})
@@ -310,7 +404,13 @@ def _build_esmfold_evaluator(
     esmfold_conf = _merge_conf_with_defaults(
         evaluator_conf, "esmfold", term_conf, alias=alias
     )
-    return ESMFoldEvaluator(**_esmfold_kwargs_from_config(esmfold_conf))
+    mode, execution_options = _execution_controls(esmfold_conf)
+    kwargs = _esmfold_kwargs_from_config(esmfold_conf)
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeESMFoldModel
+
+        kwargs["model"] = NativeESMFoldModel(**kwargs, **execution_options)
+    return ESMFoldEvaluator(**kwargs)
 
 
 @register_evaluator_factory("esmfold2")
@@ -347,7 +447,17 @@ def _build_chai1_evaluator(
     chai_conf = _merge_conf_with_defaults(evaluator_conf, "chai1", term_conf, alias=alias)
     if chai_conf is None:
         raise ValueError("Chai1 configuration is missing.")
-    return Chai1Evaluator(chai_conf, raw_model_results_dir / "chai1")
+    mode, execution_options = _execution_controls(chai_conf)
+    model_runner = None
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeChai1Runner
+
+        model_runner = NativeChai1Runner(chai_conf, **execution_options)
+    return Chai1Evaluator(
+        chai_conf,
+        raw_model_results_dir / "chai1",
+        model_runner=model_runner,
+    )
 
 
 @register_evaluator_factory("boltz")
@@ -365,7 +475,13 @@ def _build_boltz_evaluator(
     boltz_conf = _merge_conf_with_defaults(evaluator_conf, "boltz", term_conf, alias=alias)
     if boltz_conf is None:
         raise ValueError("Boltz configuration is missing.")
-    model_runner = Boltz1Runner(boltz_conf)
+    mode, execution_options = _execution_controls(boltz_conf)
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeBoltz1Runner
+
+        model_runner = NativeBoltz1Runner(boltz_conf, **execution_options)
+    else:
+        model_runner = Boltz1Runner(boltz_conf)
     return BoltzEvaluator(model_runner, raw_model_results_dir / "boltz")
 
 
@@ -407,6 +523,7 @@ def _build_protenix_evaluator(
     )
     if protenix_conf is None:
         raise ValueError("Protenix configuration is missing.")
+    mode, execution_options = _execution_controls(protenix_conf)
     raw_use_constraints = protenix_conf.get("use_constraints", True)
     if not isinstance(raw_use_constraints, bool):
         raise ValueError(
@@ -489,7 +606,12 @@ def _build_protenix_evaluator(
             )
 
     protenix_conf.dump_dir = raw_model_results_dir / "protenix"
-    model_runner = ProtenixRunner(protenix_conf)
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeProtenixRunner
+
+        model_runner = NativeProtenixRunner(protenix_conf, **execution_options)
+    else:
+        model_runner = ProtenixRunner(protenix_conf)
     return ProtenixEvaluator(model_runner, use_constraints=use_constraints)
 
 
@@ -502,10 +624,6 @@ def _build_rhofold_evaluator(
     oligo_names,
     evaluator_conf,
 ):
-    import torch
-    from rhofold.config import rhofold_config
-    from rhofold.rhofold import RhoFold
-
     from astrolabe.evaluators.rhofold import RhoFoldEvaluator
 
     rhofold_conf = _merge_conf_with_defaults(
@@ -518,10 +636,20 @@ def _build_rhofold_evaluator(
     if not ckpt:
         raise ValueError("RhoFold checkpoint is missing (`evaluator.rhofold.checkpoint`).")
 
-    model_runner = RhoFold(rhofold_config)
-    state = torch.load(str(ckpt), map_location=torch.device("cpu"))
-    model_runner.load_state_dict(state["model"])
-    model_runner.eval()
+    mode, execution_options = _execution_controls(rhofold_conf)
+    if mode.value == "daemon":
+        from astrolabe.evaluators.native_daemons import NativeRhoFoldRunner
+
+        model_runner = NativeRhoFoldRunner(rhofold_conf, **execution_options)
+    else:
+        import torch
+        from rhofold.config import rhofold_config
+        from rhofold.rhofold import RhoFold
+
+        model_runner = RhoFold(rhofold_config)
+        state = torch.load(str(ckpt), map_location=torch.device("cpu"))
+        model_runner.load_state_dict(state["model"])
+        model_runner.eval()
 
     return RhoFoldEvaluator(
         model_runner,
@@ -554,6 +682,55 @@ def _build_dummy_evaluator(
     if kwargs.get("write_structure") and kwargs.get("structure_dir") is None:
         kwargs["structure_dir"] = raw_model_results_dir / "dummy"
     return DummyEvaluator(**kwargs)
+
+
+@register_evaluator_factory("sequence")
+def _build_sequence_evaluator(
+    term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf,
+):
+    from astrolabe.evaluators.sequence import SequenceEvaluator
+
+    return SequenceEvaluator()
+
+
+def _rna_evaluator_factory(backend):
+    def build(
+        term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf,
+    ):
+        from astrolabe.evaluators.rna import RnaEvaluator
+
+        conf = _merge_conf_with_defaults(
+            evaluator_conf, backend, term_conf, alias=alias,
+        )
+        settings = OmegaConf.to_container(conf, resolve=True) if conf is not None else {}
+        return RnaEvaluator(backend, raw_model_results_dir / backend, settings)
+
+    return build
+
+
+from astrolabe.evaluators.rna import RNA_BACKENDS
+
+for _rna_backend in RNA_BACKENDS:
+    EvaluatorRegistry.register(_rna_backend, _rna_evaluator_factory(_rna_backend))
+
+
+@register_evaluator_factory("generated_structure")
+def _build_generated_structure_evaluator(
+    term_conf,
+    *,
+    alias,
+    raw_model_results_dir,
+    oligo_names,
+    evaluator_conf,
+):
+    from astrolabe.evaluators.generated_structure import GeneratedStructureEvaluator
+
+    conf = _merge_conf_with_defaults(
+        evaluator_conf, "generated_structure", term_conf, alias=alias
+    )
+    if conf is None:
+        raise ValueError("generated_structure.initial_structures is required")
+    return GeneratedStructureEvaluator(**OmegaConf.to_container(conf, resolve=True))
 
 
 @register_evaluator_factory("rosetta_crystal")
@@ -624,6 +801,16 @@ class StandardScores:
         """Fields used by the legacy score merge, including names and paths."""
         return {field.name for field in dataclasses.fields(cls)
                 if not field.metadata.get("evidence", False)}
+
+    def to_evidence(self, system, candidate, data, **provenance):
+        """Freeze scores with explicit candidate/sample and occurrence subjects.
+
+        Live pose objects need their owning artifact codec first. Ambiguous
+        legacy per-protomer aggregates retain their original limited scope.
+        """
+        from astrolabe.design.legacy import standard_scores_to_evidence
+
+        return standard_scores_to_evidence(self, system, candidate, data, **provenance)
 
     @staticmethod
     def _wrap_dict_values_in_list(

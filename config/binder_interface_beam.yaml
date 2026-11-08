@@ -1,0 +1,123 @@
+# Binder interface refinement defaults; no generation-template inheritance.
+defaults:
+- base
+- _self_
+out_dir: null
+raw_model_results_dir: null
+repeats: 1
+steps: 7
+seed: 10079
+search:
+  algorithm: branching
+  owner: isolated_native
+  execution:
+    socket_path: null
+    workers: 2
+    in_flight: 2
+    resume: false
+    retry_interrupted: false
+types:
+  A: p
+  B: p
+enable_pyrosetta: true
+skip_complex_poses: false
+allow_mmcif_pdb_fallback: true
+mutator:
+  mutator_terms:
+    LigandMPNN_itf:
+      _type: LigandMPNN
+      temperature: 0.1
+      position_selector: interface(interface_distance=10.0)
+      fallback_to_all_mutable_if_selector_empty: false
+      enforce_mutation_num: true
+      model_type: ligand_mpnn
+      ligand_mpnn_use_side_chain_context: 1
+      enforce_mutation_distribution: sampling_probs
+evaluator:
+  evaluator_terms:
+    Alphafold3:
+      _type: Alphafold3
+  alphafold3:
+    num_recycles: 3
+    num_samples: 1
+    refstructure_workers: 1
+    jax_compilation_cache_dir: /tmp/beam_jax_cache
+loss:
+  loss_terms:
+    interface_ipae:
+      _type: ipae
+      chain_a: A
+      chain_b: B
+      contact_method: sc
+      sc_cutoff: 5.0
+    interface_ipsae:
+      _type: ipsae
+      chain_a: A
+      chain_b: B
+      pae_cutoff: 10.0
+    interface_sc:
+      _type: protomer_shape_complementarity
+      protomer_a: A
+      protomer_b: B
+      strict: true
+    interface_buns:
+      _type: interface_buried_unsatisfied_hbonds
+      protomer_a: A
+      protomer_b: B
+      ignore_surface_res: false
+    interface_holes:
+      _type: interface_holes
+      protomer_a: A
+      protomer_b: B
+      interface_distance: 10.0
+  expression_terms: {}
+stages:
+  default:
+    oligo:
+    - AB
+    evaluator: Alphafold3
+    mutators:
+    - LigandMPNN_itf
+    mutator_weights:
+    - 1.0
+    mutation_num: 2
+    weighted_score_expression: interface_ipsae - interface_ipae / 10 + interface_sc
+      - interface_holes / 100 - interface_buns / 10
+    acceptance_threshold: null
+    acceptance_gate: null
+    early_stopping: null
+post_eval_hooks: {}
+protein_beam:
+  width: 4
+  proposals_per_parent: 6
+  max_evaluations: 7
+  max_generations: 1
+  max_total_mutations: 2
+  selection: pareto
+  holes_ranking: per_atom
+  af3_call_budget:
+    ledger: ${out_dir}/af3_calls.json
+    scope: ${task_name}
+    max_total: 42
+    max_per_case: 7
+  gates:
+    geometry_max:
+      root_binder_pose_ca_rmsd: 0.5
+      root_interface_bb_rmsd: 0.35
+      root_complex_bb_rmsd: 0.5
+      root_interface_binder_bb_rmsd: 0.5
+    root_metric_max_ratio:
+      interface_ipae: 1.25
+    root_metric_min_ratio:
+      interface_ipsae: 0.95
+      interface_sc: 0.95
+    root_metric_max_delta:
+      interface_buns: 1.0
+  proposal_batch_size: 3
+  pipeline_proposals: true
+  workers: 2
+  in_flight: 2
+case_input:
+  binder_chain: A
+  target_chain: B
+  purpose: bounded_pose_preserving_multiobjective_exploration

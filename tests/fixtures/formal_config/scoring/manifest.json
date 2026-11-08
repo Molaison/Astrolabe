@@ -1,0 +1,584 @@
+[
+  {
+    "id": "valid_loss",
+    "file": "valid_loss.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "valid_autodock",
+    "file": "valid_autodock.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "valid_haddock",
+    "file": "valid_haddock.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_haddock.yaml",
+    "source": [
+      "astrolabe/structure_processors/haddock3.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "valid_rpxdock",
+    "file": "valid_rpxdock.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_rpxdock.yaml",
+    "source": [
+      "astrolabe/structure_processors/symmetry.py",
+      "config/base.yaml"
+    ]
+  },
+  {
+    "id": "loss_chain_type",
+    "file": "loss_chain_type.yaml",
+    "expected_error": "loss.loss_terms.probe.chain_a",
+    "parameters": [
+      "loss.loss_terms.probe.chain_a"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_chain_list",
+    "file": "loss_chain_list.yaml",
+    "expected_error": "loss.loss_terms.probe.chain_a",
+    "parameters": [
+      "loss.loss_terms.probe.chain_a"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_contact_method",
+    "file": "loss_contact_method.yaml",
+    "expected_error": "loss.loss_terms.probe.contact_method",
+    "parameters": [
+      "loss.loss_terms.probe.contact_method"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_sc_cutoff",
+    "file": "loss_sc_cutoff.yaml",
+    "expected_error": "loss.loss_terms.probe.sc_cutoff",
+    "parameters": [
+      "loss.loss_terms.probe.sc_cutoff"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_ca_cutoff",
+    "file": "loss_ca_cutoff.yaml",
+    "expected_error": "loss.loss_terms.probe.ca_cutoff",
+    "parameters": [
+      "loss.loss_terms.probe.ca_cutoff"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_pae_cutoff",
+    "file": "loss_pae_cutoff.yaml",
+    "expected_error": "loss.loss_terms.probe.pae_cutoff",
+    "parameters": [
+      "loss.loss_terms.probe.pae_cutoff"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/confidence.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_interface_distance",
+    "file": "loss_interface_distance.yaml",
+    "expected_error": "loss.loss_terms.probe.interface_distance",
+    "parameters": [
+      "loss.loss_terms.probe.interface_distance"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interface_holes.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_sse_type",
+    "file": "loss_sse_type.yaml",
+    "expected_error": "loss.loss_terms.probe.sse_type",
+    "parameters": [
+      "loss.loss_terms.probe.sse_type"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/structure.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_included_protomers",
+    "file": "loss_included_protomers.yaml",
+    "expected_error": "loss.loss_terms.probe.included_protomers",
+    "parameters": [
+      "loss.loss_terms.probe.included_protomers"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/structure.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_strict",
+    "file": "loss_strict.yaml",
+    "expected_error": "loss.loss_terms.probe.strict",
+    "parameters": [
+      "loss.loss_terms.probe.strict"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_separation_distance",
+    "file": "loss_separation_distance.yaml",
+    "expected_error": "loss.loss_terms.probe.separation_distance",
+    "parameters": [
+      "loss.loss_terms.probe.separation_distance"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_ignore_surface_res",
+    "file": "loss_ignore_surface_res.yaml",
+    "expected_error": "loss.loss_terms.probe.ignore_surface_res",
+    "parameters": [
+      "loss.loss_terms.probe.ignore_surface_res"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_num_samples",
+    "file": "dock_num_samples.yaml",
+    "expected_error": "predocker.predocker_terms.probe.num_samples",
+    "parameters": [
+      "predocker.predocker_terms.probe.num_samples"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_num_modes",
+    "file": "dock_num_modes.yaml",
+    "expected_error": "predocker.predocker_terms.probe.num_modes",
+    "parameters": [
+      "predocker.predocker_terms.probe.num_modes"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_exhaustiveness",
+    "file": "dock_exhaustiveness.yaml",
+    "expected_error": "predocker.predocker_terms.probe.exhaustiveness",
+    "parameters": [
+      "predocker.predocker_terms.probe.exhaustiveness"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_coverage",
+    "file": "dock_coverage.yaml",
+    "expected_error": "predocker.predocker_terms.probe.binding_site_coverage",
+    "parameters": [
+      "predocker.predocker_terms.probe.binding_site_coverage"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_padding",
+    "file": "dock_padding.yaml",
+    "expected_error": "predocker.predocker_terms.probe.binding_site_padding",
+    "parameters": [
+      "predocker.predocker_terms.probe.binding_site_padding"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_box_size",
+    "file": "dock_box_size.yaml",
+    "expected_error": "predocker.predocker_terms.probe.reference_min_box_size",
+    "parameters": [
+      "predocker.predocker_terms.probe.reference_min_box_size"
+    ],
+    "valid_control": "valid_autodock_zero_box.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_asset",
+    "file": "dock_asset.yaml",
+    "expected_error": "predocker.predocker_terms.probe.obabel_path",
+    "parameters": [
+      "predocker.predocker_terms.probe.obabel_path"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "haddock_sampling",
+    "file": "haddock_sampling.yaml",
+    "expected_error": "predocker.predocker_terms.probe.sampling",
+    "parameters": [
+      "predocker.predocker_terms.probe.sampling"
+    ],
+    "valid_control": "valid_haddock.yaml",
+    "source": [
+      "astrolabe/structure_processors/haddock3.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "haddock_distance",
+    "file": "haddock_distance.yaml",
+    "expected_error": "predocker.predocker_terms.probe.restraint_distance",
+    "parameters": [
+      "predocker.predocker_terms.probe.restraint_distance"
+    ],
+    "valid_control": "valid_haddock.yaml",
+    "source": [
+      "astrolabe/structure_processors/haddock3.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "haddock_contact_cutoff",
+    "file": "haddock_contact_cutoff.yaml",
+    "expected_error": "predocker.predocker_terms.probe.contact_cutoff",
+    "parameters": [
+      "predocker.predocker_terms.probe.contact_cutoff"
+    ],
+    "valid_control": "valid_haddock.yaml",
+    "source": [
+      "astrolabe/structure_processors/haddock3.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "haddock_target_chains",
+    "file": "haddock_target_chains.yaml",
+    "expected_error": "predocker.predocker_terms.probe.target_chains",
+    "parameters": [
+      "predocker.predocker_terms.probe.target_chains"
+    ],
+    "valid_control": "valid_haddock.yaml",
+    "source": [
+      "astrolabe/structure_processors/haddock3.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "rpxdock_timeout",
+    "file": "rpxdock_timeout.yaml",
+    "expected_error": "predocker.predocker_terms.probe.rpxdock_timeout_s",
+    "parameters": [
+      "predocker.predocker_terms.probe.rpxdock_timeout_s"
+    ],
+    "valid_control": "valid_rpxdock.yaml",
+    "source": [
+      "astrolabe/structure_processors/symmetry.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "rpxdock_asset",
+    "file": "rpxdock_asset.yaml",
+    "expected_error": "predocker.predocker_terms.probe.rpxdock_vendor_repo",
+    "parameters": [
+      "predocker.predocker_terms.probe.rpxdock_vendor_repo"
+    ],
+    "valid_control": "valid_rpxdock.yaml",
+    "source": [
+      "astrolabe/structure_processors/symmetry.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "valid_loss_protomer_list",
+    "file": "valid_loss_protomer_list.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_loss_protomer_list.yaml",
+    "source": [
+      "astrolabe/losses/structure.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "valid_loss_optional_null",
+    "file": "valid_loss_optional_null.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_loss_optional_null.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "valid_haddock_nullable",
+    "file": "valid_haddock_nullable.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_haddock_nullable.yaml",
+    "source": [
+      "astrolabe/structure_processors/haddock3.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "valid_rpxdock_nullable",
+    "file": "valid_rpxdock_nullable.yaml",
+    "expected_error": null,
+    "parameters": [],
+    "valid_control": "valid_rpxdock_nullable.yaml",
+    "source": [
+      "astrolabe/structure_processors/symmetry.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_sc_cutoff_null",
+    "file": "loss_sc_cutoff_null.yaml",
+    "expected_error": "loss.loss_terms.probe.sc_cutoff",
+    "parameters": [
+      "loss.loss_terms.probe.sc_cutoff"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_ca_cutoff_null",
+    "file": "loss_ca_cutoff_null.yaml",
+    "expected_error": "loss.loss_terms.probe.ca_cutoff",
+    "parameters": [
+      "loss.loss_terms.probe.ca_cutoff"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_pae_cutoff_null",
+    "file": "loss_pae_cutoff_null.yaml",
+    "expected_error": "loss.loss_terms.probe.pae_cutoff",
+    "parameters": [
+      "loss.loss_terms.probe.pae_cutoff"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/confidence.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_interface_distance_null",
+    "file": "loss_interface_distance_null.yaml",
+    "expected_error": "loss.loss_terms.probe.interface_distance",
+    "parameters": [
+      "loss.loss_terms.probe.interface_distance"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interface_holes.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "loss_separation_distance_null",
+    "file": "loss_separation_distance_null.yaml",
+    "expected_error": "loss.loss_terms.probe.separation_distance",
+    "parameters": [
+      "loss.loss_terms.probe.separation_distance"
+    ],
+    "valid_control": "valid_loss.yaml",
+    "source": [
+      "astrolabe/losses/interaction.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_num_modes_null",
+    "file": "dock_num_modes_null.yaml",
+    "expected_error": "predocker.predocker_terms.probe.num_modes",
+    "parameters": [
+      "predocker.predocker_terms.probe.num_modes"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_coverage_null",
+    "file": "dock_coverage_null.yaml",
+    "expected_error": "predocker.predocker_terms.probe.binding_site_coverage",
+    "parameters": [
+      "predocker.predocker_terms.probe.binding_site_coverage"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "dock_obabel_null",
+    "file": "dock_obabel_null.yaml",
+    "expected_error": "predocker.predocker_terms.probe.obabel_path",
+    "parameters": [
+      "predocker.predocker_terms.probe.obabel_path"
+    ],
+    "valid_control": "valid_autodock.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "haddock_sampling_null",
+    "file": "haddock_sampling_null.yaml",
+    "expected_error": "predocker.predocker_terms.probe.sampling",
+    "parameters": [
+      "predocker.predocker_terms.probe.sampling"
+    ],
+    "valid_control": "valid_haddock.yaml",
+    "source": [
+      "astrolabe/structure_processors/haddock3.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "rpxdock_timeout_null",
+    "file": "rpxdock_timeout_null.yaml",
+    "expected_error": "predocker.predocker_terms.probe.rpxdock_timeout_s",
+    "parameters": [
+      "predocker.predocker_terms.probe.rpxdock_timeout_s"
+    ],
+    "valid_control": "valid_rpxdock.yaml",
+    "source": [
+      "astrolabe/structure_processors/symmetry.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "rpxdock_timeout_fraction",
+    "file": "rpxdock_timeout_fraction.yaml",
+    "expected_error": "predocker.predocker_terms.probe.rpxdock_timeout_s",
+    "parameters": [
+      "predocker.predocker_terms.probe.rpxdock_timeout_s"
+    ],
+    "valid_control": "valid_rpxdock.yaml",
+    "source": [
+      "astrolabe/structure_processors/symmetry.py",
+      "astrolabe/scoring_startup.py"
+    ]
+  },
+  {
+    "id": "valid_autodock_zero_box",
+    "file": "valid_autodock_zero_box.yaml",
+    "expected_error": null,
+    "parameters": [
+      "predocker.predocker_terms.probe.reference_min_box_size"
+    ],
+    "valid_control": "valid_autodock_zero_box.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py:176",
+      "astrolabe/structure_processors/autodock.py:1220"
+    ]
+  },
+  {
+    "id": "valid_autodock_negative_box",
+    "file": "valid_autodock_negative_box.yaml",
+    "expected_error": null,
+    "parameters": [
+      "predocker.predocker_terms.probe.reference_min_box_size"
+    ],
+    "valid_control": "valid_autodock_negative_box.yaml",
+    "source": [
+      "astrolabe/structure_processors/autodock.py:176",
+      "astrolabe/structure_processors/autodock.py:1220"
+    ]
+  }
+]

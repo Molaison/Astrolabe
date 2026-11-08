@@ -2,15 +2,11 @@ import logging
 import os
 from pathlib import Path
 from typing import Any
-import importlib
 import numpy as np
 from Bio.PDB import PDBParser, MMCIFParser, PDBIO, MMCIFIO, Structure, Chain
 
-if importlib.util.find_spec("PLACER") is not None:
-    import PLACER
-    from PLACER import runner
-
 from astrolabe.structure_processors import StructureProcessor, register_structure_processor
+from astrolabe.structure_processors.wrappers.placer_daemon import PlacerClient
 
 
 @register_structure_processor("dimer_interface_placer")
@@ -473,13 +469,28 @@ class DimerInterfacePlacementProcessor(StructureProcessor):
 class ChemNetPlacementProcessor(StructureProcessor):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        if importlib.util.find_spec("PLACER") is None:
-            raise ImportError(
-                "PLACER module not found. Please install PLACER to use ChemNetPlacementProcessor."
-            )
         self.num_samples = kwargs.get("num_samples", 5)
-        self.placer = runner.PLACER()
-        self.pl_inp = runner.PLACERinput()
+        execution_timeout = kwargs.get("request_timeout")
+        if execution_timeout is None:
+            execution_timeout = kwargs.get("timeout")
+        self.placer_client = PlacerClient(
+            {
+                "weights_path": kwargs.get("weights_path"),
+                "torch_device": kwargs.get("torch_device") or "auto",
+            },
+            mode=kwargs.get("execution_mode"),
+            python_bin=kwargs.get("python_bin"),
+            cwd=kwargs.get("cwd"),
+            env=kwargs.get("env"),
+            request_timeout=(
+                float(execution_timeout) if execution_timeout is not None else None
+            ),
+        )
+        self.model_metadata = self.placer_client.metadata
+
+    @property
+    def pid(self):
+        return self.placer_client.pid
 
     def _get_target_chain(self, input_file):
         self.structure = self._load_structure(input_file)
@@ -555,17 +566,19 @@ class ChemNetPlacementProcessor(StructureProcessor):
 
         if target_chain_id is None:
             raise ValueError("third_chain must be specified")
-        # import importlib.util
-        #
-
-        if input_file.endswith(".pdb"):
-            self.pl_inp.pdb(input_file)
-        elif input_file.endswith(".cif"):
-            self.pl_inp.cif(input_file)
-        self.pl_inp.name(os.path.basename(input_file))
-        # todo continuously sampling, not just one time, as long as the inputs not changed, this function should return one of previously sampled results
-        # get the ligand name by taking the first three characters of the third chain
-        outputs = self.placer.run(self.pl_inp, self.num_samples)
+        ordered_outputs = self.placer_client.predict(
+            {
+                "input_file": input_file,
+                "num_samples": self.num_samples,
+            }
+        )
+        outputs = {
+            item["key"]: {
+                "prmsd": item["prmsd"],
+                "model": item["model"],
+            }
+            for item in ordered_outputs
+        }
 
         prmsd_index = [(i, output["prmsd"]) for i, output in outputs.items()]
         lowest_prmsd_index = sorted(prmsd_index, key=lambda x: x[1])[0][0]
@@ -612,3 +625,6 @@ class ChemNetPlacementProcessor(StructureProcessor):
         os.remove(to_path)  # Clean up the resampled file
 
         return output_file
+
+    def shutdown(self) -> None:
+        self.placer_client.shutdown()

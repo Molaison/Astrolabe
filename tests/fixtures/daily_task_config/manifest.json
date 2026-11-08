@@ -1,0 +1,2522 @@
+{
+  "fields": [
+    {
+      "parameter": "seqs",
+      "source": "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+      "case_ids": [
+        "task.invalid_seqs_list"
+      ]
+    },
+    {
+      "parameter": "seqs.A",
+      "source": "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+      "case_ids": [
+        "task.invalid_sequence_bad_range",
+        "task.invalid_sequence_unknown_file",
+        "semantic.input_pdb_wrong_chain",
+        "semantic.input_pdb_out_of_range"
+      ]
+    },
+    {
+      "parameter": "seqs.AB",
+      "source": "astrolabe/core/protomer_config_parser.py:Protomer.initialize;segment_handler_distributer;is_literal",
+      "case_ids": [
+        "task.invalid_protomer_identifier"
+      ]
+    },
+    {
+      "parameter": "types",
+      "source": "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+      "case_ids": [
+        "task.invalid_types_list"
+      ]
+    },
+    {
+      "parameter": "types.A",
+      "source": "astrolabe/core/protomer_config_parser.py:ProtomerTypes.from_alias",
+      "case_ids": [
+        "task.invalid_type_unknown"
+      ]
+    },
+    {
+      "parameter": "homologies",
+      "source": "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+      "case_ids": [
+        "task.invalid_homologies_list"
+      ]
+    },
+    {
+      "parameter": "homologies.A",
+      "source": "astrolabe/core/msa_utils.py:parse_homology_arg;extract_template_fixpos",
+      "case_ids": [
+        "task.invalid_homology_json_without_chain"
+      ]
+    },
+    {
+      "parameter": "homologies.A.unpairedMsa",
+      "source": "astrolabe/task_startup.py:247",
+      "case_ids": [
+        "task.invalid_unpairedMsa_list"
+      ]
+    },
+    {
+      "parameter": "homologies.A.pairedMsa",
+      "source": "astrolabe/task_startup.py:247",
+      "case_ids": [
+        "task.invalid_pairedMsa_list"
+      ]
+    },
+    {
+      "parameter": "homologies.A.templates",
+      "source": "astrolabe/task_startup.py:219",
+      "case_ids": [
+        "task.invalid_template_type"
+      ]
+    },
+    {
+      "parameter": "homologies.A.0.templateIndices",
+      "source": "astrolabe/task_startup.py:229",
+      "case_ids": [
+        "task.invalid_template_index_length"
+      ]
+    },
+    {
+      "parameter": "homologies.A.0.mmcif",
+      "source": "astrolabe/task_startup.py:240",
+      "case_ids": [
+        "task.invalid_template_mmcif_type"
+      ]
+    },
+    {
+      "parameter": "named_files",
+      "source": "astrolabe/argparser.py:parse_arguments (named_files)",
+      "case_ids": [
+        "task.invalid_named_files_scalar"
+      ]
+    },
+    {
+      "parameter": "named_files.input",
+      "source": "astrolabe/argparser.py:parse_arguments (named_files)",
+      "case_ids": [
+        "task.invalid_named_file_missing",
+        "semantic.input_pdb_malformed"
+      ]
+    },
+    {
+      "parameter": "seed",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_seed_negative"
+      ]
+    },
+    {
+      "parameter": "steps",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_steps_fractional"
+      ]
+    },
+    {
+      "parameter": "repeats",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_repeats_zero"
+      ]
+    },
+    {
+      "parameter": "debug",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_debug_string"
+      ]
+    },
+    {
+      "parameter": "enable_pyrosetta",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_enable_pyrosetta_string"
+      ]
+    },
+    {
+      "parameter": "skip_complex_poses",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_skip_complex_poses_string"
+      ]
+    },
+    {
+      "parameter": "use_metropolis_acceptance",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_use_metropolis_acceptance_string"
+      ]
+    },
+    {
+      "parameter": "initial_temperature",
+      "source": "astrolabe/utils/base.py:calculate_temperature",
+      "case_ids": [
+        "task.invalid_metropolis_temperature_text"
+      ]
+    },
+    {
+      "parameter": "dynamic_binding_site_enabled",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_dynamic_binding_site_enabled_string"
+      ]
+    },
+    {
+      "parameter": "allow_mmcif_pdb_fallback",
+      "source": "astrolabe/argparser.py:parse_arguments;set_random_seeds",
+      "case_ids": [
+        "task.invalid_allow_mmcif_pdb_fallback_string"
+      ]
+    },
+    {
+      "parameter": "initializer.mode",
+      "source": "astrolabe/initializers/registry.py:construct_initializer",
+      "case_ids": [
+        "task.invalid_initializer_mode_type"
+      ]
+    },
+    {
+      "parameter": "initializer.dplm_alias",
+      "source": "astrolabe/initializers/registry.py:construct_initializer",
+      "case_ids": [
+        "task.invalid_initializer_alias_type",
+        "startup.initializer_dplm_alias"
+      ]
+    },
+    {
+      "parameter": "mutator.selector_expression",
+      "source": "astrolabe/argparser.py:parse_arguments (selector_expression)",
+      "case_ids": [
+        "task.invalid_selector_type"
+      ]
+    },
+    {
+      "parameter": "mutator.mutator_terms.MCMC.position_selector",
+      "source": "astrolabe/argparser.py:parse_arguments (selector_expression)",
+      "case_ids": [
+        "task.invalid_selected_position_selector_type"
+      ]
+    },
+    {
+      "parameter": "stages.default.oligo",
+      "source": "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+      "case_ids": [
+        "task.invalid_oligo_undefined"
+      ]
+    },
+    {
+      "parameter": "stages.default.evaluator",
+      "source": "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+      "case_ids": [
+        "task.invalid_evaluator_alias_type",
+        "startup.missing_evaluator_alias"
+      ]
+    },
+    {
+      "parameter": "stages.default.mutators",
+      "source": "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+      "case_ids": [
+        "task.invalid_mutators_scalar",
+        "startup.missing_mutator_alias"
+      ]
+    },
+    {
+      "parameter": "stages.default.mutation_num",
+      "source": "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+      "case_ids": [
+        "task.invalid_mutation_boolean"
+      ]
+    },
+    {
+      "parameter": "stages.default.mutator_weights",
+      "source": "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+      "case_ids": [
+        "task.invalid_weights_mismatch"
+      ]
+    },
+    {
+      "parameter": "stages.default.weighted_score_expression",
+      "source": "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+      "case_ids": [
+        "task.invalid_expression_mapping",
+        "startup.loss_expression_cycle"
+      ]
+    },
+    {
+      "parameter": "stages.default.active_loss_terms",
+      "source": "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
+      "case_ids": [
+        "task.invalid_active_loss_entry"
+      ]
+    },
+    {
+      "parameter": "loss.expression_terms.score",
+      "source": "astrolabe/losses/base.py:LossEngine.setup",
+      "case_ids": [
+        "task.invalid_loss_expression_list"
+      ]
+    },
+    {
+      "parameter": "search.algorithm",
+      "source": "astrolabe/task_startup.py:378",
+      "case_ids": [
+        "task.invalid_search_missing_algorithm"
+      ]
+    },
+    {
+      "parameter": "search.owner",
+      "source": "astrolabe/task_startup.py:378",
+      "case_ids": [
+        "task.invalid_search_owner_type"
+      ]
+    },
+    {
+      "parameter": "search.summary_format",
+      "source": "astrolabe/task_startup.py:385",
+      "case_ids": [
+        "task.invalid_search_summary_format"
+      ]
+    },
+    {
+      "parameter": "search.resume",
+      "source": "astrolabe/task_startup.py:388",
+      "case_ids": [
+        "task.invalid_search_resume_type",
+        "semantic.resume_missing_out_dir",
+        "semantic.resume_missing_prior_files"
+      ]
+    },
+    {
+      "parameter": "search.execution.in_flight",
+      "source": "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+      "case_ids": [
+        "task.invalid_execution_capacity"
+      ]
+    },
+    {
+      "parameter": "search.execution.retry_interrupted",
+      "source": "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+      "case_ids": [
+        "task.invalid_execution_retry_without_resume"
+      ]
+    },
+    {
+      "parameter": "search.execution.socket_path",
+      "source": "astrolabe/configuration.py:selected_search_target;dispatch_selected_search",
+      "case_ids": [
+        "task.invalid_execution_socket_type"
+      ]
+    },
+    {
+      "parameter": "protein_beam.width",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_width"
+      ]
+    },
+    {
+      "parameter": "protein_beam.proposals_per_parent",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_proposals_per_parent"
+      ]
+    },
+    {
+      "parameter": "protein_beam.max_evaluations",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_max_evaluations"
+      ]
+    },
+    {
+      "parameter": "protein_beam.max_generations",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_max_generations"
+      ]
+    },
+    {
+      "parameter": "protein_beam.max_total_mutations",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_max_total_mutations"
+      ]
+    },
+    {
+      "parameter": "protein_beam.proposal_batch_size",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_proposal_batch_size"
+      ]
+    },
+    {
+      "parameter": "protein_beam.selection",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_selection"
+      ]
+    },
+    {
+      "parameter": "protein_beam.holes_ranking",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_holes_ranking"
+      ]
+    },
+    {
+      "parameter": "protein_beam.af3_call_budget",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_budget_zero"
+      ]
+    },
+    {
+      "parameter": "protein_beam.gates.root_metric_max_ratio.missing",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_gate_metric"
+      ]
+    },
+    {
+      "parameter": "protein_beam.workers",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_workers"
+      ]
+    },
+    {
+      "parameter": "protein_beam.in_flight",
+      "source": "astrolabe/protein_beam.py:validate_config;run_beam",
+      "case_ids": [
+        "task.invalid_beam_in_flight"
+      ]
+    },
+    {
+      "parameter": "evaluator.evaluator_terms.check._type",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.unknown_evaluator"
+      ]
+    },
+    {
+      "parameter": "mutator.mutator_terms.m._type",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.unknown_mutator"
+      ]
+    },
+    {
+      "parameter": "evaluator.enabled_aliases",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.disabled_evaluator"
+      ]
+    },
+    {
+      "parameter": "mutator.enabled_aliases",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.disabled_mutator"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.score",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.loss_unknown",
+        "startup.loss_required_parameter",
+        "startup.loss_parameter_typo"
+      ]
+    },
+    {
+      "parameter": "stages.default.acceptance_gate",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.acceptance_gate_syntax"
+      ]
+    },
+    {
+      "parameter": "stages.default.early_stopping",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.early_stopping_syntax"
+      ]
+    },
+    {
+      "parameter": "stages.next",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.entrance_missing"
+      ]
+    },
+    {
+      "parameter": "initializer.aa_set",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.initializer_aa_set_empty"
+      ]
+    },
+    {
+      "parameter": "initializer.mask_fraction",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.initializer_mask_fraction"
+      ]
+    },
+    {
+      "parameter": "initializer.x_fraction",
+      "source": "astrolabe/startup_validation.py",
+      "case_ids": [
+        "startup.initializer_x_fraction"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.chain_a",
+      "source": "astrolabe/losses/interaction.py",
+      "case_ids": [
+        "scoring.loss_chain_type"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.contact_method",
+      "source": "astrolabe/losses/interaction.py",
+      "case_ids": [
+        "scoring.loss_contact_method"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.sc_cutoff",
+      "source": "astrolabe/losses/interaction.py",
+      "case_ids": [
+        "scoring.loss_sc_cutoff"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.ca_cutoff",
+      "source": "astrolabe/losses/interaction.py",
+      "case_ids": [
+        "scoring.loss_ca_cutoff"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.pae_cutoff",
+      "source": "astrolabe/losses/confidence.py",
+      "case_ids": [
+        "scoring.loss_pae_cutoff"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.interface_distance",
+      "source": "astrolabe/losses/interface_holes.py",
+      "case_ids": [
+        "scoring.loss_interface_distance"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.sse_type",
+      "source": "astrolabe/losses/structure.py",
+      "case_ids": [
+        "scoring.loss_sse_type"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.included_protomers",
+      "source": "astrolabe/losses/structure.py",
+      "case_ids": [
+        "scoring.loss_included_protomers"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.strict",
+      "source": "astrolabe/losses/interaction.py",
+      "case_ids": [
+        "scoring.loss_strict"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.separation_distance",
+      "source": "astrolabe/losses/interaction.py",
+      "case_ids": [
+        "scoring.loss_separation_distance"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.probe.ignore_surface_res",
+      "source": "astrolabe/losses/interaction.py",
+      "case_ids": [
+        "scoring.loss_ignore_surface_res"
+      ]
+    },
+    {
+      "parameter": "predocker.predocker_terms.probe.num_samples",
+      "source": "astrolabe/structure_processors/autodock.py",
+      "case_ids": [
+        "scoring.dock_num_samples"
+      ]
+    },
+    {
+      "parameter": "predocker.predocker_terms.probe.exhaustiveness",
+      "source": "astrolabe/structure_processors/autodock.py",
+      "case_ids": [
+        "scoring.dock_exhaustiveness"
+      ]
+    },
+    {
+      "parameter": "predocker.predocker_terms.probe.binding_site_coverage",
+      "source": "astrolabe/structure_processors/autodock.py",
+      "case_ids": [
+        "scoring.dock_coverage"
+      ]
+    },
+    {
+      "parameter": "predocker.predocker_terms.probe.binding_site_padding",
+      "source": "astrolabe/structure_processors/autodock.py",
+      "case_ids": [
+        "scoring.dock_padding"
+      ]
+    },
+    {
+      "parameter": "predocker.predocker_terms.probe.restraint_distance",
+      "source": "astrolabe/structure_processors/haddock3.py",
+      "case_ids": [
+        "scoring.haddock_distance"
+      ]
+    },
+    {
+      "parameter": "task_name",
+      "source": "task_name",
+      "case_ids": [
+        "semantic.task_name_missing",
+        "semantic.task_name_bad_type"
+      ]
+    },
+    {
+      "parameter": "out_dir",
+      "source": "out_dir",
+      "case_ids": [
+        "semantic.out_dir_type",
+        "semantic.out_dir_existing_file"
+      ]
+    },
+    {
+      "parameter": "raw_model_results_dir",
+      "source": "raw_model_results_dir",
+      "case_ids": [
+        "semantic.raw_dir_type"
+      ]
+    },
+    {
+      "parameter": "binding_site.binder",
+      "source": "binder",
+      "case_ids": [
+        "semantic.site_binder_unknown",
+        "semantic.site_binder_mixed_chains"
+      ]
+    },
+    {
+      "parameter": "binding_site.target",
+      "source": "target",
+      "case_ids": [
+        "semantic.site_target_unknown",
+        "semantic.site_target_residue",
+        "semantic.site_residue_zero",
+        "semantic.site_residue_reverse",
+        "semantic.site_both_chain_only"
+      ]
+    },
+    {
+      "parameter": "binding_site.mode",
+      "source": "binding_site.mode",
+      "case_ids": [
+        "semantic.site_mode",
+        "semantic.site_contact_missing_binder_positions"
+      ]
+    },
+    {
+      "parameter": "binding_site.max_distance",
+      "source": "binding_site.max_distance",
+      "case_ids": [
+        "semantic.site_distance",
+        "semantic.site_distance_nan",
+        "semantic.site_distance_infinity"
+      ]
+    },
+    {
+      "parameter": "binding_site.AC.target",
+      "source": "binding_site",
+      "case_ids": [
+        "semantic.site_cross_oligo"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.hotspot_b.select_expression",
+      "source": "hotspot_b",
+      "case_ids": [
+        "semantic.hotspot_selector",
+        "semantic.file_segment_hotspot_range"
+      ]
+    },
+    {
+      "parameter": "loss.loss_terms.hotspot_b._for",
+      "source": "hotspot_b",
+      "case_ids": [
+        "semantic.hotspot_for"
+      ]
+    },
+    {
+      "parameter": "structure_start.mode",
+      "source": "structure_start.mode",
+      "case_ids": [
+        "semantic.structure_start_mode"
+      ]
+    },
+    {
+      "parameter": "structure_start.references.AB.chain_map",
+      "source": "structure_start.references.AB.chain_map",
+      "case_ids": [
+        "semantic.structure_start_reference"
+      ]
+    },
+    {
+      "parameter": "structure_start.hotspot_gate.floor",
+      "source": "structure_start.hotspot_gate.floor",
+      "case_ids": [
+        "semantic.structure_start_hotspot_floor"
+      ]
+    },
+    {
+      "parameter": "structure_start.references.AB.structure_alias",
+      "source": "structure_alias",
+      "case_ids": [
+        "semantic.structure_reference_alias"
+      ]
+    },
+    {
+      "parameter": "ligand_resnames",
+      "source": "astrolabe/utils/extra_residues.py:1161",
+      "case_ids": [
+        "semantic.ligand_resnames_type"
+      ]
+    },
+    {
+      "parameter": "binding_site.min_distance",
+      "source": "astrolabe/core/binding_site.py:195",
+      "case_ids": [
+        "semantic.site_distance_reversed"
+      ]
+    },
+    {
+      "parameter": "selected_dependency.DAlphaBall",
+      "source": "astrolabe/startup_dependencies.py:193",
+      "case_ids": [
+        "semantic.dalphaball_selected_override_missing"
+      ]
+    },
+    {
+      "parameter": "exclude_AA",
+      "source": "astrolabe/core/protomer_config_parser.py:137",
+      "case_ids": [
+        "semantic.exclude_AA_item_type",
+        "semantic.exclude_AA_unknown_residue"
+      ]
+    },
+    {
+      "parameter": "mutator.mutator_terms.candidate.temperature",
+      "source": "astrolabe/backend_startup.py:214",
+      "case_ids": [
+        "semantic.selected_mutator_temperature"
+      ]
+    },
+    {
+      "parameter": "stages.default.acceptance_threshold",
+      "source": "astrolabe/startup_validation.py:272",
+      "case_ids": [
+        "semantic.acceptance_threshold_syntax"
+      ]
+    },
+    {
+      "parameter": "search.width",
+      "source": "astrolabe/design/configured_refinement.py:228",
+      "case_ids": [
+        "semantic.native_width"
+      ]
+    },
+    {
+      "parameter": "search.proposals_per_parent",
+      "source": "astrolabe/design/configured_refinement.py:228",
+      "case_ids": [
+        "semantic.native_proposals_per_parent"
+      ]
+    },
+    {
+      "parameter": "search.max_evaluations",
+      "source": "astrolabe/design/configured_refinement.py:228",
+      "case_ids": [
+        "semantic.native_max_evaluations"
+      ]
+    },
+    {
+      "parameter": "search.proposal_cap",
+      "source": "astrolabe/design/configured_refinement.py:228",
+      "case_ids": [
+        "semantic.native_proposal_cap"
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "task.invalid_seqs_list",
+      "file": "task.invalid_seqs_list.yaml",
+      "parameter": "seqs",
+      "invalid_value": "[]",
+      "expected_error": [
+        "seqs"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_sequence_bad_range",
+      "file": "task.invalid_sequence_bad_range.yaml",
+      "parameter": "seqs.A",
+      "invalid_value": "\"2--10\"",
+      "expected_error": [
+        "seqs.A"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_sequence_unknown_file",
+      "file": "task.invalid_sequence_unknown_file.yaml",
+      "parameter": "seqs.A",
+      "invalid_value": "\"absent:A\"",
+      "expected_error": [
+        "seqs.A"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_protomer_identifier",
+      "file": "task.invalid_protomer_identifier.yaml",
+      "parameter": "seqs.AB",
+      "invalid_value": "\"ACDE\"",
+      "expected_error": [
+        "seqs.AB"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_types_list",
+      "file": "task.invalid_types_list.yaml",
+      "parameter": "types",
+      "invalid_value": "[]",
+      "expected_error": [
+        "types"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_type_unknown",
+      "file": "task.invalid_type_unknown.yaml",
+      "parameter": "types.A",
+      "invalid_value": "\"polypeptide\"",
+      "expected_error": [
+        "types.A"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_homologies_list",
+      "file": "task.invalid_homologies_list.yaml",
+      "parameter": "homologies",
+      "invalid_value": "[]",
+      "expected_error": [
+        "homologies"
+      ],
+      "expected_stage": "composition",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_homology_json_without_chain",
+      "file": "task.invalid_homology_json_without_chain.yaml",
+      "parameter": "homologies.A",
+      "invalid_value": "\"/__astrolabe_formal_config_missing__/input.json\"",
+      "expected_error": [
+        "homologies.A"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_unpairedMsa_list",
+      "file": "task.invalid_unpairedMsa_list.yaml",
+      "parameter": "homologies.A.unpairedMsa",
+      "invalid_value": "[]",
+      "expected_error": [
+        "homologies.A.unpairedMsa"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_pairedMsa_list",
+      "file": "task.invalid_pairedMsa_list.yaml",
+      "parameter": "homologies.A.pairedMsa",
+      "invalid_value": "[]",
+      "expected_error": [
+        "homologies.A.pairedMsa"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_template_type",
+      "file": "task.invalid_template_type.yaml",
+      "parameter": "homologies.A.templates",
+      "invalid_value": "1",
+      "expected_error": [
+        "homologies.A.templates"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_template_index_length",
+      "file": "task.invalid_template_index_length.yaml",
+      "parameter": "homologies.A.0.templateIndices",
+      "invalid_value": "[]",
+      "expected_error": [
+        "homologies.A.0"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_template_mmcif_type",
+      "file": "task.invalid_template_mmcif_type.yaml",
+      "parameter": "homologies.A.0.mmcif",
+      "invalid_value": "1",
+      "expected_error": [
+        "homologies.A.0.mmcif"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_named_files_scalar",
+      "file": "task.invalid_named_files_scalar.yaml",
+      "parameter": "named_files",
+      "invalid_value": "\"a.pdb\"",
+      "expected_error": [
+        "named_files"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_named_file_missing",
+      "file": "task.invalid_named_file_missing.yaml",
+      "parameter": "named_files.input",
+      "invalid_value": "\"/__astrolabe_formal_config_missing__/input.pdb\"",
+      "expected_error": [
+        "named_files.input"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_seed_negative",
+      "file": "task.invalid_seed_negative.yaml",
+      "parameter": "seed",
+      "invalid_value": "-1",
+      "expected_error": [
+        "seed"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_steps_fractional",
+      "file": "task.invalid_steps_fractional.yaml",
+      "parameter": "steps",
+      "invalid_value": "1.5",
+      "expected_error": [
+        "steps"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_repeats_zero",
+      "file": "task.invalid_repeats_zero.yaml",
+      "parameter": "repeats",
+      "invalid_value": "0",
+      "expected_error": [
+        "repeats"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_debug_string",
+      "file": "task.invalid_debug_string.yaml",
+      "parameter": "debug",
+      "invalid_value": "\"false\"",
+      "expected_error": [
+        "debug"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_enable_pyrosetta_string",
+      "file": "task.invalid_enable_pyrosetta_string.yaml",
+      "parameter": "enable_pyrosetta",
+      "invalid_value": "\"false\"",
+      "expected_error": [
+        "enable_pyrosetta"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_skip_complex_poses_string",
+      "file": "task.invalid_skip_complex_poses_string.yaml",
+      "parameter": "skip_complex_poses",
+      "invalid_value": "\"false\"",
+      "expected_error": [
+        "skip_complex_poses"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_use_metropolis_acceptance_string",
+      "file": "task.invalid_use_metropolis_acceptance_string.yaml",
+      "parameter": "use_metropolis_acceptance",
+      "invalid_value": "\"false\"",
+      "expected_error": [
+        "use_metropolis_acceptance"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_metropolis_temperature_text",
+      "file": "task.invalid_metropolis_temperature_text.yaml",
+      "parameter": "initial_temperature",
+      "invalid_value": "\"warm\"",
+      "expected_error": [
+        "initial_temperature"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_dynamic_binding_site_enabled_string",
+      "file": "task.invalid_dynamic_binding_site_enabled_string.yaml",
+      "parameter": "dynamic_binding_site_enabled",
+      "invalid_value": "\"false\"",
+      "expected_error": [
+        "dynamic_binding_site_enabled"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_allow_mmcif_pdb_fallback_string",
+      "file": "task.invalid_allow_mmcif_pdb_fallback_string.yaml",
+      "parameter": "allow_mmcif_pdb_fallback",
+      "invalid_value": "\"false\"",
+      "expected_error": [
+        "allow_mmcif_pdb_fallback"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_initializer_mode_type",
+      "file": "task.invalid_initializer_mode_type.yaml",
+      "parameter": "initializer.mode",
+      "invalid_value": "[]",
+      "expected_error": [
+        "initializer.mode"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_initializer_alias_type",
+      "file": "task.invalid_initializer_alias_type.yaml",
+      "parameter": "initializer.dplm_alias",
+      "invalid_value": "[]",
+      "expected_error": [
+        "initializer.dplm_alias"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_selector_type",
+      "file": "task.invalid_selector_type.yaml",
+      "parameter": "mutator.selector_expression",
+      "invalid_value": "[1]",
+      "expected_error": [
+        "mutator.selector_expression"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_selected_position_selector_type",
+      "file": "task.invalid_selected_position_selector_type.yaml",
+      "parameter": "mutator.mutator_terms.MCMC.position_selector",
+      "invalid_value": "{}",
+      "expected_error": [
+        "mutator.mutator_terms.MCMC.position_selector"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_oligo_undefined",
+      "file": "task.invalid_oligo_undefined.yaml",
+      "parameter": "stages.default.oligo",
+      "invalid_value": "[\"B\"]",
+      "expected_error": [
+        "stages.default.oligo"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_evaluator_alias_type",
+      "file": "task.invalid_evaluator_alias_type.yaml",
+      "parameter": "stages.default.evaluator",
+      "invalid_value": "1",
+      "expected_error": [
+        "stages.default.evaluator"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_mutators_scalar",
+      "file": "task.invalid_mutators_scalar.yaml",
+      "parameter": "stages.default.mutators",
+      "invalid_value": "\"MCMC\"",
+      "expected_error": [
+        "stages.default.mutators"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_mutation_boolean",
+      "file": "task.invalid_mutation_boolean.yaml",
+      "parameter": "stages.default.mutation_num",
+      "invalid_value": "true",
+      "expected_error": [
+        "stages.default.mutation_num"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_weights_mismatch",
+      "file": "task.invalid_weights_mismatch.yaml",
+      "parameter": "stages.default.mutator_weights",
+      "invalid_value": "[1, 2]",
+      "expected_error": [
+        "stages.default.mutator_weights"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_expression_mapping",
+      "file": "task.invalid_expression_mapping.yaml",
+      "parameter": "stages.default.weighted_score_expression",
+      "invalid_value": "{\"score\": 1}",
+      "expected_error": [
+        "stages.default.weighted_score_expression"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_active_loss_entry",
+      "file": "task.invalid_active_loss_entry.yaml",
+      "parameter": "stages.default.active_loss_terms",
+      "invalid_value": "[{}]",
+      "expected_error": [
+        "stages.default.active_loss_terms"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_loss_expression_list",
+      "file": "task.invalid_loss_expression_list.yaml",
+      "parameter": "loss.expression_terms.score",
+      "invalid_value": "[1]",
+      "expected_error": [
+        "loss.expression_terms.score"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_search_missing_algorithm",
+      "file": "task.invalid_search_missing_algorithm.yaml",
+      "parameter": "search.algorithm",
+      "invalid_value": "missing field (see full YAML)",
+      "expected_error": [
+        "search.algorithm"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_search_owner_type",
+      "file": "task.invalid_search_owner_type.yaml",
+      "parameter": "search.owner",
+      "invalid_value": "[]",
+      "expected_error": [
+        "search.owner"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_search_summary_format",
+      "file": "task.invalid_search_summary_format.yaml",
+      "parameter": "search.summary_format",
+      "invalid_value": "\"csv\"",
+      "expected_error": [
+        "search.summary_format"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_search_resume_type",
+      "file": "task.invalid_search_resume_type.yaml",
+      "parameter": "search.resume",
+      "invalid_value": "\"false\"",
+      "expected_error": [
+        "search.resume"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_execution_capacity",
+      "file": "task.invalid_execution_capacity.yaml",
+      "parameter": "search.execution.in_flight",
+      "invalid_value": "3",
+      "expected_error": [
+        "search.execution.in_flight"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_execution_retry_without_resume",
+      "file": "task.invalid_execution_retry_without_resume.yaml",
+      "parameter": "search.execution.retry_interrupted",
+      "invalid_value": "true",
+      "expected_error": [
+        "search.execution.retry_interrupted"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_execution_socket_type",
+      "file": "task.invalid_execution_socket_type.yaml",
+      "parameter": "search.execution.socket_path",
+      "invalid_value": "[]",
+      "expected_error": [
+        "search.execution.socket_path"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_width",
+      "file": "task.invalid_beam_width.yaml",
+      "parameter": "protein_beam.width",
+      "invalid_value": "0",
+      "expected_error": [
+        "protein_beam.width"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_proposals_per_parent",
+      "file": "task.invalid_beam_proposals_per_parent.yaml",
+      "parameter": "protein_beam.proposals_per_parent",
+      "invalid_value": "0",
+      "expected_error": [
+        "protein_beam.proposals_per_parent"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_max_evaluations",
+      "file": "task.invalid_beam_max_evaluations.yaml",
+      "parameter": "protein_beam.max_evaluations",
+      "invalid_value": "0",
+      "expected_error": [
+        "protein_beam.max_evaluations"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_max_generations",
+      "file": "task.invalid_beam_max_generations.yaml",
+      "parameter": "protein_beam.max_generations",
+      "invalid_value": "0",
+      "expected_error": [
+        "protein_beam.max_generations"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_max_total_mutations",
+      "file": "task.invalid_beam_max_total_mutations.yaml",
+      "parameter": "protein_beam.max_total_mutations",
+      "invalid_value": "0",
+      "expected_error": [
+        "protein_beam.max_total_mutations"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_proposal_batch_size",
+      "file": "task.invalid_beam_proposal_batch_size.yaml",
+      "parameter": "protein_beam.proposal_batch_size",
+      "invalid_value": "0",
+      "expected_error": [
+        "protein_beam.proposal_batch_size"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_selection",
+      "file": "task.invalid_beam_selection.yaml",
+      "parameter": "protein_beam.selection",
+      "invalid_value": "\"best\"",
+      "expected_error": [
+        "protein_beam.selection"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_holes_ranking",
+      "file": "task.invalid_beam_holes_ranking.yaml",
+      "parameter": "protein_beam.holes_ranking",
+      "invalid_value": "\"sum\"",
+      "expected_error": [
+        "protein_beam.holes_ranking"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_budget_zero",
+      "file": "task.invalid_beam_budget_zero.yaml",
+      "parameter": "protein_beam.af3_call_budget",
+      "invalid_value": "{\"scope\": \"task\", \"ledger\": \"af3_calls.json\", \"max_total\": 0, \"max_per_case\": 1}",
+      "expected_error": [
+        "protein_beam.af3_call_budget.max_total"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_gate_metric",
+      "file": "task.invalid_beam_gate_metric.yaml",
+      "parameter": "protein_beam.gates.root_metric_max_ratio.missing",
+      "invalid_value": "1",
+      "expected_error": [
+        "protein_beam.gates.root_metric_max_ratio.missing"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_workers",
+      "file": "task.invalid_beam_workers.yaml",
+      "parameter": "protein_beam.workers",
+      "invalid_value": "0",
+      "expected_error": [
+        "protein_beam.workers"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "task.invalid_beam_in_flight",
+      "file": "task.invalid_beam_in_flight.yaml",
+      "parameter": "protein_beam.in_flight",
+      "invalid_value": "0",
+      "expected_error": [
+        "protein_beam.in_flight"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.unknown_evaluator",
+      "file": "startup.unknown_evaluator.yaml",
+      "parameter": "evaluator.evaluator_terms.check._type",
+      "invalid_value": "\"typo_model\"",
+      "expected_error": [
+        "unknown evaluator"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.unknown_mutator",
+      "file": "startup.unknown_mutator.yaml",
+      "parameter": "mutator.mutator_terms.m._type",
+      "invalid_value": "\"typo_mutator\"",
+      "expected_error": [
+        "unknown mutator"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.missing_evaluator_alias",
+      "file": "startup.missing_evaluator_alias.yaml",
+      "parameter": "stages.default.evaluator",
+      "invalid_value": "\"missing\"",
+      "expected_error": [
+        "evaluator.evaluator_terms.missing"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.missing_mutator_alias",
+      "file": "startup.missing_mutator_alias.yaml",
+      "parameter": "stages.default.mutators",
+      "invalid_value": "[\"missing\"]",
+      "expected_error": [
+        "mutator.mutator_terms.missing"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.disabled_evaluator",
+      "file": "startup.disabled_evaluator.yaml",
+      "parameter": "evaluator.enabled_aliases",
+      "invalid_value": "[]",
+      "expected_error": [
+        "evaluator.enabled_aliases"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.disabled_mutator",
+      "file": "startup.disabled_mutator.yaml",
+      "parameter": "mutator.enabled_aliases",
+      "invalid_value": "[]",
+      "expected_error": [
+        "mutator.enabled_aliases"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.loss_unknown",
+      "file": "startup.loss_unknown.yaml",
+      "parameter": "loss.loss_terms.score",
+      "invalid_value": "{\"_type\": \"nonexistent_loss\"}",
+      "expected_error": [
+        "unknown loss"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.loss_required_parameter",
+      "file": "startup.loss_required_parameter.yaml",
+      "parameter": "loss.loss_terms.score",
+      "invalid_value": "{\"_type\": \"interface_holes\", \"protomer_a\": \"A\"}",
+      "expected_error": [
+        "score.protomer_b"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.loss_parameter_typo",
+      "file": "startup.loss_parameter_typo.yaml",
+      "parameter": "loss.loss_terms.score",
+      "invalid_value": "{\"_type\": \"interface_holes\", \"protomer_a\": \"A\", \"protomer_b\": \"A\", \"interface_distnace\": 10}",
+      "expected_error": [
+        "score.interface_distnace"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.loss_expression_cycle",
+      "file": "startup.loss_expression_cycle.yaml",
+      "parameter": "stages.default.weighted_score_expression",
+      "invalid_value": "\"a\"",
+      "expected_error": [
+        "cyclic dependency"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.acceptance_gate_syntax",
+      "file": "startup.acceptance_gate_syntax.yaml",
+      "parameter": "stages.default.acceptance_gate",
+      "invalid_value": "\"a and )\"",
+      "expected_error": [
+        "acceptance_gate"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.early_stopping_syntax",
+      "file": "startup.early_stopping_syntax.yaml",
+      "parameter": "stages.default.early_stopping",
+      "invalid_value": "\"a < )\"",
+      "expected_error": [
+        "early_stopping"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.entrance_missing",
+      "file": "startup.entrance_missing.yaml",
+      "parameter": "stages.next",
+      "invalid_value": "{\"evaluator\": \"check\"}",
+      "expected_error": [
+        "stages.next._entrance"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.initializer_aa_set_empty",
+      "file": "startup.initializer_aa_set_empty.yaml",
+      "parameter": "initializer.aa_set",
+      "invalid_value": "\"\"",
+      "expected_error": [
+        "initializer.aa_set"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.initializer_mask_fraction",
+      "file": "startup.initializer_mask_fraction.yaml",
+      "parameter": "initializer.mask_fraction",
+      "invalid_value": "1.1",
+      "expected_error": [
+        "initializer.mask_fraction"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.initializer_x_fraction",
+      "file": "startup.initializer_x_fraction.yaml",
+      "parameter": "initializer.x_fraction",
+      "invalid_value": "-0.1",
+      "expected_error": [
+        "initializer.x_fraction"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "startup.initializer_dplm_alias",
+      "file": "startup.initializer_dplm_alias.yaml",
+      "parameter": "initializer.dplm_alias",
+      "invalid_value": "\"missing\"",
+      "expected_error": [
+        "initializer.dplm_alias"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_chain_type",
+      "file": "scoring.loss_chain_type.yaml",
+      "parameter": "loss.loss_terms.probe.chain_a",
+      "invalid_value": "7",
+      "expected_error": [
+        "loss.loss_terms.probe.chain_a"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_contact_method",
+      "file": "scoring.loss_contact_method.yaml",
+      "parameter": "loss.loss_terms.probe.contact_method",
+      "invalid_value": "\"wrong\"",
+      "expected_error": [
+        "loss.loss_terms.probe.contact_method"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_sc_cutoff",
+      "file": "scoring.loss_sc_cutoff.yaml",
+      "parameter": "loss.loss_terms.probe.sc_cutoff",
+      "invalid_value": "0",
+      "expected_error": [
+        "loss.loss_terms.probe.sc_cutoff"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_ca_cutoff",
+      "file": "scoring.loss_ca_cutoff.yaml",
+      "parameter": "loss.loss_terms.probe.ca_cutoff",
+      "invalid_value": "-1",
+      "expected_error": [
+        "loss.loss_terms.probe.ca_cutoff"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_pae_cutoff",
+      "file": "scoring.loss_pae_cutoff.yaml",
+      "parameter": "loss.loss_terms.probe.pae_cutoff",
+      "invalid_value": "0",
+      "expected_error": [
+        "loss.loss_terms.probe.pae_cutoff"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_interface_distance",
+      "file": "scoring.loss_interface_distance.yaml",
+      "parameter": "loss.loss_terms.probe.interface_distance",
+      "invalid_value": "0",
+      "expected_error": [
+        "loss.loss_terms.probe.interface_distance"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_sse_type",
+      "file": "scoring.loss_sse_type.yaml",
+      "parameter": "loss.loss_terms.probe.sse_type",
+      "invalid_value": "\"Q\"",
+      "expected_error": [
+        "loss.loss_terms.probe.sse_type"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_included_protomers",
+      "file": "scoring.loss_included_protomers.yaml",
+      "parameter": "loss.loss_terms.probe.included_protomers",
+      "invalid_value": "[\"A\"]",
+      "expected_error": [
+        "loss.loss_terms.probe.included_protomers"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_strict",
+      "file": "scoring.loss_strict.yaml",
+      "parameter": "loss.loss_terms.probe.strict",
+      "invalid_value": "\"false\"",
+      "expected_error": [
+        "loss.loss_terms.probe.strict"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_separation_distance",
+      "file": "scoring.loss_separation_distance.yaml",
+      "parameter": "loss.loss_terms.probe.separation_distance",
+      "invalid_value": "-2",
+      "expected_error": [
+        "loss.loss_terms.probe.separation_distance"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.loss_ignore_surface_res",
+      "file": "scoring.loss_ignore_surface_res.yaml",
+      "parameter": "loss.loss_terms.probe.ignore_surface_res",
+      "invalid_value": "1",
+      "expected_error": [
+        "loss.loss_terms.probe.ignore_surface_res"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.dock_num_samples",
+      "file": "scoring.dock_num_samples.yaml",
+      "parameter": "predocker.predocker_terms.probe.num_samples",
+      "invalid_value": "false",
+      "expected_error": [
+        "predocker.predocker_terms.probe.num_samples"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.dock_exhaustiveness",
+      "file": "scoring.dock_exhaustiveness.yaml",
+      "parameter": "predocker.predocker_terms.probe.exhaustiveness",
+      "invalid_value": "-1",
+      "expected_error": [
+        "predocker.predocker_terms.probe.exhaustiveness"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.dock_coverage",
+      "file": "scoring.dock_coverage.yaml",
+      "parameter": "predocker.predocker_terms.probe.binding_site_coverage",
+      "invalid_value": "101",
+      "expected_error": [
+        "predocker.predocker_terms.probe.binding_site_coverage"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.dock_padding",
+      "file": "scoring.dock_padding.yaml",
+      "parameter": "predocker.predocker_terms.probe.binding_site_padding",
+      "invalid_value": "-1",
+      "expected_error": [
+        "predocker.predocker_terms.probe.binding_site_padding"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "scoring.haddock_distance",
+      "file": "scoring.haddock_distance.yaml",
+      "parameter": "predocker.predocker_terms.probe.restraint_distance",
+      "invalid_value": "[2, 8, 4]",
+      "expected_error": [
+        "predocker.predocker_terms.probe.restraint_distance"
+      ],
+      "expected_stage": "scoring",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "valid.protein",
+      "file": "valid_protein.yaml",
+      "parameter": "control.protein",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": []
+    },
+    {
+      "id": "valid.binder",
+      "file": "valid_binder.yaml",
+      "parameter": "control.binder",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": []
+    },
+    {
+      "id": "valid.multitarget",
+      "file": "valid_multitarget.yaml",
+      "parameter": "control.multitarget",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": []
+    },
+    {
+      "id": "valid.ligand",
+      "file": "valid_ligand.yaml",
+      "parameter": "control.ligand",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": []
+    },
+    {
+      "id": "valid.peptide",
+      "file": "valid_peptide.yaml",
+      "parameter": "control.peptide",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": []
+    },
+    {
+      "id": "valid.oligomer",
+      "file": "valid_oligomer.yaml",
+      "parameter": "control.oligomer",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.task_name_missing",
+      "file": "semantic.task_name_missing.yaml",
+      "parameter": "task_name",
+      "invalid_value": "null",
+      "expected_error": [
+        "task_name"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": [
+        "task_name"
+      ]
+    },
+    {
+      "id": "semantic.out_dir_type",
+      "file": "semantic.out_dir_type.yaml",
+      "parameter": "out_dir",
+      "invalid_value": "[]",
+      "expected_error": [
+        "out_dir"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": [
+        "out_dir"
+      ]
+    },
+    {
+      "id": "semantic.raw_dir_type",
+      "file": "semantic.raw_dir_type.yaml",
+      "parameter": "raw_model_results_dir",
+      "invalid_value": "[]",
+      "expected_error": [
+        "raw_model_results_dir"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_binder_unknown",
+      "file": "semantic.site_binder_unknown.yaml",
+      "parameter": "binding_site.binder",
+      "invalid_value": "\"Z\"",
+      "expected_error": [
+        "binding_site.binder"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_target_unknown",
+      "file": "semantic.site_target_unknown.yaml",
+      "parameter": "binding_site.target",
+      "invalid_value": "\"Z:2-4\"",
+      "expected_error": [
+        "binding_site.target"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_target_residue",
+      "file": "semantic.site_target_residue.yaml",
+      "parameter": "binding_site.target",
+      "invalid_value": "\"B:999\"",
+      "expected_error": [
+        "binding_site.target"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_mode",
+      "file": "semantic.site_mode.yaml",
+      "parameter": "binding_site.mode",
+      "invalid_value": "\"unknown\"",
+      "expected_error": [
+        "binding_site.mode"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_distance",
+      "file": "semantic.site_distance.yaml",
+      "parameter": "binding_site.max_distance",
+      "invalid_value": "-1",
+      "expected_error": [
+        "binding_site.max_distance"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_cross_oligo",
+      "file": "semantic.site_cross_oligo.yaml",
+      "parameter": "binding_site.AC.target",
+      "invalid_value": "\"protomer:B:2-4\"",
+      "expected_error": [
+        "binding_site.AC.target"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.hotspot_selector",
+      "file": "semantic.hotspot_selector.yaml",
+      "parameter": "loss.loss_terms.hotspot_b.select_expression",
+      "invalid_value": "\"Z:2-4\"",
+      "expected_error": [
+        "loss.loss_terms.hotspot_b.select_expression"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.hotspot_for",
+      "file": "semantic.hotspot_for.yaml",
+      "parameter": "loss.loss_terms.hotspot_b._for",
+      "invalid_value": "\"AZ\"",
+      "expected_error": [
+        "loss.loss_terms.hotspot_b._for"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.structure_start_mode",
+      "file": "semantic.structure_start_mode.yaml",
+      "parameter": "structure_start.mode",
+      "invalid_value": "\"nonsense\"",
+      "expected_error": [
+        "structure_start.mode"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.structure_start_reference",
+      "file": "semantic.structure_start_reference.yaml",
+      "parameter": "structure_start.references.AB.chain_map",
+      "invalid_value": "{}",
+      "expected_error": [
+        "structure_start.references.AB.chain_map"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.structure_start_hotspot_floor",
+      "file": "semantic.structure_start_hotspot_floor.yaml",
+      "parameter": "structure_start.hotspot_gate.floor",
+      "invalid_value": "1.2",
+      "expected_error": [
+        "structure_start.hotspot_gate.floor"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.structure_reference_alias",
+      "file": "semantic.structure_reference_alias.yaml",
+      "parameter": "structure_start.references.AB.structure_alias",
+      "invalid_value": "\"missing\"",
+      "expected_error": [
+        "structure_start.references.AB.structure_alias"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.ligand_resnames_type",
+      "file": "semantic.ligand_resnames_type.yaml",
+      "parameter": "ligand_resnames",
+      "invalid_value": "[]",
+      "expected_error": [
+        "ligand_resnames"
+      ],
+      "expected_stage": "composition",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.out_dir_existing_file",
+      "file": "semantic.out_dir_existing_file.yaml",
+      "parameter": "out_dir",
+      "invalid_value": "\"tests/fixtures/daily_task_config/valid_protein.yaml\"",
+      "expected_error": [
+        "out_dir"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": [
+        "out_dir"
+      ]
+    },
+    {
+      "id": "semantic.task_name_bad_type",
+      "file": "semantic.task_name_bad_type.yaml",
+      "parameter": "task_name",
+      "invalid_value": "[]",
+      "expected_error": [
+        "task_name"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": [
+        "task_name"
+      ]
+    },
+    {
+      "id": "semantic.site_distance_nan",
+      "file": "semantic.site_distance_nan.yaml",
+      "parameter": "binding_site.max_distance",
+      "invalid_value": "NaN",
+      "expected_error": [
+        "binding_site.max_distance"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_distance_infinity",
+      "file": "semantic.site_distance_infinity.yaml",
+      "parameter": "binding_site.max_distance",
+      "invalid_value": "Infinity",
+      "expected_error": [
+        "binding_site.max_distance"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_distance_reversed",
+      "file": "semantic.site_distance_reversed.yaml",
+      "parameter": "binding_site.min_distance",
+      "invalid_value": "9.0",
+      "expected_error": [
+        "binding_site.min_distance"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_residue_zero",
+      "file": "semantic.site_residue_zero.yaml",
+      "parameter": "binding_site.target",
+      "invalid_value": "\"B:0\"",
+      "expected_error": [
+        "Residue positions"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_residue_reverse",
+      "file": "semantic.site_residue_reverse.yaml",
+      "parameter": "binding_site.target",
+      "invalid_value": "\"B:4-2\"",
+      "expected_error": [
+        "Invalid range"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_binder_mixed_chains",
+      "file": "semantic.site_binder_mixed_chains.yaml",
+      "parameter": "binding_site.binder",
+      "invalid_value": "[\"A:2-4\", \"B:3-5\"]",
+      "expected_error": [
+        "binding_site.binder"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_contact_missing_binder_positions",
+      "file": "semantic.site_contact_missing_binder_positions.yaml",
+      "parameter": "binding_site.mode",
+      "invalid_value": "\"contact\"",
+      "expected_error": [
+        "binding_site.mode"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.site_both_chain_only",
+      "file": "semantic.site_both_chain_only.yaml",
+      "parameter": "binding_site.target",
+      "invalid_value": "\"B\"",
+      "expected_error": [
+        "binding_site requires residue"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "valid.partial_multitarget_site",
+      "file": "valid_partial_multitarget_site.yaml",
+      "parameter": "binding_site.AC",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": []
+    },
+    {
+      "id": "valid.extra_unselected_site",
+      "file": "valid_extra_unselected_site.yaml",
+      "parameter": "binding_site.AD",
+      "invalid_value": {
+        "binder": "A",
+        "target": "C:3-5"
+      },
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.dalphaball_selected_override_missing",
+      "file": "semantic.dalphaball_selected_override_missing.yaml",
+      "parameter": "selected_dependency.DAlphaBall",
+      "invalid_value": "GH_DALPHABALL=tests/fixtures/daily_task_config/no_such_dalphaball",
+      "expected_error": [
+        "DAlphaBall",
+        "GH_DALPHABALL"
+      ],
+      "expected_stage": "dependencies",
+      "valid": false,
+      "preserve_fields": [],
+      "env": {
+        "GH_DALPHABALL": "tests/fixtures/daily_task_config/no_such_dalphaball"
+      }
+    },
+    {
+      "id": "valid.formal.release_protein",
+      "file": "valid_formal_release_protein.yaml",
+      "parameter": "control.formal.release_protein",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": [],
+      "control_kind": "composition_only",
+      "source": "tests/fixtures/formal_config/formal/release_protein.yaml"
+    },
+    {
+      "id": "valid.formal.benchmark_binder_v1_4",
+      "file": "valid_formal_benchmark_binder_v1_4.yaml",
+      "parameter": "control.formal.benchmark_binder_v1_4",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": [],
+      "control_kind": "composition_only",
+      "source": "tests/fixtures/formal_config/formal/benchmark_binder_v1_4.yaml"
+    },
+    {
+      "id": "valid.formal.benchmark_multitarget_binder_dplm_v1",
+      "file": "valid_formal_benchmark_multitarget_binder_dplm_v1.yaml",
+      "parameter": "control.formal.benchmark_multitarget_binder_dplm_v1",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": [],
+      "control_kind": "composition_only",
+      "source": "tests/fixtures/formal_config/formal/benchmark_multitarget_binder_dplm_v1.yaml"
+    },
+    {
+      "id": "valid.formal.benchmark_ligand_v1",
+      "file": "valid_formal_benchmark_ligand_v1.yaml",
+      "parameter": "control.formal.benchmark_ligand_v1",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": [],
+      "control_kind": "composition_only",
+      "source": "tests/fixtures/formal_config/formal/benchmark_ligand_v1.yaml"
+    },
+    {
+      "id": "valid.formal.benchmark_peptide_binder_v1",
+      "file": "valid_formal_benchmark_peptide_binder_v1.yaml",
+      "parameter": "control.formal.benchmark_peptide_binder_v1",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": [],
+      "control_kind": "composition_only",
+      "source": "tests/fixtures/formal_config/formal/benchmark_peptide_binder_v1.yaml"
+    },
+    {
+      "id": "valid.formal.benchmark_oligomer_v4_refine",
+      "file": "valid_formal_benchmark_oligomer_v4_refine.yaml",
+      "parameter": "control.formal.benchmark_oligomer_v4_refine",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": [],
+      "control_kind": "composition_only",
+      "source": "tests/fixtures/formal_config/formal/benchmark_oligomer_v4_refine.yaml"
+    },
+    {
+      "id": "semantic.exclude_AA_item_type",
+      "file": "semantic.exclude_AA_item_type.yaml",
+      "parameter": "exclude_AA",
+      "invalid_value": "[7]",
+      "expected_error": [
+        "exclude_AA"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.exclude_AA_unknown_residue",
+      "file": "semantic.exclude_AA_unknown_residue.yaml",
+      "parameter": "exclude_AA",
+      "invalid_value": "[\"Z\"]",
+      "expected_error": [
+        "exclude_AA"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.selected_mutator_temperature",
+      "file": "semantic.selected_mutator_temperature.yaml",
+      "parameter": "mutator.mutator_terms.candidate.temperature",
+      "invalid_value": "-1",
+      "expected_error": [
+        "mutator.mutator_terms.candidate.temperature"
+      ],
+      "expected_stage": "backend",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.acceptance_threshold_syntax",
+      "file": "semantic.acceptance_threshold_syntax.yaml",
+      "parameter": "stages.default.acceptance_threshold",
+      "invalid_value": "\"score > (\"",
+      "expected_error": [
+        "stages.default.acceptance_threshold"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.native_width",
+      "file": "semantic.native_width.yaml",
+      "parameter": "search.width",
+      "invalid_value": "0",
+      "expected_error": [
+        "search.width"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.native_proposals_per_parent",
+      "file": "semantic.native_proposals_per_parent.yaml",
+      "parameter": "search.proposals_per_parent",
+      "invalid_value": "0",
+      "expected_error": [
+        "search.proposals_per_parent"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.native_max_evaluations",
+      "file": "semantic.native_max_evaluations.yaml",
+      "parameter": "search.max_evaluations",
+      "invalid_value": "0",
+      "expected_error": [
+        "search.max_evaluations"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.native_proposal_cap",
+      "file": "semantic.native_proposal_cap.yaml",
+      "parameter": "search.proposal_cap",
+      "invalid_value": "0",
+      "expected_error": [
+        "search.proposal_cap"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.resume_missing_out_dir",
+      "file": "semantic.resume_missing_out_dir.yaml",
+      "parameter": "search.resume",
+      "invalid_value": "true",
+      "expected_error": [
+        "search.resume"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": [
+        "out_dir"
+      ]
+    },
+    {
+      "id": "semantic.resume_missing_prior_files",
+      "file": "semantic.resume_missing_prior_files.yaml",
+      "parameter": "search.resume",
+      "invalid_value": "true",
+      "expected_error": [
+        "resume"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": [
+        "out_dir"
+      ]
+    },
+    {
+      "id": "valid.input_pdb_valid",
+      "file": "valid_input_pdb_valid.yaml",
+      "parameter": "control.input_pdb",
+      "invalid_value": null,
+      "expected_error": [],
+      "expected_stage": "composition",
+      "valid": true,
+      "preserve_fields": [],
+      "control_kind": "composition_only"
+    },
+    {
+      "id": "semantic.input_pdb_wrong_chain",
+      "file": "semantic.input_pdb_wrong_chain.yaml",
+      "parameter": "seqs.A",
+      "invalid_value": "\"input:Z\"",
+      "expected_error": [
+        "seqs.A"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.input_pdb_out_of_range",
+      "file": "semantic.input_pdb_out_of_range.yaml",
+      "parameter": "seqs.A",
+      "invalid_value": "\"input:A99\"",
+      "expected_error": [
+        "seqs.A"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.input_pdb_malformed",
+      "file": "semantic.input_pdb_malformed.yaml",
+      "parameter": "named_files.input",
+      "invalid_value": "\"tests/fixtures/daily_task_config/assets/tiny_malformed.pdb\"",
+      "expected_error": [
+        "named_files.input"
+      ],
+      "expected_stage": "task",
+      "valid": false,
+      "preserve_fields": []
+    },
+    {
+      "id": "semantic.file_segment_hotspot_range",
+      "file": "semantic.file_segment_hotspot_range.yaml",
+      "parameter": "loss.loss_terms.hotspot_b.select_expression",
+      "invalid_value": "\"A_1:4\"",
+      "expected_error": [
+        "loss.loss_terms.hotspot_b.select_expression",
+        "outside segment"
+      ],
+      "expected_stage": "startup",
+      "valid": false,
+      "preserve_fields": []
+    }
+  ],
+  "excluded": [
+    "Model layer options: evaluator.* backend/model/weights and internal network/transport knobs are outside this task.",
+    "GPU/device and external inference-service controls are outside this task.",
+    "Environment setup and dependency installation are outside this task; DAlphaBall is represented through selected loss cases, not an environment mutation.",
+    "multitarget.shared_hotspots is CLI-written metadata; no runtime validation consumer found, so malformed metadata is not a fail-fast requirement.",
+    "A hotspot_dsasa.select_expression is a segment alias selector (B_1/C_1 for the literal controls), not binding_site chain-position syntax (B:2-4/C:3-5)."
+  ]
+}

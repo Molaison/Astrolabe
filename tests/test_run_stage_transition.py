@@ -4,12 +4,20 @@ import csv
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 import run as run_mod
 from astrolabe.core import global_config
 from astrolabe.decision_context import passes_stage_entry_acceptance_gate
 from astrolabe.evaluators.utils import StandardScores
 from astrolabe.losses.base import LossEngine
 from astrolabe.structure_start import ReferenceGateResult
+from native_flow_test_support import native_flow_test_projections
+
+
+@pytest.fixture(autouse=True)
+def _native_flow_test_projections(native_flow_test_projections):
+    return native_flow_test_projections
 
 
 class _EvalResult:
@@ -28,7 +36,7 @@ def test_run_optimization_loop_evaluates_initial_result_for_stage_entry(
     global_config.reset()
 
     events: list[tuple] = []
-    initial_eval = _EvalResult(["A"], score=1.0, iptm=0.9)
+    initial_eval = _EvalResult(["A"], score=0.25, iptm=0.9)
     loop_eval = _EvalResult(["A"], score=1.1, iptm=0.95)
 
     class _FakeDecisions:
@@ -74,7 +82,11 @@ def test_run_optimization_loop_evaluates_initial_result_for_stage_entry(
 
         def find_entrance_stage(self, eval_result, loss_computer):
             events.append(("find", int(global_config.step), tuple(eval_result.names)))
-            return "stage_1" if int(global_config.step) == 0 else None
+            return (
+                "stage_1"
+                if eval_result.score <= 0.25 and self.current_stage == "default"
+                else None
+            )
 
         def get_transition_consistency_gate(self, stage_name):
             return None
@@ -347,9 +359,10 @@ def test_run_optimization_loop_does_not_enter_stage_from_rejected_candidate(
 
     decision_calls: list[tuple[int, tuple[str, ...], bool]] = []
     stage_calls: list[tuple[str, ...]] = []
+    entrance_scores: list[float] = []
 
-    eval_default = _EvalResult(["A"])
-    eval_candidate = _EvalResult(["AB"])
+    eval_default = _EvalResult(["A"], score=0.5)
+    eval_candidate = _EvalResult(["A"], score=0.25)
 
     class _FakeDecisions:
         def make_mutation_decision(
@@ -383,7 +396,8 @@ def test_run_optimization_loop_does_not_enter_stage_from_rejected_candidate(
 
         def find_entrance_stage(self, eval_result, loss_computer):
             stage_calls.append(tuple(eval_result.names))
-            if tuple(eval_result.names) == ("AB",):
+            entrance_scores.append(eval_result.score)
+            if eval_result.score <= 0.25:
                 self.last_setting = self.current_setting
                 self.current_setting = self.stage_args["target"]
                 self.current_stage = "target"
@@ -436,7 +450,43 @@ def test_run_optimization_loop_does_not_enter_stage_from_rejected_candidate(
 
     assert stage_manager.current_stage == "default"
     assert all(names == ("A",) for names in stage_calls)
+    assert entrance_scores and all(score == 0.5 for score in entrance_scores)
     assert all(force_accept is False for _, _, force_accept in decision_calls)
+
+
+def test_cli_configuration_entry_uses_stage_native_route_without_recovery(
+    monkeypatch, tmp_path
+) -> None:
+    from omegaconf import OmegaConf
+    from astrolabe import app, cli
+
+    global_config.reset()
+    cfg = OmegaConf.create({
+        "task_name": "stage-route", "out_dir": str(tmp_path), "seed": 17,
+        "repeats": 1, "steps": 1, "search": None, "recovery": None,
+        "stages": {"default": {"evaluator": "sequence"}, "joint": {
+            "evaluator": "tertiary", "_entrance": "defect <= 0.1",
+        }},
+    })
+    entered = []
+    # This fixture tests dispatch, with the stage graph intentionally supplied
+    # by the test. Full configuration validation has separate CLI coverage.
+    monkeypatch.setattr("astrolabe.startup_validation.validate_startup_config", lambda *_, **__: None)
+    monkeypatch.setattr(app, "_load_run_module", lambda: run_mod)
+    monkeypatch.setattr(run_mod, "install_handlers", lambda: None)
+    monkeypatch.setattr(run_mod, "stop_requested", lambda: False)
+    monkeypatch.setattr(run_mod, "parse_arguments", lambda config: config)
+    monkeypatch.setattr(run_mod, "setup_logging", lambda *_args: None)
+    monkeypatch.setattr(run_mod, "initialize_pipeline_components", lambda args: (
+        None, SimpleNamespace(stage_args=args.stages), {},
+    ))
+    monkeypatch.setattr(run_mod, "run_optimization_loop", lambda args, loss, initial,
+                        manager, runtime, **kwargs: entered.append(tuple(manager.stage_args)))
+    monkeypatch.setattr(run_mod, "_finish_run_provenance", lambda *_args: None)
+    monkeypatch.setattr(run_mod, "_cleanup_auto_managed_raw_dir", lambda **_kwargs: None)
+    cli._run_from_config(cfg, autoselect_gpu=False)
+
+    assert entered == [("default", "joint")]
 
 
 def test_run_optimization_loop_keeps_source_stage_when_decision_rejects_candidate(

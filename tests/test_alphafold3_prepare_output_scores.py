@@ -214,3 +214,26 @@ def test_prepare_output_remaps_ccd_ligand_resname_in_canonical_structure(
     assert "Z49" in text
     assert "B49" not in text
     assert "LIG_B" not in text
+
+
+
+def test_native_coordinator_applies_feature_settings_at_actual_feature_call(monkeypatch, tmp_path):
+    import os
+    from contextlib import nullcontext
+    from omegaconf import OmegaConf
+    key = "ALPHAFOLD3_REFSTRUCTURE_WORKERS"
+    monkeypatch.setenv(key, "9")
+    observed = []
+    monkeypatch.setattr(af3_eval.chemical_components, "Ccd", lambda **kw: object())
+    monkeypatch.setattr(af3_eval, "allow_all_x_protein_chains_during_featurisation", lambda inp: nullcontext())
+    def features(**kwargs):
+        observed.append(os.environ[key])
+        return []
+    monkeypatch.setattr(af3_eval.featurisation, "featurise_input", features)
+    for workers in (2, 3):
+        evaluator = af3_eval.AlphaFold3Evaluator(None, tmp_path, OmegaConf.create({"refstructure_workers": workers}))
+        evaluator.buckets = {"A": None}
+        evaluator.kwargs = {"A": {}}
+        assert evaluator.run_function({"A": SimpleNamespace(rng_seeds=[], user_ccd=None, name="A")}) == {"A": []}
+        assert os.environ[key] == "9"
+    assert observed == ["2", "3"]

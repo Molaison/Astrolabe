@@ -840,6 +840,7 @@ def _write_docker_apptainer_runner(
     path = pathlib.Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     text = """#!/usr/bin/env python3
+import json
 import os
 import pathlib
 import subprocess
@@ -857,6 +858,7 @@ ENV_DEFAULTS = {env_defaults}
 ENV_PREPENDS = {env_prepends}
 SENSITIVE_ENV_FORWARD_KEYS = [
     "GH_CUDA_PREINITIALIZE",
+    "GH_DALPHABALL",
     "HF_TOKEN",
     "HUGGING_FACE_HUB_TOKEN",
     "HF_HUB_OFFLINE",
@@ -874,11 +876,11 @@ def _docker_mount_source(bind):
 
 
 def _add_docker_mount(cmd, seen, host_path, mode="rw"):
-    resolved = str(pathlib.Path(host_path).resolve())
-    if resolved in seen:
+    lexical = os.path.abspath(os.path.expanduser(str(host_path)))
+    if lexical in seen:
         return
-    seen.add(resolved)
-    spec = f"{{resolved}}:{{resolved}}"
+    seen.add(lexical)
+    spec = f"{{lexical}}:{{lexical}}"
     if mode:
         spec += f":{{mode}}"
     cmd += ["-v", spec]
@@ -893,6 +895,8 @@ def main() -> int:
     source_map_root = (
         str(pathlib.Path(source_map_value).resolve()) if source_map_value else None
     )
+    host_cwd = os.environ.get("ASTROLABE_HOST_CWD")
+    path_mounts = json.loads(os.environ.get("ASTROLABE_PATH_MOUNTS", "[]")) if host_cwd else []
 
     py_args = sys.argv[1:]
     if source_map_root and len(py_args) >= 2 and py_args[0] == "-c":
@@ -903,6 +907,8 @@ def main() -> int:
         ]
 
     env = os.environ.copy()
+    env.pop("ASTROLABE_HOST_CWD", None)
+    env.pop("ASTROLABE_PATH_MOUNTS", None)
     env_overrides = {{
         key: env[key]
         for key in SENSITIVE_ENV_FORWARD_KEYS
@@ -924,14 +930,27 @@ def main() -> int:
         "--no-mount",
         "cwd",
         "--pwd",
-        CONTAINER_REPO_ROOT,
+        host_cwd or CONTAINER_REPO_ROOT,
     ]
     if USE_NV:
         inner_cmd.append("--nv")
     if host_repo_root:
         inner_cmd += ["-B", f"{{host_repo_root}}:{{CONTAINER_REPO_ROOT}}"]
+        if host_cwd:
+            inner_cmd += ["-B", f"{{host_repo_root}}:{{host_repo_root}}:ro"]
+    for directory in dict.fromkeys(path_mounts):
+        inner_cmd += ["-B", f"{{directory}}:{{directory}}"]
     for bind in BIND_MOUNTS:
         inner_cmd += ["-B", bind]
+    dalphaball_dirs = []
+    if env.get("GH_DALPHABALL"):
+        binary = pathlib.Path(os.path.expandvars(env["GH_DALPHABALL"])).expanduser()
+        if binary.is_file():
+            binary = binary.absolute()
+            env["GH_DALPHABALL"] = str(binary)
+            dalphaball_dirs = list(dict.fromkeys([binary.parent, binary.resolve().parent]))
+            for directory in dalphaball_dirs:
+                inner_cmd += ["-B", f"{{directory}}:{{directory}}:ro"]
     inner_cmd += [SIF_PATH]
     if container_home:
         inner_cmd += ["/usr/bin/env", f"HOME={{container_home}}"]
@@ -945,11 +964,15 @@ def main() -> int:
     seen = set()
     if host_repo_root:
         _add_docker_mount(docker_cmd, seen, host_repo_root)
+    for directory in path_mounts:
+        _add_docker_mount(docker_cmd, seen, directory)
     _add_docker_mount(docker_cmd, seen, SIF_PATH, mode="ro")
     for bind in BIND_MOUNTS:
         source = _docker_mount_source(bind)
         if source:
             _add_docker_mount(docker_cmd, seen, source)
+    for directory in dalphaball_dirs:
+        _add_docker_mount(docker_cmd, seen, directory, mode="ro")
 
     forward_keys = set(ENV_DEFAULTS)
     forward_keys.update(key for key, _value in ENV_PREPENDS)
@@ -957,12 +980,15 @@ def main() -> int:
     for key in sorted(forward_keys):
         if key == "HOME":
             continue
-        if key not in env or not env[key]:
+        if key not in env or (not env[key] and key != "GH_DALPHABALL"):
             continue
         env[f"APPTAINERENV_{{key}}"] = env[key]
         docker_cmd += ["-e", f"APPTAINERENV_{{key}}"]
     docker_cmd += ["-w", "/tmp", DOCKER_IMAGE, *inner_cmd]
-    subprocess.check_call(docker_cmd, env=env)
+    try:
+        subprocess.check_call(docker_cmd, env=env)
+    except subprocess.CalledProcessError as exc:
+        return exc.returncode
     return 0
 
 
@@ -1019,6 +1045,7 @@ def _write_python_runner(
     path = pathlib.Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     text = """#!/usr/bin/env python3
+import json
 import os
 import pathlib
 import subprocess
@@ -1036,6 +1063,7 @@ ENV_PREPENDS = {env_prepends}
 ENV_FORWARD_KEYS = [
     "CUDA_VISIBLE_DEVICES",
     "GH_CUDA_PREINITIALIZE",
+    "GH_DALPHABALL",
     "HF_TOKEN",
     "HUGGING_FACE_HUB_TOKEN",
     "GH_DPLM_PYTHON",
@@ -1110,6 +1138,8 @@ def main() -> int:
     source_map_root = (
         str(pathlib.Path(source_map_value).resolve()) if source_map_value else None
     )
+    host_cwd = os.environ.get("ASTROLABE_HOST_CWD")
+    path_mounts = json.loads(os.environ.get("ASTROLABE_PATH_MOUNTS", "[]")) if host_cwd else []
 
     py_args = sys.argv[1:]
     if source_map_root and len(py_args) >= 2 and py_args[0] == "-c":
@@ -1120,6 +1150,8 @@ def main() -> int:
         ]
 
     env = os.environ.copy()
+    env.pop("ASTROLABE_HOST_CWD", None)
+    env.pop("ASTROLABE_PATH_MOUNTS", None)
     env_overrides = {{key: env[key] for key in ENV_FORWARD_KEYS if key in env}}
     apptainer_bin_dir = str(pathlib.Path(APPTAINER_BIN).resolve().parent)
     _prepend_env(env, "PATH", apptainer_bin_dir)
@@ -1139,12 +1171,16 @@ def main() -> int:
         "--no-mount",
         "cwd",
         "--pwd",
-        CONTAINER_REPO_ROOT,
+        host_cwd or CONTAINER_REPO_ROOT,
     ]
     if USE_NV:
         cmd.append("--nv")
     if host_repo_root:
         cmd += ["-B", f"{{host_repo_root}}:{{CONTAINER_REPO_ROOT}}"]
+        if host_cwd:
+            cmd += ["-B", f"{{host_repo_root}}:{{host_repo_root}}:ro"]
+    for directory in dict.fromkeys(path_mounts):
+        cmd += ["-B", f"{{directory}}:{{directory}}"]
     for bind in BIND_MOUNTS:
         cmd += ["-B", bind]
     seen_binds = set(_bind_source(bind) for bind in BIND_MOUNTS)
@@ -1154,13 +1190,20 @@ def main() -> int:
         value = env.get(key)
         if value:
             _add_bind(cmd, seen_binds, value)
+    if env.get("GH_DALPHABALL"):
+        binary = pathlib.Path(os.path.expandvars(env["GH_DALPHABALL"])).expanduser()
+        if binary.is_file():
+            binary = binary.absolute()
+            env["GH_DALPHABALL"] = str(binary)
+            for directory in dict.fromkeys([binary.parent, binary.resolve().parent]):
+                cmd += ["-B", f"{{directory}}:{{directory}}:ro"]
     forward_keys = set(ENV_DEFAULTS)
     forward_keys.update(key for key, _value in ENV_PREPENDS)
     forward_keys.update(ENV_FORWARD_KEYS)
     for key in forward_keys:
         if key == "HOME":
             continue
-        if key in env and env[key]:
+        if key in env and (env[key] or key == "GH_DALPHABALL"):
             env[f"APPTAINERENV_{{key}}"] = env[key]
     cmd += [SIF_PATH]
     if container_home:

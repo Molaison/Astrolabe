@@ -1,9 +1,14 @@
-# Astrolabe 开发者手册：Owner、数据流与扩展合同
+# Astrolabe 开发者手册
 
 本文是 Astrolabe 在本仓库中的 canonical
 开发者手册。它回答四个问题：行为应由谁负责、数据如何流动、公共参数怎样演进、
 以及用什么最小证据证明修改完成。用户如何准备输入、运行、调参和验收，见
 [用户手册](user_guide.md)。
+
+第一次修改从[贡献流程](../CONTRIBUTING.md)开始。
+本文用于查找当前代码的职责、数据流和扩展合同。
+搜索与持久化控制的说明见[统一框架实现](development/06_unified_framework_implementation.md)。
+外部仓库的借鉴及适用边界见[参考实践](#reference-practices)。
 
 开发环境可使用 `python -m pip install '.[dev]'` 安装测试与打包工具。
 模型相关测试另需对应的 vendored 运行时；验收命令见 `justfile`，当前覆盖范围见
@@ -15,7 +20,8 @@
 
 - **Astrolabe** 是当前公开的软件名、Python namespace 和唯一安装 CLI。
 - **GuidedHallucination** / **GH** 只作为历史名称或环境兼容合同保留；不安装 `gh` alias，以避免与 GitHub CLI 冲突。
-- 安装后的 console entry point 是 `astrolabe=astrolabe.cli:main`。
+- 本开发树安装后的 console entry point 是 `astrolabe=astrolabe.launcher:main`。
+  launcher 处理运行环境后调用 `astrolabe.cli.main`。
 - 开发 checkout 使用 `./scripts/astrolabe`；`scripts/gh_dev` 仅委托到该入口。
 - 内部 `GH_*`、环境组 `gh`、`~/.gh_envs`、`.gh_python_path` 不随公共 CLI 重命名；bootstrap 固定为 `scripts/install.py`。
 
@@ -32,11 +38,25 @@
   -> posthoc collect/filter/refold/report
 ```
 
-### 0.2 命名迁移边界
+<a id="source-version"></a>
 
-- 公共 Python namespace 与 CLI 分别是 `astrolabe` 和 `astrolabe`。
-- `scripts/gh_dev` 仅为委托到 `scripts/astrolabe` 的兼容包装器。
-- 内部兼容名不随公共 CLI 一起重命名：保留 `GH_*`、`~/.gh_envs`、`.gh_python_path`、环境组 `gh`；bootstrap 固定为 `scripts/install.py`。
+### 0.2 源码版本与能力边界
+
+本手册随包含 `astrolabe/design/` 的开发树维护。
+2026-11-06 核对时，发布 `main@2a8b72a`、本地开发树和 evaluator pipeline
+源码副本尚未收敛。读取代码和文档时使用同一个版本。
+
+| 源码范围 | 本文适用内容 |
+| --- | --- |
+| 发布 `main@2a8b72a` | CLI、组件、配置、默认轨迹、posthoc 和发布 CPU 检查；该提交没有本地 `design/` 统一控制模块 |
+| 本开发树 | 包含 `DesignRun`、`ControlRun`、共享 coordinator、native registry、持久 candidate batch，以及下述 evaluator/Score 执行合同 |
+| `generic-evaluator-pipeline`、`evaluator-stages` 开发副本 | 已按来源文件迁入通用阶段执行、AF3 native daemon adapter、Score worker 和回执合同；并行搜索 owner、runtime CLI/session/model pool 和动态供给仍未迁入本树，不能将整个副本视为已集成 |
+
+Git HEAD 不标识 untracked 文件或未提交改动。
+无 Git 的副本使用冻结源码清单及补丁标识。
+验证记录还须包含实际配置和运行环境，详见[验证证据](#validation-evidence)。
+`development/04_unified_framework_sketch.py` 和 `05_unified_framework_usage.md`
+是目标草图，不能作为已实现 API 的调用示例。
 
 ### 0.3 开发的五条硬规则
 
@@ -85,6 +105,7 @@
 
 ```text
 setup.py                         astrolabe console entry point
+astrolabe/launcher.py        安装入口、checkout 入口和运行环境选择
 scripts/astrolabe                当前 checkout 的 canonical 开发入口
 scripts/install.py               canonical server/container bootstrap
 scripts/gh_dev                   唯一保留的 launcher 兼容入口
@@ -101,6 +122,9 @@ astrolabe/cli_interactive.py config compose/scaffold 等交互 builder
 astrolabe/shell_completion.py Bash/Zsh 共用 completion engine
 astrolabe/app.py             repeat lifecycle；延迟加载 run.py
 run.py                           单次 run 的编排与兼容接线
+astrolabe/configuration.py   search factory 选择与共享配置加载
+astrolabe/design/            typed 科学数据、操作、搜索控制、存储和恢复
+astrolabe/model_execution.py 模型 owner、执行与 RNG 生命周期
 astrolabe/argparser.py       runtime normalization、schema validation、run dir
 astrolabe/run_config_lifecycle.py
                                  persisted config normalization/pruning
@@ -169,6 +193,31 @@ lifecycle”。例如：
 - repeated post-run selection 进入 `posthoc/`，不新建任务分析脚本。
 - mutator 前的结构变换进入 predocker，不把 docking 分支写进 mutator 主逻辑。
 
+<a id="design-control"></a>
+
+### 1.3 统一科学数据与控制
+
+本开发树的 [design/types.py](../astrolabe/design/types.py) 定义
+`System`、`Candidate`、`PredictRequest`、`Evidence` 等科学对象。
+`Candidate` 表达完整赋值，不能只凭相同 sequence 字符串认定科学身份相同。
+[design/store.py](../astrolabe/design/store.py) 保存可编码的数据及引用。
+`ProcessResources` 中的 Pose、模型和 live score handle 属于当前进程，
+不能随科学快照持久化。
+
+[configuration.py](../astrolabe/configuration.py) 的
+`SEARCH_FACTORY_CATALOG` 选择搜索实现。
+evaluator 和 mutator 的 family registry 选择组件工厂。
+两类 registry 分别拥有搜索与组件的配置职责。
+[design/native_registry.py](../astrolabe/design/native_registry.py)
+将选中组件接入 typed operation，并绑定配置、源码和资产身份。
+构造和预检不加载模型。
+
+[coordinator.drive](../astrolabe/design/coordinator.py) 执行
+`ask`、`perform`、`tell`。policy 拥有选择、预算和停止条件，
+trial 执行一次有界操作。policy transition 不消耗共享 RNG。
+新增搜索策略复用该控制循环，新增 backend 复用组件 registry。
+具体路径与限制见[控制流复查](development/07_repository_control_audit.md)。
+
 ## 2. 从 `astrolabe` 到输出的真实数据流
 
 ### 2.1 CLI 与配置组合
@@ -177,6 +226,7 @@ lifecycle”。例如：
 
 ```text
 ./scripts/astrolabe 或已安装 astrolabe
+  -> astrolabe.launcher 的 checkout_main 或 main
   -> astrolabe.cli:main
   -> argparse command handler
   -> _compose_hydra_config()
@@ -216,7 +266,17 @@ PyRosetta、Torch/JAX 或其他可选 backend 的 import 拖垮。
 
 ### 2.2 公共 Python API
 
-`astrolabe.Astrolabe` 的构造参数是已经组合完成的 Hydra `DictConfig`，不是 YAML 路径。公共示例应使用 `initialize_config_dir(config_dir=str(astrolabe.config_dir()), version_base=None)` 和 `compose(...)`，再调用 `Astrolabe(cfg).run()`。`release_protein` 会执行 AF3 推理，因此需要 GPU、AF3 参数/资产和匹配的环境配置；CPU 示例必须走 `examples/01_cpu_reproduce.py`，不能把配置路径字符串传给应用类。
+配置运行传入已经组合完成的 Hydra `DictConfig`。
+使用 `initialize_config_dir(config_dir=str(astrolabe.config_dir()), version_base=None)`
+和 `compose(...)`，再调用 `Astrolabe(cfg).run()`。
+`release_protein` 会执行 AF3 推理，需要模型资产和匹配的运行环境。
+CPU 例子使用 `examples/01_cpu_reproduce.py`。
+
+本开发树的 [app.py](../astrolabe/app.py) 也接收实际构造的 `DesignRun`
+和 `ControlRun`，直接进入对应组合。
+YAML 路径字符串不是以上任何一种输入。
+typed 组合的可运行合同以 `tests/test_design_coordinator.py` 和
+`tests/test_unified_control_surface.py` 为例；目标草图不代替这些接口。
 
 ### 2.3 `astrolabe config compose` 的边界
 
@@ -268,8 +328,12 @@ run_optimization_loop()
 shutdown + owned raw-output cleanup
 ```
 
-`run.py` 只拥有步骤顺序和 module wiring。任何可复用规则都应下沉到 initializer、
-stage transaction、decision context、component registry 或 output helper。
+本开发树的 `run_optimization_loop()` 委托给
+`design.native_flow.run_native_optimization()`，再进入共享 coordinator。
+上图描述一次轨迹的科学顺序。stage transaction 和 acceptance 仍由原 owner
+实现，不是 coordinator 中按模型名称分派的分支。
+initializer、decision context、component registry 和 output helper
+继续持有各自规则。
 
 ### 2.6 运行输出与 posthoc
 
@@ -381,8 +445,8 @@ length 解析并校验不超过可变位点数。不要在 mutator wrapper 中�
 
 - 归一化兼容 initializer 字段，移除可由 owner 表达的 legacy root mirror。
 - evaluator/mutator/predocker 只保留 enabled aliases 及必要 backend config。
-- loss 只保留 stage expressions 实际引用的 `loss_terms`，并递归保留依赖的
-  `expression_terms`。
+- 本开发树保留所有显式配置且非 `None` 的 `loss_terms`，包括只用于 hook、
+  条件或报告的项；递归保留所需的 `expression_terms`。
 - env 只保留 task requirement 或 refold replay 需要的路径。
 - AF3/Protenix refold replay 所需 backend config 例外保留。
 - derived selectors、enabled aliases 等在 pruning 前注入，因此 persisted view 代表
@@ -391,6 +455,9 @@ length 解析并校验不超过可变位点数。不要在 mutator wrapper 中�
 扩展 lifecycle 时必须同时回答：新字段是否需要 replay？谁推导它？是否应写入
 `config.yaml`？posthoc/refold 是否消费？不能为了“完整”把整份 env 和所有未启用
 backend 都持久化。
+
+发布 `main@2a8b72a` 尚使用按 stage expression 裁剪 loss 的旧逻辑。
+将本开发树的保存规则迁入其他分支时，须连同保存、重新加载和评分回归一起验证。
 
 ### 3.4 临时 raw outputs 的 ownership
 
@@ -444,9 +511,9 @@ Owner：`astrolabe/initializers/`；`run.build_initializer()` 只负责选择和
 - RFD3 先生成结构，再复用同一个 structure-to-sequence 路径，不创建第二套 inverse
   folding pipeline。
 
-扩展 initializer：增加实现类、在 `build_initializer()` 接线、声明 runtime
-requirements、确保 initializer-only mutator 不被 pruning，并验证 fixed/mapping/
-manifest/output contract。
+扩展 initializer 时，在 `initializers/registry.py` 注册对应实现，
+由既有 `build_initializer()` 路径装配。声明 runtime requirements，
+确保 initializer-only mutator 不被 pruning，并验证 fixed/mapping/manifest/output。
 
 ### 4.3 `structure_start`
 
@@ -504,6 +571,43 @@ Evaluator 输入标准 folding inputs，输出 `StandardScores`：
 5. 缺 env/weights/tool 在该 evaluator 被实际选择时清楚失败。
 6. 验证 registry/alias、score parse、结构映射、seed determinism（若承诺）和真实
    backend smoke（若行为依赖 backend）。
+
+逐项声明 backend 实际提供的指标。没有输出的 confidence、PAE 或 chain-pair
+metric 按缺失合同处理，不能填零伪装成功。输入体系、支持的 chain 组合、
+模型采样和输出归约也属于 adapter 合同。
+延迟注册、加载成功和数值一致分别验证。
+
+<a id="execution-boundary"></a>
+
+#### 4.5.1 evaluator 执行与并行的开发合同
+
+本树以 `model_execution.EvaluatorStages` 声明实际模型边界。
+`kernel_handler` 在同一 owner 中解释阶段；AF3 native daemon 已接入该路径。
+未迁移的 callable 仍按完整调用处理，不能用 evaluator 外层的
+`prepare_input/run_function/prepare_output` 名称推断纯模型边界。
+
+`EvaluatorStages` 的 prepare 包含特征处理和输入转移，
+execute 包含完整模型算法，finalize 保持原生归约和输出物化。
+推理槽持有到实际设备完成。请求内存从 prepare 前持有到 finalize 完成。
+prepare/finalize 使用 GPU 时仍需容量，不占模型推理槽。
+声明 stages 不代表该后端已证明可以并发推理。
+
+`design/native_refinement_runtime.py` 的串行持久路径分开保存 raw prediction、
+ScoreReceipt 和 member commit。ScoreReceipt 绑定请求、raw scores、评分 protocol、
+测量结果与 after-RNG；提交前核对身份，已完成评分不重复执行。
+`design/refinement_worker.py` 从已有副本迁入，以 candidate 为单位执行预测和 Score，
+使用私有目录、评分上下文、Pose 和 RNG。当前配置 CLI 尚未接入并行 worker pool；
+worker 的进程合同已有独立回归，不能据此声称搜索已经并行化。
+父控制流程拥有 proposal、搜索状态和提交。
+独立 loss 可以在状态隔离后并行，不能让多个线程共用可变 Pose 或 loss cache。
+
+对应阶段、AF3 工厂 doubles 与资源准入回归已进入发布 CPU 清单。
+worker、持久恢复、kernel 和实际 AF3 wrapper 的 CPU 回归由同一脚本的
+`--suite execution` / `just test-execution` 执行，需配置科学运行时。
+CPU 测试使用受控设备完成信号或 vendor doubles；它们不证明真实模型数值一致或性能。
+原生归约设备、dtype、计算顺序和随机流的变化需要独立科学验收。
+逐文件职责、验收标准和恢复边界见
+[evaluator/Score 执行合同](development/08_evaluator_score_execution.md)。
 
 ### 4.6 Score snapshot 与 contribution
 
@@ -737,7 +841,7 @@ Hard gate 只用于明确的无效态或不可继续态，例如缺 required met
 
 ## 6. CLI 与 shell completion 合同
 
-所有新增/重命名 `gh` subcommand、alias、option、positional 或 fixed-choice value 都
+所有新增/重命名 `astrolabe` subcommand、alias、option、positional 或 fixed-choice value 都
 必须遵守 [CLI 设计规则](command_design_rules.md)。最低要求：
 
 1. parser/handler 只表达 intent，并复用 shared option helper。
@@ -749,8 +853,9 @@ Hard gate 只用于明确的无效态或不可继续态，例如缺 required met
    Bash/Zsh 不维护分叉 command tree。
 7. dynamic completion 必须 lazy 且 parameter-gated；只有当前 argument 需要时才访问
    SQLite、filesystem 或 config。
-8. 当前 `./scripts/astrolabe completion complete ...` 约 0.5 s median 是上限预算；新
-   provider 不应显著变慢。
+8. 修改 provider 前后，用同一环境和输入测量
+   `./scripts/astrolabe completion complete ...` 的响应时间，记录冷、热启动条件；
+   性能判定使用该变更预先确定的基线和标准。
 9. completion 修改必须更新 `tests/test_cli_completion.py`，并运行真实 Bash、Zsh
    source round-trip。
 
@@ -810,11 +915,16 @@ primary backend failed
 
 ## 8. 文档治理
 
-仓库 overview 只保留三个 canonical 入口：
+仓库入口按阅读目的分工：
 
 1. `README.md`：名称、最短路径、文档索引。
-2. `docs/user_guide.md`：用户流程、配置、调参、运行、验收和 posthoc。
-3. `docs/developer_guide.md`：owner、数据流、扩展与验证合同（本文）。
+2. `CONTRIBUTING.md`：完成一次修改的操作流程。
+3. `docs/user_guide.md`：用户流程、配置、调参、运行、验收和 posthoc。
+4. `docs/developer_guide.md`：owner、数据流、扩展与验证合同（本文）。
+
+根目录 [CONTRIBUTING.md](../CONTRIBUTING.md) 是贡献流程入口，
+按定位代码、实现、验证和提交组织步骤，链接本文的接口细节。
+它不复制一份组件参考手册。
 
 独立文档只保留范围窄、跨任务稳定且会长期独立维护的 reference：
 
@@ -841,7 +951,44 @@ primary backend failed
 - 不把测试名或 commit message 当作唯一用户说明；
 - 删除文档时同步修正 canonical 入口和 repo 内链接，不留下替代索引表维护负担。
 
+代码、配置例子和当前实现说明在同一个 PR 中同步。
+运行证据保留执行时的源码身份和覆盖范围。
+提案、历史审查与当前接口分别标注，不以修改文档的日期更新历史验收结论。
+
+<a id="validation"></a>
+
 ## 9. 最小验证阶梯
+
+### 配置本项目的验收
+
+验收按改动涉及的行为选取。开发者先确定本次适用行，交付时逐行给出结果。
+以下命令均在目标 checkout 根目录、同一已配置的开发环境执行。
+
+| 触发条件 | 必须执行 | 通过条件 |
+| --- | --- | --- |
+| 每个 PR 的公共软件接口与分发 | `python scripts/validation/release_cpu.py -q`，沿用现有 CI | 命令正常退出且退出码为 0；所声明能力没有因缺依赖跳过 |
+| 修改 `Runtime.call`、日志写入、预算，或形式验证覆盖记录中的依赖 | `python scripts/validation/verify_runtime_recovery.py --self-test` | 源码同步检查通过；正常模型与真实代码通过；故障变体被检出；恢复后的原代码再次通过 |
+| 修改 evaluator 阶段、Score、daemon 或恢复 wiring | `python scripts/validation/release_cpu.py --suite execution -q` | 生命周期、错误传播和恢复合同通过；适用后端缺失或跳过仍是未验收 |
+| 修改核心 evaluator、mutator、decision、loss 或 `StandardScores` 共享抽象 | `python -m pytest -q` | 完整回归正常结束；新增失败修复，既有失败由同环境基线对照证明并保留，不把它们记为通过 |
+| 修改实际模型算法、设备放置、RNG 或声称性能改善 | 复用该后端现有 acceptance 脚本，经公共 `astrolabe run` 执行固定输入与共同配置 | 在运行前固定比较器、科学容差或严格一致要求；检查预测、评分、选择和恢复，性能另测完整流程 |
+
+纯文档本地检查仍用 V0。CI 对所有 PR 运行发布 CPU 和恢复形式验证，
+本地无需为未涉及的后端运行真实模型。execution、全仓回归与 GPU 验收仍由对应
+开发环境执行，不能用公共 CI 的 CPU 结果替代。
+
+形式验证工具、范围、源码 SHA256 和同步提交在
+[`verification/runtime_recovery/coverage.json`](../verification/runtime_recovery/coverage.json)
+配置；覆盖源码变更会让检查失败，要求重新确认模型与代码的对应关系。
+[`verify-runtime-recovery` 技能](../.agents/skills/verify-runtime-recovery/SKILL.md)
+说明运行与维护方式。该检查证明有界模型中的性质；真实代码的进程中断测试和
+故障变体负责检查模型对应关系，不等于证明整个 Python 程序。
+
+一次验收记录包含适用检查、源码内容身份、环境、实际命令、退出码和产物位置。
+结果区分通过、失败、阻塞和不适用。超时或被终止的命令没有通过结论，即使用例
+已打印通过摘要。缺依赖不是不适用；只有改动不涉及该边界时才记不适用并说明原因。
+日志和 JUnit 作为证据保留，不能用测试总数替代行为标准。
+新增 workflow 随分支推送后才在远端生效；仓库的分支保护另须选择对应成功检查，
+本地新增配置不表示已经启用远端合并限制。
 
 ### V0：静态/文档边界
 
@@ -895,12 +1042,117 @@ posthoc collect/filter/refold smoke。只有修改覆盖该边界时才运行；
 如果 full suite 因未改动的明确缺依赖被阻塞，可以报告 blocker，但必须已有 focused
 验证覆盖本次行为。不能因为 suite 慢、预算不足或接近结束而把未验证说成通过。
 
+### 按行为选择现有检查
+
+| 修改 | 本开发树中的验证起点 | 要检查的结果 |
+| --- | --- | --- |
+| 配置和运行身份 | `tests/test_run_provenance.py`、`tests/test_configuration_routing.py` | 实际路由、配置保存、拒绝行为、终态和身份范围 |
+| 组件接入 | `tests/test_design_native_registry.py`、`tests/test_native_registry_seams.py` | 选中配置、延迟加载、alias、typed 请求和未知类型错误 |
+| score 与 loss | `tests/test_standard_score_snapshot.py`、`tests/test_sequence_losses.py`、对应公式测试 | scope、单位、shape、缺失值、缓存失效及独立数值参考 |
+| 搜索与预算 | `tests/test_design_coordinator.py`、`tests/test_default_coordinator.py`、`tests/test_design_branching.py` | 候选、次序、选择、预算、RNG 与失败传播 |
+| 持久恢复 | `tests/test_native_refinement_recovery.py`、`tests/test_candidate_recovery.py` | 已完成工作不重复、unknown 不重发、回执与控制状态对齐 |
+| 包与公共 CLI | `tests/test_distribution.py`、`tests/test_release_cli.py`、`tests/test_cli_run_dry_configs.py` | 安装产物、仓库外入口、配置解析和错误输出 |
+| 验证入口与依赖锁定 | `tests/test_release_validation.py`、`tests/test_install.py` | 实际 pytest 选择与退出码、声明依赖和关键运行时版本、逐项哈希 |
+| CPU 结果流转 | `tests/test_cpu_release_example.py` | 独立坐标计算、CSV、SQLite、筛选与报告 |
+
+共享行为优先在已有参数化测试中增加 case。
+后端特有输入处理和数值语义使用针对性的测试。
+上述文件存在不代表发布 CI 已执行它们。
+实际发布 CPU 清单由
+[release_cpu.py](../scripts/validation/release_cpu.py)维护。
+[release-cpu.yml](../.github/workflows/release-cpu.yml) 与本地
+`python scripts/validation/release_cpu.py -q` 使用同一入口。
+`--collect-only -q` 可列出实际选择；其他 pytest 参数和退出码原样传递。
+`just test-cpu` 调用发布清单；`just test-execution` 使用
+`--suite execution`，执行发布清单加 evaluator/Score 执行层回归，
+需要 Torch 和 AF3 等科学依赖，但不进行 GPU 或真实模型推理。
+`just test` 仍执行完整 pytest。
+
+公式正确性使用独立 oracle。执行方式对照使用同一科学配置下的原生与候选路径。
+模型可以构造、结构文件存在、总分相等，均不能单独证明完整数值一致。
+静态断言可以检查静态架构合同；输入、输出和恢复行为需要实际调用验证。
+实现从 shell 迁到 Python 时，保留解释器选择、参数、环境传递和错误输出的行为检查，
+不继续要求旧 shell 语句出现。依赖锁文件按声明的依赖、版本和哈希检查，
+不以包的总数或哈希总数作为完整性标准。
+
+<a id="validation-evidence"></a>
+
+### 验证证据与复用
+
+每份验收记录都说明以下内容。各脚本目前有自己的结果格式，
+本表是交付要求，不表示仓库已经实现统一结果 schema。
+
+| 内容 | 必须能确定的事实 |
+| --- | --- |
+| 验证声明 | CLI、公式、执行一致性、恢复或性能中的哪项行为 |
+| 源码 | baseline/candidate 的提交与相关内容清单，包括实际使用的未提交代码和 vendor 修改 |
+| 科学配置 | 生效的输入、选中组件配置、权重、seed、采样预算、归约及选择规则 |
+| 运行边界 | 实际命令、解释器或容器、设备、并发、缓存、服务与资源约束 |
+| 比较 | 比较器版本、预先规定的指标和标准、允许忽略的非科学字段 |
+| 结果 | 实际调用量、产物、失败与未完成范围 |
+
+`run_config_lifecycle.py` 在 `provenance.json` 中记录两种配置身份：
+
+- `config.sha256`：落盘 `config.yaml` 的原始字节，保持已有读取合同。
+- `config.resolved.sha256`：复用 `build_persisted_run_config(..., resolve=True)`，
+  在原配置上下文中解析裁剪后保留的字段，以键排序、紧凑分隔符、UTF-8、
+  非转义 Unicode 且拒绝非有限数值的 JSON 计算哈希。路径按字符串编码，
+  字典键须为字符串，避免 JSON 将不同类型的键编码为同一身份。
+
+解析只访问保留字段及其插值依赖；未启用后端的无关默认值保持未解析。
+原参数和落盘 YAML 不被修改。保留字段不可解析、缺少必填值或无法编码时，
+新增哈希为 `null`，`reason` 说明失败，其他 provenance 和真实运行终态仍保留。
+该字段是 schema 1 的可选增量；旧记录没有它不代表旧运行失败。
+
+解析哈希通常在 run 开始时采集，表示当时的保留视图，包含输出目录等运行路径。
+它不保存完整配置内容，不代表后续动态状态，也不作为跨目录科学等价或缓存复用键。
+Git dirty 范围仍不含 untracked 文件和 submodule 工作树。
+显式输入记录也不覆盖后端随后读取的所有资产。
+验收须补齐相关身份，可复用 native registry 的组件源码和资产记录。
+不能仅凭相同 HEAD 或相同权重路径复用结论。
+
+每项声明分别记录通过、失败、阻塞、未运行或不确定。
+只有完整且有效的成功证据才能复用。
+使用 `codex-check` 的环境中，显式声明源码、测试、配置、工具和运行依赖。
+依赖清单完整且未变的可重复本地检查可以复用其成功回执。
+动态资源、真实模型和部署状态不能由旧本地回执代替。
+
+### 恢复与性能的专项标准
+
+| 持久状态 | 允许的动作 |
+| --- | --- |
+| 请求尚未发出 | 按原身份提交 |
+| 已 issued，缺少完成证据 | 保持 unknown，由原 owner 核对；不能自动重发 |
+| 原始预测完整，Score 未完成 | 支持该路径的 owner 核验身份和存活任务后，只恢复 Score |
+| Score 完整，控制提交未确认 | 核对 journal 与回执；无法确认时保持 unknown |
+| 控制提交完整 | 从提交后的状态继续，不重复选择或扣预算 |
+| 输入身份冲突、引用缺失或回执损坏 | 明确拒绝该次恢复 |
+
+故障注入验证受影响的状态转换，同时核对输出、RNG、预算和模型调用量。
+某一种 native owner 的可恢复范围不能推广到任意 external child。
+缺少原子 collection 提交时，应遵守该 owner 已实现的 unknown 处理。
+
+性能比较通过公共 `astrolabe run` 执行。
+对照使用共同的 scoring、mutator、steps、模型预算和输入配置。
+区分 cold/warm，记录完整输出完成时间、实际工作量、GPU 活动、
+内存和等待原因。同工作量的吞吐变化可写为
+`T_baseline / T_candidate - 1`，并给出原始耗时。
+受干扰、失败和恢复运行单列，不只保留最快的结果。
+
+确定性配置继续按其精确标准比较。
+原生本身不确定时，先定义重复性实验、比较指标和判定方法。
+不能在看到差异后放宽容差，也不能用严格模式认证默认模式。
+性能证据不足的并发优化保留其明确的实验状态，不据此改变默认值。
+
 ### 停止规则
 
 当请求的 observable behavior 和一个直接受影响的 shared boundary 已证明，就停止
 验证。只有证据冲突或新增独立风险边界时才增加下一层。真实运行则负责到下一有意义
 决策点：早期完整输出不正确就停、修、重跑；输出正确且 durable supervisor/磁盘
-handoff 已接管，才可交接。
+handoff 已接管，才可交接。上述停止规则不免除已触发的 V3 检查，
+也不免除用户要求的真实端到端验收。
+
+<a id="branch-integration"></a>
 
 ## 10. Dirty worktree 与提交保护
 
@@ -923,6 +1175,27 @@ git diff --check
   除非任务明确要求这些 artifact。
 - reusable examples 放 `examples/`；task-private overlay 不放 repo root。
 - 新 linked worktree 放在主 checkout 外；删除前保留其独有修改和运行记录。
+
+集成使用 `main` 加短期功能分支。PR 声明实际 base；
+依赖 PR 按依赖顺序合入，每个单元包含相应代码、配置、测试和文档。
+不以分支名认定能力，也不把整个开发现场快照当作单个 backend 的补丁。
+
+收敛历史分支时，先记录原提交或源码 manifest 到集成提交和验证证据的对应关系。
+已覆盖的修改避免重复引入。evidence 分支保存历史结果，不作为另一套运行实现。
+确认独有改动与活动 owner 后，再清理不再使用的分支或 worktree。
+
+当前几类增量的收敛顺序如下；每一步都在目标 checkout 上验证：
+
+1. 固定各来源的提交或源码清单、独有改动、依赖和活动运行 owner。
+2. 先集成 `design/` 数据与控制、组件 registry、配置保存等基础合同，
+   连同对应测试和当前实现说明合入。
+3. 在基础合同上迁入 evaluator stages、原始预测与 Score 回执等执行边界。
+   先证明科学顺序、数值与恢复，再迁入依赖它们的并发和自适应调度。
+4. 在集成结果上检查发布入口、配置例子、CPU 检查及受影响后端。
+   同步 README 和文档索引，并更新源码版本表。
+5. 记录来源到集成结果的对应关系，再处理已无独有代码和活动 owner 的历史分支。
+
+文档随每个代码单元同步；最后的索引检查不能代替前面的接口说明和验收。
 
 提交前逐项确认：
 
@@ -954,6 +1227,8 @@ git diff --check
 5. 若需 replay，扩展 persisted lifecycle；否则证明会被安全 pruning。
 6. 用代表性 output 证明 knob 生效，不只 assert 配置里有 key。
 
+<a id="extension-evaluator"></a>
+
 ### 11.3 新 evaluator/mutator/predocker
 
 1. 在对应 registry 注册轻量 factory；heavy import 留到实际调用。
@@ -962,6 +1237,14 @@ git diff --check
 4. 定义 output/score/manifest、failure/fallback 和 deterministic seed contract。
 5. 运行 registry/alias/缺资源测试及一个最小真实 smoke。
 6. 若改变 CLI/config public choice，同步 completion 和 user guide。
+
+以 evaluator 为例，先检查 `evaluators/registry.py` 和既有 family factory。
+本开发树还通过 `design/native_registry.py` 构造 typed operation。
+在这些现有入口中接入目标组件，不新增平行的 backend 名称列表。
+先验证未选中后端不会被加载，再验证选中配置、输入转换和标准输出。
+实际权重的数值验收与加载测试分开记录。
+
+<a id="extension-score"></a>
 
 ### 11.4 新 score/loss/gate
 
@@ -983,6 +1266,8 @@ git diff --check
 5. 覆盖 default inheritance、entrance、target re-evaluation、seed/active gate、失败
    rollback、成功 commit 和 row-history。
 
+<a id="posthoc-extension"></a>
+
 ### 11.6 新 posthoc behavior
 
 1. 先定义 DB/row/metric identity 和 missing policy。
@@ -995,7 +1280,7 @@ git diff --check
 
 一个修改只有同时满足以下条件才完成：
 
-- 请求行为通过预期 `gh`/config/Python/output surface 真正可用；
+- 请求行为通过公共 `astrolabe` CLI、配置、Python API 或输出真正可用；
 - 复杂度位于正确 owner，`run.py`/CLI 没有新增可复用领域 special case；
 - 参数、score、stage 和 output schema 的公共语义已说明并可审计；
 - invalid state 和 backend failure 清楚可见，fallback 不伪装 primary success；
@@ -1010,3 +1295,25 @@ git diff --check
 ## 状态与证据边界增量
 
 运行状态由 `RuntimeState` 持有，`RuntimeContext` 绑定具体实例，legacy facade 仍为进程级入口。评估 metadata 与数值字段分别处理；execution audit 不承诺精确恢复。参见 [Repository Mental Model](repository_mental_model.md) 和 [实施及验证边界](architecture_convergence.md)。
+
+<a id="reference-practices"></a>
+
+## 13. 参考仓库与适用边界
+
+以下来源于 2026-11-06 核对的官方文档和源码。
+GitHub 链接固定到核对的提交。采用的是维护方法，
+不要求 Astrolabe 依赖这些框架。
+
+| 仓库及出处 | 用于 Astrolabe 的做法 | 适用边界 |
+| --- | --- | --- |
+| [scikit-learn 的 estimator 合同](https://github.com/scikit-learn/scikit-learn/blob/6a9d938e58168c55cd2bd70b031273c5169c32d9/doc/developers/develop.rst)和[共同检查](https://github.com/scikit-learn/scikit-learn/blob/6a9d938e58168c55cd2bd70b031273c5169c32d9/sklearn/tests/test_common.py) | 将扩展合同写成共同测试，注册新实现时增加 case | 不把 `fit/predict` 或其构造器规则照搬到科学工作流；Astrolabe 保留配置边界的提前校验 |
+| [ASE calculator 指南](https://docs.ase-lib.org/development/calculators.html)和[实现](https://docs.ase-lib.org/_modules/ase/calculators/calculator.html) | 声明支持的输出，输入变化使缓存失效，不支持的属性显式处理 | `StandardScores` 的缺失合同和 loss cache 仍由本仓库实现；不要求所有后端提供同一组 confidence |
+| [AiiDA 执行概念](https://github.com/aiidateam/aiida-core/blob/8c24cbc94dd58f2bb36e70402b51f4124fc90edb/docs/source/topics/processes/concepts.rst)和[缓存合同](https://github.com/aiidateam/aiida-core/blob/8c24cbc94dd58f2bb36e70402b51f4124fc90edb/docs/source/topics/provenance/caching.rst) | 区分执行对象与持久记录，明确身份与缓存有效性；raw 预测和派生 Score 分别记录 | 沿用现有 journal/store/receipt；Astrolabe 的源码和权重内容身份、unknown 不重发须独立保证 |
+| [vLLM 模型注册](https://github.com/vllm-project/vllm/blob/6c13a380b1b0f071d3522181fb321c5fcd27bfae/docs/contributing/model/registration.md)和[模型测试](https://github.com/vllm-project/vllm/blob/6c13a380b1b0f071d3522181fb321c5fcd27bfae/docs/contributing/model/tests.md) | 注册、延迟加载、公共输入处理和后端特例分开组织；区分加载与数值检查 | vLLM 该指南将部分 correctness 检查列为可选；Astrolabe 的科学等价声明必须有相应数值证据 |
+
+[scikit-learn 的贡献流程](https://github.com/scikit-learn/scikit-learn/blob/6a9d938e58168c55cd2bd70b031273c5169c32d9/doc/developers/contributing.rst)
+提供功能分支与 PR 工作流的参考。
+[AiiDA 文档入口](https://github.com/aiidateam/aiida-core/blob/8c24cbc94dd58f2bb36e70402b51f4124fc90edb/docs/source/index.rst)
+按教程、操作、概念和参考区分阅读目的。
+Astrolabe 对应保留贡献流程、用户手册、组件参考与明确标注的架构说明，
+避免让一次性实验状态成为公共开发规则。

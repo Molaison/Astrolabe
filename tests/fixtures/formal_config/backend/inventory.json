@@ -1,0 +1,385 @@
+{
+  "scope": "Distinct backend-kind/field pairs in the explicit common-control inventory below. This is not every base.yaml key or a complete scientific/vendor schema. Containers count when their mapping type itself has a fixture. A valid-control parameter annotation alone is not an invalid check.",
+  "case_count": 387,
+  "invalid_cases": 348,
+  "valid_controls": 39,
+  "audited_common_field_count": 180,
+  "fields_with_explicit_invalid_case": 180,
+  "backend": {
+    "alphafold2": {
+      "audited_common_fields": [
+        "data_dir",
+        "execution",
+        "execution_cwd",
+        "execution_env",
+        "execution_max_frame_bytes",
+        "execution_mode",
+        "execution_python_bin",
+        "execution_request_timeout",
+        "initial_guess",
+        "initial_guess.A.chain_map",
+        "initial_guess.A.path",
+        "initial_guess.allow_missing_chains",
+        "initial_guess.chain_map",
+        "initial_guess.chain_maps.A",
+        "initial_guess.enabled",
+        "initial_guess.init_guess_path",
+        "initial_guess.path",
+        "initial_guess.paths.A",
+        "initial_guess.references.A.chain_map",
+        "initial_guess.references.A.path",
+        "initial_guess.references.B.path",
+        "model_id",
+        "msa_clusters",
+        "recycles",
+        "suffix"
+      ],
+      "audited_count": 25,
+      "explicit_invalid_count": 25,
+      "omitted_or_deferred": [
+        "initial_guess.query_residue_index_jumps"
+      ],
+      "ignored_or_not_exposed": {
+        "initial_guess.source": "Not resolved or consumed by current AF2 evaluator. Enabled source-only config requires path or legacy init_guess_path; disabled source is irrelevant."
+      },
+      "source": [
+        "astrolabe/evaluators/alphafold2.py:_initial_guess_enabled",
+        "astrolabe/evaluators/alphafold2.py:_initial_guess_positions",
+        "astrolabe/evaluators/alphafold2.py:_initial_guess_source",
+        "astrolabe/evaluators/alphafold2.py:_initial_guess_source_chain_id",
+        "astrolabe/evaluators/alphafold2.py:_resolve_initial_guess_cfg",
+        "astrolabe/evaluators/utils.py:_execution_controls",
+        "astrolabe/evaluators/wrappers/alphafold.py:alphafold_setup",
+        "astrolabe/model_execution.py:execution_directory",
+        "astrolabe/model_execution.py:execution_mode",
+        "config/base.yaml:evaluator.alphafold2",
+        "config/base.yaml:evaluator.alphafold2.initial_guess"
+      ]
+    },
+    "alphafold3": {
+      "audited_common_fields": [
+        "bucket_pad_tolerance",
+        "buckets",
+        "execution",
+        "execution_cwd",
+        "execution_env",
+        "execution_max_frame_bytes",
+        "execution_mode",
+        "execution_python_bin",
+        "execution_request_timeout",
+        "flash_attention_implementation",
+        "jax_compilation_cache_dir",
+        "model_dir",
+        "msa_cache",
+        "msa_cache_max_entries",
+        "num_recycles",
+        "num_samples",
+        "num_seeds",
+        "refstructure_cache",
+        "refstructure_cache_max_entries",
+        "refstructure_workers",
+        "save_embeddings",
+        "service_socket"
+      ],
+      "audited_count": 22,
+      "explicit_invalid_count": 22,
+      "omitted_or_deferred": [
+        "datapipeline.* (official data-pipeline workflow, not maintained inference path)"
+      ],
+      "ignored_or_not_exposed": {
+        "run_data_pipeline": "Not consumed by maintained model setup/evaluation path.",
+        "run_inference": "Not consumed as an enable/disable switch by maintained evaluator path."
+      },
+      "source": [
+        "astrolabe/evaluators/alphafold3.py:_should_use_default_buckets",
+        "astrolabe/evaluators/utils.py:_execution_controls",
+        "astrolabe/evaluators/wrappers/alphafold3.py:alphafold3_setup",
+        "astrolabe/model_execution.py:execution_directory",
+        "astrolabe/model_execution.py:execution_mode",
+        "config/binder_interface_beam.yaml:evaluator.alphafold3",
+        "config/binder_interface_beam.yaml:evaluator.alphafold3.jax_compilation_cache_dir"
+      ]
+    },
+    "esmfold": {
+      "audited_common_fields": [
+        "device",
+        "execution",
+        "execution_cwd",
+        "execution_env",
+        "execution_max_frame_bytes",
+        "execution_mode",
+        "execution_python_bin",
+        "execution_request_timeout",
+        "model_name"
+      ],
+      "audited_count": 9,
+      "explicit_invalid_count": 9,
+      "omitted_or_deferred": [],
+      "ignored_or_not_exposed": {
+        "num_recycles": "Not exposed by ESMFoldEvaluator constructor or passed in its model.infer call.",
+        "chunk_size": "Not exposed by ESMFoldEvaluator constructor or passed in its model.infer call."
+      },
+      "source": [
+        "astrolabe/evaluators/esmfold.py:ESMFoldEvaluator._ensure_model",
+        "astrolabe/evaluators/utils.py:_execution_controls",
+        "astrolabe/model_execution.py:execution_mode",
+        "config/release_protein.yaml"
+      ]
+    },
+    "protenix": {
+      "audited_common_fields": [
+        "data",
+        "data.msa",
+        "data.msa.enable",
+        "data.msa.enable_rna_msa",
+        "data.num_dl_workers",
+        "data.template.enable",
+        "dtype",
+        "enable_diffusion_shared_vars_cache",
+        "enable_efficient_fusion",
+        "enable_tf32",
+        "infer_setting",
+        "infer_setting.chunk_size",
+        "infer_setting.lddt_metrics_chunk_size",
+        "infer_setting.sample_diffusion_chunk_size",
+        "load_checkpoint_dir",
+        "load_checkpoint_path",
+        "load_strict",
+        "model",
+        "model.N_cycle",
+        "model.constraint_embedder",
+        "model_name",
+        "msa_pair_as_unpair",
+        "need_atom_confidence",
+        "num_workers",
+        "sample_diffusion",
+        "sample_diffusion.N_sample",
+        "sample_diffusion.N_sample_mini_rollout",
+        "sample_diffusion.N_step",
+        "sample_diffusion.N_step_mini_rollout",
+        "sample_diffusion.gamma0",
+        "sample_diffusion.gamma_min",
+        "sample_diffusion.guidance",
+        "sample_diffusion.guidance.enable",
+        "sample_diffusion.noise_scale_lambda",
+        "sample_diffusion.step_scale_eta",
+        "seed",
+        "seeds",
+        "skip_amp",
+        "sorted_by_ranking_score",
+        "use_deepspeed_evo_attention",
+        "use_msa",
+        "use_rna_msa",
+        "use_seeds_in_json",
+        "use_template"
+      ],
+      "audited_count": 44,
+      "explicit_invalid_count": 44,
+      "omitted_or_deferred": [
+        "triangle_multiplicative",
+        "triangle_attention",
+        "model.constraint_embedder.* scientific schema",
+        "sample_diffusion.guidance.* scientific schema except enable",
+        "data.* scientific schema except explicit inventory keys"
+      ],
+      "ignored_or_not_exposed": {
+        "model.N_model_seed": "Not forwarded by _normalize_protenix_configs model override whitelist.",
+        "model.msa_module.n_blocks": "Not forwarded by the model override whitelist; do not reject zero.",
+        "model.pairformer.n_blocks": "Not forwarded by the model override whitelist; do not invent an architecture check.",
+        "model.template_embedder.n_blocks": "Not forwarded by the model override whitelist; native zero-block template module is supported.",
+        "diffusion_batch_size": "Top-level training/minibatch knob is not forwarded by the normalization runtime override whitelist."
+      },
+      "source": [
+        "astrolabe/evaluators/wrappers/protenix.py:ProtenixRunner",
+        "astrolabe/evaluators/wrappers/protenix.py:_normalize_protenix_configs",
+        "config/base.yaml:evaluator.protenix",
+        "config/benchmark_ligand_v1_protenix.yaml"
+      ]
+    },
+    "boltz": {
+      "audited_common_fields": [
+        "accelerator",
+        "cache",
+        "checkpoint",
+        "devices",
+        "diffusion_samples",
+        "msa_pairing_strategy",
+        "msa_server_url",
+        "num_workers",
+        "output_format",
+        "recycling_steps",
+        "sampling_steps",
+        "use_msa_server",
+        "write_full_pae",
+        "write_full_pde"
+      ],
+      "audited_count": 14,
+      "explicit_invalid_count": 14,
+      "omitted_or_deferred": [],
+      "ignored_or_not_exposed": {},
+      "source": [
+        "astrolabe/evaluators/wrappers/boltz.py:Boltz1Runner",
+        "astrolabe/evaluators/wrappers/boltz.py:807",
+        "astrolabe/evaluators/wrappers/boltz.py:832",
+        "config/base.yaml:evaluator.boltz",
+        "config/base.yaml:evaluator.boltz.cache"
+      ],
+      "cache_path_semantics": "Output directory: existing directories and nonexistent intended directories are accepted; existing files rejected; validation never creates a directory. Boltz setup/download mkdir is deferred until real execution."
+    },
+    "chai1": {
+      "audited_common_fields": [
+        "fasta_names_as_cif_chains",
+        "low_memory",
+        "num_diffn_samples",
+        "num_diffn_timesteps",
+        "num_trunk_recycles",
+        "num_trunk_samples",
+        "recycle_msa_subsample",
+        "seed",
+        "use_esm_embeddings",
+        "use_msa_server",
+        "use_templates_server"
+      ],
+      "audited_count": 11,
+      "explicit_invalid_count": 11,
+      "omitted_or_deferred": [
+        "template_hits_path",
+        "msa_directory and constraint_path (generated per-request paths)"
+      ],
+      "ignored_or_not_exposed": {},
+      "source": [
+        "astrolabe/evaluators/chai1.py:Chai1Evaluator.run_function",
+        "config/benchmark_binder_v1_4.yaml",
+        "vendor/chai_lab/chai_lab/chai1.py:run_inference"
+      ]
+    },
+    "rf3": {
+      "audited_common_fields": [
+        "ckpt_path",
+        "compress_outputs",
+        "diffusion_batch_size",
+        "early_stopping_plddt_threshold",
+        "fallback_conformer_to_input_coords",
+        "n_recycles",
+        "num_steps",
+        "python_bin",
+        "repo_path",
+        "template_noise_scale"
+      ],
+      "audited_count": 10,
+      "explicit_invalid_count": 10,
+      "omitted_or_deferred": [
+        "template_selection",
+        "ground_truth_conformer_selection",
+        "fixed_ligands"
+      ],
+      "ignored_or_not_exposed": {},
+      "source": [
+        "astrolabe/evaluators/wrappers/rf3.py:RF3RunnerService",
+        "astrolabe/evaluators/wrappers/rf3.py:_engine_config",
+        "config/base.yaml:evaluator.rf3"
+      ]
+    },
+    "ligandmpnn": {
+      "audited_common_fields": [
+        "bias_mode",
+        "checkpoint_global_label_membrane_mpnn",
+        "checkpoint_ligand_mpnn",
+        "checkpoint_per_residue_label_membrane_mpnn",
+        "checkpoint_protein_mpnn",
+        "checkpoint_soluble_mpnn",
+        "enforce_mutation_distribution",
+        "enforce_mutation_num",
+        "entropy_cutoff",
+        "execution_mode",
+        "fallback_to_all_mutable_if_selector_empty",
+        "homo_oligomer",
+        "ligand_mpnn_cutoff_for_score",
+        "ligand_mpnn_use_atom_context",
+        "ligand_mpnn_use_side_chain_context",
+        "map_sequence_positions_to_pdb_residues",
+        "model_type",
+        "number_of_batches",
+        "parse_atoms_with_zero_occupancy",
+        "save_stats",
+        "seed",
+        "supplemental_structure_weight",
+        "temperature",
+        "verbose",
+        "zero_indexed"
+      ],
+      "audited_count": 25,
+      "explicit_invalid_count": 25,
+      "omitted_or_deferred": [
+        "bias_AA and residue-specific bias/omit/symmetry mappings",
+        "position_selector and membrane selectors (parent shared expression validation)",
+        "supplemental_structures"
+      ],
+      "ignored_or_not_exposed": {
+        "batch_size": "Base config key is not stored by LigandMPNN.__init__ or forwarded by LigandMPNNMutator; design_sequences uses its own batch_size argument default. No invented startup contract."
+      },
+      "source": [
+        "astrolabe/evaluators/utils.py:_execution_controls",
+        "astrolabe/model_execution.py:execution_mode",
+        "astrolabe/mutators/base.py:_build_mpnn_mutator",
+        "astrolabe/mutators/ligandmpnn.py:LigandMPNNMutator.__init__",
+        "astrolabe/mutators/wrappers/ligandmpnn_run.py:LigandMPNN",
+        "config/base.yaml:mutator.LigandMPNN",
+        "config/binder_interface_beam.yaml"
+      ]
+    },
+    "dplm": {
+      "audited_common_fields": [
+        "daemon",
+        "device",
+        "max_iter",
+        "model_name",
+        "num_samples",
+        "prefetch_invalidate_on_sequence_change",
+        "prefetch_save",
+        "python_bin",
+        "quality_filter_attempt_num_samples",
+        "quality_filter_enable",
+        "quality_filter_fallback_to_raw",
+        "quality_filter_max_rounds",
+        "repo_path",
+        "response_cache",
+        "sampling_strategy",
+        "temperature"
+      ],
+      "audited_count": 16,
+      "explicit_invalid_count": 16,
+      "omitted_or_deferred": [
+        "quality_filter.* scientific schema"
+      ],
+      "ignored_or_not_exposed": {},
+      "source": [
+        "astrolabe/mutators/dplm.py:DPLMMutator",
+        "astrolabe/mutators/wrappers/dplm_runner.py:DPLMRunner",
+        "config/base.yaml:mutator.DPLM",
+        "config/benchmark_dihedral_d2_dplm_protenix_af2_rpxdock_v1.yaml"
+      ]
+    },
+    "mcmc": {
+      "audited_common_fields": [
+        "allowed_residues",
+        "avoid_current_residue",
+        "disallowed_residues",
+        "max_mutations"
+      ],
+      "audited_count": 4,
+      "explicit_invalid_count": 4,
+      "omitted_or_deferred": [],
+      "ignored_or_not_exposed": {
+        "mutation_method": "Stored on RandomSubstitutionMutator, not used for proposal dispatch.",
+        "select_positions": "Stored on RandomSubstitutionMutator, not used by its current proposal path."
+      },
+      "source": [
+        "astrolabe/mutators/random_substitution.py:RandomSubstitutionMutator",
+        "config/release_protein.yaml"
+      ]
+    }
+  },
+  "asset_policy": "Startup-only path checks: config/base.yaml and assets/weights.pt are file-stat placeholders, never scientific weights or parsed structures; repo_path uses source root and python_bin uses /usr/bin/true. Boltz and AF3 cache paths may name nonexistent intended directories: no mkdir by validation. Unit tests change cwd to source; native harness runs from source. No model or child runner is started.",
+  "unresolved_policy": "validate_backend_settings allow_unresolved defaults False independently of check_paths. Only intentional unresolved CLI pass opts in; startup caller passes not resolve_environment."
+}

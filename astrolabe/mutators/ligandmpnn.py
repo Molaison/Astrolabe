@@ -50,6 +50,7 @@ class LigandMPNNMutator(Mutator):
         supplemental_structure_weight=1.0,
         entropy_cutoff=None,
         enforce_mutation_num=False,
+        enforce_mutation_distribution="raw_log_probs",
         map_sequence_positions_to_pdb_residues=False,
     ):
         self.runner = sequence_model_runner
@@ -71,6 +72,9 @@ class LigandMPNNMutator(Mutator):
             raise ValueError("supplemental_structure_weight must be non-negative.")
         self.entropy_cutoff = entropy_cutoff
         self.enforce_mutation_num = bool(enforce_mutation_num)
+        if enforce_mutation_distribution not in {"raw_log_probs", "sampling_probs"}:
+            raise ValueError("Unknown enforced mutation distribution")
+        self.enforce_mutation_distribution = enforce_mutation_distribution
         self.map_sequence_positions_to_pdb_residues = bool(
             map_sequence_positions_to_pdb_residues
         )
@@ -654,6 +658,7 @@ class LigandMPNNMutator(Mutator):
             runtime_config=runtime_config,
             entropy_cutoff=self.entropy_cutoff,
             enforce_mutation_num=self.enforce_mutation_num,
+            enforce_mutation_distribution=self.enforce_mutation_distribution,
         )
 
 

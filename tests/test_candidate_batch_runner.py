@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 import subprocess
 import time
@@ -7,10 +8,17 @@ from pathlib import Path
 
 import pytest
 
+import astrolabe.app as astrolabe_app
 import astrolabe.cli as gh_cli
+from astrolabe.design import collection as collection_core
+from astrolabe.design import collection_search as collection_search_core
+from astrolabe.design import coordinator
+from astrolabe.design.composition import ControlRun
 import astrolabe.experimental.candidate_batch_runner as candidate_batch_runner
 from astrolabe.experimental.candidate_batch_runner import (
+    CandidateBatchRun,
     CandidateDecisionRun,
+    CandidateCollection,
     CandidateExecutionError,
     CandidatePoolConfig,
     CandidatePoolScheduler,
@@ -24,6 +32,73 @@ from astrolabe.experimental.candidate_batch_runner import (
     _extract_sequences,
     run_process_candidate_batch,
 )
+
+
+def test_candidate_batch_names_alias_shared_collection_core() -> None:
+    assert CandidatePoolConfig is collection_core.CollectionConfig
+    assert CandidateTask is collection_core.Job
+    assert CandidateResult is collection_core.JobResult
+    assert CandidateCollection is collection_core.ResultCollection
+    assert CandidatePoolScheduler is collection_core.CompletionPool
+    assert CandidateExecutionError is collection_core.CollectionExecutionError
+    assert CandidateBatchRun is collection_search_core.CollectionRun
+    assert CandidatePoolConfig(num_candidates=3).num_jobs == 3
+    assert CandidatePoolConfig(num_jobs=3).num_candidates == 3
+
+
+def test_candidate_decision_run_uses_shared_coordinator_drive(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    calls = []
+    controls = []
+    opaque_payload = object()
+    drive = coordinator.drive
+    astrolabe_run = astrolabe_app.Astrolabe.run
+
+    def _spy(policy, trial, state):
+        calls.append((policy, trial, state))
+        return drive(policy, trial, state)
+
+    def _app_spy(self):
+        controls.append(self.config)
+        return astrolabe_run(self)
+
+    monkeypatch.setattr(coordinator, "drive", _spy)
+    monkeypatch.setattr(astrolabe_app.Astrolabe, "run", _app_spy)
+
+    def _worker(task: CandidateTask) -> CandidateResult:
+        return CandidateResult(
+            task=task,
+            status="completed",
+            score=0.5,
+            payload=opaque_payload,
+        )
+
+    run = CandidateDecisionRun(
+        pool_config=CandidatePoolConfig(
+            num_candidates=1,
+            min_completed=1,
+            max_wait_s=1.0,
+        ),
+        worker=_worker,
+        decision_rounds=1,
+    ).run()
+
+    assert len(controls) == 1
+    assert isinstance(controls[0], ControlRun)
+    assert controls[0].runtime is None
+    assert len(calls) == 1
+    policy, trial, state = calls[0]
+    assert controls[0].policy is policy
+    assert controls[0].trial is trial
+    assert controls[0].initial_state is state
+    assert isinstance(policy, collection_search_core.CollectionPolicy)
+    assert isinstance(trial, collection_search_core.CollectionTrial)
+    assert isinstance(state, collection_search_core.CollectionState)
+    assert run.decision_collections[0].selected.payload is opaque_payload
+    assert [collection.selected.candidate_id for collection in run.decision_collections] == [
+        "cand_0001"
+    ]
 
 
 def _task(candidate_id: str, score: float, delay_s: float = 0.0) -> CandidateTask:
@@ -561,6 +636,7 @@ def test_candidate_batch_main_dry_run_json_output_preserves_summary_fields(
         "out_root",
         "runner",
         "dry_run",
+        "resume",
         "num_candidates",
         "min_completed",
         "max_wait_s",
@@ -881,19 +957,49 @@ def test_process_candidate_worker_does_not_use_collection_wait_as_subprocess_tim
         encoding="utf-8",
     )
     base_cfg = candidate_batch_runner._load_base_cfg(config_yaml)
-    calls: list[float | None] = []
+    monkeypatch.setattr(candidate_batch_runner, "_source_manifest", lambda: ())
+    monkeypatch.setattr(
+        candidate_batch_runner,
+        "_asset_manifest",
+        lambda _cfg: {"schema": "test-assets/v1", "files": []},
+    )
+    monkeypatch.setattr(
+        candidate_batch_runner,
+        "_scientific_config",
+        lambda cfg: {"seed": int(cfg.seed), "steps": int(cfg.steps)},
+    )
+    calls: list[list[str]] = []
 
-    def _fake_run(*_args, **kwargs):
-        calls.append(kwargs.get("timeout"))
-        out_root = tmp_path / "out"
-        task_name = "base__g001__cand_0001"
-        scores = out_root / task_name / "scores.csv"
-        scores.parent.mkdir(parents=True)
-        scores.write_text(
-            "step,weighted_score,accepted,pA_sequence\n0,0.7,true,AAAA\n",
-            encoding="utf-8",
+    def _fake_run(command, **_kwargs):
+        calls.append(command)
+        receipt_path = Path(command[command.index("--receipt") + 1])
+        receipt = candidate_batch_runner._read_candidate_receipt(receipt_path)
+        result = CandidateResult(
+            task=CandidateTask(
+                candidate_id=receipt.job_id,
+                generation=receipt.generation,
+                payload={"sequences": receipt.sequences},
+            ),
+            status="completed",
+            score=0.7,
+            payload=candidate_batch_runner.ProcessCandidatePayload(
+                config_yaml=receipt.config_yaml,
+                out_dir=receipt.out_dir,
+                task_name=receipt.task_name,
+                stdout_log=receipt.stdout_log,
+                stderr_log=receipt.stderr_log,
+                sequences={"A": "AAAA"},
+            ),
         )
-        return subprocess.CompletedProcess(args=kwargs, returncode=0)
+        candidate_batch_runner._write_candidate_receipt(
+            receipt_path,
+            replace(
+                receipt,
+                status="completed",
+                result=result,
+            ),
+        )
+        return subprocess.CompletedProcess(args=command, returncode=0)
 
     monkeypatch.setattr(candidate_batch_runner.subprocess, "run", _fake_run)
     worker = candidate_batch_runner.ProcessCandidateWorker(
@@ -911,7 +1017,9 @@ def test_process_candidate_worker_does_not_use_collection_wait_as_subprocess_tim
     result = worker(CandidateTask(candidate_id="cand_0001", generation=1))
 
     assert result.status == "completed"
-    assert calls == [None]
+    assert calls
+    assert "--timeout-s" in calls[0]
+    assert calls[0][calls[0].index("--timeout-s") + 1] == "none"
 
 
 def test_process_candidate_worker_uses_explicit_candidate_timeout(
@@ -932,11 +1040,50 @@ def test_process_candidate_worker_uses_explicit_candidate_timeout(
         encoding="utf-8",
     )
     base_cfg = candidate_batch_runner._load_base_cfg(config_yaml)
-    calls: list[float | None] = []
+    monkeypatch.setattr(candidate_batch_runner, "_source_manifest", lambda: ())
+    monkeypatch.setattr(
+        candidate_batch_runner,
+        "_asset_manifest",
+        lambda _cfg: {"schema": "test-assets/v1", "files": []},
+    )
+    monkeypatch.setattr(
+        candidate_batch_runner,
+        "_scientific_config",
+        lambda cfg: {"seed": int(cfg.seed), "steps": int(cfg.steps)},
+    )
+    calls: list[list[str]] = []
 
-    def _fake_run(*_args, **kwargs):
-        calls.append(kwargs.get("timeout"))
-        return subprocess.CompletedProcess(args=kwargs, returncode=1)
+    def _fake_run(command, **_kwargs):
+        calls.append(command)
+        receipt_path = Path(command[command.index("--receipt") + 1])
+        receipt = candidate_batch_runner._read_candidate_receipt(receipt_path)
+        result = CandidateResult(
+            task=CandidateTask(
+                candidate_id=receipt.job_id,
+                generation=receipt.generation,
+                payload={"sequences": receipt.sequences},
+            ),
+            status="failed",
+            error=f"candidate CLI failed; stderr={receipt.stderr_log}",
+            payload=candidate_batch_runner.ProcessCandidatePayload(
+                config_yaml=receipt.config_yaml,
+                out_dir=receipt.out_dir,
+                task_name=receipt.task_name,
+                stdout_log=receipt.stdout_log,
+                stderr_log=receipt.stderr_log,
+                sequences=receipt.sequences,
+            ),
+        )
+        candidate_batch_runner._write_candidate_receipt(
+            receipt_path,
+            replace(
+                receipt,
+                status="failed",
+                error=result.error,
+                result=result,
+            ),
+        )
+        return subprocess.CompletedProcess(args=command, returncode=0)
 
     monkeypatch.setattr(candidate_batch_runner.subprocess, "run", _fake_run)
     worker = candidate_batch_runner.ProcessCandidateWorker(
@@ -954,6 +1101,7 @@ def test_process_candidate_worker_uses_explicit_candidate_timeout(
     result = worker(CandidateTask(candidate_id="cand_0001", generation=1))
 
     assert result.status == "failed"
-    assert calls == [5.0]
+    assert calls
+    assert calls[0][calls[0].index("--timeout-s") + 1] == "5.0"
     assert "stderr.log" in str(result.error)
     assert isinstance(result.payload, candidate_batch_runner.ProcessCandidatePayload)

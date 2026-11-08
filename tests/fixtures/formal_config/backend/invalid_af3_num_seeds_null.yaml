@@ -1,0 +1,49 @@
+# Standalone startup-only fixture; no model is loaded.
+# config/base.yaml is an existing file placeholder for path-stat checks, not weights.
+task_name: backend_formal_fixture
+out_dir: /tmp/astrolabe-backend-formal-fixture
+steps: 1
+seed: 17
+types:
+  A: p
+seqs:
+  A: AAAA
+enable_pyrosetta: false
+skip_complex_poses: true
+evaluator:
+  evaluator_terms:
+    backend:
+      _type: alphafold3
+      model_dir: null
+      service_socket: null
+      num_seeds: null
+      num_samples: 1
+      num_recycles: 0
+      save_embeddings: false
+      flash_attention_implementation: cudnn
+      refstructure_workers: 0
+      refstructure_cache: 0
+      refstructure_cache_max_entries: 0
+      msa_cache: 1
+      msa_cache_max_entries: 0
+      bucket_pad_tolerance: 0
+      buckets: null
+mutator:
+  mutator_terms:
+    mcmc:
+      _type: mcmc
+      mutation_method: frequency_adjusted
+      select_positions: random
+loss:
+  loss_terms: {}
+stages:
+  default:
+    evaluator: backend
+    oligo:
+    - A
+    mutators:
+    - mcmc
+    mutation_num: 1
+    weighted_score_expression: '0'
+    acceptance_threshold: null
+    early_stopping: null
