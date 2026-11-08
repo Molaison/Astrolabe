@@ -3159,15 +3159,18 @@ def _advance_optimization_state(
             runtime_config=runtime_config,
         )
 
-        evaluation_result, is_accepted, is_early_stop = (
-            _decide_evaluated_optimization_state(
-                args, loss_computer, evaluation_result, stage_manager,
-                runtime_config, decisions, step,
-                finalize_mutations=False,
-            )
+    except BaseException:
+        _finalize_mutator_stack_pre_update(runtime_config, accepted=False)
+        raise
+
+    # Decision owns finalization once it can accept the mutation. A later
+    # stage-entry failure must not undo that already committed acceptance.
+    evaluation_result, is_accepted, is_early_stop = (
+        _decide_evaluated_optimization_state(
+            args, loss_computer, evaluation_result, stage_manager,
+            runtime_config, decisions, step,
         )
-    finally:
-        _finalize_mutator_stack_pre_update(runtime_config, accepted=is_accepted)
+    )
 
     if is_early_stop:
         logging.info("Metrics have converged. Early stopping triggered.")

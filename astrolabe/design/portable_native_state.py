@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Mapping
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 import math
 from pathlib import Path
 from typing import Any
@@ -338,6 +338,23 @@ class BlobAtStep:
 
 
 @dataclass(frozen=True)
+class DecisionAssessmentState:
+    details: Blob
+    evaluation_scores: Blob | None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.details, Blob) or (
+            self.details.codec != NUMERIC_TREE_CODEC.identity
+        ):
+            raise TypeError("assessment details must be a numeric-tree Blob")
+        if self.evaluation_scores is not None and (
+            not isinstance(self.evaluation_scores, Blob)
+            or self.evaluation_scores.codec != NATIVE_SCORES_ENVELOPE_CODEC.identity
+        ):
+            raise TypeError("assessment evaluation must be a native-score Blob or None")
+
+
+@dataclass(frozen=True)
 class DecisionState:
     schema: str
     sequences: tuple[SequenceAtStep, ...]
@@ -348,10 +365,27 @@ class DecisionState:
     stage_history: tuple[tuple[int, str], ...]
     row_history: Blob
     evaluation_scores: tuple[BlobAtStep, ...]
+    assessments: tuple[DecisionAssessmentState, ...] | None = field(
+        default=None, metadata={"omit_none": True}
+    )
+    observation_state: Blob | None = field(
+        default=None, metadata={"omit_none": True}
+    )
 
     def __post_init__(self) -> None:
         if self.schema != DECISION_STATE_SCHEMA:
             raise ValueError(f"unsupported decision state schema {self.schema!r}")
+        if (self.assessments is None) != (self.observation_state is None):
+            raise ValueError("assessment history and observation state must occur together")
+        if self.assessments is not None and any(
+            not isinstance(item, DecisionAssessmentState) for item in self.assessments
+        ):
+            raise TypeError("assessment history must contain DecisionAssessmentState values")
+        if self.observation_state is not None and (
+            not isinstance(self.observation_state, Blob)
+            or self.observation_state.codec != NUMERIC_TREE_CODEC.identity
+        ):
+            raise TypeError("observation state must be a numeric-tree Blob or None")
         for name in ("sequences", "scores", "scores_detail", "evaluation_scores"):
             values = getattr(self, name)
             if not values:
@@ -671,7 +705,7 @@ def read_numeric_tree(data: DataStore, blob: Blob) -> Any:
 
 def snapshot_decision_state(decisions: Any, data: DataStore) -> DecisionState:
     """Freeze every scientific field currently held by legacy ``Decisions``."""
-    from astrolabe.decision_maker import Decisions
+    from astrolabe.decision_maker import DecisionAssessment, Decisions
     from astrolabe.evaluators.utils import StandardScores
 
     if type(decisions) is not Decisions:
@@ -754,6 +788,39 @@ def snapshot_decision_state(decisions: Any, data: DataStore) -> DecisionState:
         raise UnsupportedPortableNativeState(
             "Decisions last_accepted is not the latest accepted step"
         )
+    assessments = []
+    for assessment in decisions.assessments:
+        if type(assessment) is not DecisionAssessment:
+            raise UnsupportedPortableNativeState(
+                "Decisions contains a non-DecisionAssessment observation"
+            )
+        assessments.append(
+            DecisionAssessmentState(
+                # Do not normalize tuples or Paths through _plain_config: these
+                # are already frozen observations, not configuration values.
+                details=data.put(
+                    {
+                        item.name: getattr(assessment, item.name)
+                        for item in fields(DecisionAssessment)
+                        if item.name != "evaluation_result"
+                    },
+                    NUMERIC_TREE_CODEC,
+                ),
+                evaluation_scores=(
+                    None if assessment.evaluation_result is None
+                    else snapshot_scores(assessment.evaluation_result, data)
+                ),
+            )
+        )
+    observation_state = data.put(
+        {
+            "observation_errors": decisions.observation_errors,
+            "_attempt_count": decisions._attempt_count,
+            "_accepted_attempt": decisions._accepted_attempt,
+            "_revision_known": decisions._revision_known,
+        },
+        NUMERIC_TREE_CODEC,
+    )
     return DecisionState(
         schema=DECISION_STATE_SCHEMA,
         sequences=tuple(sequences),
@@ -764,6 +831,8 @@ def snapshot_decision_state(decisions: Any, data: DataStore) -> DecisionState:
         stage_history=stages,
         row_history=row_history,
         evaluation_scores=evaluations,
+        assessments=tuple(assessments),
+        observation_state=observation_state,
     )
 
 
@@ -773,7 +842,7 @@ def restore_decision_state(
     destination: Path | str,
 ) -> Any:
     """Reconstruct the legacy owner without replaying its scientific methods."""
-    from astrolabe.decision_maker import Decisions
+    from astrolabe.decision_maker import DecisionAssessment, Decisions
 
     if not isinstance(state, DecisionState):
         raise TypeError("state must be DecisionState")
@@ -797,19 +866,46 @@ def restore_decision_state(
     rows = read_numeric_tree(data, state.row_history)
     if not isinstance(rows, list):
         raise UnsupportedPortableNativeState("row history must decode to a list")
-    return Decisions(
-        sequences={
-            item.step: dict(item.assignments)
-            for item in state.sequences
-        },
-        scores={item.step: item.value for item in state.scores},
-        evaluation_results=evaluations,
-        scores_detail=details,
-        accepted_steps=list(state.accepted_steps),
-        last_accepted=state.last_accepted,
-        stage_history={step: name for step, name in state.stage_history},
-        row_history=list(rows),
-    )
+    # Construction observes a new "initial" assessment. Restore storage only;
+    # neither a scientific decision nor an observation may be replayed here.
+    decisions = Decisions.__new__(Decisions)
+    decisions.sequences = {
+        item.step: dict(item.assignments) for item in state.sequences
+    }
+    decisions.scores = {item.step: item.value for item in state.scores}
+    decisions.evaluation_results = evaluations
+    decisions.scores_detail = details
+    decisions.accepted_steps = list(state.accepted_steps)
+    decisions.last_accepted = state.last_accepted
+    decisions.stage_history = dict(state.stage_history)
+    decisions.row_history = list(rows)
+    decisions.assessments = []
+    # Older records contain no attempt identities or assessment evidence.
+    # Leave that history absent, and do not infer a revision from accepted_steps.
+    decisions.observation_errors = []
+    decisions._attempt_count = 0
+    decisions._accepted_attempt = None
+    decisions._revision_known = False
+    if state.observation_state is not None:
+        observation = read_numeric_tree(data, state.observation_state)
+        decisions.observation_errors = observation["observation_errors"]
+        decisions._attempt_count = observation["_attempt_count"]
+        decisions._accepted_attempt = observation["_accepted_attempt"]
+        decisions._revision_known = observation["_revision_known"]
+        for index, assessment in enumerate(state.assessments):
+            values = read_numeric_tree(data, assessment.details)
+            result = (
+                None if assessment.evaluation_scores is None
+                else restore_scores(
+                    assessment.evaluation_scores,
+                    data,
+                    destination / "assessments" / f"assessment_{index:08d}",
+                )
+            )
+            decisions.assessments.append(
+                DecisionAssessment(**values, evaluation_result=result)
+            )
+    return decisions
 
 
 def _nested_types() -> tuple[type[Any], ...]:
@@ -818,6 +914,7 @@ def _nested_types() -> tuple[type[Any], ...]:
         SequenceAtStep,
         ScoreAtStep,
         BlobAtStep,
+        DecisionAssessmentState,
         DecisionState,
         NativeRuntimeContext,
         PendingEdit,
@@ -909,6 +1006,7 @@ __all__ = [
     "DECISION_STATE_CODEC",
     "DECISION_STATE_SCHEMA",
     "DecisionRequest",
+    "DecisionAssessmentState",
     "DecisionResult",
     "DecisionState",
     "EVALUATION_RESULT_CODEC",

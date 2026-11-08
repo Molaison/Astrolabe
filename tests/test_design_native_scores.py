@@ -43,7 +43,9 @@ def test_evaluator_evidence_survives_cold_durable_roundtrip(tmp_path):
         derived_structures={"A": [DerivedStructure(source, tmp_path / "relaxed.cif", "relax")]},
     )
     store = tmp_path / "store"
-    blob = snapshot_scores(scores, DataStore(store))
+    data = DataStore(store)
+    blob = snapshot_scores(scores, data)
+    data.persist((blob,))
     restored = restore_scores(blob, DataStore(store), tmp_path / "restored")
     _assert_scores_equal(scores, restored)
     assert restored.complex_paths["A"].read_bytes() == source.read_bytes()
@@ -287,8 +289,6 @@ def test_dynamic_extensions_and_nested_scores_survive_cold_restore(tmp_path):
     assert extension_names == tuple(sorted(extension_names))
     assert set(extension_names) == {
         "_interface_holes_details",
-        "candidate_scores",
-        "post_eval_hook_reports",
         "pre_eval_hook_reports",
         "report_path",
         "rosetta_metrics",

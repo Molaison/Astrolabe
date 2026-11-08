@@ -211,6 +211,19 @@ def test_context_snapshot_restores_mutations_probs_scores_caches_and_manager():
     assert manager._pre_update_snapshot is not None
 
 
+def test_activation_restores_constants_in_the_bound_runtime_store(tmp_path):
+    add_protomer("A", "AC")
+    global_config.init_const("out_dir", tmp_path / "original")
+    bound = global_config.build_runtime_context()
+    with LegacyContext().activate():
+        global_config.update_const("out_dir", tmp_path / "temporary")
+        global_config.init_const("per_residue_scores", {"A": [1.]})
+    assert global_config.out_dir == tmp_path / "original"
+    assert bound.get_const("out_dir") == tmp_path / "original"
+    with pytest.raises(RuntimeError, match="not been initialized"):
+        bound.get_const("per_residue_scores")
+
+
 def test_activation_rolls_back_after_exception_and_serializes_global_owner():
     add_protomer("A", "AC")
     data = DataStore()

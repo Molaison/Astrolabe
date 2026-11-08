@@ -63,6 +63,11 @@ RELEASE_CPU_TESTS = (
     "tests/test_run_execution_evidence.py",
     "tests/test_stage_evidence_regressions.py",
     "tests/test_design_native_scores.py",
+    "tests/test_design_legacy.py",
+    "tests/test_design_variable_length.py",
+    "tests/test_native_flow_parity.py",
+    "tests/test_portable_decision_assessments.py",
+    "tests/test_portable_native_state.py",
 )
 
 

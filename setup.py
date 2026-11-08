@@ -36,6 +36,7 @@ setup(
         "matplotlib>=3.8,<4",
         "numpy>=1.26,<3",
         "omegaconf>=2.3,<2.4",
+        "pandas>=2,<3",
         "prompt-toolkit>=3.0,<4",
     ],
     extras_require={

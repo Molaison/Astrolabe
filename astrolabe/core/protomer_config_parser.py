@@ -1117,7 +1117,11 @@ class SegmentManager:
 
     def refresh_protomers(self) -> None:
         """Rebuild accepted component layout and invalidate derived caches."""
-        for protomer in (global_config.__dict__.get("_protomers") or {}).values():
+        try:
+            protomers = global_config.get_const("protomers")
+        except RuntimeError:
+            protomers = {}
+        for protomer in (protomers or {}).values():
             offset = 0
             slices = []
             for name in protomer.components:

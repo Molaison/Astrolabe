@@ -1220,9 +1220,10 @@ class LegacyContext:
                     segment_values.append(segment)
 
             constants: list[_ConstantSnapshot] = []
+            runtime_state = global_config.build_runtime_context().state
             for name in sorted(_SNAPSHOT_CONSTANTS):
-                initialized = bool(global_config._initialized_constants.get(name, False))
-                value = global_config.__dict__.get(f"_{name}")
+                initialized = runtime_state.initialized_constants[name]
+                value = runtime_state.constants[name]
                 try:
                     copied = deepcopy(value)
                 except Exception as error:
@@ -1307,9 +1308,10 @@ class LegacyContext:
                 manager.primary_names.update(snapshot.manager.primary_names)
                 manager._pre_update_snapshot = deepcopy(snapshot.manager.pre_update)
 
+            runtime_state = global_config.build_runtime_context().state
             for constant in snapshot.constants:
-                global_config.__dict__[f"_{constant.name}"] = deepcopy(constant.value)
-                global_config._initialized_constants[constant.name] = constant.initialized
+                runtime_state.constants[constant.name] = deepcopy(constant.value)
+                runtime_state.initialized_constants[constant.name] = constant.initialized
             for name, value in snapshot.variables:
                 global_config.set_variable(name, deepcopy(value))
 
