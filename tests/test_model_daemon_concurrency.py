@@ -359,6 +359,8 @@ def test_drain_waits_for_all_request_cleanup_and_repeated_stops_are_safe(tmp_pat
         assert _read_frame(first)["result"] == 0
         assert exited[0].is_set() and not exited[1].is_set()
         assert not stopping_one.done() and not stopping_two.done()
+        # Sending the response precedes the server's bookkeeping publication.
+        _wait(lambda: server._status()["active_requests"] == ["two"])
         status = server._status()
         assert status["active_requests"] == ["two"]
         assert status["completed_count"] == 1

@@ -534,7 +534,7 @@ def test_external_cli_failure_releases_actual_adapter(monkeypatch, ledger, tmp_p
             "daemon": False, "work_dir": str(tmp_path/"work"), "response_cache_dir": str(tmp_path/"cache")})
         assert runner.model_metadata["residency"] == "one_shot"
         monkeypatch.setattr(module.subprocess, "run", fail)
-        with pytest.raises(RuntimeError, match="exit code"):
+        with pytest.raises(module.RequestOutcomeUnknown, match="subprocess exited 1"):
             runner._infer_tasks_no_cache([{"name": "A", "masked_sequence": "A<mask>"}])
         runner.close()
     assert not ledger.active
