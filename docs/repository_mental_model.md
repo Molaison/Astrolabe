@@ -111,9 +111,24 @@ binds options, params contents, version and database location. Conflicting
 explicit requirements fail; external initialization is unattested. Provider
 activation/reset cannot erase applied patches or a poisoned process.
 MSA entries publish only after complete loading. Score extraction binds working
-sequences, dynamic sites and actual loss parameters to its run; its cache is not
-a durable Score receipt. DEBUG writes require `DEBUG=1` and remain debug-only,
-with no RNG/recovery guarantee.
+sequences, dynamic sites, complete loss parameters and raw score contents
+(including referenced structure bytes) to its run. Cached mappings are copied
+for callers. Live poses and other values without a complete content codec bypass
+this cache; array subclasses such as masked arrays require an explicit codec for
+durable snapshots. This cache is not a durable Score receipt.
+
+Initial DEBUG reuse requires `DEBUG=1`, an explicit stateless evaluator contract
+and unchanged global RNG across the original evaluation. It binds implementation,
+configuration, input and RNG identity and revalidates output structure contents.
+Only raw results are cached; hooks and finalization still run on a hit. Unbound
+legacy pickle files are ignored. First-party SequenceEvaluator declares this
+contract; native/generated-coordinate backends do not. DEBUG remains an optional
+shortcut, not a checkpoint or native RNG recovery mechanism. Cache publication
+failure does not invalidate a successful evaluation.
+
+Lazy native owners publish usable values only after construction, registration
+and readiness binding complete. Access during construction or before readiness
+fails, including the interval after the factory returns its object.
 
 Posthoc collection binds input contents and derivation configuration. Records,
 per-derivation outcomes and run completeness commit in one DB transaction;

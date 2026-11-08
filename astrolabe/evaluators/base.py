@@ -13,6 +13,15 @@ class Evaluator:
         std_output = self.prepare_output(output, inputs, runtime_config)
         return std_output
 
+    def debug_cache_identity(self):
+        """Return complete stateless-call configuration, or decline debug reuse.
+
+        An override promises no hidden native state or external effects need
+        advancing when the raw result is reused. RNG-consuming calls are also
+        excluded by the cache owner. This does not grant durable recovery.
+        """
+        return None
+
     def shutdown(self):
         from astrolabe.evaluators.utils import shutdown_model_handles
 

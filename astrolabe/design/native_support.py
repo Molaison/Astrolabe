@@ -129,14 +129,17 @@ class LazyNativeOwner:
             self._constructing = True
 
     def get(self):
-        if self._cleanup_pending:
-            raise RuntimeError("Native model cleanup is unresolved")
-        if self._initialization_error is not None:
-            raise RuntimeError("Native model initialization failed; use a new owner") from self._initialization_error
-        if self._value is not None:
-            return self._value
-        if self._constructor_rng is None:
-            raise RuntimeError("Native model initialization must run before inference")
+        with self._cleanup_lock:
+            if self._cleanup_pending:
+                raise RuntimeError("Native model cleanup is unresolved")
+            if self._initialization_error is not None:
+                raise RuntimeError("Native model initialization failed; use a new owner") from self._initialization_error
+            if self._constructing:
+                raise RuntimeError("Native model construction is still in progress")
+            if self._constructor_rng is None:
+                raise RuntimeError("Native model initialization must complete before inference")
+            if self._value is not None:
+                return self._value
         self._claim_construction()
         try:
             self._prepare_rng()

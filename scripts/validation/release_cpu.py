@@ -62,6 +62,7 @@ RELEASE_CPU_TESTS = (
     "tests/test_cleanup_protocol.py",
     "tests/test_p0_protocols.py",
     "tests/test_scientific_state_protocols.py",
+    "tests/test_residual_cache_failures.py",
     "tests/test_initialization_protocols.py",
     "tests/test_mutator_state_protocols.py",
     "tests/test_posthoc_state_protocols.py",
