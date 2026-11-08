@@ -25,6 +25,7 @@ def test_isolated_cli_completes_and_resumes_without_new_evaluations(tmp_path, sh
         f"search.execution.model_sharing={sharing}",
         f"out_dir={output}", f"raw_model_results_dir={tmp_path / 'raw'}",
         "task_name=integrated_cli", "obabel_path=null",
+        "ananas_path=null", "dssp_path=null", "usalign_path=null",
     ]
     environment = {
         **os.environ, "ASTROLABE_RUNTIME_ACTIVE": "1", "ASTROLABE_PY": sys.executable,

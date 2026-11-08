@@ -21,6 +21,7 @@ jobs:
       - name: Shell completion runtime
         run: sudo apt-get update && sudo apt-get install -y zsh
       - name: Non-editable installation
+        id: install
         run: python -m pip install '.[dev]'
       - uses: actions/setup-java@v4
         with:
@@ -42,12 +43,14 @@ jobs:
           astrolabe --help
           astrolabe run --task release_protein --dry-run env=env
       - name: CPU dependencies for structural and real process tests
+        id: cpu_dependencies
         run: |
           python -m pip install rdkit
           python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
       - name: CPU workflows and numerical regressions
         run: python scripts/validation/release_cpu.py -q
       - name: Integrated CLI, Score receipts and deterministic recovery
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.cpu_dependencies.outcome == 'success' }}
         env:
           CUDA_VISIBLE_DEVICES: ''
           JAX_PLATFORMS: cpu
@@ -67,6 +70,7 @@ jobs:
           path: ${{ runner.temp }}/integrated-runtime.xml
           if-no-files-found: error
       - name: Daily configuration failures and valid CLI controls
+        if: ${{ !cancelled() && steps.install.outcome == 'success' && steps.cpu_dependencies.outcome == 'success' }}
         run: python tests/run_daily_task_cli.py --report "$RUNNER_TEMP/daily-task.json" --jobs 2
       - name: Upload daily CLI evidence
         if: always()
@@ -76,6 +80,7 @@ jobs:
           path: ${{ runner.temp }}/daily-task*
           if-no-files-found: error
       - name: Build public distributions
+        if: ${{ !cancelled() && steps.install.outcome == 'success' }}
         run: |
           python scripts/release/export.py "$RUNNER_TEMP/Astrolabe" --archive dist/astrolabe-source.tar.gz
           python -m build "$RUNNER_TEMP/Astrolabe" --outdir "$GITHUB_WORKSPACE/dist"
