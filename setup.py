@@ -45,6 +45,7 @@ setup(
             "build>=1",
             "setuptools>=70.1",
             "scipy==1.17.0",
+            "rdkit>=2024.3",
         ],
     },
     entry_points={

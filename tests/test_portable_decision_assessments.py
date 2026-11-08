@@ -154,7 +154,7 @@ def test_cold_history_preserves_rejections_reassessments_and_next_identity(
     np.testing.assert_equal(np.random.get_state(), numpy_rng)
     assert random.getstate() == python_rng
     assert [NUMERIC_TREE_CODEC.encode(_details(a)) for a in restored.assessments] == expected
-    assert restored.row_history == expected_rows
+    assert NUMERIC_TREE_CODEC.encode(restored.row_history) == NUMERIC_TREE_CODEC.encode(expected_rows)
     assert restored.accepted_steps == [0, 2] and restored.last_accepted == 2
     assert restored._attempt_count == 2 and restored._accepted_attempt == 2
     assert restored._revision_known is True
