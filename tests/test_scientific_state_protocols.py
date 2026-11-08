@@ -35,10 +35,10 @@ def shared_graph():
 
 def test_restore_preserves_shared_preupdate_state_and_rejection_rng():
     shared, manager = shared_graph()
-    shared.add_mutations((0, "A", "G"))
+    shared.add_mutations((0, "A", "G", 0.0, 0.0))
     manager.begin_pre_update_step()
     manager.preapply_pending_mutations()
-    shared.add_mutations((1, "C", "V"))
+    shared.add_mutations((1, "C", "V", 0.0, 0.0))
     context = LegacyContext()
     snapshot = context.capture_state()
     rng = np.random.get_state()
