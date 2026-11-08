@@ -22,6 +22,7 @@ import hashlib
 import json
 import logging
 import math
+import copy
 import os
 import pathlib
 import pickle
@@ -32,7 +33,7 @@ import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple
 
 # Third-party imports
@@ -1789,6 +1790,24 @@ class PreparedPipelineState:
     mutators: Any = None
     initializer_result: Any = None
     initializer_pending: bool = False
+    # The store identity already separates runs. This latch owns one attempt
+    # to advance the prepared inputs, including failure after partial work.
+    _progress: dict = field(default_factory=lambda: {"phase": "prepared"}, compare=False)
+
+    @property
+    def initialization_state(self):
+        return self._progress["phase"]
+
+    def begin_initialization(self):
+        self.runtime_context.require_current()
+        if self.initialization_state != "prepared":
+            raise RuntimeError(f"Pipeline initialization is {self.initialization_state}")
+        self._progress["phase"] = "initializing"
+
+    def finish_initialization(self, error=None):
+        self._progress["phase"] = "failed" if error is not None else "input_ready"
+        if error is not None:
+            self._progress["error"] = repr(error)
 
 
 def prepare_pipeline_state(
@@ -1911,10 +1930,16 @@ def prepare_pipeline_math(args, prepared):
     predocker = getattr(args, "predocker", None)
     if predocker is not None and predocker.get("predocker_terms"):
         raise ValueError("Deferred pipeline math requires an empty predocker selection")
-    loss_computer, stage_manager = _initialize_pipeline_math(args, prepared)
-    inputs = _initialize_pipeline_inputs(
-        args, loss_computer, stage_manager, include_predockers=False
-    )
+    prepared.begin_initialization()
+    try:
+        loss_computer, stage_manager = _initialize_pipeline_math(args, prepared)
+        inputs = _initialize_pipeline_inputs(
+            args, loss_computer, stage_manager, include_predockers=False
+        )
+    except BaseException as error:
+        prepared.finish_initialization(error)
+        raise
+    prepared.finish_initialization()
     return loss_computer, stage_manager, inputs
 
 
@@ -1922,7 +1947,8 @@ class LazyEvaluatorMap(Mapping):
     """Keep configured aliases available and construct each evaluator on demand."""
 
     def __init__(self, evaluator_conf, raw_model_results_dir, oligo_names, *, enabled_aliases=None):
-        self._config = evaluator_conf
+        self._config = copy.deepcopy(evaluator_conf)
+        self._runtime_context = global_config.build_runtime_context()
         self._output_dir = raw_model_results_dir
         self._oligo_names = oligo_names
         enabled = set(enabled_aliases) if enabled_aliases is not None else None
@@ -1934,27 +1960,44 @@ class LazyEvaluatorMap(Mapping):
             and (enabled is None or alias in enabled)
         )
         self._instances = {}
+        self._failed = {}
+        self._constructing = set()
         self._construction_lock = threading.RLock()
 
     def __getitem__(self, alias):
         if alias not in self._aliases:
             raise KeyError(alias)
         with self._construction_lock:
+            self._runtime_context.require_current()
             if alias not in self._instances:
                 from astrolabe.evaluator_startup import initialization_options
 
                 _workers, initialization_seed = initialization_options(self._config)
+                selected = self._aliases if initialization_seed is not None else (alias,)
+                for name in selected:
+                    if name in self._failed:
+                        raise RuntimeError(f"Evaluator {name!r} initialization failed; use a new owner") from self._failed[name]
+                    if name in self._constructing:
+                        raise RuntimeError(f"Evaluator {name!r} initialization is already in progress")
                 try:
                     resource_owner = global_config.get_const("resource_owner")
                 except RuntimeError:
                     resource_owner = None
-                self._instances.update(construct_evaluators(
-                    self._config,
-                    self._output_dir,
-                    self._oligo_names,
-                    enabled_aliases=list(self._aliases) if initialization_seed is not None else [alias],
-                    resource_owner=resource_owner,
-                ))
+                self._constructing.update(selected)
+                try:
+                    constructed = construct_evaluators(
+                        self._config,
+                        self._output_dir,
+                        self._oligo_names,
+                        enabled_aliases=list(selected),
+                        resource_owner=resource_owner,
+                    )
+                    self._instances.update(constructed)
+                except BaseException as error:
+                    self._failed.update((name, error) for name in selected)
+                    raise
+                finally:
+                    self._constructing.difference_update(selected)
             return self._instances[alias]
 
     def __iter__(self):
@@ -1982,7 +2025,17 @@ def load_pipeline_components(
 
     if not isinstance(prepared, PreparedPipelineState):
         raise TypeError("prepared must be a PreparedPipelineState")
+    prepared.begin_initialization()
+    try:
+        result = _load_pipeline_components(args, prepared, evaluator_factory=evaluator_factory)
+    except BaseException as error:
+        prepared.finish_initialization(error)
+        raise
+    prepared.finish_initialization()
+    return result
 
+
+def _load_pipeline_components(args, prepared, *, evaluator_factory=None):
     mutators = prepared.mutators
     if prepared.initializer_pending:
         mutators = build_mutators(args.mutator, args.raw_model_results_dir,
@@ -2467,7 +2520,7 @@ def load_or_evaluate_initial(
         )
 
         # Cache results if in debug mode
-        if "DEBUG" in os.environ and not generated_coordinates:
+        if is_debug and not generated_coordinates:
             with open(eval_file, "wb") as f:
                 pickle.dump(evaluation_result, f)
             logging.info(f"Cached evaluation results to {eval_file}")

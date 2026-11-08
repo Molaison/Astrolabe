@@ -2,6 +2,7 @@
 from dataclasses import dataclass, field
 import sys
 from types import ModuleType
+from uuid import uuid4
 
 DEFAULT_MUTATION_FRACTION = 0.1
 
@@ -69,9 +70,15 @@ class RuntimeState:
     """Storage for one run. Legacy module access points to one current instance."""
 
     def __init__(self):
+        # Run identity is operational metadata, never drawn from scientific RNG.
+        self._run_id = uuid4().hex
         self.constants = {name: None for name in constants_names}
         self.initialized_constants = {name: False for name in constants_names}
         self.variables = {name: None for name in variable_names}
+
+    @property
+    def run_id(self):
+        return self._run_id
 
     def init_const(self, name, value):
         if name not in constants_names:
@@ -119,6 +126,22 @@ class RuntimeContext:
 
     state: RuntimeState = field(default_factory=lambda: _current_state)
     _MISSING = object()
+
+    @property
+    def run_id(self) -> str:
+        return self.state.run_id
+
+    def require_current(self) -> None:
+        """Guard operations which also consume process-scoped legacy globals.
+
+        Reading an old explicit store remains valid. Mixing it with another
+        active run's legacy owners does not.
+        """
+        if self.state is not _current_state:
+            raise RuntimeError(
+                f"Runtime context {self.run_id} is not the active run "
+                f"{_current_state.run_id}"
+            )
 
     def get_const(self, name: str, default=_MISSING):
         try:

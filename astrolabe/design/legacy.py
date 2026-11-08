@@ -469,6 +469,7 @@ class LegacyStateSnapshot:
     manager: _ManagerSnapshot
     constants: tuple[_ConstantSnapshot, ...]
     variables: tuple[tuple[str, Any], ...]
+    run_id: str
 
 
 @dataclass(frozen=True)
@@ -1053,6 +1054,7 @@ class LegacyContext:
     """Serialized owner for legacy mutable globals and candidate application."""
 
     def __init__(self) -> None:
+        self.runtime_context = global_config.build_runtime_context()
         self._translations: dict[str, LegacyTranslation] = {}
         self._active = False
         self._owner_thread: int | None = None
@@ -1073,6 +1075,7 @@ class LegacyContext:
         data: DataStore | None = None,
     ) -> LegacyTranslation:
         with _LEGACY_OWNER:
+            self.runtime_context.require_current()
             translation = translate_legacy_state(
                 assemblies=assemblies,
                 state=state,
@@ -1202,6 +1205,7 @@ class LegacyContext:
         """Capture all bridge-owned scientific state for exact in-place restore."""
 
         with _LEGACY_OWNER:
+            self.runtime_context.require_current()
             segments = _require_initialized("segments", {})
             protomers = _require_initialized("protomers", {})
             manager = _require_initialized("segment_manager", None)
@@ -1270,6 +1274,7 @@ class LegacyContext:
                 ),
                 constants=tuple(constants),
                 variables=tuple(variables),
+                run_id=self.runtime_context.run_id,
             )
 
     @staticmethod
@@ -1288,14 +1293,38 @@ class LegacyContext:
         if not isinstance(snapshot, LegacyStateSnapshot):
             raise TypeError("snapshot must be a LegacyStateSnapshot")
         with _LEGACY_OWNER:
-            for object_snapshot in snapshot.segments + snapshot.protomers:
-                attributes = deepcopy(object_snapshot.attributes)
-                target = object_snapshot.value
+            self.runtime_context.require_current()
+            if snapshot.run_id != self.runtime_context.run_id:
+                raise UnsupportedLegacyState("snapshot belongs to another run")
+            # Materialize the entire restore before the first scientific write.
+            # A failing deepcopy/invalid key must not leave half the graph at
+            # the old revision and half at the new revision.
+            prepared = tuple(
+                (item.value, deepcopy(item.attributes))
+                for item in snapshot.segments + snapshot.protomers
+            )
+            pre_update = deepcopy(snapshot.manager.pre_update)
+            constants = tuple(
+                (item.name, item.initialized, deepcopy(item.value))
+                for item in snapshot.constants
+            )
+            variables = tuple((name, deepcopy(value)) for name, value in snapshot.variables)
+            if any(name not in global_config.constants_names for name, _, _ in constants):
+                raise UnsupportedLegacyState("snapshot contains unknown runtime constants")
+            if any(name not in global_config.variable_names for name, _ in variables):
+                raise UnsupportedLegacyState("snapshot contains unknown runtime variables")
+            segments = _require_initialized("segments", None)
+            manager = _require_initialized("segment_manager", None)
+            if not isinstance(segments, dict) or manager is None:
+                raise UnsupportedLegacyState("snapshot requires its live segment manager")
+            if {id(item.value) for item in snapshot.segments} != {
+                id(item) for item in manager.unique_segments.values()
+            }:
+                raise UnsupportedLegacyState("snapshot belongs to another segment graph")
+            for target, attributes in prepared:
                 target.__dict__.clear()
                 target.__dict__.update(attributes)
 
-            segments = _require_initialized("segments", None)
-            manager = _require_initialized("segment_manager", None)
             if isinstance(segments, dict):
                 segments.clear()
                 segments.update(snapshot.manager.segments)
@@ -1306,14 +1335,14 @@ class LegacyContext:
                 manager.unique_segments.update(snapshot.manager.unique_segments)
                 manager.primary_names.clear()
                 manager.primary_names.update(snapshot.manager.primary_names)
-                manager._pre_update_snapshot = deepcopy(snapshot.manager.pre_update)
+                manager._pre_update_snapshot = pre_update
 
             runtime_state = global_config.build_runtime_context().state
-            for constant in snapshot.constants:
-                runtime_state.constants[constant.name] = deepcopy(constant.value)
-                runtime_state.initialized_constants[constant.name] = constant.initialized
-            for name, value in snapshot.variables:
-                global_config.set_variable(name, deepcopy(value))
+            for name, initialized, value in constants:
+                runtime_state.constants[name] = value
+                runtime_state.initialized_constants[name] = initialized
+            for name, value in variables:
+                global_config.set_variable(name, value)
 
     @contextmanager
     def activate(
@@ -1326,13 +1355,14 @@ class LegacyContext:
         """Own serialized legacy state; always restore it on context exit."""
 
         with _LEGACY_OWNER:
+            self.runtime_context.require_current()
             if self._active:
                 raise RuntimeError(
                     "LegacyContext does not provide nested or parallel isolation"
                 )
+            snapshot = self.capture_state()
             self._active = True
             self._owner_thread = threading.get_ident()
-            snapshot = self.capture_state()
             try:
                 if candidate is not None:
                     active_data = data if data is not None else DataStore()
