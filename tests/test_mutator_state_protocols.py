@@ -222,6 +222,47 @@ def test_f21_rfd4_duplicate_conflict_restored_feedback_and_references(tmp_path, 
     assert restored._failed_hbond_attempts["B:1:N"] == 2
 
 
+def test_rfd4_mid_observation_failure_leaves_state_unchanged_and_retry_matches_baseline(tmp_path, monkeypatch):
+    import astrolabe.mutators.rfd4_feedback as module
+    atoms = tuple(SimpleNamespace(atom=AtomRef("B", i, "N"), role="DONOR", source_present=True,
+                                  satisfied=False, qualifying_hbond_count=0, sasa=.5,
+                                  nearest_other_group_heavy_atom_distance=3.) for i in (1, 2))
+    monkeypatch.setattr(module, "analyze_interface", lambda *a, **kw: SimpleNamespace(polar_atoms=atoms))
+    path = tmp_path / "generated.pdb"
+    path.write_text("immutable native structure")
+    generated = SimpleNamespace(request_digest="prior", structure_digest=hashlib.sha256(path.read_bytes()).hexdigest(),
+                                structure_path=str(path))
+    request = SimpleNamespace(plan=ConditionPlan((), (), tuple(HBondCondition(a.atom, a.role) for a in atoms)))
+    owner = rfd4()
+    owner._observe_hbond_attempt(request, generated)
+    before = owner.export_state()
+    live_fields = (owner._failed_hbond_attempts, owner._hbond_attempt_history, owner._observed_requests)
+
+    class FaultAfterFirstResult:
+        def __bool__(self):
+            raise RuntimeError("injected second HBond result failure")
+
+    # The first unsatisfied result has already updated the temporary counter
+    # when interpreting the second result raises.
+    atoms[1].satisfied = FaultAfterFirstResult()
+    generated.request_digest = "retryable"
+    with pytest.raises(RuntimeError, match="injected second HBond"):
+        owner._observe_hbond_attempt(request, generated)
+    assert owner.export_state() == before
+    assert all(current is original for current, original in zip(
+        (owner._failed_hbond_attempts, owner._hbond_attempt_history, owner._observed_requests), live_fields))
+    assert "retryable" not in owner._observed_requests
+
+    atoms[1].satisfied = False
+    baseline = rfd4()
+    baseline.restore_state(wire(before))
+    baseline._observe_hbond_attempt(request, generated)
+    owner._observe_hbond_attempt(request, generated)
+    assert owner.export_state() == baseline.export_state()
+    assert dict(owner._failed_hbond_attempts) == {"B:1:N": 2, "B:2:N": 2}
+    assert len(owner._hbond_attempt_history) == 2
+
+
 class CacheOwner(StructureProcessor):
     def _run_impl(self, input_file):
         return input_file

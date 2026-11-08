@@ -440,17 +440,22 @@ class RFD4Mutator(Mutator):
                 "sasa": atom.sasa,
                 "nearest_binder_heavy_distance": atom.nearest_other_group_heavy_atom_distance,
             })
+        # Build the complete observation off-owner. A later result or history
+        # construction failure must not publish counters without its receipt.
+        failures = self._failed_hbond_attempts.copy()
         for outcome in outcomes:
             if not outcome["satisfied"]:
-                self._failed_hbond_attempts[outcome["key"]] += 1
-            outcome["failed_attempts_after"] = self._failed_hbond_attempts[outcome["key"]]
-        self._hbond_attempt_history.append({
+                failures[outcome["key"]] += 1
+            outcome["failed_attempts_after"] = failures[outcome["key"]]
+        history = [*self._hbond_attempt_history, {
             "request_digest": generated.request_digest,
             "observation_identity": observation,
             "generated_structure_path": generated.structure_path,
             "generated_structure_sha256": generated.structure_digest, "outcomes": outcomes,
-        })
-        self._observed_requests[generated.request_digest] = observation
+        }]
+        observed = {**self._observed_requests, generated.request_digest: observation}
+        self._failed_hbond_attempts, self._hbond_attempt_history, self._observed_requests = (
+            failures, history, observed)
 
     def _state_identity(self, binding):
         # Asset digests/environment are supplied by the durable owner; calling
