@@ -58,6 +58,16 @@ def test_failure_receipt_is_retained_until_explicit_retry():
     assert resource.calls == 2
 
 
+def test_successful_run_inside_except_still_surfaces_cleanup_failure():
+    resource = IdempotentOwner(OSError("cleanup failed"))
+    try:
+        raise ValueError("unrelated caller exception")
+    except ValueError:
+        with pytest.raises(RuntimeError, match="failed to stop"):
+            with execution.model_run_scope():
+                execution.register_model_owner(resource)
+
+
 def test_explicit_retry_failure_is_attempted_only_once_per_call():
     resource = IdempotentOwner(OSError("still live"))
     owner = ResourceOwner()

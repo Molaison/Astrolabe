@@ -8,6 +8,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import importlib
+import threading
 from typing import Callable
 
 from astrolabe.model_execution import capture_random_state, restore_random_state, register_model_owner
@@ -46,6 +47,10 @@ class LazyNativeOwner:
         self.factory, self.data, self.identity = factory, data, identity
         self._rng_modules = tuple(rng_modules)
         self._value = None
+        self._cleanup_pending = False
+        self._cleanup_running = False
+        self._cleanup_error = None
+        self._cleanup_lock = threading.RLock()
         self._constructor_rng = None
         self.initialization_request = ModelInitializationRequest(identity)
         self.initialization = operation(alias + "/initialize", ModelInitializationRequest,
@@ -66,6 +71,8 @@ class LazyNativeOwner:
             importlib.import_module(module)
 
     def _initialize(self, request: ModelInitializationRequest):
+        if self._cleanup_pending:
+            raise RuntimeError("Native model cleanup is unresolved")
         if request.model != self.identity:
             raise ValueError("Initialization request belongs to another model")
         self._prepare_rng()
@@ -75,6 +82,8 @@ class LazyNativeOwner:
         return ModelReady(self.identity, before)
 
     def get(self):
+        if self._cleanup_pending:
+            raise RuntimeError("Native model cleanup is unresolved")
         if self._value is not None:
             return self._value
         if self._constructor_rng is None:
@@ -90,10 +99,31 @@ class LazyNativeOwner:
         return self._value
 
     def shutdown(self):
-        value, self._value = self._value, None
-        close = getattr(value, "shutdown", None)
-        if close is not None:
-            close()
+        from astrolabe.runtime_support import cleanup_retry_allowed
+        with self._cleanup_lock:
+            value = self._value
+            if value is None:
+                return
+            if self._cleanup_running:
+                raise RuntimeError("Native model cleanup is already in progress")
+            if self._cleanup_error is not None and not cleanup_retry_allowed():
+                raise self._cleanup_error
+            self._cleanup_pending = True
+            self._cleanup_running = True
+        try:
+            close = getattr(value, "shutdown", None)
+            if close is not None:
+                close()
+        except BaseException as error:
+            with self._cleanup_lock:
+                self._cleanup_running = False
+                self._cleanup_error = error
+            raise
+        with self._cleanup_lock:
+            # Retain the only owner reference until shutdown actually succeeds.
+            self._value = None
+            self._cleanup_pending = self._cleanup_running = False
+            self._cleanup_error = None
 
 
 def native_score_artifact(evidence: Evidence):

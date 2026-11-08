@@ -110,11 +110,13 @@ class StartupScope:
 
     def cancel(self, *, retry_failed=False):
         """Retry only when the caller asserts adapter shutdown is idempotent."""
+        from astrolabe.runtime_support import cleanup_pass
         with self.lock:
             self.cancelled = True
             cleanups = [self._cleanups[id(owner)] for owner in reversed(self.owners)]
-        for cleanup in cleanups:
-            cleanup.close(retry_failed=retry_failed)
+        with cleanup_pass():
+            for cleanup in cleanups:
+                cleanup.close(retry_failed=retry_failed)
         if self.first_error is not None and not self.cleanup_report.complete:
             self.retain_errors(self.first_error)
         return self.cleanup_errors
@@ -491,10 +493,13 @@ def register_model_owner(owner) -> None:
 def model_run_scope():
     owners = StartupScope(parent=_RUN_OWNERS.get())
     token = _RUN_OWNERS.set(owners)
+    active_error = None
     try:
         yield owners
+    except BaseException as error:
+        active_error = error
+        raise
     finally:
-        active_error = sys.exc_info()[1]
         try:
             errors = owners.cancel()
         finally:

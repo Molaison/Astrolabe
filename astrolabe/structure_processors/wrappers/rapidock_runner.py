@@ -10,6 +10,9 @@ import threading
 import uuid
 from typing import Any, Dict, List
 
+from astrolabe.model_daemon import RequestOutcomeUnknown
+from astrolabe.stdio_daemon import json_line_request, positive_timeout, stop_owned_stdio_process
+
 
 _CACHE_PAYLOAD_VERSION = 4
 
@@ -66,6 +69,11 @@ class RAPiDockRunner:
         self.daemon_script_path = self._resolve_path(daemon_script_path, must_exist=True)
 
         self._proc: subprocess.Popen | None = None
+        self._unknown: RequestOutcomeUnknown | None = None
+        self._last_request_id: str | None = None
+        self._cleanup_pending = False
+        self.request_timeout = positive_timeout(self._get("request_timeout"))
+        self.startup_timeout = positive_timeout(self._get("startup_timeout"), default=600.0)
         self._lock = threading.RLock()
         self._response_cache_mem: Dict[str, List[str]] = {}
         self._cursor_mem: Dict[str, int] = {}
@@ -236,8 +244,14 @@ class RAPiDockRunner:
         os.replace(str(tmp_path), str(path))
 
     def _ensure_daemon(self) -> subprocess.Popen:
+        if self._unknown is not None:
+            raise self._unknown
+        if self._cleanup_pending:
+            raise RuntimeError("RAPiDock daemon cleanup is unresolved")
         if self._proc is not None and self._proc.poll() is None:
             return self._proc
+        if self._proc is not None:
+            self.shutdown()
 
         cmd = [
             str(self.python_bin),
@@ -264,6 +278,7 @@ class RAPiDockRunner:
             stderr=None,
             text=True,
             bufsize=1,
+            start_new_session=True,
         )
         self._proc = proc
         try:
@@ -290,36 +305,25 @@ class RAPiDockRunner:
                 )
                 if key in response
             }
-        except Exception:
-            self._proc = None
+        except Exception as error:
             try:
-                proc.terminate()
-                proc.wait(timeout=5)
-            except Exception:
-                try:
-                    proc.kill()
-                except Exception:
-                    pass
+                self.shutdown()
+            except Exception as cleanup_error:
+                error.add_note(f"RAPiDock startup cleanup remains unresolved: {cleanup_error!r}")
             raise
         return proc
 
     def _daemon_exchange(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         proc = self._proc
-        if proc is None or proc.poll() is not None:
+        if proc is None:
             raise RuntimeError("RAPiDock daemon exited unexpectedly.")
-        assert proc.stdin is not None
-        assert proc.stdout is not None
-        proc.stdin.write(json.dumps(payload) + "\n")
-        proc.stdin.flush()
-        line = proc.stdout.readline()
-        if not line:
-            raise RuntimeError("RAPiDock daemon exited unexpectedly.")
-        response = json.loads(line)
-        if response.get("type") == "error":
-            error_type = response.get("error_type") or "RuntimeError"
-            message = response.get("message") or "RAPiDock daemon returned an error."
-            raise RuntimeError(f"{error_type}: {message}")
-        return response
+        try:
+            return json_line_request(
+                proc, payload,
+                timeout=self.request_timeout if payload.get("type") == "dock" else self.startup_timeout)
+        except RequestOutcomeUnknown as error:
+            self._unknown = error
+            raise
 
     def _daemon_request(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         self._ensure_daemon()
@@ -327,6 +331,7 @@ class RAPiDockRunner:
 
     def _request_bank(self, *, name: str, protein_pdb: str, peptide_pdb: str) -> List[str]:
         request_id = uuid.uuid4().hex
+        self._last_request_id = request_id
         output_dir = self.work_dir / request_id
         output_dir.mkdir(parents=True, exist_ok=True)
         payload = {
@@ -344,19 +349,26 @@ class RAPiDockRunner:
         }
         response = self._daemon_request(payload)
         if response.get("type") != "result" or response.get("id") != request_id:
-            raise RuntimeError(f"Unexpected RAPiDock daemon response: {response}")
+            self._unknown = RequestOutcomeUnknown(
+                "Unexpected RAPiDock daemon response; not replayed", request_id=request_id)
+            raise self._unknown
 
-        results = response.get("results") or []
-        if not results:
-            raise RuntimeError("RAPiDock daemon returned no results.")
-        candidates = [
-            str(item.get("peptide_pdb"))
-            for item in (results[0].get("candidates") or [])
-            if item.get("peptide_pdb")
-        ]
-        if not candidates:
-            raise RuntimeError("RAPiDock daemon returned no candidate pdb paths.")
-        return candidates
+        try:
+            results = response.get("results") or []
+            if not results:
+                raise ValueError("RAPiDock daemon returned no results.")
+            candidates = [
+                str(item.get("peptide_pdb"))
+                for item in (results[0].get("candidates") or [])
+                if item.get("peptide_pdb")
+            ]
+            if not candidates:
+                raise ValueError("RAPiDock daemon returned no candidate pdb paths.")
+            return candidates
+        except Exception as error:
+            self._unknown = RequestOutcomeUnknown(
+                "RAPiDock output validation failed; not replayed", request_id=request_id)
+            raise self._unknown from error
 
     def ping(self) -> str:
         with self._lock:
@@ -388,19 +400,9 @@ class RAPiDockRunner:
     def _request_bank_with_retry(
         self, *, name: str, protein_pdb: str, peptide_pdb: str
     ) -> List[str]:
-        try:
-            return self._request_bank(
-                name=name,
-                protein_pdb=protein_pdb,
-                peptide_pdb=peptide_pdb,
-            )
-        except Exception:
-            self.shutdown()
-            return self._request_bank(
-                name=name,
-                protein_pdb=protein_pdb,
-                peptide_pdb=peptide_pdb,
-            )
+        # Kept as a compatibility seam; retries belong to the durable owner.
+        return self._request_bank(
+            name=name, protein_pdb=protein_pdb, peptide_pdb=peptide_pdb)
 
     def _load_or_request_bank(
         self,
@@ -411,6 +413,10 @@ class RAPiDockRunner:
         peptide_pdb: str,
         force_refresh: bool,
     ) -> List[str]:
+        if self._unknown is not None:
+            raise self._unknown
+        if self._cleanup_pending:
+            raise RuntimeError("RAPiDock daemon cleanup is unresolved")
         if self.response_cache and not force_refresh:
             candidates = self._load_cached_candidates(key)
             if candidates:
@@ -422,7 +428,13 @@ class RAPiDockRunner:
             peptide_pdb=peptide_pdb,
         )
         if self.response_cache:
-            self._store_cached_candidates(key, candidates)
+            try:
+                self._store_cached_candidates(key, candidates)
+            except Exception as error:
+                self._unknown = RequestOutcomeUnknown(
+                    "RAPiDock computed bank but cache publication failed",
+                    request_id=self._last_request_id)
+                raise self._unknown from error
             self._cursor_mem[key] = 0
         return candidates
 
@@ -449,14 +461,13 @@ class RAPiDockRunner:
         protein_path = str(self._resolve_path(protein_pdb, must_exist=True))
         peptide_path = str(self._resolve_path(peptide_pdb, must_exist=True))
 
-        if not self.response_cache:
-            return self._request_bank_with_retry(
-                name=name,
-                protein_pdb=protein_path,
-                peptide_pdb=peptide_path,
-            )[0]
-
         with self._lock:
+            if not self.response_cache:
+                return self._request_bank_with_retry(
+                    name=name,
+                    protein_pdb=protein_path,
+                    peptide_pdb=peptide_path,
+                )[0]
             key = self._cache_key(protein_pdb=protein_path, peptide_pdb=peptide_path)
             candidates = self._load_or_request_bank(
                 key=key,
@@ -500,19 +511,11 @@ class RAPiDockRunner:
             return candidate
 
     def shutdown(self) -> None:
-        proc = self._proc
-        if proc is None:
-            return
-        if proc.poll() is not None:
+        with self._lock:
+            proc = self._proc
+            if proc is None:
+                return
+            self._cleanup_pending = True
+            stop_owned_stdio_process(proc)
             self._proc = None
-            return
-        try:
-            with self._lock:
-                self._daemon_request({"type": "shutdown"})
-        except Exception:
-            pass
-        try:
-            proc.terminate()
-        except Exception:
-            pass
-        self._proc = None
+            self._cleanup_pending = False

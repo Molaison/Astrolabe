@@ -1101,7 +1101,9 @@ def test_measure_extensions_survive_raw_cut_and_are_visible_to_next_proposal(
             root / "raw-check" / attempt.identity[:12],
         )
         raw_receipts[attempt.key.named_round] = raw_receipt
-        assert not hasattr(raw_scores, "candidate_scores")
+        # StandardScores now declares this optional field; raw prediction must
+        # still have no measurement payload in it.
+        assert raw_scores.candidate_scores is None
         assert not hasattr(raw_scores, "posthoc_metric")
 
     members = {

@@ -237,8 +237,9 @@ def test_rapidock_runner_uses_content_cache_and_refreshes_after_bank_exhaustion(
     runner.shutdown()
 
 
-def test_rapidock_runner_retries_once_after_daemon_error(tmp_path: Path) -> None:
+def test_rapidock_runner_does_not_retry_unproven_daemon_error(tmp_path: Path) -> None:
     from astrolabe.structure_processors.wrappers.rapidock_runner import RAPiDockRunner
+    from astrolabe.model_daemon import RequestOutcomeUnknown
 
     repo_root = tmp_path / "rapidock_repo"
     daemon_path = _write_fake_rapidock_repo(repo_root, error_once=True)
@@ -262,16 +263,15 @@ def test_rapidock_runner_retries_once_after_daemon_error(tmp_path: Path) -> None
         }
     )
 
-    candidate = runner.dock_candidate(
-        name="retry_case",
-        protein_pdb=str(protein_path),
-        peptide_pdb=str(peptide_path),
-    )
-
-    assert Path(candidate).name == "candidate_1_1.pdb"
+    with pytest.raises(RequestOutcomeUnknown, match="transient failure"):
+        runner.dock_candidate(
+            name="retry_case",
+            protein_pdb=str(protein_path),
+            peptide_pdb=str(peptide_path),
+        )
     state = (repo_root / "RAPiDock" / "daemon_state.json").read_text(encoding="utf-8")
     assert '"error_once_handled": true' in state
-    assert '"dock_calls": 1' in state
+    assert '"dock_calls": 0' in state
     runner.shutdown()
 
 

@@ -59,7 +59,10 @@ def test_dplm_runner_close_releases_daemon_and_prevents_reuse(
     proc = _FakeProc()
     runner._proc = proc
     runner._proc_finalizer = weakref.finalize(runner, _terminate_process, proc)
-    monkeypatch.setattr(runner, "_daemon_request", lambda _payload: {"type": "ok"})
+    monkeypatch.setattr(
+        "astrolabe.mutators.wrappers.dplm_runner.stop_owned_stdio_process",
+        lambda owned: owned.terminate(),
+    )
 
     runner.close()
 

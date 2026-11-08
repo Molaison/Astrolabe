@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import contextmanager
-from contextvars import copy_context
+from contextvars import ContextVar, copy_context
 from dataclasses import dataclass, replace
 import logging
 import os
@@ -19,6 +19,30 @@ _T = TypeVar("_T")
 _U = TypeVar("_U")
 _V = TypeVar("_V")
 logger = logging.getLogger(__name__)
+_CLEANUP_RETRY = ContextVar("astrolabe_cleanup_retry", default=True)
+_CLEANUP_ATTEMPTS = ContextVar("astrolabe_cleanup_attempts", default=None)
+
+
+@contextmanager
+def cleanup_pass():
+    """One drain/retry may visit a shared failed child at most once."""
+    token = None
+    if _CLEANUP_ATTEMPTS.get() is None:
+        token = _CLEANUP_ATTEMPTS.set(set())
+    try:
+        yield _CLEANUP_ATTEMPTS.get()
+    finally:
+        if token is not None:
+            _CLEANUP_ATTEMPTS.reset(token)
+
+
+def cleanup_retry_allowed() -> bool:
+    """Propagate explicit retry intent through composite cleanup adapters.
+
+    A direct adapter shutdown is an explicit call. Automatic registry drains
+    set False, including when parent and child are both registered.
+    """
+    return _CLEANUP_RETRY.get()
 
 
 @dataclass(frozen=True)
@@ -84,6 +108,10 @@ class ResourceOwner:
                 self.close()
 
     def close(self, *, retry_failed: bool = False) -> CloseReport:
+        with cleanup_pass() as attempted:
+            return self._close(retry_failed=retry_failed, attempted=attempted)
+
+    def _close(self, *, retry_failed, attempted) -> CloseReport:
         with self._lock:
             self._close_requested = True
             if self._draining:
@@ -97,7 +125,8 @@ class ResourceOwner:
                 with self._lock:
                     candidate = next((
                         (identity, record) for identity, record in self._resources.items()
-                        if record.state == "pending" or identity in retry
+                        if record.state == "pending" or
+                        (identity in retry and identity not in attempted)
                     ), None)
                     if candidate is None:
                         # Atomically finish the drain relative to add().
@@ -105,6 +134,7 @@ class ResourceOwner:
                         owns_drain = False
                         return self.report
                     identity, record = candidate
+                    attempted.add(identity)
                     retry.discard(identity)
                     record = replace(record, state="closing", attempts=record.attempts + 1,
                                      error=None)
@@ -123,7 +153,11 @@ class ResourceOwner:
                     else:
                         method = getattr(record.resource, operation)
                     if operation is not None:
-                        method()
+                        token = _CLEANUP_RETRY.set(retry_failed and cleanup_retry_allowed())
+                        try:
+                            method()
+                        finally:
+                            _CLEANUP_RETRY.reset(token)
                     result = replace(record, state="closed" if operation else "skipped",
                                      operation=operation)
                 except BaseException as error:

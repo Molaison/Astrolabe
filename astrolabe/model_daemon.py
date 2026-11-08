@@ -1387,8 +1387,9 @@ class OwnedModelDaemon:
             connection.connect(str(self._socket_path))
             if _peer_uid(connection) != os.getuid():
                 raise PermissionError("daemon endpoint requires same UID")
-            connection.sendall(frame)
+            # sendall may transmit a prefix before raising or timing out.
             sent = True
+            connection.sendall(frame)
             connection.settimeout(timeout)
             response = _read_frame(connection, self.max_frame_bytes)
         except (socket.timeout, TimeoutError) as error:
@@ -1417,20 +1418,44 @@ class OwnedModelDaemon:
                     generation=self.generation,
                 ) from error
             raise DaemonDisconnected(f"{self.spec.backend} daemon disconnected") from error
+        except (ProtocolError, FrameTooLarge) as error:
+            if sent and message.get("type") == "infer":
+                raise RequestOutcomeUnknown(
+                    f"{self.spec.backend} response is invalid; outcome unknown; not replayed",
+                    request_id=request_id, generation=self.generation,
+                ) from error
+            raise
         finally:
             connection.close()
-        if response.get("protocol") != PROTOCOL:
-            raise ProtocolError("daemon protocol mismatch")
-        if response.get("request_id") != request_id:
-            raise ProtocolError("daemon response request id mismatch")
-        if response.get("generation") != self.generation:
-            raise ProtocolError("daemon response generation mismatch")
-        if response.get("identity") != self.identity:
-            raise IdentityMismatch("daemon identity handshake failed")
+        try:
+            if response.get("protocol") != PROTOCOL:
+                raise ProtocolError("daemon protocol mismatch")
+            if response.get("request_id") != request_id:
+                raise ProtocolError("daemon response request id mismatch")
+            if response.get("generation") != self.generation:
+                raise ProtocolError("daemon response generation mismatch")
+            # A matching request rejected by the server's pre-execution
+            # identity guard carries the server's identity, not the caller's.
+            rejected_identity = (
+                response.get("type") == "error" and response.get("code") == "identity_mismatch")
+            if response.get("identity") != self.identity and not rejected_identity:
+                raise IdentityMismatch("daemon identity handshake failed")
+        except (ProtocolError, IdentityMismatch) as error:
+            if message.get("type") == "infer":
+                raise RequestOutcomeUnknown(
+                    f"{self.spec.backend} response identity is invalid; outcome unknown; not replayed",
+                    request_id=request_id, generation=self.generation,
+                ) from error
+            raise
         if response.get("type") == "error":
             code = response.get("code")
             if code == "identity_mismatch":
                 raise IdentityMismatch("daemon identity handshake failed")
+            if code == "response_not_materializable":
+                raise RequestOutcomeUnknown(
+                    f"{self.spec.backend} executed but could not publish its response; not replayed",
+                    request_id=request_id, generation=self.generation,
+                )
             raise DaemonRequestFailed(
                 str(response.get("message") or code or "daemon request failed"),
                 remote_type=str(response.get("error_type") or code or "") or None,

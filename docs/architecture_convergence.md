@@ -66,3 +66,28 @@ its [qualification contract](https://github.com/Molaison/Astrolabe/blob/research
 separates historical native canaries from the outstanding current-main gates.
 That preservation branch includes old runtime dependencies and is not intended
 for a whole-tree merge.
+
+### P0 request, cleanup and recovery boundaries
+
+DPLM/RAPiDock no longer replay an uncertain scientific request or draw another
+seed after transport failure. Shared stdio transport binds the response ID and
+bounds partial writes/lines when a request timeout is configured. Socket
+response serialization and identity failures remain unknown after send.
+Collection preserves unknown through wrapped exceptions, leaving reconciliation
+and budget accounting with Runtime.
+
+ResourceOwner and StartupScope now publish cleanup receipts instead of marking
+an attempted close successful. Failed handles survive; explicit cleanup retry
+visits failed children without closing successful children again. Native
+refinement, NA-MPNN and stdio process adapters retain their inner owners until
+teardown succeeds. The CLI reports unresolved cleanup, preserves raw data, and
+keeps the original scientific exception when both operations fail.
+
+Release CPU coverage includes real process disconnect/malformed/identity/
+timeout injection, post-compute publication failure, cleanup/reentrancy faults,
+durable unknown accounting and raw/Score restart recovery. No scientific
+selection, mutation/stage commit, RNG policy or scoring algorithm was changed.
+The raw optional `candidate_scores` assertion now requires `None`, matching the
+existing data class; this is not permission to persist finalized scores in raw.
+Cross-version state migration, DPLM proposal-cursor persistence and lifecycle
+qualification of every backend remain outside this P0 change.

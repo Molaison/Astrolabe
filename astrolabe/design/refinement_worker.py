@@ -142,6 +142,9 @@ class _Worker:
         self.role = role
         self.lock = threading.Lock()
         self.closed = False
+        self._cleanup_requested = False
+        from astrolabe.runtime_support import ResourceOwner
+        self._cleanup = ResourceOwner()
         self.evaluators = {}
         self.constructor_count = 0
         self.finalizer = Finalize(self, self.shutdown, exitpriority=10)
@@ -245,25 +248,27 @@ class _Worker:
                     ),
                 }
                 _complete(self.session_root / "ready.json", self.readiness)
-        except BaseException:
-            self.shutdown()
+        except BaseException as error:
+            try:
+                self.shutdown()
+            except BaseException as cleanup_error:
+                error.add_note(f"refinement worker cleanup failed: {cleanup_error!r}")
+                error.cleanup_owner = self
             raise
 
     def shutdown(self):
+        from astrolabe.runtime_support import cleanup_retry_allowed
         if self.closed:
             return
-        self.closed = True
-        seen = set()
+        self._cleanup_requested = True
         for evaluator in self.evaluators.values():
-            if id(evaluator) in seen:
-                continue
-            seen.add(id(evaluator))
-            try:
-                close = getattr(evaluator, "shutdown", None)
-                if close is not None:
-                    close()
-            except Exception:
-                logging.exception("refinement worker evaluator shutdown failed")
+            self._cleanup.add(evaluator, "worker.evaluator")
+        report = self._cleanup.close(retry_failed=cleanup_retry_allowed())
+        self.closed = report.complete
+        if report.failed:
+            raise report.failed[0].error
+        if not report.complete:
+            raise RuntimeError("Refinement worker cleanup is still in progress")
 
     @contextmanager
     def _output(self, root: Path, seed: int):
@@ -442,7 +447,7 @@ class _Worker:
         from astrolabe.model_execution import capture_random_state
 
         started = time.perf_counter()
-        if self.closed or os.getpid() != self.pid:
+        if self.closed or self._cleanup_requested or os.getpid() != self.pid:
             raise RuntimeError("worker must be initialized in this spawned process")
         # Take an independent, JSON-only request snapshot before any side effects.
         task = json.loads(_json(task))

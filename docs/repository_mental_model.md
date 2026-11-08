@@ -53,6 +53,35 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 
 Use affected-owner tests and real CPU boundary probes before broad checks. Decision changes require accepted/rejected history, CSV rows and RNG replay; evidence changes require clone/filter/merge and transformation provenance; resource changes require acquisition/cleanup faults and bounded scheduling. Native model, GPU, end-to-end and measured throughput claims need separate evidence and were not established in this change.
 
+## P0 failure and cleanup protocols
+
+- DPLM and RAPiDock freeze each request once. A lost, malformed, mismatched or
+  unmaterializable response after send is `RequestOutcomeUnknown`; neither a
+  daemon restart nor a cache hit may bypass that fence. DPLM does not draw a
+  replacement seed. This adds no cross-process DPLM bank/cursor recovery.
+- Socket inference likewise treats partial-send failure and unproven response
+  identity/materialization as unknown. Explicit pre-execution server rejection
+  remains a known failure. Collection propagates unknown exception chains to
+  the durable owner instead of publishing a failed terminal job.
+- `ResourceOwner` keeps per-resource `CleanupRecord` receipts and returns a
+  `CloseReport`. Failed references stay reachable; ordinary repeated close
+  does not retry them. Only an explicit `close(retry_failed=True)` does.
+  A concurrent close reports draining, never successful release. Startup and
+  run scopes preserve the original exception and attach cleanup diagnostics.
+- Native refinement and NA-MPNN retain inner owners after cleanup failure.
+  DPLM/RAPiDock clear process handles only after owned process-group exit.
+  Cleanup is called outside lifecycle locks. Cleanup receipts prove adapter
+  completion, not unmeasured GPU allocator release for every backend.
+- The CLI retains raw artifacts if cleanup is unresolved. Durable prediction,
+  Score, collection and control receipts remain separate; journal identities,
+  RNG and charged attempts remain authoritative. Files, futures and logs
+  cannot authorize replay. Arbitrary cross-version checkpoint migration and
+  all-backend recovery are unsupported.
+
+The release CPU suite includes protocol fault injection, raw-only Score
+recovery and child-owner cleanup checks. Native scientific qualification and
+deployment evidence are recorded for the exact release separately.
+
 ## Proton integration boundary
 
 `proton_pottsmpnn` / `Proton-PottsMPNN` are lazy, protein-only joint sequence

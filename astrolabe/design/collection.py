@@ -18,7 +18,7 @@ from concurrent.futures import (
 from dataclasses import dataclass, replace
 from typing import Any, Callable, Iterable, Literal
 
-from astrolabe.design.runtime import OutcomeUnknown
+from astrolabe.design.runtime import OutcomeUnknown, outcome_is_unknown
 from astrolabe.utils.log_events import event_span
 
 
@@ -607,6 +607,12 @@ class CompletionPool:
                 raise
             except Exception as exc:
                 duration = time.monotonic() - started
+                if outcome_is_unknown(exc):
+                    span.finish(
+                        event="span_error", status="unknown",
+                        artifact=job.job_id, duration_s=duration,
+                    )
+                    raise OutcomeUnknown(job.job_id) from exc
                 span.error(exc, duration_s=duration)
                 return JobResult(
                     job=job,

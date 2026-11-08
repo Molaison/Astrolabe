@@ -27,6 +27,7 @@ import pathlib
 import pickle
 import random
 import shutil
+import sys
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -53,7 +54,7 @@ from astrolabe.evaluators.evidence import (
     attach_evaluation_records, merge_evidence_metadata, observe_evaluation_inputs,
 )
 from astrolabe.execution_audit import EvaluationJournal, write_execution_audit
-from astrolabe.runtime_support import ResourceOwner, ordered_cpu_overlap
+from astrolabe.runtime_support import CloseReport, ResourceOwner, ordered_cpu_overlap
 from astrolabe.argparser import parse_arguments
 from astrolabe.configuration import (
     dispatch_selected_search,
@@ -3218,7 +3219,7 @@ def run_optimization_loop(
     )
 
 
-def _shutdown_pipeline_resources() -> None:
+def _shutdown_pipeline_resources() -> CloseReport:
     """Release explicitly owned component resources once per instance."""
     try:
         owner = global_config.get_const("resource_owner")
@@ -3234,7 +3235,7 @@ def _shutdown_pipeline_resources() -> None:
                  else (components or {}).items())
         for alias, component in items:
             owner.add(component, f"{family}.{alias}")
-    owner.close()
+    return owner.close()
 
 
 def _finish_run_provenance(
@@ -3261,6 +3262,7 @@ def _run_pipeline(cfg) -> None:
     args = None
     recipe = None
     succeeded = False
+    active_error = None
     try:
         recovery = (
             cfg.get("recovery") if hasattr(cfg, "get")
@@ -3282,8 +3284,6 @@ def _run_pipeline(cfg) -> None:
                 raise ValueError("RFD4 CLI recovery is unsupported")
             from astrolabe.design.portable_native_builder import build_portable_native_recipe
             from astrolabe.design.portable_native_math import build_portable_native_math
-            import sys
-
             recipe = build_portable_native_recipe(
                 cfg, math_factory=build_portable_native_math,
                 run_module=sys.modules[__name__],
@@ -3334,22 +3334,46 @@ def _run_pipeline(cfg) -> None:
     except Exception as exc:
         # Include full traceback in debug/info logs.
         logging.exception("Pipeline failed")
+        active_error = exc
         _finish_run_provenance(args, "failed", error=exc)
         raise
     except BaseException as exc:
         # Interruptions (KeyboardInterrupt/SystemExit) must never be recorded as
         # completion; provenance keeps the failure visible for the run directory.
+        active_error = exc
         _finish_run_provenance(args, "interrupted", error=exc)
         raise
     else:
         _finish_run_provenance(args, "completed")
     finally:
+        cleanup_error = None
+        report = None
         try:
             if recipe is not None:
                 recipe.close()
-        finally:
-            _shutdown_pipeline_resources()
-            _cleanup_auto_managed_raw_dir(args=args, succeeded=succeeded)
+        except BaseException as error:
+            cleanup_error = error
+        try:
+            report = _shutdown_pipeline_resources()
+        except BaseException as error:
+            if cleanup_error is None:
+                cleanup_error = error
+            else:
+                cleanup_error.add_note(f"pipeline resource cleanup also failed: {error!r}")
+        if report is not None and not report.complete:
+            if cleanup_error is None:
+                cleanup_error = RuntimeError("Pipeline resources have unresolved cleanup")
+            cleanup_error.cleanup_report = report
+            cleanup_error.cleanup_owner = global_config.get_const("resource_owner")
+        _cleanup_auto_managed_raw_dir(
+            args=args, succeeded=succeeded and cleanup_error is None)
+        if cleanup_error is not None:
+            if active_error is not None:
+                active_error.add_note(f"pipeline cleanup failed: {cleanup_error!r}")
+                active_error.cleanup_error = cleanup_error
+            else:
+                _finish_run_provenance(args, "failed", error=cleanup_error)
+                raise cleanup_error
 
 
 def _cleanup_auto_managed_raw_dir(*, args, succeeded: bool) -> None:
