@@ -1919,6 +1919,10 @@ def _run_configured_refinement_locked(
             # Spawned Score workers do not initialize Rosetta in this process,
             # and their poses are deliberately absent from the score receipt.
             # Rebuild the parent's private selector view without rescoring.
+            # skip_complex_poses suppresses eager score views, not the native
+            # runtime required by a mutator's lazy pose-backed selector.
+            if bool(getattr(args, "enable_pyrosetta", False)) and bool(getattr(args, "skip_complex_poses", False)):
+                run_module._init_pyrosetta_runtime(structure_files=scores.complex_paths)
             run_module._ensure_evaluation_complex_poses(
                 args, scores, session.loss_computer,
             )
