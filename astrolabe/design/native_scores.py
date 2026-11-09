@@ -292,9 +292,9 @@ def _encode_value(
         with _active_guard(value, active):
             entries = []
             for key, item in value.items():
-                if not isinstance(key, str):
+                if not (isinstance(key, str) or type(key) is int):
                     raise UnsupportedNativeScoresState(
-                        "native score mapping keys must be strings"
+                        "native score mapping keys must be strings or integers"
                     )
                 entries.append([key, _encode_value(item, data, active)])
             return {"$dict": entries}
@@ -458,12 +458,12 @@ def _decode_value(
         entries = value["$dict"]
         if not isinstance(entries, list):
             raise ValueError("invalid native mapping value")
-        result: dict[str, Any] = {}
+        result: dict[str | int, Any] = {}
         for entry in entries:
             if (
                 not isinstance(entry, list)
                 or len(entry) != 2
-                or not isinstance(entry[0], str)
+                or not (isinstance(entry[0], str) or type(entry[0]) is int)
                 or entry[0] in result
             ):
                 raise ValueError("invalid or duplicate native mapping entry")
