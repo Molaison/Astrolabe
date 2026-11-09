@@ -691,6 +691,11 @@ def _selected_asset_manifest(cfg: Any) -> _SelectedAssetManifest:
     except (ImportError, TypeError, ValueError):
         objective_names = set()
     for name in sorted(objective_names):
+        if name in expression_terms and name not in loss_terms:
+            # Derived score expressions are strings, not component mappings.
+            # Their exact formulas are already bound by the canonical config.
+            components.append(_AssetComponent(f"objective:{name}", "expression", "config_only"))
+            continue
         configured = loss_terms.get(name, expression_terms.get(name))
         if configured is None:
             continue
