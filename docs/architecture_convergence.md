@@ -12,6 +12,7 @@ This is in-place migration on baseline `b537b8a`, not a second engine. Public CL
 | CPU overlap | Serial evaluator calls, ordered finalization, backpressure, propagated context. | No GPU scheduler or changed search policy. Final results remain retained; not a total-memory bound. |
 | Persistence | Atomic compatible CSV/provenance plus additive terminal execution audit. | No cross-file transaction, power-loss durability or exact checkpoint/resume. |
 | CPU dependency | NumPy confidence losses register without importing Torch. | Real tensor/device paths need their own environment evidence. |
+| Fresh root raw import | Explicit `root_prediction_receipt`, original worker validation, new raw/import/Score evidence; root inference count zero. | Not checkpoint migration; fresh isolated fixed-request root only, unchanged prediction inputs/assets. Child predictions and old unknown fences unchanged. |
 
 ## Compatibility and recovery
 

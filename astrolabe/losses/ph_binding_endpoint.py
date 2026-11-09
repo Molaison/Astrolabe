@@ -471,7 +471,11 @@ def ph_binding_endpoint(eval_result, metric, binder_chains, target_chains, local
         _require(proton_config is not None, "proton_config is required for live Proton")
         cfg = dict(proton_config)
         _require(set(cfg) == {'python_bin', 'repo_path', 'checkpoint_path', 'hbplus_bin'}, "proton_config requires exactly python_bin/repo_path/checkpoint_path/hbplus_bin")
-        cfg = {k: str(Path(v).expanduser().resolve(strict=True)) for k, v in cfg.items()}
+        # Resolving a venv's Python symlink selects the base interpreter and
+        # loses pyvenv.cfg/site-packages. Preserve its executable entry path.
+        cfg = {k: str(Path(v).expanduser().absolute() if k == 'python_bin'
+                      else Path(v).expanduser().resolve(strict=True)) for k, v in cfg.items()}
+        _require(Path(cfg['python_bin']).is_file(), "Proton python_bin does not exist")
     result = {}
     for name in eval_result.names:
         path = Path(eval_result.complex_paths[name]).resolve(strict=True)

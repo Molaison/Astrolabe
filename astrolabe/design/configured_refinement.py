@@ -60,6 +60,7 @@ _EXCLUDED_SCIENTIFIC_KEYS = frozenset(
         "scheduling",
         "summary_format",
         "task_name",
+        "root_prediction_receipt",
     }
 )
 _ASSET_MANIFEST_SCHEMA = "astrolabe.configured-refinement.assets/v1"
@@ -1550,12 +1551,83 @@ def _write_json_atomic(path: Path, value: Any) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _prepare_root_prediction_import(args, search, selected_assets, candidate):
+    """Verify a raw-only root in a separate source epoch, before model loading.
+
+    Deliberately not resume/migration: only loss configuration and the stage's
+    derived score expression may differ. Candidate/System bind the initialized
+    sequence, assembly, templates/MSAs and fixed constraints by content.
+    """
+    from omegaconf import OmegaConf
+    from .refinement_worker import read_root_prediction, _blob
+    from .runtime import ContractConflict
+
+    value = args.get("root_prediction_receipt")
+    if value is None:
+        return None
+    if (search.resume or search.execution_mode != "isolated"
+            or search.prediction_rng != "fixed_request"
+            or int(args.get("repeats", 1)) != 1):
+        raise ContractConflict("root_prediction_receipt requires one fresh isolated fixed_request run")
+    path = Path(str(value)).expanduser().resolve(strict=True)
+    source_root = path.parents[2]
+    if Path(args.out_dir).resolve() == source_root:
+        raise ContractConflict("root prediction import must use a NEW run directory")
+    receipt, source_data, original = read_root_prediction(path)
+    saved_path = source_root / "config.yaml"
+    saved_bytes = saved_path.read_bytes()
+    provenance = json.loads((source_root / "provenance.json").read_text())
+    if hashlib.sha256(saved_bytes).hexdigest() != provenance["config"]["sha256"]:
+        raise ContractConflict("source persisted config differs from its provenance")
+    saved = OmegaConf.create(saved_bytes.decode())
+    saved_search = _search_settings(saved)
+    if saved_search.prediction_rng != "fixed_request" or saved_search.execution_mode != "isolated":
+        raise ContractConflict("source root has no fixed-request isolated prediction contract")
+    saved_assets = _read_asset_manifest(source_root / ".framework" / "assets.json")
+    old_science, new_science = _scientific_config_payload(saved), _scientific_config_payload(args)
+    old_protocol = key_for((
+        "astrolabe.configured-refinement.protocol/v3",
+        key_for(("astrolabe.configured-refinement.scientific/v1", old_science)),
+        _asset_manifest_identity(saved_assets),
+    ))
+    if receipt["scoring_identity"] != old_protocol.digest:
+        raise ContractConflict("source receipt is not bound to its saved config/assets")
+    for payload in (old_science, new_science):
+        payload.pop("loss", None)
+        for stage in payload.get("stages", {}).values():
+            stage.pop("weighted_score_expression", None)
+    if old_science != new_science:
+        raise ContractConflict("root import prediction/input configuration changed")
+    # Ignore mutator/objective qualification: neither produced this root.
+    def prediction_assets(manifest):
+        record = _asset_manifest_record(manifest)
+        components = [item for item in record["components"] if item["role"].startswith("evaluator:")]
+        if not components or any(item["state"] not in {"hashed", "weight_free"} for item in components):
+            raise ContractConflict("root import evaluator assets cannot be content-verified")
+        return (components, [item for item in record["files"] if item["role"].startswith("evaluator:")])
+    if prediction_assets(saved_assets) != prediction_assets(selected_assets):
+        raise ContractConflict("root import selected prediction asset contents changed")
+    source_candidate = source_data.get(_blob(receipt["candidate_blob"]), design_codec)
+    if (source_candidate != candidate or receipt["seed"] != int(args.seed)
+            or receipt["sequence"] != _candidate_label(candidate)):
+        raise ContractConflict("root import initialized Candidate/System/sequence/seed changed")
+    # Confirm the original raw structures cover precisely the selected assembly.
+    from .native_scores import NATIVE_SCORES_ENVELOPE_CODEC
+    envelope = source_data.get(_blob(receipt["raw_scores"]), NATIVE_SCORES_ENVELOPE_CODEC)
+    assemblies = tuple(args.stages.default.oligo)
+    if {item.assembly for item in envelope.structures} != set(assemblies):
+        raise ContractConflict("root import raw structures do not match the selected assemblies")
+    return {"path": str(path), "source_sha256": hashlib.sha256(original).hexdigest()}
+
+
 def run_configured_refinement(cfg: Any, repeat: RepeatRun) -> dict[str, Any]:
     """Run one refinement repeat under the shared scientific state owner."""
 
     if not isinstance(repeat, RepeatRun):
         raise TypeError("repeat must be a design.repeats.RepeatRun")
     search = _search_settings(cfg)
+    if cfg.get("root_prediction_receipt") is not None and (repeat.total != 1 or repeat.index != 0):
+        raise ValueError("root_prediction_receipt requires exactly one repeat")
     run_cfg = _canonical_config(cfg, repeat, search)
     _validate_resume_root(run_cfg, search, repeat)
     selected_assets = _selected_asset_manifest(run_cfg)
@@ -1759,6 +1831,9 @@ def _run_configured_refinement_locked(
         if translated_assembly_names != assemblies:
             raise ValueError("translated assemblies differ from selected stage assemblies")
         expected_assemblies = assemblies
+        root_prediction_import = _prepare_root_prediction_import(
+            args, search, selected_assets, initial_candidate,
+        )
 
         def score_context(step):
             name = f"configured-refinement/score-context/{step}"
@@ -2040,6 +2115,7 @@ def _run_configured_refinement_locked(
                         model_sharing=search.model_sharing,
                         loss_order=lambda: tuple(session_holder["session"].loss_computer.loss_specs),
                         score_context=score_context,
+                        root_prediction_import=root_prediction_import,
                     )
                 else:
                     result = run_native_refinement(

@@ -88,7 +88,7 @@ def test_lazy_proposals_advance_on_parent_with_original_scope_and_wait_budget(tm
         ))
 
     owner = SimpleNamespace(data=data, job_codec=job_codec, proposal_codec=proposal_codec,
-                            runtime=runtime, _terminal=terminal)
+                            runtime=runtime, _terminal=terminal, root_prediction_import=None)
     pool = _PredictionPool(owner, SimpleNamespace(submit=lambda *args: remote_future))
     futures = [pool.submit(None, {
         "kind": "propose", "job": asdict(data.put(BranchJob("propose", i, 1, i), job_codec)),

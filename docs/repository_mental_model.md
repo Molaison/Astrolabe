@@ -97,6 +97,23 @@ feedback state in its original Runtime at proposal boundaries, including
 consumption by rejected proposals. Recovery validates prior proposal receipts
 before initialization and restores all selected projections before new mutation.
 Missing/stale state cannot authorize continuation; unknown stays unknown.
+An explicit top-level `root_prediction_receipt` can instead import a verified
+original raw-only `evaluate/0` (generation/step 0, no parent) into **one fresh
+isolated fixed-request run**, through `astrolabe run`. This is not checkpoint
+migration. Preflight binds original config/protocol/assets and initialized
+Candidate/System (including template/MSA content), sequence, assembly and seed;
+only loss configuration and the stage's derived score expression may differ.
+Unsupported evaluator assets or incomplete/corrupt evidence fail before model
+loading, without inference fallback. Mutator/objective assets are not prediction
+assets. The new run copies only reachable raw/RNG blobs and raw sidecars, keeps
+their original hashes, and saves the exact source receipt under
+`.prediction_workers/imports/`. Its new raw receipt has a
+`root_prediction_import` provenance bridge and `inference_count: 0`; original
+worker/timing metadata describe the historical inference, not new work. Score
+and its receipt belong to the new epoch. Child jobs still predict normally.
+Set this individual field to the absolute original
+`.prediction_workers/receipts/<hash>.json` and choose a new output/task; do not
+set `search.resume`. Old journals, checkpoints and unknown fences are untouched.
 DPLM requires `response_cache=false` for this durable profile. Predocker bank
 projections alone do not cover dynamic-site/sidecar state, so configured durable
 refinement rejects predockers before initialization. The legacy trajectory,
