@@ -41,6 +41,8 @@ _MUTATOR_DEFAULTS = {
     "dynamicmpnn": ("DynamicMPNN",), "surfdesign": ("SurfDesign",),
     "proton_pottsmpnn": ("ProtonPottsMPNN",),
     "proton-pottsmpnn": ("ProtonPottsMPNN",),
+    "vdm_pair": ("VDMPair",),
+    "vdm_proton": ("ProtonPottsMPNN",),
     "surfpro": ("SurfPro",), "carbondesign": ("CarbonDesign",),
     "dplm": ("DPLM",), "nampnn": ("NAMPNN",),
 }

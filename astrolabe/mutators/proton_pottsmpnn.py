@@ -660,6 +660,11 @@ class ProtonPottsMPNNMutator(Mutator):
         # This reservation belongs to one proposal step, never a permanent His lock.
         if runtime_config is not None:
             runtime_config.pop("network_pair_roles", None)
+        from astrolabe.mutators.wrappers.proton_pottsmpnn_runner import (
+            proton_request_seed_features,
+        )
+
+        seed_features = proton_request_seed_features(runtime_config)
         active_scores = self._active_scores(evaluation_scores, runtime_config)
         active_names = list(active_scores.names)
         if len(active_names) != 1:
@@ -836,6 +841,7 @@ class ProtonPottsMPNNMutator(Mutator):
                 "max_mutations": budget,
                 "pin_budget": pin_budget,
                 "n_jobs": self.n_jobs,
+                **seed_features,
             }
         return prepared
 
@@ -952,6 +958,8 @@ class ProtonPottsMPNNMutator(Mutator):
                 "designs_considered": output.get("designs_considered"),
                 "raw_output_path": output.get("raw_output_path"),
                 "seed_energies": output.get("seed_energies"),
+                "seed": output.get("seed"),
+                "seed_provenance": output.get("seed_provenance"),
                 "declared_network_pair_roles": network_pair_roles.get(binder_proto_name, {}),
                 "pair_identity_source": "deterministic supported canonical match; not an engine pair-id claim",
             }

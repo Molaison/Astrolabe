@@ -151,4 +151,24 @@ centres and native energies remain mutation evidence, not prediction confidence.
 `proton-states` and `proton-parity` are explicit opt-in commands, not automatic
 scientific acceptance. Patched source and external checkpoint/EV6 assets have
 separate provenance; see [installation](proton_installation.md) and
-[pH interfaces](ph_sensitive_design.md). This port adds no AF3 or vdM implementation.
+[pH interfaces](ph_sensitive_design.md). No AF3 implementation is changed here.
+
+`vdm_pair` and `vdm_proton` use the same native factory/selection boundaries.
+The former searches natural pair geometry and supplies a fresh preview/role
+packet; the latter consumes those validated roles for local Proton redesign.
+Root site-map identity, fixed pair/target positions and the shared mutation
+budget remain scientific inputs, not an opportunity to reuse stale previews.
+The qualified geometry and role helpers are retained rather than replacing
+the current orchestration or Proton resource ownership.
+The surface selector accepts explicit `core_cutoff`/`surface_cutoff` SASA
+values in A^2. The vdM task selects its historical 20/40 values explicitly;
+omitting them preserves the current defaults for unrelated tasks.
+
+`ph_binding_endpoint` exposes raw local-His three-system S/P differences for
+Proton H, ref2015 and fa_elec. Explicit frozen residue masks and disjoint
+physical chain lists define the compared systems. Proton canonical reference
+tokens are installed before encoding; Rosetta uses isolated, fixed-backbone
+local repack/chi-minimization with matched bound/free seeds. Normalization and
+metric combinations stay in existing `loss.expression_terms`. Archived-table
+and same-saved-pose readout parity is distinct from new live model/relaxation
+or end-to-end optimization qualification; none implies experimental pH efficacy.

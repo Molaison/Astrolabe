@@ -134,3 +134,19 @@ Release CPU checks include the new protocol suites and a configured-refinement
 cut after proposal terminal publication: the resumed next proposal matches the
 uninterrupted baseline. Native scientific canary, CI and deployed commit
 identities are recorded separately in release evidence.
+
+## Native vdM and normalized pH metric integration
+
+The qualified vdM pair proposal, role projection and local Proton adapter are
+integrated through the existing native mutator factory rather than restoring
+the historical base/runtime wholesale. Fixed/target constraints, starting-root
+site identity, proposal budgets and current ResourceOwner/seed boundaries remain
+owned by their existing components. Frozen historical runs are not migrated.
+
+The raw `ph_binding_endpoint` loss supplies local three-system Proton-H,
+Rosetta and fa_elec S/P descriptors. Shared normalization/ensemble expressions
+use the existing LossEngine; they do not introduce a second optimization loop.
+Saved float32 Proton tables are promoted before changed-entry subtraction.
+Old/new Rosetta readouts agree on the same saved poses; serialized-pose versus
+original in-memory differences are retained separately. These checks do not
+establish live model/relaxation parity or experimentally calibrated pH release.

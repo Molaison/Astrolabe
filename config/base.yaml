@@ -952,6 +952,8 @@ mutator:
     startup_timeout: 600
     request_timeout: null
     output_dir: null
+  VDMPair:
+    library_path: ${oc.env:GH_VDM_PAIR_LIBRARY,null}
   ProtonPottsMPNN:
     # Joint Potts energy optimizer from christian-creator/ProtonPottsMPNN.
     # It is not an independent per-position probability model: one coherent

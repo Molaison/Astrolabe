@@ -199,6 +199,8 @@ def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path", *,
                 "far_apart_tied_multitarget_ligandmpnn": ("LigandMPNN",),
                 "proton_pottsmpnn": ("ProtonPottsMPNN",),
                 "proton-pottsmpnn": ("ProtonPottsMPNN",),
+                "vdm_pair": ("VDMPair",),
+                "vdm_proton": ("ProtonPottsMPNN",),
                 "dynamicmpnn": ("DynamicMPNN",), "surfdesign": ("SurfDesign",),
                 "surfpro": ("SurfPro",), "carbondesign": ("CarbonDesign",),
                 "dplm": ("DPLM",), "nampnn": ("NAMPNN",),
@@ -590,3 +592,89 @@ def _build_nampnn_mutator(term_conf, *, alias, mutator_conf, raw_model_results_d
         sequence_model_runner=sequence_model_runner,
         **mutator_kwargs,
     )
+
+
+@register_mutator_factory("vdm_pair")
+def _build_vdm_pair_mutator(term_conf, *, alias, mutator_conf, raw_model_results_dir):
+    """Build vdM via the same native registry, selector and stage as other mutators."""
+    from astrolabe.mutators.vdm import VdmPairMutator
+
+    conf = dict(term_conf)
+    network_only = conf.pop("network_only", None)
+    if network_only is not None and network_only is not True:
+        raise ValueError("vdm_pair generates network pairs only; network_only=false is incompatible.")
+    defaults = getattr(mutator_conf, "VDMPair", None) or {}
+    library = conf.pop("library_path", None) or defaults.get("library_path")
+    if not library:
+        raise ValueError("vdm_pair requires mutator.VDMPair.library_path or GH_VDM_PAIR_LIBRARY.")
+    # LigandMPNN is the existing consumer of the shared aa_bias schema.  Until
+    # vdM implements the same semantics, reject explicit rules rather than
+    # silently ignoring them and changing the requested design space.
+    ligand = getattr(mutator_conf, "LigandMPNN", None) or {}
+    for field in ("bias_AA", "bias_AA_per_residue", "bias_AA_per_residue_multi",
+                  "omit_AA_per_residue", "omit_AA_per_residue_multi"):
+        value = ligand.get(field)
+        if value not in (None, "", {}, []):
+            raise ValueError(f"vdm_pair does not yet support configured aa_bias.{field}.")
+
+    mutator = VdmPairMutator(library_path=library, **conf)
+    mutator.preview_dir = pathlib.Path(raw_model_results_dir) / "vdm_pair_previews" / str(alias)
+
+    # Existing ph_core_network can share a Proton scorer via runtime_key even
+    # when vdM replaces the Proton mutator.  A nonempty key is an explicit
+    # opt-in; without it a standalone vdM has no Proton runtime dependency.
+    proton = getattr(mutator_conf, "ProtonPottsMPNN", None)
+    if proton is not None and proton.get("runtime_key"):
+        from astrolabe.mutators.wrappers.proton_pottsmpnn_runner import get_shared_proton_runner
+
+        runner_conf = OmegaConf.to_container(proton, resolve=True) if OmegaConf.is_config(proton) else dict(proton)
+        key = str(runner_conf.pop("runtime_key"))
+        for field in ("binder_chain", "n_jobs", "preserve_disulfides", "protect_gly_pro",
+                      "reference_sequence", "max_total_mutations", "network_proposal",
+                      "network_only", "criteria"):
+            runner_conf.pop(field, None)
+        runner_conf["output_dir"] = str(pathlib.Path(raw_model_results_dir) / "ProtonPottsMPNN")
+        try:
+            get_shared_proton_runner(key=key)
+        except RuntimeError as exc:
+            if "No live shared Proton-PottsMPNN runner" not in str(exc):
+                raise
+            get_shared_proton_runner(config=runner_conf, key=key)
+    return mutator
+
+
+@register_mutator_factory("vdm_proton")
+def _build_vdm_proton_mutator(
+    term_conf, *, alias, mutator_conf, raw_model_results_dir
+):
+    from astrolabe.mutators.vdm_proton import VdmProtonMutator
+    from astrolabe.mutators.wrappers.proton_pottsmpnn_runner import (
+        ProtonPottsMPNNRunner, get_shared_proton_runner,
+    )
+
+    # Use the same native Proton configuration and optional shared daemon as
+    # proton_pottsmpnn; packet paths remain term-local adapter arguments.
+    base_conf = mutator_conf.ProtonPottsMPNN
+    overrides = dict(term_conf)
+    term_criteria = overrides.pop("criteria", None)
+    runner_conf, kwargs = _merge_runner_conf(base_conf, overrides)
+    if term_criteria is not None:
+        base_criteria = base_conf.get("criteria") or {}
+        runner_conf["criteria"] = OmegaConf.merge(
+            OmegaConf.to_container(base_criteria, resolve=True)
+            if OmegaConf.is_config(base_criteria) else dict(base_criteria),
+            term_criteria,
+        )
+    runner_conf["output_dir"] = str(raw_model_results_dir / f"VdmProton_{alias}")
+    for key in ("binder_chain", "n_jobs", "preserve_disulfides", "protect_gly_pro",
+                "reference_sequence", "max_total_mutations", "network_proposal", "network_only"):
+        if key in runner_conf:
+            kwargs[key] = runner_conf.pop(key)
+    if "criteria" in runner_conf:
+        kwargs["criteria"] = OmegaConf.to_container(runner_conf.pop("criteria"), resolve=True)
+    runtime_key = runner_conf.pop("runtime_key", None)
+    if runtime_key:
+        runner_conf["output_dir"] = str(raw_model_results_dir / "ProtonPottsMPNN")
+    runner = (get_shared_proton_runner(config=runner_conf, key=str(runtime_key))
+              if runtime_key else ProtonPottsMPNNRunner(runner_conf))
+    return VdmProtonMutator(sequence_model_runner=runner, **kwargs)

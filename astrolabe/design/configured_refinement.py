@@ -1828,6 +1828,7 @@ def _run_configured_refinement_locked(
         ) -> NativeProposal:
             del parent, generation, parent_id, proposal_index, output
             set_random_seeds(seed)
+            runtime_config["proposal_seed"] = seed
             global_config.set_variable("step", int(step))
             try:
                 session = session_holder["session"]

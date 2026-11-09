@@ -27,6 +27,8 @@ NATIVE_REGISTRY_CODE_VERSION = "astrolabe-native-registry/v1"
 _COMPONENT_CONFIG_ALIASES = {
     "proton_pottsmpnn": "protonpottsmpnn",
     "proton-pottsmpnn": "protonpottsmpnn",
+    "vdm_proton": "protonpottsmpnn",
+    "vdm_pair": "vdmpair",
     "proteinmpnn": "ligandmpnn",
     "multistate_proteinmpnn": "ligandmpnn",
     "far_apart_tied_multitarget_ligandmpnn": "ligandmpnn",
@@ -207,6 +209,10 @@ def _selected_config(
     component_keys.update(_COMPONENT_CONFIG_ALIASES.values())
     component_keys.add(type_name.casefold())
 
+    selected_bases = {selected_base}
+    if type_name.casefold() == "vdm_pair":
+        # The pair factory reads shared Proton scoring and AA-bias constraints.
+        selected_bases.update({"protonpottsmpnn", "ligandmpnn"})
     selected: dict[str, Any] = {}
     items = config.items() if isinstance(config, Mapping) else ()
     for raw_name, value in items:
@@ -216,7 +222,7 @@ def _selected_config(
             continue
         if name == "enabled_aliases":
             continue
-        if folded in component_keys and folded != selected_base:
+        if folded in component_keys and folded not in selected_bases:
             continue
         selected[name] = resolve(
             value,
