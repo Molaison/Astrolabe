@@ -1594,6 +1594,11 @@ def _prepare_root_prediction_import(args, search, selected_assets, candidate):
         raise ContractConflict("source receipt is not bound to its saved config/assets")
     for payload in (old_science, new_science):
         payload.pop("loss", None)
+        # These broker-only controls cannot change a completed prediction.
+        # Device allocation, execution mode and all prediction controls remain
+        # exact; import never relaxes live resource admission.
+        for key in ("telemetry_path", "telemetry_recovery"):
+            payload.get("execution", {}).pop(key, None)
         for stage in payload.get("stages", {}).values():
             stage.pop("weighted_score_expression", None)
     if old_science != new_science:
