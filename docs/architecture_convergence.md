@@ -151,3 +151,18 @@ Saved float32 Proton tables are promoted before changed-entry subtraction.
 Old/new Rosetta readouts agree on the same saved poses; serialized-pose versus
 original in-memory differences are retained separately. These checks do not
 establish live model/relaxation parity or experimentally calibrated pH release.
+
+
+## 2026-11-10: configured budget stop and read-only finalization
+
+The TNFa p10/p14 run produced 66 complete Scores, but the configured builder
+forced `cap_error=True` and did not expose a generation stop. The builder now
+uses normal proposal-cap termination and accepts explicit
+`search.max_generations` (root generation zero); `steps` is not reinterpreted.
+
+An explicit native CLI budget-snapshot export validates a terminal/drained old
+journal and completed measurement evidence, then writes a separate result.
+It neither bypasses source-bound resume contracts nor writes old checkpoints,
+receipts or failed provenance. The historical generation-13 overrun remains
+reported. Scope: CPU/control-flow checks and read-only export from the actual
+retained run; no new AF3/Proton inference or pH experimental validation.

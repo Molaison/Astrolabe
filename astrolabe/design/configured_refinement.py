@@ -36,6 +36,7 @@ _SEARCH_KEYS = frozenset(
         "width",
         "proposals_per_parent",
         "max_evaluations",
+        "max_generations",
         "proposal_cap",
         "measurement",
         "resume",
@@ -125,6 +126,7 @@ class _SearchSettings:
     evaluation_width: int
     prediction_rng: str
     model_sharing: str
+    max_generations: int | None = None
 
 
 @dataclass(frozen=True)
@@ -240,6 +242,9 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         {"max_evaluations": search.get("max_evaluations", cfg.get("steps"))},
         "max_evaluations",
     )
+    max_generations = search.get("max_generations")
+    if max_generations is not None and (type(max_generations) is not int or max_generations < 0):
+        raise ValueError("cfg.search.max_generations must be null or a non-negative integer")
     raw_proposal_cap = search.get("proposal_cap")
     proposal_cap = (
         max(1, max_evaluations - 1)
@@ -302,6 +307,7 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         evaluation_width=in_flight,
         prediction_rng=prediction_rng,
         model_sharing=sharing,
+        max_generations=max_generations,
     )
 
 
@@ -1184,6 +1190,7 @@ def _canonical_config(cfg: Any, repeat: RepeatRun, search: _SearchSettings) -> A
             "width": search.width,
             "proposals_per_parent": search.proposals_per_parent,
             "max_evaluations": search.max_evaluations,
+            "max_generations": search.max_generations,
             "proposal_cap": search.proposal_cap,
             "measurement": search.measurement,
             "summary_format": search.summary_format,
@@ -1599,6 +1606,8 @@ def _prepare_root_prediction_import(args, search, selected_assets, candidate):
         # exact; import never relaxes live resource admission.
         for key in ("telemetry_path", "telemetry_recovery"):
             payload.get("execution", {}).pop(key, None)
+        # A future generation stop cannot change an already completed root.
+        payload.get("search", {}).pop("max_generations", None)
         for stage in payload.get("stages", {}).values():
             stage.pop("weighted_score_expression", None)
     if old_science != new_science:
@@ -2035,7 +2044,8 @@ def _run_configured_refinement_locked(
                 search.execution_mode == "serial"
                 and search.proposal_batch_size == 1
             ),
-            cap_error=True,
+            max_generations=search.max_generations,
+            cap_error=False,
         )
 
         journal_path = output / "01_evaluations.jsonl"
@@ -2074,6 +2084,7 @@ def _run_configured_refinement_locked(
                             "width": search.width,
                             "proposals_per_parent": search.proposals_per_parent,
                             "max_evaluations": search.max_evaluations,
+                            "max_generations": search.max_generations,
                             "proposal_cap": search.proposal_cap,
                             "assemblies": assemblies,
                             "proposal_batch_size": search.proposal_batch_size,
@@ -2179,6 +2190,7 @@ def _run_configured_refinement_locked(
                         "width": search.width,
                         "proposals_per_parent": search.proposals_per_parent,
                         "max_evaluations": search.max_evaluations,
+                        "max_generations": search.max_generations,
                         "proposal_cap": search.proposal_cap,
                         "proposal_batch_size": search.proposal_batch_size,
                         "execution": {

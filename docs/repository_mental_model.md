@@ -82,6 +82,22 @@ The release CPU suite includes protocol fault injection, raw-only Score
 recovery and child-owner cleanup checks. Native scientific qualification and
 deployment evidence are recorded for the exact release separately.
 
+## Configured search limits and budget snapshots
+
+Configured native branching stops normally when its `search.proposal_cap` is
+exhausted, even when deduplication or scientific rejection leaves fewer than
+`search.max_evaluations` scored members. `steps` remains the evaluation-budget
+fallback, not a generation limit. Set `search.max_generations` explicitly:
+generation zero is the evaluated root, and a limit of 12 prevents generation 13.
+`null` preserves an unbounded generation count; zero evaluates the root only.
+
+`astrolabe run --finalize-run RUN --finalize-output DIR` derives a budget-stop
+beam from a terminal, drained configured refinement journal. The source run is
+read-only; the separate output binds its checkpoint and completed measurements.
+It does not resume the old policy, migrate a checkpoint, rerun a model or change
+an original failed provenance to completed. `--dry-run` validates without
+exporting. Missing, corrupt, pending or unknown evidence cannot be finalized.
+
 ## Scientific restoration and initialization protocols
 
 Runtime contexts retain an immutable run identity. Old explicit stores remain

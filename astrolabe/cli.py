@@ -646,6 +646,23 @@ def _probe_rapidock_daemon(
 
 
 def _cmd_run(ns: argparse.Namespace) -> int:
+    if getattr(ns, "finalize_run", None) or getattr(ns, "finalize_output", None):
+        if not getattr(ns, "finalize_run", None) or not getattr(ns, "finalize_output", None):
+            raise ValueError("--finalize-run and --finalize-output must be supplied together")
+        if any(getattr(ns, field, None) for field in (
+            "task", "standalone", "overlay", "overrides", "overrides_file",
+            "hydra_overrides", "config_dir", "print_config", "autoselect_gpu",
+        )) or not getattr(ns, "chdir", True):
+            raise ValueError("Finalization cannot be mixed with run configuration, overrides or GPU options")
+        from astrolabe.design.refinement_finalization import finalize_run
+        summary = finalize_run(ns.finalize_run, ns.finalize_output, dry_run=ns.dry_run)
+        print(json.dumps({
+            "dry_run": bool(ns.dry_run), "out_dir": summary["out_dir"],
+            "finalization": summary["finalization"],
+            "evaluations": len(summary["evaluations"]),
+            "selected_evaluation_ids": [member["evaluation_id"] for member in summary["beam"]],
+        }, indent=2, allow_nan=False))
+        return 0
     if not any(
         [
             getattr(ns, "task", None),
@@ -6571,6 +6588,14 @@ def _build_parser() -> argparse.ArgumentParser:
             "Use -o/--overlay to layer an overlay on top of the chosen base."
         ),
         formatter_class=argparse.RawTextHelpFormatter,
+    )
+    run_p.add_argument(
+        "--finalize-run", default=None, metavar="RUN",
+        help="Read-only derivative export of a drained, proposal-cap-failed native run; never resumes optimization.",
+    )
+    run_p.add_argument(
+        "--finalize-output", default=None, metavar="DIR",
+        help="New directory outside the source run for final beam and finalization receipt. --dry-run validates without writing.",
     )
     run_p.add_argument(
         "-t",

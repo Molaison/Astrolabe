@@ -428,6 +428,9 @@ def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=F
     boolean(read("search", "resume"), "search.resume")
     native = read("search", "algorithm") == "branching" and read("search", "owner") == "native_refinement"
     if native:
+        generations = read("search", "max_generations")
+        if generations is not _MISSING and generations is not None and (type(generations) is not int or generations < 0):
+            fail("search.max_generations", "expected null or a non-negative integer")
         for key in ("width", "proposals_per_parent", "max_evaluations", "proposal_cap"):
             value = read("search", key)
             if value is None and key == "proposal_cap":
