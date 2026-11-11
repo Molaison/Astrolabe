@@ -18,6 +18,8 @@ import tempfile
 from typing import Any, Generic, TypeVar
 from urllib.parse import quote
 
+from astrolabe.profiling import profiled
+
 from . import types as design_types
 from .types import Blob, Codec, Key
 
@@ -500,6 +502,7 @@ class DataStore:
         self._codecs.setdefault(identity, codec)
         return codec
 
+    @profiled("datastore.put")
     def put(self, value: Any, codec: Codec[Any]) -> Blob:
         self.register(codec)
         if self.root is not None and getattr(codec, "persistent", True) is False:
@@ -522,6 +525,7 @@ class DataStore:
         self._memory[reference] = encoded
         return reference
 
+    @profiled("datastore.get")
     def get(
         self,
         reference: Blob,
@@ -558,6 +562,7 @@ class DataStore:
             raise TypeError("codec.references() must return tuple[Blob, ...]")
         return value
 
+    @profiled("datastore.persist")
     def persist(self, references: tuple[Blob, ...]) -> None:
         """Validate and durably write the complete referenced-closure."""
 

@@ -13,6 +13,8 @@ import json
 from pathlib import Path
 import sqlite3
 
+from astrolabe.profiling import profiled
+
 from astrolabe.model_execution import capture_random_state, restore_random_state
 from astrolabe.model_daemon import (
     DaemonChildExited,
@@ -164,12 +166,14 @@ class Runtime:
             self.close()
             raise
 
+    @profiled("runtime.read")
     def _read(self, kind, name):
         if self._connection is None:
             return deepcopy(self._memory.get((kind, name)))
         row = self._connection.execute("SELECT value FROM records WHERE kind=? AND name=?", (kind, name)).fetchone()
         return json.loads(row[0]) if row else None
 
+    @profiled("runtime.write")
     def _write(self, kind, name, value):
         if self._closed:
             raise RuntimeError("Runtime is closed")
@@ -190,6 +194,7 @@ class Runtime:
         if self.root is not None:
             self.data.persist(tuple(ref for ref in references if ref is not None))
 
+    @profiled("runtime.save")
     def save(self, name, value, codec=design_codec):
         reference = self.data.put(value, codec)
         self._durable(reference)

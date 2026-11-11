@@ -438,6 +438,10 @@ def _case_specs(work_root: Path, repo_root: Path) -> list[Case]:
 
     cases = [
         Case(("run",), configured("run", "--task", "benchmark_binder_v1_4", "--dry-run"), require_stdout=True),
+        Case(("profile", "report"), ("profile", "report", p("missing_profile")),
+             expected_returncode=1, stderr_contains="Session directory does not exist"),
+        Case(("profile", "compare"), ("profile", "compare", p("missing_profile"), p("missing_candidate_profile")),
+             expected_returncode=1, stderr_contains="Session directory does not exist"),
         Case(("setup",), configured("setup", "--profile", "cpu", "--root", p("install_root"), "--dry-run", "--json"), require_stdout=True, json_stdout=True),
         Case(("doctor",), configured("doctor"), require_stdout=True),
         Case(("demo",), ("demo", "--out-dir", p("cpu_demo")), require_stdout=True, json_stdout=True, artifacts=(p("cpu_demo/onboarding.json"),), timeout_seconds=300.0),

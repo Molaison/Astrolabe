@@ -12,6 +12,8 @@ import inspect
 import math
 from typing import Literal
 
+from astrolabe.profiling import span
+
 from .branch_types import (
     BranchAction,
     BranchEvent,
@@ -1003,7 +1005,8 @@ class BranchingPolicy:
             raise ValueError(
                 "comparison_context mismatch requires explicit reassessment"
             )
-        selected = self.selection(eligible, self.width)
+        with span("beam.selection", candidates=len(eligible), width=self.width):
+            selected = self.selection(eligible, self.width)
         if not isinstance(selected, tuple):
             raise TypeError("selection callback must return a tuple")
         by_id = {member.id: member for member in eligible}

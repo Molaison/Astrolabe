@@ -3469,12 +3469,13 @@ def run_repeats(
     """Validate first, then own resources around the scientific repeat lifecycle."""
     from astrolabe.startup_validation import validate_startup_config
     from astrolabe.runtime.session import resource_session
+    from astrolabe.profiling.integration import configured_profile
 
     validate_startup_config(base_cfg, require_inputs=True)
     execution = base_cfg.get("execution") if hasattr(base_cfg, "get") else None
     if OmegaConf.is_config(execution):
         execution = OmegaConf.to_container(execution, resolve=True)
-    with resource_session(execution):
+    with configured_profile(base_cfg), resource_session(execution):
         _run_repeats_owned(base_cfg, on_stop_requested=on_stop_requested)
 
 
@@ -3510,7 +3511,8 @@ def _run_repeats_owned(
         global_config.reset()
         print(f"=== Repeat {repeat.number}/{repeat.total} ===")
         from astrolabe.model_execution import model_run_scope
-        with model_run_scope():
+        from astrolabe.profiling import span
+        with span("run.repeat", repeat=repeat.number, seed=repeat.seed), model_run_scope():
             if not dispatch_selected_search(run_cfg, repeat):
                 _run_pipeline(run_cfg)
         if stop_requested():

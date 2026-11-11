@@ -208,6 +208,50 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
     if not isinstance(raw, dict):
         raise StartupValidationError("config: expected a mapping")
 
+    from astrolabe.profiling import ProfileConfig
+    try:
+        profiling = cfg.get("profiling")
+        if OmegaConf.is_config(profiling):
+            if resolve_environment:
+                profiling = OmegaConf.to_container(profiling, resolve=True)
+            else:
+                from omegaconf.errors import InterpolationResolutionError, MissingMandatoryValue
+
+                # Resolve references that are available without requiring unused
+                # machine environment values during a config-only preview.
+                preview = OmegaConf.to_container(profiling, resolve=False)
+                if not isinstance(preview, dict):
+                    ProfileConfig.from_mapping(preview)
+                defaults = ProfileConfig().as_dict()
+                for key, value in preview.items():
+                    if key not in defaults or "${" not in str(value):
+                        continue
+                    if isinstance(value, (dict, list)) and (
+                        key != "modules" or not isinstance(value, list)
+                    ):
+                        # Interpolation cannot turn an already declared
+                        # container into a scalar configuration field.
+                        continue
+                    try:
+                        resolved = profiling[key]
+                        preview[key] = (
+                            OmegaConf.to_container(resolved, resolve=True)
+                            if OmegaConf.is_config(resolved) else resolved
+                        )
+                    except (InterpolationResolutionError, MissingMandatoryValue):
+                        # Keep literal list entries subject to their own type
+                        # checks even when another pattern is not yet resolved.
+                        preview[key] = (
+                            ["*" if isinstance(item, str) and "${" in item else item
+                             for item in value]
+                            if key == "modules" and isinstance(value, list)
+                            else defaults[key]
+                        )
+                profiling = preview
+        ProfileConfig.from_mapping(profiling)
+    except (TypeError, ValueError) as exc:
+        errors.append(f"profiling: {exc}")
+
     reference_info = {}
     errors.extend(validate_task_config(
         cfg, raw=raw, resolve_environment=resolve_environment,

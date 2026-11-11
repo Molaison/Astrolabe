@@ -10,6 +10,8 @@ from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import ALL_COMPLETED, FIRST_COMPLETED, Future, wait
 from typing import Any, TypeVar, cast
 
+from astrolabe.profiling import span
+
 from .branch_types import BranchAction, BranchEvent, BranchJob, BranchTerminal
 
 
@@ -203,10 +205,11 @@ class BranchExecutor:
             for future in pending:
                 heads.setdefault(self.one_pending[future].phase, future)
             waiting = list(heads.values())
-        ready, _ = wait(
-            waiting,
-            return_when=return_when,
-        )
+        with span("beam.wait", mode=action.wait, pending=len(pending), waiting=len(waiting)):
+            ready, _ = wait(
+                waiting,
+                return_when=return_when,
+            )
         if self._ordered_results:
             ordered = []
             blocked: set[str] = set()
@@ -296,7 +299,8 @@ def gather_ordered(
             pending[future] = next_index
             next_index += 1
 
-        ready, _ = wait(tuple(pending), return_when=FIRST_COMPLETED)
+        with span("beam.wait", mode="any", pending=len(pending)):
+            ready, _ = wait(tuple(pending), return_when=FIRST_COMPLETED)
         ordered = sorted(ready, key=pending.__getitem__)
 
         raw_results, errors = _observe_futures(ordered)

@@ -16,6 +16,7 @@ import threading
 from typing import Any, Callable
 
 from astrolabe.core import global_config
+from astrolabe.profiling import span
 from astrolabe.mutators.rfd4_types import GenerationResult
 
 from .generated_structure import (
@@ -512,27 +513,28 @@ class NativeMutationOperation(FunctionOperation[ProposeRequest, Proposals]):
 
         selected_protomers = self._scope_mapping()
         response = None
-        if has_native_prepared:
-            owner_blob = _role_blob(prepared, "native-prepared", _RUNTIME_CONFIG_CODEC.identity)
-            response = mutator.mutate_prepared(
-                data.get(owner_blob, _RUNTIME_CONFIG_CODEC),
-                selected_protomers, scores, runtime_config,
-            )
-        elif self.native_invoke is None:
-            response = mutator.mutate(
-                selected_protomers,
-                scores,
-                runtime_config,
-            )
-        else:
-            response = self.native_invoke(
-                mutator,
-                selected_protomers,
-                scores,
-                runtime_config,
-            )
-            if response is not None and not isinstance(response, GenerationResult):
-                raise TypeError("native mutator invoker must return None")
+        with span("mutate.propose", backend=type(mutator).__name__):
+            if has_native_prepared:
+                owner_blob = _role_blob(prepared, "native-prepared", _RUNTIME_CONFIG_CODEC.identity)
+                response = mutator.mutate_prepared(
+                    data.get(owner_blob, _RUNTIME_CONFIG_CODEC),
+                    selected_protomers, scores, runtime_config,
+                )
+            elif self.native_invoke is None:
+                response = mutator.mutate(
+                    selected_protomers,
+                    scores,
+                    runtime_config,
+                )
+            else:
+                response = self.native_invoke(
+                    mutator,
+                    selected_protomers,
+                    scores,
+                    runtime_config,
+                )
+                if response is not None and not isinstance(response, GenerationResult):
+                    raise TypeError("native mutator invoker must return None")
         drafts: tuple[NativeMutationContextDraft, ...] = ()
         if self.mutation_context is not None:
             try:

@@ -34,6 +34,7 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 | Structure transformation | `structure_processors/`, `post_eval_hooks/` | Changed geometry is not a new prediction. Keep original confidence and derived-path provenance distinct. |
 | Resources / overlap | `runtime_support.py`, backend lifecycle methods, `run.py` | Explicit deduplicated cleanup; serial prediction, bounded ordered CPU finalization. |
 | Persistence | `decision_maker.py`, `run_config_lifecycle.py`, `execution_audit.py`, `posthoc/` | Same CSV row/column semantics. Single-file atomic replacement is not exact resume. |
+| Profiling | `profiling/`, public application/repeat scopes and module spans | Optional observations, separate per-process files and bounded resource sampling; no RNG, synchronization, scheduling or recovery authority. See [profiling](profiling.md). |
 
 ## Constraints that are easy to miss
 

@@ -51,6 +51,7 @@ _EXCLUDED_SCIENTIFIC_KEYS = frozenset(
     {
         "debug",
         "logging",
+        "profiling",
         "out_dir",
         "raw_model_results_dir",
         "repeat_index",

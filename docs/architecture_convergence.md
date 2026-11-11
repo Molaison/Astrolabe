@@ -12,6 +12,7 @@ This is in-place migration on baseline `b537b8a`, not a second engine. Public CL
 | CPU overlap | Serial evaluator calls, ordered finalization, backpressure, propagated context. | No GPU scheduler or changed search policy. Final results remain retained; not a total-memory bound. |
 | Persistence | Atomic compatible CSV/provenance plus additive terminal execution audit. | No cross-file transaction, power-loss durability or exact checkpoint/resume. |
 | CPU dependency | NumPy confidence losses register without importing Torch. | Real tensor/device paths need their own environment evidence. |
+| Module profiling | Opt-in shared configuration, spans across execution owners, process/resource sampling and offline HTML/JSON/Perfetto reports. | Diagnostic host spans and device samples do not prove kernel parallelism, scientific equivalence or performance improvement; original scientific and cleanup owners remain authoritative. |
 
 ## Compatibility and recovery
 

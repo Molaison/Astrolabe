@@ -27,6 +27,8 @@ import time
 from types import SimpleNamespace
 from typing import Any
 
+from astrolabe.profiling import profiled
+
 from .legacy import LEGACY_REFERENCE_CODECS, LegacyContext
 from .native_refinement import REFINEMENT_REFERENCE_CODECS
 from .native_scores import NATIVE_SCORES_ENVELOPE_CODEC, restore_scores, snapshot_scores
@@ -128,6 +130,7 @@ def _private_score_paths(value, raw_root, score_root):
 
 
 class _Worker:
+    @profiled("refinement.worker_init")
     def __init__(self, config_yaml, data_root, assemblies, state, output_root,
                  role="combined"):
         from omegaconf import OmegaConf, open_dict
@@ -441,6 +444,7 @@ class _Worker:
         _complete(complete, receipt)
         return receipt
 
+    @profiled("refinement.worker")
     def execute(self, task):
         from astrolabe.argparser import set_random_seeds
         from astrolabe.core import global_config
