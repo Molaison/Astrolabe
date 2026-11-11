@@ -2601,10 +2601,34 @@ def validate_mutation_counts(
 
 
 @timer("mutation step")
-def execute_mutation_step(
-    mutators, evaluation_result, runtime_config: Dict, step: int
+def execute_mutation_step(mutators, evaluation_result, runtime_config: Dict, step: int) -> None:
+    """Existing synchronous entrypoint; same ordered mutation implementation."""
+    from astrolabe.design.continuation import complete
+    return complete(execute_mutation_step_continuation(
+        mutators, evaluation_result, runtime_config, step, cooperative=False,
+    ))
+
+
+def execute_mutation_step_continuation(
+    mutators, evaluation_result, runtime_config: Dict, step: int, *, cooperative=True
 ) -> None:
     """Execute mutation for all mutators."""
+    from astrolabe.profiling import event as profile_event
+    from astrolabe.mutators.ligandmpnn import LigandMPNNMutator
+    from astrolabe.mutators.native_daemons import NativeSequenceRunner
+    eligible = (
+        cooperative and len(mutators) == 1
+        and type(mutators[0]) is LigandMPNNMutator
+        and type(mutators[0].runner) is NativeSequenceRunner
+        and mutators[0].runner.supports_cooperative_transport
+        and not runtime_config.get("mutator_stack_pre_update", False)
+        and mutators[0].predocker is None
+    )
+    if cooperative:
+        profile_event("proposal.staged" if eligible else "proposal.synchronous_fallback",
+                      mutators=[type(item).__name__ for item in mutators],
+                      staged_count=int(eligible), synchronous_fallback_count=int(not eligible),
+                      step=step, reason=None if eligible else "unsupported_mutation_stack_or_remote_runner")
     # Never carry a prior proposal forward, including sequence-identical proposals.
     runtime_config["generated_structure_records"] = {}
     if len(mutators) > 1 and any(
@@ -2641,9 +2665,14 @@ def execute_mutation_step(
             step=step,
             detail=getattr(mutator, "name", mutator.__class__.__name__),
         ) as span:
-            mutation_result = native_call("mutation", mutator.mutate,
-                global_config.mutable_protomers, evaluation_result, runtime_config
-            )
+            if eligible:
+                mutation_result = yield from mutator.mutate_continuation(
+                    global_config.mutable_protomers, evaluation_result, runtime_config,
+                )
+            else:
+                mutation_result = native_call("mutation", mutator.mutate,
+                    global_config.mutable_protomers, evaluation_result, runtime_config
+                )
             from astrolabe.design.generated_structure import publish_generated_structure
             from astrolabe.mutators.rfd4_types import GenerationResult
 

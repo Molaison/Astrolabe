@@ -79,6 +79,45 @@ execution:
 配置须满足现有资源合同。先固定输入、seed、模型、权重与设备，分别保存修改前后
 的配置和 profiling 目录，再比较对应模块的墙钟、CPU 工作量、等待和重叠。
 
+## 配置持久化与 Score/Mutator 流水线
+
+在同一份任务配置的 `search.execution` 中分别开启以下选项。默认关闭，
+可独立恢复原来的执行方式；不改变模型参数、科学评分或代际选择规则。
+
+```yaml
+search:
+  execution:
+    mode: isolated
+    model_sharing: shared
+    workers: 4
+    in_flight: 4
+    reuse_durable_closures: true
+    async_mutator: true
+    score_queue_size: 4
+execution:
+  cpu_slots: 4
+  max_concurrency: 1
+```
+
+| 选项 | 生效范围和关闭方式 |
+| --- | --- |
+| `reuse_durable_closures` | 复用当前进程已成功落盘的内置 codec 成员证明；仍验证文件身份和引用链。自定义 codec 完整重验。设为 `false` 恢复严格重复校验与同步。 |
+| `async_mutator` | 在 isolated 模式中，将支持的原生 LigandMPNN 远端等待移出主线程，准备和结果应用仍按提案顺序执行。不支持的 mutation stack 或只能在主线程调用的 owner 同步回退。设为 `false` 关闭。 |
+| `score_queue_size` | 独立 Score 等待加运行总容量，须为非负整数；正值要求 isolated/shared。设为 `0` 恢复预测和 Score 共用在途额度。 |
+
+启用独立 Score 队列后，`in_flight` 限制预测及等待进入 Score 的原始结果。
+原始结果可靠落盘后可移交 Score；Score 满时保留在有界的原始结果槽中。
+包括已完成但尚未按 ID 顺序发布的结果在内，未发布 evaluation 总数不超过
+`in_flight + score_queue_size`。完成一个 generation 仍须等待全部必要评分，
+不会提前用未评分候选作选择。中断后只依据原生持久化回执恢复，未知推理不自动重放。
+
+使用原来的 `astrolabe run ... --dry-run` 核验配置，另设新的输出目录执行对照。
+诊断时采集 `datastore.*`、`runtime.*`、`mutate.*`、`proposal.*`、
+`pipeline.*`、`score.*` 和 `evaluator.*`。`datastore.persist.reuse`
+记录命中与回退；`proposal.staged` / `proposal.synchronous_fallback`
+说明实际路径；`pipeline.credit` 记录预测、原始结果暂存和 Score 占用。
+比较完整耗时、采样覆盖和跨模块重叠，再用关闭 profiling 的重复运行确认收益。
+
 Evaluator 性能验收仍分两步：先用预先准备的真实输入与持续就绪队列检查推理能力和
 科学一致性；然后按该服务能力检查 Beam、Mutate 和 Score 供给。已有
 [`model_gpu_throughput.py`](../scripts/validation/model_gpu_throughput.py)

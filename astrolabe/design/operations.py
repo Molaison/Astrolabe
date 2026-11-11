@@ -77,6 +77,15 @@ class FunctionOperation(Generic[I, O]):
             raise TypeError(f"{self.descriptor.alias}: invalid result type {type(result).__name__}")
         return result
 
+    def invoke_continuation(self, prepared: _Prepared[I]):
+        continuation = getattr(self, "_invoke_continuation", None)
+        if continuation is None:
+            return self.invoke(prepared)
+        result = yield from continuation(prepared.request)
+        if not isinstance(result, self.descriptor.result_type):
+            raise TypeError(f"{self.descriptor.alias}: invalid continuation result")
+        return result
+
 
 def _source_identity(value: Implementation | None):
     if value is None:

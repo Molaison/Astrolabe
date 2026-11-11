@@ -293,6 +293,7 @@ class DurableNativeRefinementOwner:
                 spec.load_mutator,
                 spec.load_evaluator,
                 spec.propose,
+                getattr(spec.propose, "continuation", None),
                 spec.evaluate,
                 spec.measure,
             )
@@ -334,6 +335,7 @@ class DurableNativeRefinementOwner:
             reconciler=self._reconcile_rejection,
             **common,
         )
+        self.proposal_operation._invoke_continuation = self._propose_continuation
         self.prediction_operation = operation(
             _PREDICTION_ALIAS,
             DurablePredictionRequest,
@@ -509,6 +511,17 @@ class DurableNativeRefinementOwner:
         return destination
 
     def _propose(self, request: DurableProposalRequest) -> BranchProposal:
+        from .continuation import complete
+        return complete(self._propose_continuation(request))
+
+    def _propose_continuation(self, request: DurableProposalRequest):
+        from astrolabe.profiling import span
+        with span("mutate.propose", proposal_id=request.job.id,
+                  generation=request.job.generation, parent_id=None if request.job.parent is None else request.job.parent.id,
+                  slot=request.job.slot, seed=request.job.seed):
+            return (yield from self._propose_steps(request))
+
+    def _propose_steps(self, request: DurableProposalRequest):
         if request.protocol != self.protocol:
             raise ValueError("proposal request protocol differs from the owner contract")
         job = request.job
@@ -536,17 +549,22 @@ class DurableNativeRefinementOwner:
         )
         loaded = self.models.get()
         try:
-            with self._activate(parent.candidate):
-                proposed = self.spec.propose(
-                    loaded.mutator,
-                    parent.candidate,
-                    scores,
-                    seed=proposal_seed,
-                    step=job.id,
-                    generation=job.generation,
-                    parent_id=job.parent.id,
-                    proposal_index=job.slot,
-                    output=Path(request.output),
+            arguments = dict(
+                seed=proposal_seed, step=job.id, generation=job.generation,
+                parent_id=job.parent.id, proposal_index=job.slot,
+                output=Path(request.output),
+            )
+            continuation = getattr(self.spec.propose, "continuation", None)
+            if continuation is None:
+                with self._activate(parent.candidate):
+                    proposed = self.spec.propose(
+                        loaded.mutator, parent.candidate, scores, **arguments,
+                    )
+            else:
+                from .continuation import activated
+                proposed = yield from activated(
+                    continuation(loaded.mutator, parent.candidate, scores, **arguments),
+                    lambda: self._activate(parent.candidate), self.spec.context,
                 )
         except ProposalInfeasible as error:
             if outcome_is_unknown(error):

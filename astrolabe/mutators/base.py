@@ -1,6 +1,9 @@
 import logging
 import pathlib
 from abc import abstractmethod
+from contextlib import nullcontext
+
+from astrolabe.profiling import span
 from typing import Any, Dict
 
 from astrolabe.runtime_support import ResourceOwner
@@ -38,6 +41,13 @@ class Mutator:
         pass
 
     def mutate(self, protomer, evaluation_scores=None, runtime_config=None):
+        from astrolabe.design.continuation import complete
+        return complete(self._mutate_steps(protomer, evaluation_scores, runtime_config, cooperative=False))
+
+    def mutate_continuation(self, protomer, evaluation_scores=None, runtime_config=None):
+        return (yield from self._mutate_steps(protomer, evaluation_scores, runtime_config, cooperative=True))
+
+    def _mutate_steps(self, protomer, evaluation_scores, runtime_config, *, cooperative):
         for name, segment in global_config.segments.items():
             segment.clean_up()
         sentinel = object()
@@ -55,9 +65,10 @@ class Mutator:
             )
             runtime_config["record_mutator_selector_scores"] = True
         try:
-            input_feat = self.prepare_mutation_input(
-                protomer, evaluation_scores, runtime_config
-            )
+            with span("proposal.prepare", part="input", backend=type(self).__name__) if cooperative else nullcontext():
+                input_feat = self.prepare_mutation_input(
+                    protomer, evaluation_scores, runtime_config
+                )
         finally:
             if runtime_config is not None:
                 if previous_alias is sentinel:
@@ -68,7 +79,11 @@ class Mutator:
                     runtime_config.pop("record_mutator_selector_scores", None)
                 else:
                     runtime_config["record_mutator_selector_scores"] = previous_record_flag
-        mutation_output = self.compute_mutation(input_feat)
+        compute = getattr(self, "compute_mutation_continuation", None) if cooperative else None
+        if compute is None:
+            mutation_output = self.compute_mutation(input_feat)
+        else:
+            mutation_output = yield from compute(input_feat)
         extra_output = None
         transition_consistency_gate_context = get_transition_consistency_gate_context(
             runtime_config
@@ -87,11 +102,10 @@ class Mutator:
                 )
                 runtime_config["record_mutator_selector_scores"] = False
             try:
-                extra_input_feat = self.prepare_mutation_input(
-                    protomer,
-                    transition_consistency_gate_context.reference_scores,
-                    runtime_config,
-                )
+                with span("proposal.prepare", part="reference_input", backend=type(self).__name__) if cooperative else nullcontext():
+                    extra_input_feat = self.prepare_mutation_input(
+                        protomer, transition_consistency_gate_context.reference_scores, runtime_config,
+                    )
             finally:
                 if runtime_config is not None:
                     if previous_record_flag is sentinel:
@@ -100,7 +114,10 @@ class Mutator:
                         runtime_config["record_mutator_selector_scores"] = (
                             previous_record_flag
                         )
-            extra_output = self.compute_mutation(extra_input_feat)
+            if compute is None:
+                extra_output = self.compute_mutation(extra_input_feat)
+            else:
+                extra_output = yield from compute(extra_input_feat)
 
         sentinel = object()
         previous_extra_output = sentinel
@@ -110,9 +127,10 @@ class Mutator:
             )
             runtime_config["transition_consistency_gate_output"] = extra_output
         try:
-            std_output = self.prepare_mutation_output(
-                mutation_output, protomer, evaluation_scores, runtime_config
-            )
+            with span("proposal.apply", part="output", backend=type(self).__name__) if cooperative else nullcontext():
+                std_output = self.prepare_mutation_output(
+                    mutation_output, protomer, evaluation_scores, runtime_config
+                )
         finally:
             if runtime_config is not None:
                 if previous_extra_output is sentinel:

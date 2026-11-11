@@ -250,6 +250,7 @@ class BranchingPolicy:
         expansion: Expansion = "round_robin",
         proposal_batch_size: int = 1,
         evaluation_width: int = 1,
+        score_queue_size: int = 0,
         pipeline: bool = False,
         immediate_evaluation: bool = False,
         selection: Selection | None = None,
@@ -280,6 +281,9 @@ class BranchingPolicy:
         self.evaluation_width = _positive_int(
             "evaluation_width", evaluation_width
         )
+        self.score_queue_size = _nonnegative_int("score_queue_size", score_queue_size)
+        if score_queue_size and not pipeline:
+            raise ValueError("Separate Score credits require pipeline execution")
         if quota_mode not in ("admitted", "attempts"):
             raise ValueError("quota_mode must be 'admitted' or 'attempts'")
         if expansion not in ("balanced", "round_robin"):
@@ -346,6 +350,7 @@ class BranchingPolicy:
                 self.expansion,
                 self.proposal_batch_size,
                 self.evaluation_width,
+                self.score_queue_size,
                 self.pipeline,
                 self.immediate_evaluation,
                 self.selection_identity,
@@ -415,6 +420,15 @@ class BranchingPolicy:
             job.identity for job in state.pending
         ):
             raise ValueError("an evaluation job cannot be queued and pending")
+        _nonnegative_int("credit_epoch", state.credit_epoch)
+        pending_ids = {job.id for job in state.pending}
+        for name in ("prediction_done", "score_admitted", "score_done"):
+            values = getattr(state, name)
+            if (not isinstance(values, tuple) or any(type(item) is not int for item in values)
+                    or tuple(sorted(set(values))) != values or not set(values) <= pending_ids):
+                raise ValueError(f"Invalid {name} admission acknowledgement")
+        if not set(state.score_done) <= set(state.score_admitted) <= set(state.prediction_done):
+            raise ValueError("Score admission/completion requires verified raw completion")
         if not isinstance(state.batch_results, tuple):
             raise TypeError("BranchingState.batch_results must be a tuple")
         proposal_ids: set[int] = set()
@@ -602,7 +616,14 @@ class BranchingPolicy:
     ) -> tuple[tuple[BranchJob, ...], BranchingState]:
         if not self._can_dispatch_evaluations(state):
             return (), state
-        available = self.evaluation_width - len(state.pending)
+        if self.score_queue_size:
+            # Each producer reserves one bounded raw-handoff slot. Score
+            # admission transfers that reservation into its independent pool.
+            producers = len(state.pending) - len(state.score_admitted)
+            available = min(self.evaluation_width - producers,
+                            self.evaluation_width + self.score_queue_size - len(state.pending))
+        else:
+            available = self.evaluation_width - len(state.pending)
         if available <= 0:
             return (), state
         jobs = state.queued[:available]
@@ -756,8 +777,12 @@ class BranchingPolicy:
                 raise ValueError("evaluation jobs are not the next queued jobs")
             if action.state.pending != state.pending + jobs:
                 raise ValueError("evaluation dispatch accounting changed")
-            if len(action.state.pending) > self.evaluation_width:
-                raise ValueError("evaluation dispatch exceeds configured width")
+            producers = len(action.state.pending) - len(state.score_admitted)
+            if producers > self.evaluation_width:
+                raise ValueError("prediction/handoff dispatch exceeds configured width")
+            capacity = self.evaluation_width + self.score_queue_size
+            if len(action.state.pending) > capacity:
+                raise ValueError("evaluation dispatch exceeds bounded reorder capacity")
         return action.state
 
     def _proposal_terminal_state(
@@ -943,6 +968,12 @@ class BranchingPolicy:
             records=tuple(sorted(records, key=lambda member: member.id)),
             frontier=tuple(sorted(frontier, key=lambda member: member.id)),
             pending=remain,
+            prediction_done=tuple(item for item in state.prediction_done
+                                  if item in {job.id for job in remain}),
+            score_admitted=tuple(item for item in state.score_admitted
+                                 if item in {job.id for job in remain}),
+            score_done=tuple(item for item in state.score_done
+                             if item in {job.id for job in remain}),
             queued=() if stopped else state.queued,
             seen=tuple(seen),
             refused=tuple(refused),
@@ -957,6 +988,31 @@ class BranchingPolicy:
         self._validate_state(state)
         if not isinstance(event, BranchEvent):
             raise TypeError("BranchingPolicy.tell requires BranchEvent")
+        if (event.prediction_done or event.score_admitted or event.score_done
+                or event.credit_epoch is not None):
+            if not self.score_queue_size:
+                raise ValueError("Stage acknowledgements require separate Score credits")
+            pending_ids = {job.id for job in state.pending}
+            for values in (event.prediction_done, event.score_admitted, event.score_done):
+                if (not isinstance(values, tuple) or any(type(item) is not int for item in values)
+                        or tuple(sorted(set(values))) != values or not set(values) <= pending_ids):
+                    raise ValueError("Stage acknowledgement does not match pending evaluation")
+            if event.credit_epoch is not None:
+                if type(event.credit_epoch) is not int or event.credit_epoch != state.credit_epoch + 1:
+                    raise ValueError("Credit recovery must advance exactly one live epoch")
+                # Admission is process-local occupancy, not paid completion.
+                # Reconstructed Score may admit raw jobs in a different order.
+                predicted, admitted, scored = event.prediction_done, event.score_admitted, event.score_done
+            else:
+                predicted = tuple(sorted(set(state.prediction_done) | set(event.prediction_done)))
+                admitted = tuple(sorted(set(state.score_admitted) | set(event.score_admitted)))
+                scored = tuple(sorted(set(state.score_done) | set(event.score_done)))
+            if not set(scored) <= set(admitted) <= set(predicted):
+                raise ValueError("Score admission/completion requires verified raw prediction")
+            if len(admitted) - len(scored) > self.score_queue_size:
+                raise ValueError("Score acknowledgement exceeds capacity")
+            state = replace(state, prediction_done=predicted, score_admitted=admitted, score_done=scored,
+                            credit_epoch=state.credit_epoch if event.credit_epoch is None else event.credit_epoch)
         terminals = tuple(event.terminals)
         for terminal in terminals:
             _check_terminal(terminal)
@@ -1064,6 +1120,9 @@ class BranchingPolicy:
             batch_results=(),
             queued=(),
             pending=(),
+            prediction_done=(),
+            score_admitted=(),
+            score_done=(),
             duplicates=state.duplicates,
             rejected=state.rejected,
             stop_reason=None,

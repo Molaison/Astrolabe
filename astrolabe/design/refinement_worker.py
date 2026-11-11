@@ -173,6 +173,9 @@ class _Worker:
         self.session_root.mkdir(parents=True, exist_ok=True)
         cfg = OmegaConf.create(config_yaml)
         cfg._set_flag("allow_objects", True)
+        self.data.reuse_durable_closures = bool(
+            OmegaConf.select(cfg, "search.execution.reuse_durable_closures", default=False)
+        )
         with open_dict(cfg):
             cfg.out_dir = self.session_root
             cfg.raw_model_results_dir = self.session_root / "raw_model_results"
@@ -587,6 +590,24 @@ class _Worker:
                 raise OutcomeUnknown(f"worker evaluation outcome unknown: {issued}") from error
             return (receipt if self.role == "prediction" else
                     self._score(task, receipt, scored))
+
+
+
+def read_raw_receipt(data_root, output_root, task):
+    """Verify durable raw completion without constructing a scientific worker.
+
+    Uses the same strict disk/closure/sidecar verifier as Score recovery; this
+    is the prediction-credit boundary, never a mere Future completion check.
+    """
+    reader = SimpleNamespace(
+        root=Path(output_root).expanduser().resolve(),
+        data=SimpleNamespace(root=Path(data_root)),
+        codecs={codec.identity: codec for codec in (
+            *REFINEMENT_REFERENCE_CODECS, *LEGACY_REFERENCE_CODECS,
+            design_codec, ArrayCodec(), JSONCodec(), _SCORE_RECEIPT_CODEC,
+        )},
+    )
+    return _Worker._read(reader, reader.root / "receipts" / (task["_request_hash"] + ".json"), task)
 
 
 def initializer(config_yaml: str, data_root: str, assemblies: tuple[str, ...], state: str,

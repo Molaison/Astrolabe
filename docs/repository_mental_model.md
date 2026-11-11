@@ -173,3 +173,22 @@ local repack/chi-minimization with matched bound/free seeds. Normalization and
 metric combinations stay in existing `loss.expression_terms`. Archived-table
 and same-saved-pose readout parity is distinct from new live model/relaxation
 or end-to-end optimization qualification; none implies experimental pH efficacy.
+
+## Opt-in refinement pipeline (r58 candidate)
+
+`search.execution.async_mutator` runs a cooperative, single-live-proposal
+continuation: main prepares and applies scientific state/RNG; only a frozen
+remote transport waits off-thread, outside LegacyContext activation. Local and
+borrowed main-thread model owners keep synchronous fallback. Runtime's ordinary
+issued/result/RNG journal also owns suspended calls; interruption is not replay
+permission.
+
+Positive `score_queue_size` separates Score waiting+running capacity from the
+bounded prediction/raw-holding producer lane. Durable raw verification releases
+prediction execution; full Score applies nonblocking, bounded handoff pressure.
+Final evaluation still waits Score and ordered publication. Pending evaluations,
+including completed unpublished suffixes, are capped at `in_flight +
+score_queue_size`. Recovery replaces process-local stage occupancy with a new
+credit-epoch snapshot; paid receipts remain authoritative. The closure-reuse,
+async-mutator and separate-credit switches default to false/false/0. This is
+candidate control-flow work, not real-model numerical or throughput qualification.

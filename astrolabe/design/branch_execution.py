@@ -67,6 +67,8 @@ class BranchExecutor:
         on_observed: Callable[[BranchJob, Any], None] | None = None,
         before_wait: Callable[[BranchAction], None] | None = None,
         ordered_results: bool = False,
+        waiter=None,
+        progress=None,
     ) -> None:
         if submit is None and worker is None:
             raise TypeError("worker is required when submit is omitted")
@@ -90,6 +92,8 @@ class BranchExecutor:
         self._on_observed = on_observed
         self._before_wait = before_wait
         self._ordered_results = ordered_results
+        self._waiter = waiter
+        self._progress = progress
         self.one_pending: dict[Future[Any], BranchJob] = {}
         self.observed: dict[str, BranchTerminal] = {}
         self._admitted: dict[str, BranchJob] = {}
@@ -205,11 +209,14 @@ class BranchExecutor:
             for future in pending:
                 heads.setdefault(self.one_pending[future].phase, future)
             waiting = list(heads.values())
+        progress = BranchEvent(()) if self._progress is None else self._progress(action)
         with span("beam.wait", mode=action.wait, pending=len(pending), waiting=len(waiting)):
-            ready, _ = wait(
-                waiting,
-                return_when=return_when,
-            )
+            if (progress.prediction_done or progress.score_admitted or progress.score_done
+                    or progress.credit_epoch is not None):
+                ready = {future for future in waiting if future.done()}
+            else:
+                ready, _ = (self._waiter or wait)(waiting, return_when=return_when)
+                progress = BranchEvent(()) if self._progress is None else self._progress(action)
         if self._ordered_results:
             ordered = []
             blocked: set[str] = set()
@@ -259,7 +266,8 @@ class BranchExecutor:
         for future, terminal in zip(ordered, terminals):
             self.observed[self.one_pending[future].identity] = terminal
             self.one_pending.pop(future)
-        return BranchEvent(terminals)
+        return BranchEvent(terminals, progress.prediction_done, progress.score_admitted,
+                           progress.score_done, progress.credit_epoch)
 
 
 def gather_ordered(

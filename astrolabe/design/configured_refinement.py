@@ -125,6 +125,9 @@ class _SearchSettings:
     evaluation_width: int
     prediction_rng: str
     model_sharing: str
+    reuse_durable_closures: bool = False
+    async_mutator: bool = False
+    score_queue_size: int = 0
 
 
 @dataclass(frozen=True)
@@ -251,7 +254,8 @@ def _search_settings(cfg: Any) -> _SearchSettings:
     execution = search.get("execution", {})
     if not isinstance(execution, Mapping):
         raise ValueError("search.execution must be a mapping")
-    unknown_execution = set(execution) - {"mode", "workers", "in_flight", "model_sharing"}
+    unknown_execution = set(execution) - {"mode", "workers", "in_flight", "model_sharing",
+                                            "reuse_durable_closures", "async_mutator", "score_queue_size"}
     if unknown_execution:
         raise ValueError(f"Unsupported search.execution fields: {sorted(unknown_execution)}")
     mode = str(execution.get("mode", "serial"))
@@ -271,6 +275,14 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         raise ValueError("search.execution.model_sharing must be replicated or shared")
     if mode == "serial" and sharing != "replicated":
         raise ValueError("Model sharing applies to isolated evaluator workers")
+    for name in ("reuse_durable_closures", "async_mutator"):
+        if type(execution.get(name, False)) is not bool:
+            raise ValueError(f"search.execution.{name} must be a boolean")
+    score_queue_size = execution.get("score_queue_size", 0)
+    if type(score_queue_size) is not int or score_queue_size < 0:
+        raise ValueError("search.execution.score_queue_size must be a nonnegative integer")
+    if score_queue_size and (mode != "isolated" or sharing != "shared"):
+        raise ValueError("Separate Score capacity requires isolated shared-model execution")
     width = _positive_int({"width": search.get("width", 2)}, "width")
     per_parent = _positive_int(
         {"proposals_per_parent": search.get("proposals_per_parent", 2)},
@@ -302,6 +314,9 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         evaluation_width=in_flight,
         prediction_rng=prediction_rng,
         model_sharing=sharing,
+        reuse_durable_closures=execution.get("reuse_durable_closures", False),
+        async_mutator=execution.get("async_mutator", False),
+        score_queue_size=score_queue_size,
     )
 
 
@@ -1189,6 +1204,9 @@ def _canonical_config(cfg: Any, repeat: RepeatRun, search: _SearchSettings) -> A
                 "mode": search.execution_mode,
                 "workers": search.workers,
                 "in_flight": search.evaluation_width,
+                "reuse_durable_closures": search.reuse_durable_closures,
+                "async_mutator": search.async_mutator,
+                "score_queue_size": search.score_queue_size,
                 "model_sharing": search.model_sharing,
             },
         }
@@ -1659,6 +1677,7 @@ def _run_configured_refinement_locked(
                 _asset_manifest_record(selected_assets),
             )
         data = DataStore(runtime_root / "data")
+        data.reuse_durable_closures = search.reuse_durable_closures
         runtime = Runtime(
             root=runtime_root,
             data=data,
@@ -1815,7 +1834,7 @@ def _run_configured_refinement_locked(
                 ) from None
             return _OwnedComponent(session.stage_manager.current_evaluator)
 
-        def propose(
+        def propose_continuation(
             mutators: _OwnedComponent,
             parent: Candidate,
             scores: Any,
@@ -1844,11 +1863,9 @@ def _run_configured_refinement_locked(
                 args, scores, session.loss_computer,
             )
             try:
-                run_module.execute_mutation_step(
-                    session.stage_manager.current_mutators,
-                    scores,
-                    runtime_config,
-                    int(step),
+                yield from run_module.execute_mutation_step_continuation(
+                    session.stage_manager.current_mutators, scores, runtime_config,
+                    int(step), cooperative=search.async_mutator,
                 )
             except BaseException as error:
                 try:
@@ -1876,6 +1893,13 @@ def _run_configured_refinement_locked(
                 data=data,
             ).candidate
             return NativeProposal(child, _candidate_label(child))
+
+        def propose(*args, **kwargs):
+            from .continuation import complete
+            return complete(propose_continuation(*args, **kwargs))
+
+        if search.async_mutator:
+            propose.continuation = propose_continuation
 
         def evaluate(
             evaluator: _OwnedComponent,
@@ -1942,6 +1966,7 @@ def _run_configured_refinement_locked(
             expansion="round_robin",
             proposal_batch_size=search.proposal_batch_size,
             evaluation_width=search.evaluation_width,
+            score_queue_size=search.score_queue_size,
             pipeline=search.execution_mode == "isolated",
             immediate_evaluation=(
                 search.execution_mode == "serial"
@@ -1993,6 +2018,9 @@ def _run_configured_refinement_locked(
                                 "mode": search.execution_mode,
                                 "workers": search.workers,
                                 "in_flight": search.evaluation_width,
+                                "reuse_durable_closures": search.reuse_durable_closures,
+                                "async_mutator": search.async_mutator,
+                                "score_queue_size": search.score_queue_size,
                                 "model_sharing": search.model_sharing,
                                 "prediction_rng": (
                                     "fixed-request-seed/v1"
@@ -2034,6 +2062,9 @@ def _run_configured_refinement_locked(
                         workers=search.workers,
                         worker_output=output / ".prediction_workers",
                         model_sharing=search.model_sharing,
+                        score_queue_size=search.score_queue_size,
+                        prediction_width=search.evaluation_width,
+                        async_mutator=search.async_mutator,
                         loss_order=lambda: tuple(session_holder["session"].loss_computer.loss_specs),
                         score_context=score_context,
                     )
@@ -2096,6 +2127,9 @@ def _run_configured_refinement_locked(
                             "mode": search.execution_mode,
                             "workers": search.workers,
                             "in_flight": search.evaluation_width,
+                            "reuse_durable_closures": search.reuse_durable_closures,
+                            "async_mutator": search.async_mutator,
+                            "score_queue_size": search.score_queue_size,
                             "prediction_rng": search.prediction_rng,
                             "model_sharing": search.model_sharing,
                         },

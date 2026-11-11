@@ -308,6 +308,11 @@ class Runtime:
                 self.history, self._work = previous, None
 
     def call(self, named_round, operation, request, *, work_id=None):
+        from .continuation import complete
+        return complete(self.call_continuation(named_round, operation, request, work_id=work_id))
+
+    def call_continuation(self, named_round, operation, request, *, work_id=None):
+        """Same durable begin/finalize lifecycle, suspended only by its live owner."""
         if self._work is None:
             raise RuntimeError("Runtime.call requires a bound work entry")
         if not named_round or named_round.startswith("/") or ".." in named_round.split("/"):
@@ -386,7 +391,11 @@ class Runtime:
         self._write("attempt", slot, previous)
         returned = False
         try:
-            result = operation.invoke(prepared)
+            continuation = getattr(operation, "invoke_continuation", None)
+            if continuation is None:
+                result = operation.invoke(prepared)
+            else:
+                result = yield from continuation(prepared)
             returned = True
             reference = self.data.put(result, descriptor.result_codec)
             after = self.data.put(capture_random_state(), design_codec)

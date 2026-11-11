@@ -151,3 +151,16 @@ Saved float32 Proton tables are promoted before changed-entry subtraction.
 Old/new Rosetta readouts agree on the same saved poses; serialized-pose versus
 original in-memory differences are retained separately. These checks do not
 establish live model/relaxation parity or experimentally calibrated pH release.
+
+### Opt-in cooperative refinement pipeline (r58 candidate)
+
+The configured native owner shares Runtime's durable call lifecycle with a
+main-thread continuation. It freezes LigandMPNN daemon requests before leaving
+legacy activation and moves transport wait only, preserving ordered application
+and private intermediate RNG. Unsupported stacks and main-thread-only local or
+borrowed owners retain explicit synchronous fallback. Score waiting+running and
+prediction/raw-holding use independent bounded lanes; completed unpublished
+results still occupy a fixed reorder window. Recovery rebases occupancy via a
+credit epoch without replaying unknown inference. All three execution toggles
+remain off by default. Host control checks passed; SIF/native scientific and
+performance acceptance are separate, unfinished evidence layers.
