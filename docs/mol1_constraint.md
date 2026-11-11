@@ -13,15 +13,21 @@ coordinates and compared numerical confidence fields exactly. This covers two
 76-residue ubiquitin chains, SITE/CONTACT/EXCLUSION, seed 101, bf16, 2 cycles,
 5 steps, one sample, no MSA, torch triangle kernels, no fusion/TF32, and
 `CUBLAS_WORKSPACE_CONFIG=:4096:8`, `PYTHONHASHSEED=101`. It does not qualify
-default-budget inference, other inputs, throughput, recovery fault scenarios or
-this automatic-selection revision. Real base/Constraint and switching acceptance
-for this revision belongs to the parent; no GPU acceptance was run in this code-only delivery.
+default-budget inference, other inputs, throughput or recovery fault scenarios.
+The automatic-selection revision was then verified on the main integration tree:
+one real runner completed base → Constraint → base, each result matched its own
+native reference for all 1204 labeled atoms and compared confidence fields with
+maximum difference zero. Same-selection access reused the client; switching
+stopped the previous private process and created a new residency. Thirteen CPU
+selection/input routes and fifteen existing registry/owner checks passed.
 The non-deterministic comparisons did not pass the same preregistered
 tolerances; their failed evidence is retained, not treated as adapter equivalence.
 
-Evidence: [integration and qualification report](/xcf26/zpzeng/practice_arena/224_astrolabe_architecture_handoff/publish/001_execution_architecture/01_shared_contracts/55_mol1_constraint_integration/README.md).
-The existing daily launcher and running jobs are unchanged; this checkout is the
-integration branch, not a promotion past the inference-service/Beam/Mutate/Score gates.
+Evidence: [automatic selection and main merge](/xcf26/zpzeng/practice_arena/224_astrolabe_architecture_handoff/publish/001_execution_architecture/01_shared_contracts/57_mol1_auto_model_main_merge/README.md),
+with the [earlier Constraint qualification](/xcf26/zpzeng/practice_arena/224_astrolabe_architecture_handoff/publish/001_execution_architecture/01_shared_contracts/55_mol1_constraint_integration/README.md) retained separately.
+Merging this backend into main does not retarget the machine's existing daily
+launcher or running jobs, nor does it grant inference-service/Beam/Mutate/Score
+performance qualification.
 
 ## Configuration and invocation
 

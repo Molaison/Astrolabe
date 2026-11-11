@@ -27,7 +27,7 @@ The overlap default bounds unconsumed finalizations to `max_workers + 1`. Succes
 
 ## Evidence levels
 
-Mol-1 is a narrow native-family adapter port (source `9e85ad16`, separate base/Constraint weights), not a legacy runtime merge. Auto selects from merged request constraints and dynamic hints, freezes both switchable assets, and replaces the current native client only after normal shutdown. Constraint-only legacy configuration remains supported. A pre-auto fixed deterministic Constraint real-GPU canary matched native coordinates/confidence exactly; non-deterministic comparisons are retained as failures. This code-only auto revision needs parent-run real acceptance. Full recovery/service/performance qualification and daily promotion remain pending ([usage](mol1_constraint.md)).
+Mol-1 is a narrow native-family adapter port (source `9e85ad16`, separate base/Constraint weights), not a legacy runtime merge. Auto selects from merged request constraints and dynamic hints, freezes both switchable assets, and replaces the current native client only after normal shutdown. Constraint-only legacy configuration remains supported. Real deterministic base → Constraint → base requests on the main integration tree matched their native atom coordinates/confidence exactly and stopped the previous process at each switch; 13 selection/input routes and 15 existing checks passed. Non-deterministic comparisons are retained as failures. Full recovery/service/performance qualification and daily promotion remain pending ([usage](mol1_constraint.md)).
 
 | Evidence | Interpretation |
 |---|---|
