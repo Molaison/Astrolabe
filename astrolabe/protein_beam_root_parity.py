@@ -5,6 +5,8 @@ import math
 import shlex
 from pathlib import Path
 
+from astrolabe.evaluators.confidence_sidecar import resolve_af3_confidence_path
+
 def _atoms(path):
     columns=[];rows=[];active=False
     for line in Path(path).read_text().splitlines():
@@ -24,8 +26,11 @@ def _atoms(path):
     return rows
 
 def _confidence(record):
-    path=Path(record['structure_path']);label=path.name.removesuffix('_model.cif')
-    value=json.loads((path.parent.parent/'raw_model_results/alphafold3'/label/(label+'_confidences.json')).read_text())
+    path=Path(record['structure_path'])
+    confidence_path = resolve_af3_confidence_path(path)
+    if confidence_path is None:
+        raise FileNotFoundError(f'AF3 confidence unavailable for root structure: {path}')
+    value=json.loads(confidence_path.read_text())
     matrix=value['pae']
     residues = {(a[0], a[1]) for a in _atoms(path) if a[3] == 'CA'}
     expected = len(residues)
