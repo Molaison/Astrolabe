@@ -239,6 +239,17 @@ def task_requirements(task_cfg: Any) -> dict:
             if triangle_attention == "cuequivariance" or triangle_multiplicative == "cuequivariance":
                 req_imports.add("cuequivariance_torch")
 
+    if any(t.lower() in {"mol1", "mol-1"} for t in evaluator_types_used):
+        req_env_keys |= {"weight_path.mol1", "weight_path.mol1_constraint",
+                         "subprocess_envs.mol1.repo_path", "subprocess_envs.mol1.python_bin"}
+        mol1_defaults = (task_cfg.get("evaluator") or {}).get("mol1") or {}
+        for term in evaluator_terms_used.values():
+            if str(term.get("_type") or "").lower() in {"mol1", "mol-1"}:
+                mode = term.get("model_name", mol1_defaults.get("model_name", "auto"))
+                if mode != "mol-1-constraint":
+                    req_env_keys.add("weight_path.mol1_base")
+        # Dependencies belong to the selected external interpreter, not the host.
+
     opendde_terms_used = [
         conf
         for conf in evaluator_terms_used.values()
@@ -580,6 +591,10 @@ def task_requirements(task_cfg: Any) -> dict:
             ],
             "required by vendored Biohub ESMFold2 source",
         )
+    if any(t.lower() in {"mol1", "mol-1"} for t in evaluator_types_used):
+        _note_env(["weight_path.mol1", "weight_path.mol1_base", "weight_path.mol1_constraint"],
+                  "Mol-1 local references and switchable base/Constraint weights (Constraint-only needs no base)")
+        _note_env(["subprocess_envs.mol1.repo_path", "subprocess_envs.mol1.python_bin"], "pinned Mol-1 native child source and interpreter")
     if any(t.lower() == "opendde" for t in evaluator_types_used):
         _note_env(["weight_path.opendde"], "required by OpenDDE OPENDDE_ROOT_DIR assets")
         _note_env(

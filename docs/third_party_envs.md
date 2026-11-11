@@ -157,6 +157,13 @@ Optional overrides:
 
 ## OpenDDE subprocess evaluator
 
+Molence Mol-1 is a separate manual external runtime, not OpenDDE or Protenix weights.
+Its default auto/base configuration needs separate `weight_path.mol1_base` and
+`weight_path.mol1_constraint` assets (`GH_WEIGHT_MOL1_BASE` / `GH_WEIGHT_MOL1_CONSTRAINT`),
+even when only base is initially loaded; explicit Constraint-only needs no base.
+The common root remains `weight_path.mol1` / `MOL_ROOT_DIR`. Native-owner selection,
+legacy checkpoint compatibility and qualification limits are in [Mol-1](mol1_constraint.md).
+
 OpenDDE source lives in `vendor/opendde` and is invoked through a subprocess.
 When `subprocess_envs.opendde.python_bin` / `GH_OPENDDE_PYTHON` is unset, the
 wrapper uses the current `gh` interpreter. Initialize the source and assets before

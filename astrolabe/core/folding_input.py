@@ -68,6 +68,9 @@ class Input:
     cyclic_relative_patches: Sequence[CyclicRelativePatch] | None = None
     bonded_atom_pair_meta: Sequence[Any] | None = None
     user_ccd: str | None = None
+    # Backend-neutral transport, interpreted strictly by the selected adapter.
+    # Mol-1 accepts the official site/contact/exclusion mapping, not topology.
+    constraint_ir: Mapping[str, Any] | None = None
 
     @property
     def protein_chains(self) -> list[ProteinChain]:

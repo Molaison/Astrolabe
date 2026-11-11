@@ -25,6 +25,18 @@ class SoftwareSpec:
 
 
 SOFTWARE: dict[str, SoftwareSpec] = {
+    "mol1": SoftwareSpec(
+        "mol1", "Molence Mol-1 automatic base/Constraint native evaluator", "manual",
+        "Supply pinned external source, separate base/Constraint checkpoints, local common assets and isolated interpreter; see docs/mol1_constraint.md",
+        host_envs=("mol1",),
+        asset_urls=(
+            "https://github.com/molence/Mol-1/tree/9e85ad16b3d7031dd92c34d99f895ee65547038b",
+            "https://mol-1-release.oss-cn-shanghai.aliyuncs.com/checkpoint/mol-1-base.pt",
+            "https://mol-1-release.oss-cn-shanghai.aliyuncs.com/checkpoint/mol-1-constraint.pt",
+        ),
+        revision="9e85ad16b3d7031dd92c34d99f895ee65547038b",
+        license_id="Apache-2.0",
+    ),
     "rfd4": SoftwareSpec(
         "rfd4", "RFD4 native sequence/structure mutator", "manual",
         "Supply the accepted RFD4 source, model.safetensors/config.json and isolated interpreter; no geometry guide",

@@ -139,6 +139,8 @@ class FoldingInputCodec:
                 "fields": {
                     field.name: self._encode_value(getattr(value, field.name))
                     for field in fields(value)
+                    if not (isinstance(value, Input) and field.name == "constraint_ir"
+                            and value.constraint_ir is None)
                 },
             }
         raise UnsupportedNativePrediction(
@@ -180,7 +182,8 @@ class FoldingInputCodec:
                 )
             expected = {field.name for field in fields(value_type)}
             encoded_fields = value["fields"]
-            if set(encoded_fields) != expected:
+            legacy_input_fields = expected - {"constraint_ir"} if value_type is Input else expected
+            if set(encoded_fields) not in (expected, legacy_input_fields):
                 raise ValueError(f"folding-input fields changed for {tag!r}")
             return value_type(
                 **{

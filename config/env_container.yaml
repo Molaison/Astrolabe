@@ -12,6 +12,9 @@ weight_path:
   protenix_constraint: ${oc.env:GH_WEIGHT_PROTENIX_CONSTRAINT,/models/protenix/release_model/protenix_base_constraint_v0.5.0.pt}
   boltz: ${oc.env:GH_WEIGHT_BOLTZ,/models/boltz}
   opendde: ${oc.env:OPENDDE_ROOT_DIR,/models/opendde}
+  mol1: ${oc.env:MOL_ROOT_DIR,/models/mol1}
+  mol1_base: ${oc.env:GH_WEIGHT_MOL1_BASE,${weight_path.mol1}/checkpoint/mol-1-base.pt}
+  mol1_constraint: ${oc.env:GH_WEIGHT_MOL1_CONSTRAINT,${weight_path.mol1}/checkpoint/mol-1-constraint.pt}
   surfdesign: ${oc.env:GH_WEIGHT_SURFDESIGN,/models/surfdesign}
   surfpro: ${oc.env:GH_WEIGHT_SURFPRO,/models/surfpro}
 
@@ -47,6 +50,10 @@ subprocess_envs:
     hbplus_bin: ${oc.env:GH_PROTON_POTTSMPNN_HBPLUS,null}
   rf3:
     python_bin: ${oc.env:GH_RF3_PYTHON,/ext/foundry/.venv/bin/python}
+  mol1:
+    python_bin: ${oc.env:GH_MOL1_PYTHON,/envs/mol1/bin/python}
+    repo_path: ${oc.env:GH_MOL1_REPO,/ext/mol1}
+    extra_python_paths: ${oc.env:GH_MOL1_PYTHONPATH,''}
   opendde:
     python_bin: ${oc.env:GH_OPENDDE_PYTHON,/opt/opendde/bin/python}
     repo_path: ${oc.env:GH_OPENDDE_REPO,/workspace/vendor/opendde}

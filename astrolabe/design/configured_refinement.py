@@ -375,6 +375,7 @@ def _matching_component_base(
 def _component_base_name(component_type: str) -> str:
     selected = component_type.lower()
     return {
+        "mol-1": "mol1",
         "proteinmpnn": "ligandmpnn",
         "multistate_proteinmpnn": "ligandmpnn",
         "far_apart_tied_multitarget_ligandmpnn": "ligandmpnn",
@@ -528,6 +529,14 @@ def _model_component_assets(
     mapping: Mapping[str, Any],
 ) -> tuple[_AssetComponent, tuple[_AssetFile, ...]]:
     selected = component_type.lower()
+    if selected in {"mol1", "mol-1"}:
+        from astrolabe.evaluators.mol1_contract import local_assets
+
+        # Config-wide assets include both weights for auto/base (late Input IR
+        # can upgrade base). This is not a single native request's asset set.
+        paths, _ = local_assets(mapping)
+        files = tuple(_hash_selected_file(role, path) for path in paths)
+        return _AssetComponent(role, "mol1", "hashed"), _deduplicate_asset_files(files)
     if selected == "rosetta_crystal":
         states = _case_value(mapping, "states")
         if not isinstance(states, Mapping) or not states:

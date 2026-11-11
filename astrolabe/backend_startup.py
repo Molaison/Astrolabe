@@ -10,6 +10,7 @@ import os
 import re
 import math
 import shutil
+import subprocess
 from collections.abc import Mapping
 from pathlib import Path
 
@@ -387,6 +388,11 @@ def validate_backend_settings(family, kind, options, *, path, check_paths,
     if not isinstance(options, Mapping):
         return [f'{root}: expected a mapping of resolved backend settings']
     cfg = options
+    if family == 'evaluator' and kind in {'mol1', 'mol-1'}:
+        from astrolabe.evaluators.mol1_contract import configuration_errors
+
+        errors.extend(f'{root}.{error}' for error in
+                      configuration_errors(cfg, allow_unresolved=allow_unresolved))
     errors.extend(_validate_common_options(family, kind, cfg, root,
                                            allow_unresolved=allow_unresolved))
     child_base = None
@@ -643,6 +649,27 @@ def validate_backend_settings(family, kind, options, *, path, check_paths,
             for field in ('esm_repo_path', 'transformers_repo_path'):
                 if value(field) not in _MISSING:
                     asset(field, kind='dir')
+        elif kind in {'mol1', 'mol-1'}:
+            for field, asset_kind in (('repo_path', 'dir'), ('mol_root_dir', 'dir')):
+                asset(field, required=True, kind=asset_kind)
+            asset('python_bin', required=True, executable=True)
+            from astrolabe.evaluators.mol1_contract import checkpoint_paths, local_assets
+
+            try:
+                # auto and explicit base can switch later: freeze/check both now.
+                checkpoints = checkpoint_paths(cfg, allow_unresolved=allow_unresolved)
+                for model_name, target in checkpoints.items():
+                    if allow_unresolved and '${' in str(target):
+                        continue
+                    if check_paths and not target.is_file():
+                        fail('assets', f'{model_name} checkpoint does not exist: {target}')
+            except (TypeError, ValueError) as error:
+                fail('assets', str(error))
+            if check_paths and not errors:
+                try:
+                    local_assets(cfg)
+                except (OSError, ValueError, KeyError, subprocess.CalledProcessError) as error:
+                    fail('assets', str(error))
         elif kind == 'opendde':
             for field, asset_kind in (('repo_path', 'dir'), ('opendde_root_dir', 'dir'), ('load_checkpoint_path', 'file')):
                 if value(field) not in _MISSING:

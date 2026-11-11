@@ -1349,12 +1349,19 @@ def model_construction_scope():
 
 
 class NativeModelClient:
-    """One typed backend kernel behind a private resident model owner."""
+    """One typed backend kernel behind a private resident model owner.
+
+    ``poolable=False`` bypasses local pooling and automatic resident-registry
+    attachment. Without an explicit socket_path it always owns a private daemon,
+    even in trajectory mode, so normal shutdown releases it before replacement.
+    Explicit socket attachment is still honored; the default True is unchanged.
+    """
     def __init__(self, backend, factory, settings, *, python_bin=None, cwd=None,
                  env=None, request_timeout=None,
                  max_frame_bytes=DEFAULT_MODEL_FRAME_BYTES, socket_path=None,
                  startup_timeout=300, shutdown_timeout=30, max_pending=4,
-                 provider=None, resource_profile=None, direct_payload=False):
+                 provider=None, resource_profile=None, direct_payload=False,
+                 poolable=True):
         independent_state = _INITIALIZATION_RANDOM_STATE.get()
         guard = (_CALLER_RANDOM_LOCK if independent_state is None and not direct_payload
                  else nullcontext())
@@ -1366,12 +1373,13 @@ class NativeModelClient:
                 shutdown_timeout=shutdown_timeout, max_pending=max_pending,
                 provider=provider, resource_profile=resource_profile,
                 direct_payload=direct_payload, independent_state=independent_state,
+                poolable=poolable,
             )
 
     def _initialize(self, backend, factory, settings, *, python_bin, cwd, env,
                     request_timeout, max_frame_bytes, socket_path, startup_timeout,
                     shutdown_timeout, max_pending, provider, resource_profile,
-                    direct_payload, independent_state):
+                    direct_payload, independent_state, poolable):
         from astrolabe.model_daemon import (
             DaemonSpec, LocalModelOwner, OwnedModelDaemon,
             model_identity, _prepare_provider_spec,
@@ -1389,7 +1397,8 @@ class NativeModelClient:
                           max_frame_bytes=max_frame_bytes, provider=provider)
         spec = _prepare_provider_spec(spec)
         identity = model_identity(spec, max_pending=max_pending)
-        shared_endpoint = _resident_model_endpoint(spec, identity, socket_path)
+        shared_endpoint = (_resident_model_endpoint(spec, identity, socket_path)
+                           if poolable else None)
         if shared_endpoint is not None:
             socket_path, shared_broker = shared_endpoint
         profiles_path = os.environ.get("ASTROLABE_RESOURCE_PROFILES")
@@ -1420,7 +1429,7 @@ class NativeModelClient:
             resource_profile["identity"] = identity
             spec.settings["_runtime_profile"] = resource_profile
         self._resource_profile = resource_profile
-        owner_type = (LocalModelOwner if not direct_payload and shared_endpoint is None
+        owner_type = (LocalModelOwner if poolable and not direct_payload and shared_endpoint is None
                       and os.environ.get("ASTROLABE_MODEL_OWNER") == "trajectory"
                       else OwnedModelDaemon)
         owner_kwargs = dict(request_timeout=request_timeout,
@@ -1431,7 +1440,7 @@ class NativeModelClient:
         from astrolabe.runtime.model_pool import get_local_model_pool
         # Direct drivers own their job/seed loops in the isolated daemon; they
         # are not typed infer kernels eligible for trajectory-local pooling.
-        pool = get_local_model_pool() if shared_endpoint is None and not direct_payload else None
+        pool = get_local_model_pool() if poolable and shared_endpoint is None and not direct_payload else None
         self.owner = None
         try:
             self.owner = (pool.acquire(spec, owner_type, owner_kwargs, identity)

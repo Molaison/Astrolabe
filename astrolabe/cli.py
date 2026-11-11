@@ -4728,6 +4728,7 @@ def _compose_section_evaluator(overlay_obj: dict, config_dir: pathlib.Path) -> N
         "Chai1",
         "Boltz",
         "OpenDDE",
+        "Mol1",
         "Protenix",
         "Dummy",
     ]
@@ -4744,6 +4745,8 @@ def _compose_section_evaluator(overlay_obj: dict, config_dir: pathlib.Path) -> N
             "chai1": "chai1",
             "boltz": "boltz",
             "protenix": "protenix",
+            "mol1": "mol1",
+            "mol-1": "mol1",
         }
         sub = mapping.get(key)
         if not sub:

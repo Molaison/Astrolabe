@@ -389,7 +389,8 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                 selected_kind = str(selected_term_cfg.get("_type", "")).strip()
                 if family == "evaluator":
                     raw_kind = selected_kind.lower()
-                    merged_cfg = merge_component_config(section_cfg, (raw_kind,), selected_term_cfg, resolve=resolve_environment)
+                    base_kind = {"mol-1": "mol1"}.get(raw_kind, raw_kind)
+                    merged_cfg = merge_component_config(section_cfg, (base_kind,), selected_term_cfg, resolve=resolve_environment)
                     resolved = OmegaConf.to_container(merged_cfg, resolve=resolve_environment)
                 elif family == "mutator":
                     raw_kind = selected_kind.lower()

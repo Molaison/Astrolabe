@@ -37,6 +37,8 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 
 ## Constraints that are easy to miss
 
+- Mol-1 (`mol1`/`mol-1`) defaults to automatic base/Constraint selection using the existing native family/client owner and strict protein/SITE/CONTACT/EXCLUSION translation. Config/durable identity freezes both switchable weights; each native client binds its actual selected model/checkpoint/source/references. Late input IR reselects per job; switching shuts down the old client, without clearing failure fences or retaining two local models. The pre-auto fixed deterministic Constraint GPU canary matched native coordinates/confidence exactly; this selection revision still needs parent-run real acceptance, and full recovery/service/performance qualification remains pending. See [Mol-1 usage](mol1_constraint.md).
+
 - `RuntimeContext()` captures the active store; `reset()` replaces the facade's store without retargeting existing contexts. Use init/update/set methods, not registered public module assignments. This does not isolate native backend globals or make legacy concurrent runs safe.
 - A frozen Input can contain mutable lists. Snapshotting at dispatch isolates caller inputs while preserving backend-expected types; it does not alter native inference or sample selection.
 - StandardScores numerical/native values retain their existing shallow sharing semantics. Evidence has explicit clone/filter/merge rules. Equal metric names do not prove cross-backend scientific equivalence.

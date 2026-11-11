@@ -25,6 +25,36 @@
 #     git submodule update --init --recursive
 
 envs:
+  # Manual external runtime: export paths only, never install into or mutate
+  # the shared Mol-1 environment/source. See docs/mol1_constraint.md.
+  - name: mol1
+    manager: path
+    prefix: "/xcf26/zpzeng/scientific-tool-runtimes/mol1-constraint-v1"
+    export:
+      subprocess_envs.mol1.python_bin:
+        value: "/xcf26/zpzeng/scientific-tool-runtimes/mol1-evaluator-v1/venv/bin/python"
+        env_var: GH_MOL1_PYTHON
+        optional: true
+      subprocess_envs.mol1.repo_path:
+        value: "{{PREFIX}}/source"
+        env_var: GH_MOL1_REPO
+        optional: true
+      subprocess_envs.mol1.extra_python_paths:
+        value: "{{PREFIX}}/python-extras"
+        env_var: GH_MOL1_PYTHONPATH
+        optional: true
+      weight_path.mol1:
+        value: "{{PREFIX}}/data"
+        env_var: MOL_ROOT_DIR
+        optional: true
+      weight_path.mol1_constraint:
+        value: "{{PREFIX}}/data/checkpoint/mol-1-constraint.pt"
+        env_var: GH_WEIGHT_MOL1_CONSTRAINT
+        optional: true
+      weight_path.mol1_base:
+        value: "{{PREFIX}}/data/checkpoint/mol-1-base.pt"
+        env_var: GH_WEIGHT_MOL1_BASE
+        optional: true
   # Main runtime env: runs `gh run` and must include everything imported directly by the pipeline
   # (AlphaFold3 python, Boltz python, Protenix python, RAPiDock python if used, plus common deps).
   - name: gh

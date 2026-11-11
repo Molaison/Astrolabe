@@ -313,6 +313,34 @@ evaluator:
     use_msa_server: False
     msa_server_url: null
     msa_pairing_strategy: greedy
+  mol1:
+    python_bin: ${subprocess_envs.mol1.python_bin}
+    repo_path: ${subprocess_envs.mol1.repo_path}
+    extra_python_paths: ${subprocess_envs.mol1.extra_python_paths}
+    mol_root_dir: ${weight_path.mol1}
+    # Empty jobs use base; active constraints or enabled dynamic hints select Constraint.
+    model_name: auto
+    base_checkpoint_path: ${weight_path.mol1_base}
+    constraint_checkpoint_path: ${weight_path.mol1_constraint}
+    load_checkpoint_path: null # legacy override for the explicitly named model (or filename in auto)
+    dynamic_binding_site: false
+    reference_assets: {}
+    execution_mode: daemon
+    device: auto
+    num_cycles: 20
+    num_steps: 200
+    num_samples: 5
+    num_workers: 0
+    dtype: bf16
+    use_msa: false
+    need_atom_confidence: true
+    triangle_multiplicative: auto
+    triangle_attention: auto
+    enable_fusion: true
+    enable_tf32: false
+    deterministic: false
+    timeout_seconds: null
+    constraints: null
   opendde:
     # OpenDDE runs through a subprocess. By default it uses the current GH
     # interpreter when python_bin is null; set GH_OPENDDE_PYTHON only when a

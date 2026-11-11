@@ -132,6 +132,7 @@ def _merge_conf_with_defaults(
     from astrolabe.component_config import merge_component_config
 
     try:
+        evaluator_name = {"mol-1": "mol1"}.get(evaluator_name, evaluator_name)
         merged = merge_component_config(evaluator_conf, evaluator_name, override_conf)
         merged.pop("_type", None)
         return merged
@@ -483,6 +484,29 @@ def _build_boltz_evaluator(
     else:
         model_runner = Boltz1Runner(boltz_conf)
     return BoltzEvaluator(model_runner, raw_model_results_dir / "boltz")
+
+
+@register_evaluator_factory("mol1")
+@register_evaluator_factory("mol-1")
+def _build_mol1_evaluator(
+    term_conf, *, alias, raw_model_results_dir, oligo_names, evaluator_conf,
+):
+    from astrolabe.evaluators.mol1 import Mol1Evaluator
+    from astrolabe.evaluators.wrappers.mol1 import Mol1Runner
+    from astrolabe.core.binding_site import has_binding_site_config
+
+    config = _merge_conf_with_defaults(evaluator_conf, "mol1", term_conf, alias=alias)
+    try:
+        static_binding_site = getattr(global_config, "binding_site", None)
+        dynamic_enabled = bool(getattr(global_config, "dynamic_binding_site_enabled", False))
+    except RuntimeError:
+        static_binding_site, dynamic_enabled = None, False
+    # A dynamic site may arrive after initialization, just as with Protenix.
+    # Static guidance is only an initial hint; each merged job is checked again.
+    if dynamic_enabled:
+        config.dynamic_binding_site = True
+    runner = Mol1Runner.from_config(config, constraint_hint=has_binding_site_config(static_binding_site))
+    return Mol1Evaluator(runner, raw_model_results_dir / "mol1")
 
 
 @register_evaluator_factory("opendde")

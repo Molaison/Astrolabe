@@ -36,6 +36,8 @@ BACKENDS = (
             "The owner retains the model; prediction and result dumping are one request."),
     Backend("opendde", "evaluator", ("opendde",), ("opendde",), "daemon",
             "OpenDDE uses its own interpreter and chemistry assets."),
+    Backend("mol1", "evaluator", ("mol1", "mol-1"), ("mol1",), "daemon",
+            "Pinned Molence auto base/Constraint; protein/MSA/SITE/CONTACT/EXCLUSION only. Native qualification pending."),
     Backend("rhofold", "evaluator", ("rhofold",), ("rhofold",), "daemon",
             "The owner retains the RNA model and performs device transfers."),
     *(Backend(name, "evaluator", (name,), (name,), "daemon",

@@ -27,6 +27,8 @@ The overlap default bounds unconsumed finalizations to `max_workers + 1`. Succes
 
 ## Evidence levels
 
+Mol-1 is a narrow native-family adapter port (source `9e85ad16`, separate base/Constraint weights), not a legacy runtime merge. Auto selects from merged request constraints and dynamic hints, freezes both switchable assets, and replaces the current native client only after normal shutdown. Constraint-only legacy configuration remains supported. A pre-auto fixed deterministic Constraint real-GPU canary matched native coordinates/confidence exactly; non-deterministic comparisons are retained as failures. This code-only auto revision needs parent-run real acceptance. Full recovery/service/performance qualification and daily promotion remain pending ([usage](mol1_constraint.md)).
+
 | Evidence | Interpretation |
 |---|---|
 | Pinned baseline | Original commit, supported Python and targeted failures recorded before implementation. |
@@ -60,7 +62,7 @@ Deterministic identity regressions and the existing candidate/recovery checks
 are included in the release CPU suite. This is a correctness fix, with no model
 or performance qualification claim.
 
-Mol-1 remains on the independent
+The legacy Mol-1 base adapter remains on the independent
 [`research/mol1-qualification-20261108` branch](https://github.com/Molaison/Astrolabe/tree/research/mol1-qualification-20261108);
 its [qualification contract](https://github.com/Molaison/Astrolabe/blob/research/mol1-qualification-20261108/docs/mol1-qualification.md)
 separates historical native canaries from the outstanding current-main gates.
