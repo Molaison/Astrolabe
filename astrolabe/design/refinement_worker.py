@@ -31,7 +31,7 @@ from astrolabe.profiling import profiled
 
 from .legacy import LEGACY_REFERENCE_CODECS, LegacyContext
 from .native_refinement import REFINEMENT_REFERENCE_CODECS
-from .native_scores import NATIVE_SCORES_ENVELOPE_CODEC, restore_scores, snapshot_scores
+from .native_scores import NATIVE_SCORES_ENVELOPE_CODEC, _write_exact, restore_scores, snapshot_scores
 from .native_refinement_runtime import ScoreReceipt, _SCORE_RECEIPT_CODEC
 from .runtime import ContractConflict, OutcomeUnknown
 from .store import ArrayCodec, DataStore, JSONCodec, design_codec
@@ -394,6 +394,45 @@ class _Worker:
         raw = root / "raw_model_results"
         shutil.copytree(raw_receipt["job_raw_dir"], raw)
         scores = restore_scores(_blob(raw_receipt["raw_scores"]), self.data, root / "structures")
+        envelope = self.data.get(_blob(raw_receipt["raw_scores"]), NATIVE_SCORES_ENVELOPE_CODEC)
+        raw_source = Path(raw_receipt["job_raw_dir"])
+        structure_source = raw_source.parent / "structures"
+        for structure in envelope.structures:
+            original = Path(structure.original_path)
+            if not original.is_absolute():
+                continue
+            if original.is_relative_to(raw_source):
+                source_root, private_root = raw_source, raw
+                target = raw / original.relative_to(raw_source)
+                mirror = False
+            elif original.is_relative_to(structure_source):
+                source_root, private_root = structure_source, root / "structures"
+                target = root / original.relative_to(raw_source.parent)
+                mirror = True
+            else:
+                continue
+            if ".." in original.parts:
+                raise ContractConflict(f"Score native structure contains parent traversal: {original}")
+            if (original == source_root
+                    or not original.resolve().is_relative_to(source_root.resolve())
+                    or not target.resolve().is_relative_to(private_root.resolve())
+                    or not target.resolve().is_relative_to(root.resolve())
+                    or target.resolve() == private_root.resolve()):
+                raise ContractConflict(f"Score native structure escapes private directory: {original}")
+            restored = scores.complex_paths.get(structure.assembly)
+            if restored != root / "structures" / structure.restored_name:
+                raise ContractConflict(f"Score native structure assembly mismatch: {structure.assembly}")
+            if mirror:
+                # Restore provenance, not raw-native CIF bytes: the exact alias
+                # and filename locate confidence in the private copied raw tree.
+                target.parent.mkdir(parents=True, exist_ok=True)
+                _write_exact(target, restored.read_bytes())
+            else:
+                if not target.is_file():
+                    raise ContractConflict(f"Score native structure is missing: {target}")
+                if target.read_bytes() != restored.read_bytes():
+                    raise ContractConflict(f"Score native structure content mismatch: {target}")
+            scores.complex_paths[structure.assembly] = target
         _private_score_paths(scores, Path(raw_receipt["job_raw_dir"]), raw)
         runtime_config = dict(self.runtime_config)
         if task.get("score_context") is not None:
