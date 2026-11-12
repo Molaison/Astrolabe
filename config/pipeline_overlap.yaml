@@ -1,0 +1,9 @@
+# Apply to an existing isolated/shared task; scientific configuration is inherited.
+# score_queue_size limits Score waiting + running, not GPU model concurrency.
+search:
+  execution:
+    mode: isolated
+    model_sharing: shared
+    reuse_durable_closures: true
+    async_mutator: true
+    score_queue_size: 4

@@ -174,7 +174,7 @@ metric combinations stay in existing `loss.expression_terms`. Archived-table
 and same-saved-pose readout parity is distinct from new live model/relaxation
 or end-to-end optimization qualification; none implies experimental pH efficacy.
 
-## Opt-in refinement pipeline (r58 candidate)
+## Opt-in refinement pipeline (r58 validated)
 
 `search.execution.async_mutator` runs a cooperative, single-live-proposal
 continuation: main prepares and applies scientific state/RNG; only a frozen
@@ -190,5 +190,10 @@ Final evaluation still waits Score and ordered publication. Pending evaluations,
 including completed unpublished suffixes, are capped at `in_flight +
 score_queue_size`. Recovery replaces process-local stage occupancy with a new
 credit-epoch snapshot; paid receipts remain authoritative. The closure-reuse,
-async-mutator and separate-credit switches default to false/false/0. This is
-candidate control-flow work, not real-model numerical or throughput qualification.
+async-mutator and separate-credit switches default to false/false/0.
+The D5056_D15 workload passed exact candidates, structures, complete Rosetta
+scores, selection and continuation RNG across six native runs. Staged proposals
+and bounded credits were observed; Score's active peak remained one. Two
+unprofiled repeats per version showed 2.29% lower mean CLI time, below the
+predeclared 3% benefit threshold. Numerical equivalence and measured scheduling
+behavior therefore have stronger evidence than a general throughput claim.

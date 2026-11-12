@@ -83,6 +83,8 @@ execution:
 
 在同一份任务配置的 `search.execution` 中分别开启以下选项。默认关闭，
 可独立恢复原来的执行方式；不改变模型参数、科学评分或代际选择规则。
+也可使用 [`config/pipeline_overlap.yaml`](../config/pipeline_overlap.yaml)
+作为 `--overlay`；它保留原任务的 worker、CPU 和 GPU 配额。
 
 ```yaml
 search:
@@ -122,6 +124,21 @@ Evaluator 性能验收仍分两步：先用预先准备的真实输入与持续�
 科学一致性；然后按该服务能力检查 Beam、Mutate 和 Score 供给。已有
 [`model_gpu_throughput.py`](../scripts/validation/model_gpu_throughput.py)
 可用于其支持后端的受控模型对照。profiling 不会自行重放科学请求。
+
+### 已验证的 D5056_D15 对照范围
+
+r58 在同一 GPU、271 residues、seed 10079、完整 Rosetta Score、4 CPU workers
+及 GPU 模型并发 1 下，完成 11 次推理资格及六次完整设计任务，共 83 次 AF3。
+六次运行的候选、结构、全部 Score、最终选择和 RNG 均 exact。
+两版各两次关闭 profiling 的运行，平均 CLI 耗时为 347.722 → 339.769 秒
+（减少 2.29%），GPU 时间加权均值为 56.558% → 57.874%，采样覆盖
+99.811% → 100%。两对候选都更快，但未达到预设 3% 提速确认门槛。
+
+诊断中持久化 union 为 139.969 → 117.846 秒，12 个提案全部 staged，
+远端等待期间可观察到主控制持久化推进；Score 活跃峰值仍为 1，
+与 AF3 重叠时间仅为 2.193 → 2.532 秒。此工作负载没有证明增加 Score
+实际并行数，也不代表队列已饱和。GPU 利用率是设备采样，不是 kernel occupancy。
+因此，三个开关继续默认关闭；在自己的任务上按相同科学合同做对照后使用。
 
 ## 阅读指标与增加观测点
 

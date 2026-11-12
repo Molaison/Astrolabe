@@ -152,7 +152,7 @@ Old/new Rosetta readouts agree on the same saved poses; serialized-pose versus
 original in-memory differences are retained separately. These checks do not
 establish live model/relaxation parity or experimentally calibrated pH release.
 
-### Opt-in cooperative refinement pipeline (r58 candidate)
+### Opt-in cooperative refinement pipeline (r58 validated)
 
 The configured native owner shares Runtime's durable call lifecycle with a
 main-thread continuation. It freezes LigandMPNN daemon requests before leaving
@@ -162,5 +162,10 @@ borrowed owners retain explicit synchronous fallback. Score waiting+running and
 prediction/raw-holding use independent bounded lanes; completed unpublished
 results still occupy a fixed reorder window. Recovery rebases occupancy via a
 credit epoch without replaying unknown inference. All three execution toggles
-remain off by default. Host control checks passed; SIF/native scientific and
-performance acceptance are separate, unfinished evidence layers.
+remain off by default. CPU checks and six native D5056_D15 AF3/Rosetta runs
+passed exact scientific and continuation-RNG comparison. The profiled candidate
+used staged proposals 12/12 and overlapped main control persistence with remote
+wait; Score concurrency remained one. Two unprofiled replicates per version
+averaged 347.722 s before and 339.769 s after (2.29% observed reduction).
+This fell below the predeclared 3% benefit threshold; it is not a confirmed
+throughput improvement or qualification for other workloads.
