@@ -56,6 +56,8 @@ RELEASE_CPU_TESTS = (
     "tests/test_backend_startup.py",
     "tests/test_startup_validation.py",
     "tests/test_pyrosetta_lazy_import.py",
+    "tests/test_loss_import_lifecycle.py",
+    "tests/test_design_screening_geometry.py",
     "tests/test_protein_beam_metric_guards.py",
     "tests/test_runtime_context.py",
     "tests/test_runtime_support.py",
