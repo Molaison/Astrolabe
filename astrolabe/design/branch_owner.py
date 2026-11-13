@@ -43,7 +43,7 @@ class NativeBranchTrial:
     def __init__(self, pool, runtime, *, identity, worker, task_factory,
                  result_factory, probe, reserve=None, retry=None, report=None,
                  terminal_proposal_errors=True, charge_identity=None,
-                 before_wait=None, ordered_results=False):
+                 before_wait=None, ordered_results=False, waiter=None, progress=None):
         self.runtime, self.data = runtime, runtime.data
         self.identity = identity
         self.worker, self.task_factory = worker, task_factory
@@ -57,7 +57,8 @@ class NativeBranchTrial:
         self._state = self._request = None
         self.executor = BranchExecutor(pool, submit=self._submit,
             resolve=self._resolve, on_error=self._failure, on_observed=self._observe,
-            before_wait=before_wait, ordered_results=ordered_results)
+            before_wait=before_wait, ordered_results=ordered_results,
+            waiter=waiter, progress=progress)
 
     def _name(self, job):
         return "native-jobs/" + job.identity

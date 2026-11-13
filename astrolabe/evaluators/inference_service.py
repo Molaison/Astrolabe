@@ -19,8 +19,11 @@ import threading
 import time
 import traceback
 
+from astrolabe.profiling import event as profile_event, profiled
+
 
 def mark(event, **fields):
+    profile_event("inference." + event, **fields)
     os.write(1, (json.dumps(dict(event=event, ts=time.time(), pid=os.getpid(),
                                **fields)) + "\n").encode())
 
@@ -82,6 +85,7 @@ def _checked_path(socket_path):
     return path
 
 
+@profiled("ipc.inference_opaque_exchange")
 def _opaque_exchange(socket_path, frame):
     _check_opaque_request(frame)
     with Client(str(_checked_path(socket_path)), family="AF_UNIX") as connection:
@@ -94,6 +98,7 @@ def _opaque_exchange(socket_path, frame):
     return wire
 
 
+@profiled("ipc.inference_call")
 def call(socket_path, payload, *, opaque=False):
     if opaque:
         frame = {_OPAQUE: 1, "kind": "predict", "model": payload.get("model"),
@@ -131,6 +136,7 @@ def _json_load(wire):
     return value
 
 
+@profiled("ipc.inference_json_call")
 def json_call(socket_path, payload):
     """Explicit control-only protocol. Never detects or falls back to pickle."""
     wire = _json_dump(payload)

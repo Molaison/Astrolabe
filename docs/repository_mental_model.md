@@ -34,6 +34,7 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 | Structure transformation | `structure_processors/`, `post_eval_hooks/` | Changed geometry is not a new prediction. Keep original confidence and derived-path provenance distinct. |
 | Resources / overlap | `runtime_support.py`, backend lifecycle methods, `run.py` | Explicit deduplicated cleanup; serial prediction, bounded ordered CPU finalization. |
 | Persistence | `decision_maker.py`, `run_config_lifecycle.py`, `execution_audit.py`, `posthoc/` | Same CSV row/column semantics. Single-file atomic replacement is not exact resume. |
+| Profiling | `profiling/`, public application/repeat scopes and module spans | Optional observations, separate per-process files and bounded resource sampling; no RNG, synchronization, scheduling or recovery authority. See [profiling](profiling.md). |
 
 ## Constraints that are easy to miss
 
@@ -153,4 +154,48 @@ centres and native energies remain mutation evidence, not prediction confidence.
 `proton-states` and `proton-parity` are explicit opt-in commands, not automatic
 scientific acceptance. Patched source and external checkpoint/EV6 assets have
 separate provenance; see [installation](proton_installation.md) and
-[pH interfaces](ph_sensitive_design.md). This port adds no AF3 or vdM implementation.
+[pH interfaces](ph_sensitive_design.md). No AF3 implementation is changed here.
+
+`vdm_pair` and `vdm_proton` use the same native factory/selection boundaries.
+The former searches natural pair geometry and supplies a fresh preview/role
+packet; the latter consumes those validated roles for local Proton redesign.
+Root site-map identity, fixed pair/target positions and the shared mutation
+budget remain scientific inputs, not an opportunity to reuse stale previews.
+The qualified geometry and role helpers are retained rather than replacing
+the current orchestration or Proton resource ownership.
+The surface selector accepts explicit `core_cutoff`/`surface_cutoff` SASA
+values in A^2. The vdM task selects its historical 20/40 values explicitly;
+omitting them preserves the current defaults for unrelated tasks.
+
+`ph_binding_endpoint` exposes raw local-His three-system S/P differences for
+Proton H, ref2015 and fa_elec. Explicit frozen residue masks and disjoint
+physical chain lists define the compared systems. Proton canonical reference
+tokens are installed before encoding; Rosetta uses isolated, fixed-backbone
+local repack/chi-minimization with matched bound/free seeds. Normalization and
+metric combinations stay in existing `loss.expression_terms`. Archived-table
+and same-saved-pose readout parity is distinct from new live model/relaxation
+or end-to-end optimization qualification; none implies experimental pH efficacy.
+
+## Opt-in refinement pipeline (r58 validated)
+
+`search.execution.async_mutator` runs a cooperative, single-live-proposal
+continuation: main prepares and applies scientific state/RNG; only a frozen
+remote transport waits off-thread, outside LegacyContext activation. Local and
+borrowed main-thread model owners keep synchronous fallback. Runtime's ordinary
+issued/result/RNG journal also owns suspended calls; interruption is not replay
+permission.
+
+Positive `score_queue_size` separates Score waiting+running capacity from the
+bounded prediction/raw-holding producer lane. Durable raw verification releases
+prediction execution; full Score applies nonblocking, bounded handoff pressure.
+Final evaluation still waits Score and ordered publication. Pending evaluations,
+including completed unpublished suffixes, are capped at `in_flight +
+score_queue_size`. Recovery replaces process-local stage occupancy with a new
+credit-epoch snapshot; paid receipts remain authoritative. The closure-reuse,
+async-mutator and separate-credit switches default to false/false/0.
+The D5056_D15 workload passed exact candidates, structures, complete Rosetta
+scores, selection and continuation RNG across six native runs. Staged proposals
+and bounded credits were observed; Score's active peak remained one. Two
+unprofiled repeats per version showed 2.29% lower mean CLI time, below the
+predeclared 3% benefit threshold. Numerical equivalence and measured scheduling
+behavior therefore have stronger evidence than a general throughput claim.

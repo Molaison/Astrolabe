@@ -22,6 +22,8 @@ from pathlib import Path
 import subprocess
 from typing import Any, Callable
 
+from astrolabe.profiling import event, span
+
 
 _RUN_OWNERS = ContextVar("astrolabe_model_run_owners", default=None)
 DEFAULT_MODEL_FRAME_BYTES = 256 * 1024 * 1024
@@ -928,11 +930,23 @@ def kernel_handler(settings: dict, loader, *, torch_device=None, lifecycle=None)
                     invoked = True
                 if device_state is not None and resource == "gpu":
                     device_state["uncertain"] = True
-                result = function(value)
-                if strict:
-                    result = _complete_native(result)
-                elif resource == "gpu":
-                    result = _complete_device(result)
+                # Completed timing encloses only dispatch plus the existing native
+                # completion boundary, not admission or later finalization.
+                completed = (span("evaluator.infer_completed", resource=resource)
+                             if strict and name == "infer" else nullcontext())
+                with completed:
+                    stage_name = (("evaluator.infer_host" if name == "infer" else
+                                   "evaluator." + name) if strict else "model." + name + "_host")
+                    with span(stage_name, resource=resource, stage=name):
+                        result = function(value)
+                    if strict:
+                        with span("evaluator.completion_wait", resource=resource, stage=name):
+                            result = _complete_native(result)
+                    elif resource == "gpu":
+                        with span("model.completion_wait", resource=resource, stage=name):
+                            result = _complete_device(result)
+                    if not strict and resource == "gpu":
+                        event("model.stage_completed", resource=resource, stage=name)
                 if device_state is not None:
                     device_state["uncertain"] = False
         except BaseException:
@@ -1484,17 +1498,19 @@ class NativeModelClient:
                 if getattr(self, "direct_payload", False):
                     # The native driver dispatches its own per-sample stages.
                     # Do not wrap the call or replace the owner's RNG stream.
-                    result = self.owner.request(payload)
+                    with span("ipc.model_request_wait", request_id=request_id):
+                        result = self.owner.request(payload)
                     _request_evidence("request_finished", self.owner, self.metadata,
                                       request_id=request_id, ok=True, runtime=None)
                     return result
-                response = self.owner.request({
-                    "operation": "infer", "payload": payload,
-                    "random_state": capture_random_state(),
-                    "runtime_request_id": request_id,
-                    "concurrency_certified": (
-                        os.environ.get("ASTROLABE_REQUEST_CONCURRENCY") != "0"),
-                })
+                with span("ipc.model_request_wait", request_id=request_id):
+                    response = self.owner.request({
+                        "operation": "infer", "payload": payload,
+                        "random_state": capture_random_state(),
+                        "runtime_request_id": request_id,
+                        "concurrency_certified": (
+                            os.environ.get("ASTROLABE_REQUEST_CONCURRENCY") != "0"),
+                    })
                 runtime = response.get("runtime")
                 if runtime is not None and runtime["request_id"] != request_id:
                     raise RuntimeError("Kernel result belongs to a different runtime request")

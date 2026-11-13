@@ -47,7 +47,8 @@ from .native_scores import (
 )
 from .native_support import LazyNativeOwner
 from .operations import INVOKE, operation
-from .runtime import ContractConflict, OutcomeUnknown, Runtime
+from .runtime import ContractConflict, OutcomeUnknown, Runtime, outcome_is_unknown
+from .proposal_rejection import ProposalInfeasible, VDM_INFEASIBILITY_REASONS
 from .store import DataclassCodec, JSONCodec, design_codec
 from .types import (
     Assignment,
@@ -58,6 +59,8 @@ from .types import (
     Key,
     Polymer,
     Requirement,
+    Reconciliation,
+    RNGReceipt,
     System,
     key_for,
 )
@@ -290,6 +293,7 @@ class DurableNativeRefinementOwner:
                 spec.load_mutator,
                 spec.load_evaluator,
                 spec.propose,
+                getattr(spec.propose, "continuation", None),
                 spec.evaluate,
                 spec.measure,
             )
@@ -328,8 +332,10 @@ class DurableNativeRefinementOwner:
             request_codec=_PROPOSAL_REQUEST_CODEC,
             result_codec=_BRANCH_PROPOSAL_RESULT_CODEC,
             paid_boundary="propose",
+            reconciler=self._reconcile_rejection,
             **common,
         )
+        self.proposal_operation._invoke_continuation = self._propose_continuation
         self.prediction_operation = operation(
             _PREDICTION_ALIAS,
             DurablePredictionRequest,
@@ -505,6 +511,17 @@ class DurableNativeRefinementOwner:
         return destination
 
     def _propose(self, request: DurableProposalRequest) -> BranchProposal:
+        from .continuation import complete
+        return complete(self._propose_continuation(request))
+
+    def _propose_continuation(self, request: DurableProposalRequest):
+        from astrolabe.profiling import span
+        with span("mutate.propose", proposal_id=request.job.id,
+                  generation=request.job.generation, parent_id=None if request.job.parent is None else request.job.parent.id,
+                  slot=request.job.slot, seed=request.job.seed):
+            return (yield from self._propose_steps(request))
+
+    def _propose_steps(self, request: DurableProposalRequest):
         if request.protocol != self.protocol:
             raise ValueError("proposal request protocol differs from the owner contract")
         job = request.job
@@ -532,18 +549,27 @@ class DurableNativeRefinementOwner:
         )
         loaded = self.models.get()
         try:
-            with self._activate(parent.candidate):
-                proposed = self.spec.propose(
-                    loaded.mutator,
-                    parent.candidate,
-                    scores,
-                    seed=proposal_seed,
-                    step=job.id,
-                    generation=job.generation,
-                    parent_id=job.parent.id,
-                    proposal_index=job.slot,
-                    output=Path(request.output),
+            arguments = dict(
+                seed=proposal_seed, step=job.id, generation=job.generation,
+                parent_id=job.parent.id, proposal_index=job.slot,
+                output=Path(request.output),
+            )
+            continuation = getattr(self.spec.propose, "continuation", None)
+            if continuation is None:
+                with self._activate(parent.candidate):
+                    proposed = self.spec.propose(
+                        loaded.mutator, parent.candidate, scores, **arguments,
+                    )
+            else:
+                from .continuation import activated
+                proposed = yield from activated(
+                    continuation(loaded.mutator, parent.candidate, scores, **arguments),
+                    lambda: self._activate(parent.candidate), self.spec.context,
                 )
+        except ProposalInfeasible as error:
+            if outcome_is_unknown(error):
+                raise
+            return self._reject_proposal(request, error.reason)
         except BaseException as error:
             self.spec.event(
                 "proposal_failed",
@@ -586,6 +612,73 @@ class DurableNativeRefinementOwner:
             value=value,
             valid=True,
         )
+
+    def _reject_proposal(self, request: DurableProposalRequest, reason: str) -> BranchProposal:
+        """Commit a rejected outcome, with no invented child or model result."""
+        if reason not in VDM_INFEASIBILITY_REASONS:
+            raise ValueError("Unsupported proposal rejection reason")
+        job = request.job
+        parent = self._member_record(job)
+        record = RefinementProposalRecord(
+            candidate=parent.candidate,
+            label=parent.label,
+            generation=job.generation,
+            parent_id=job.parent.id,
+            proposal_index=job.slot,
+            proposal_step=job.id,
+            proposal_seed=job.seed,
+            protocol=self.protocol,
+        )
+        proposal = BranchProposal(
+            job.id, job.parent.id, parent.label,
+            self.data.put(record, _PROPOSAL_CODEC),
+            valid=False, reasons=(reason,),
+        )
+        # A rejection is a completed operation, never a successful candidate.
+        # Its receipt also closes the validate-before-result-commit window.
+        slot = key_for((self._job_work_id(job),
+                        f"native-refinement/propose/{job.id}/proposal")).digest
+        row = self.runtime._read("attempt", slot)
+        if row is None or row["status"] != "issued":
+            raise ContractConflict("Rejection must belong to an issued proposal")
+        before = Blob(Key(row["before"]["identity"]), row["before"]["codec"])
+        result = self.data.put(proposal, _BRANCH_PROPOSAL_RESULT_CODEC)
+        rng = self.data.put(RNGReceipt(before, self.runtime._capture_rng(),
+                                       self.runtime.scientific_contract), design_codec)
+        self.runtime.save("native-refinement/rejection/" + slot, {
+            "binding": row["binding"], "request": row["request"],
+            "result": result, "rng": rng, "reason": reason,
+        })
+        return proposal
+
+    def _reconcile_rejection(self, attempt: str, row: dict, data) -> Reconciliation:
+        """Only owner-created, request-bound rejection receipts can resolve unknown."""
+        receipt = self.runtime.load("native-refinement/rejection/" + attempt)
+        if receipt is None:
+            return Reconciliation(attempt, "unknown", data.put({
+                "binding": row["binding"], "reason": "no owner rejection receipt",
+            }, _JSON))
+        if (receipt["binding"] != row["binding"]
+                or receipt["request"] != row["request"]):
+            raise ContractConflict("Rejection receipt belongs to another proposal")
+        request_ref = Blob(Key(row["request"]["identity"]), row["request"]["codec"])
+        request = data.get(request_ref, _PROPOSAL_REQUEST_CODEC)
+        proposal = data.get(receipt["result"], _BRANCH_PROPOSAL_RESULT_CODEC)
+        if (request.protocol != self.protocol or proposal.valid
+                or proposal.id != request.job.id
+                or proposal.parent_id != request.job.parent.id
+                or receipt["reason"] not in VDM_INFEASIBILITY_REASONS
+                or proposal.reasons != (receipt["reason"],)):
+            raise ContractConflict("Rejection terminal does not match the issued job")
+        proof = data.put({
+            "binding": row["binding"],
+            "result": {"identity": receipt["result"].identity.digest,
+                       "codec": receipt["result"].codec},
+            "rng": {"identity": receipt["rng"].identity.digest,
+                    "codec": receipt["rng"].codec},
+            "outcome": "proposal_rejected", "reasons": list(proposal.reasons),
+        }, _JSON)
+        return Reconciliation(attempt, "completed", proof)
 
     def _predict(self, request: DurablePredictionRequest) -> RawPredictionReceipt:
         if request.protocol != self.protocol:
@@ -968,6 +1061,10 @@ class DurableNativeRefinementOwner:
             if component is None:
                 continue
             if attempt.status in ("issued", "unknown"):
+                if component is self.proposal_operation:
+                    terminal = self.runtime.reconcile(attempt.identity)
+                    if terminal.status == "completed":
+                        continue
                 raise OutcomeUnknown(attempt.identity)
             if attempt.status == "completed":
                 if attempt.result is None or attempt.rng is None:

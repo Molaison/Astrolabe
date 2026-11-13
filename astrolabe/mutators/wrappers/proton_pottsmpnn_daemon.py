@@ -556,6 +556,7 @@ def _infer(runtime, message: dict[str, Any], output_dir: Path) -> dict[str, Any]
         "fixed_positions": fixed_positions,
         "criteria": criteria,
         "seed": seed,
+        "seed_provenance": message.get("seed_provenance"),
         "selected": _design_metadata(selected),
         "designs": [_design_metadata(design) for design in designs],
         "seed_energies": seed_energies,

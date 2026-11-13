@@ -8,6 +8,7 @@ import uuid
 from typing import Any
 
 from astrolabe.utils.logging_utils import format_metric_value
+from astrolabe.profiling import span as profile_span
 
 
 EVENT_SUMMARY_ITEM_LIMIT = 5
@@ -155,14 +156,28 @@ class EventSpan:
 
     def __enter__(self) -> "EventSpan":
         self.start()
+        # Reuse the concrete aggregate call sites, including overridden mutators.
+        # Per-loss detail spans must not count as another whole Score evaluation.
+        name = ("evaluator.evaluate" if self.component == "evaluator" else
+                "mutate.propose" if self.component == "mutator" else
+                "score.evaluate" if self.component == "loss_engine" and
+                self.detail == "compute_loss" else None)
+        self._profile = None if name is None else profile_span(
+            name, alias=self.alias, stage=self.stage, step=self.step)
+        if self._profile is not None:
+            self._profile.__enter__()
         return self
 
     def __exit__(self, exc_type, exc, _tb) -> bool:
-        if exc_type is not None:
-            self.error(exc if exc is not None else exc_type)
-            return False
-        if not self._closed:
-            self.finish()
+        try:
+            if exc_type is not None:
+                self.error(exc if exc is not None else exc_type)
+                return False
+            if not self._closed:
+                self.finish()
+        finally:
+            if self._profile is not None:
+                self._profile.__exit__(exc_type, exc, _tb)
         return False
 
     def start(self, **fields: Any) -> None:

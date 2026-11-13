@@ -114,6 +114,77 @@ class NativeSequenceRunner:
     def design_sequences(self, **features: Any) -> dict[str, Any]:
         return self.client.request({"features": features})
 
+    @property
+    def supports_cooperative_transport(self):
+        from astrolabe.model_daemon import OwnedModelDaemon
+        # LocalModelOwner and BorrowedOwner both enforce main-thread scientific
+        # ownership, even when a borrowed owner exposes a daemon socket.
+        return (isinstance(self.client.owner, OwnedModelDaemon)
+                and not getattr(self.client, "direct_payload", False)
+                and self.client.owner.socket_path is not None)
+
+    def design_sequences_continuation(self, **features: Any):
+        """Freeze on main; transport alone waits off-thread; apply RNG on main.
+
+        Deliberately does not call NativeModelClient.request in the transport:
+        that synchronous API captures/restores process-global caller RNG.
+        """
+        import copy
+        import os
+        import uuid
+        from astrolabe.design.continuation import TransportWait
+        from astrolabe.model_execution import _request_evidence
+        from astrolabe.model_execution import capture_random_state, restore_random_state
+        from astrolabe.profiling import span
+
+        client = self.client
+        if not self.supports_cooperative_transport:
+            raise ValueError("Cooperative sequence mutation requires a remote native daemon")
+        with span("proposal.prepare", part="request_freeze", backend="LigandMPNN"):
+            request_id = uuid.uuid4().hex
+            envelope = copy.deepcopy({
+                "operation": "infer", "payload": host_result({"features": features}),
+                "random_state": capture_random_state(), "runtime_request_id": request_id,
+                "concurrency_certified": os.environ.get("ASTROLABE_REQUEST_CONCURRENCY") != "0",
+            })
+            _request_evidence("request_started", client.owner, client.metadata, request_id=request_id)
+
+        def transport():
+            # copy_context at submission propagates model ownership and profile
+            # identity. No legacy access, RNG capture/apply or output sampling.
+            with client._request_lock, span("proposal.wait", request_id=request_id):
+                return client.owner.request(envelope)
+
+        try:
+            response = yield TransportWait(transport)
+            with span("proposal.apply", request_id=request_id):
+                runtime = response.get("runtime")
+                if runtime is not None and runtime["request_id"] != request_id:
+                    raise RuntimeError("Kernel result belongs to a different runtime request")
+                if callable(getattr(client.owner, "quarantine", None)):
+                    expected = client.metadata["runtime_lifecycle"]["model_id"]
+                    if runtime is None or runtime.get("model_id") != expected:
+                        raise RuntimeError("Pooled kernel result has no matching model identity")
+                client.last_runtime_receipt = runtime
+                restore_random_state(response["random_state"])
+                _request_evidence("request_finished", client.owner, client.metadata,
+                                  request_id=request_id, ok=response["ok"], runtime=runtime)
+                if not response["ok"]:
+                    raise RuntimeError(f"{response['error_type']}: {response['error']}")
+                return response["result"]
+        except BaseException as error:
+            try:
+                _request_evidence("request_error", client.owner, client.metadata,
+                                  request_id=request_id, error_type=type(error).__name__,
+                                  outcome_unknown=bool(getattr(error, "outcome_unknown", False)))
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception("Failed to persist model request error")
+            quarantine = getattr(client.owner, "quarantine", None)
+            if callable(quarantine):
+                quarantine()
+            raise
+
     def close(self) -> None:
         self.shutdown()
 

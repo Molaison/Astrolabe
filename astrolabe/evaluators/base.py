@@ -2,15 +2,23 @@ from __future__ import annotations
 
 from abc import abstractmethod
 
+from astrolabe.profiling import span
+
 
 class Evaluator:
     def __init__(self, *args, **kwargs):
         pass
 
     def evaluate(self, inputs=None, runtime_config=None):
-        input_feat = self.prepare_input(inputs, runtime_config)
-        output = self.run_function(input_feat)
-        std_output = self.prepare_output(output, inputs, runtime_config)
+        # Facade work can include RPC, features and output conversion. Keep it
+        # distinct from the native evaluator's prepare/infer/finalize stages.
+        backend = type(self).__name__
+        with span("evaluator.prepare_input", backend=backend):
+            input_feat = self.prepare_input(inputs, runtime_config)
+        with span("evaluator.run_host", backend=backend):
+            output = self.run_function(input_feat)
+        with span("evaluator.prepare_output", backend=backend):
+            std_output = self.prepare_output(output, inputs, runtime_config)
         return std_output
 
     def debug_cache_identity(self):

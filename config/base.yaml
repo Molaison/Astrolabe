@@ -32,6 +32,16 @@ per_residue_scores:
   allow_missing_mutator_score_terms: false
 
 debug: False
+profiling:
+  enabled: false
+  # Glob patterns over names such as evaluator.*, score.*, mutate.*, runtime.*.
+  modules: ["*"]
+  sample_interval_s: 1.0
+  gpu: false
+  cprofile: false
+  max_events: 200000
+  # null writes a unique session below out_dir/profile.
+  output_dir: null
 logging:
   console_level: INFO
   info_file_level: INFO
@@ -980,6 +990,8 @@ mutator:
     startup_timeout: 600
     request_timeout: null
     output_dir: null
+  VDMPair:
+    library_path: ${oc.env:GH_VDM_PAIR_LIBRARY,null}
   ProtonPottsMPNN:
     # Joint Potts energy optimizer from christian-creator/ProtonPottsMPNN.
     # It is not an independent per-position probability model: one coherent

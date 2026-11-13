@@ -5,6 +5,8 @@ import json
 import os
 from pathlib import Path
 
+from astrolabe.evaluators.confidence_sidecar import resolve_af3_confidence_path
+
 
 def content_sha256(path):
     digest=hashlib.sha256()
@@ -40,7 +42,8 @@ def scientific_contract(cfg):
              source/'protein_beam_budget.py',
              source/'inference_pipeline.py',source/'inference_backends.py',
              source/'evaluators/af3_lifecycle.py',source/'evaluators/af3_pool.py',source/'evaluators/af3_pipeline.py',source/'evaluators/af3_service.py',
-             source/'evaluators/inference_service.py',source/'evaluators/wrappers/alphafold3.py']
+             source/'evaluators/inference_service.py',source/'evaluators/wrappers/alphafold3.py',
+             source/'evaluators/confidence_sidecar.py']
     sources += [source/'mutators/ligandmpnn.py',source/'mutators/utils.py',source/'mutators/base.py']
     sources += [source/'mutators/wrappers/ligandmpnn_run.py',source/'mutators/wrappers/ligandmpnn_utils.py',source/'protein_beam_root_parity.py']
     sources += [source/'app.py', source/'design/coordinator.py', source/'design/composition.py',
@@ -61,8 +64,10 @@ def scientific_contract(cfg):
     parity=cfg.protein_beam.get('root_parity_reference')
     if parity:
         p=Path(str(parity));data[str(p.resolve())]=content_sha256(p)
-        root=json.loads(p.read_text());structure=Path(root['structure_path']);label=structure.name.removesuffix('_model.cif')
-        confidence=structure.parent.parent/'raw_model_results/alphafold3'/label/(label+'_confidences.json')
+        root=json.loads(p.read_text());structure=Path(root['structure_path'])
+        confidence=resolve_af3_confidence_path(structure)
+        if confidence is None:
+            raise FileNotFoundError(f'AF3 confidence unavailable for root structure: {structure}')
         for p in (structure,confidence):data[str(p.resolve())]=content_sha256(p)
     initial=cfg.protein_beam.get('initial_state')
     if initial:

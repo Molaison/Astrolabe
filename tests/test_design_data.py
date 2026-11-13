@@ -727,6 +727,37 @@ def test_repersist_rechecks_existing_content_and_restores_missing_blob(tmp_path)
     assert target.read_bytes() == original
 
 
+def test_repersist_custom_codec_rechecks_changed_child_references(tmp_path):
+    class StatefulCodec:
+        identity = "test/stateful-closure/v1"
+
+        def __init__(self):
+            self.children = ()
+
+        def encode(self, value):
+            return JSONCodec().encode(value)
+
+        def decode(self, encoded):
+            return JSONCodec().decode(encoded)
+
+        def references(self, value):
+            return self.children
+
+    data = DataStore(tmp_path / "data", reuse_durable_closures=True)
+    codec = StatefulCodec()
+    child = data.put({"child": 1}, JSONCodec())
+    parent = data.put({"parent": 1}, codec)
+    root = data.put((parent,), design_codec)
+    data.persist((root,))
+    assert not data._path_for(child).exists()
+
+    # Neither parent bytes nor fallback compatibility identity changed. Even
+    # beneath a cached built-in root, its newly reported child must be visited.
+    codec.children = (child,)
+    data.persist((root,))
+    assert data._path_for(child).read_bytes() == JSONCodec().encode({"child": 1})
+
+
 def test_repersist_existing_closure_retains_directory_sync_failure(tmp_path, monkeypatch):
     import os
     import stat

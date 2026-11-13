@@ -79,7 +79,7 @@ def _pyrosetta_loss_types_from_source() -> set[str]:
                 node_src = _source_segment(lines, node)
                 arg_names = [a.arg for a in list(node.args.args) + list(node.args.kwonlyargs)]
                 uses_pyrosetta = (
-                    path.name in {"interaction.py", "ph_sensitive.py", "ph_core.py"}
+                    path.name in {"interaction.py", "ph_sensitive.py", "ph_core.py", "ph_binding_endpoint.py"}
                     or "pyrosetta_init" in arg_names
                     or "_ensure_pyrosetta" in node_src
                     or "_bindcraft_interface_field" in node_src
@@ -410,10 +410,18 @@ def task_requirements(task_cfg: Any) -> dict:
                 )
             )
 
-    if any(
-        t.lower() in {"proton_pottsmpnn", "proton-pottsmpnn"}
-        for t in mutator_types_used
-    ) or "ph_core_network" in loss_types:
+    proton_defaults = (
+        (task_cfg.get("mutator") or {}).get("ProtonPottsMPNN") or {}
+        if isinstance(task_cfg, dict) else {}
+    )
+    proton_used = (
+        any(t.lower() in {"proton_pottsmpnn", "proton-pottsmpnn", "vdm_proton"}
+            for t in mutator_types_used)
+        or (any(t.lower() == "vdm_pair" for t in mutator_types_used)
+            and bool(proton_defaults.get("runtime_key")))
+        or "ph_core_network" in loss_types
+    )
+    if proton_used:
         req_env_keys |= {
             "weight_path.proton_pottsmpnn",
             "subprocess_envs.proton_pottsmpnn.python_bin",
@@ -519,12 +527,8 @@ def task_requirements(task_cfg: Any) -> dict:
         "interface_polar_satisfaction", "short_range_interface_pair_energy",
     }
     needs_pyrosetta = any(t in pyro_losses for t in loss_types)
-    proton_defaults = (
-        (task_cfg.get("mutator") or {}).get("ProtonPottsMPNN") or {}
-        if isinstance(task_cfg, dict) else {}
-    )
     for conf in mutator_terms_used.values():
-        if str(conf.get("_type") or "").lower() in {"proton_pottsmpnn", "proton-pottsmpnn"}:
+        if str(conf.get("_type") or "").lower() in {"proton_pottsmpnn", "proton-pottsmpnn", "vdm_proton", "vdm_pair"}:
             if any(_as_bool(conf.get(flag, proton_defaults.get(flag)), default=False)
                    for flag in ("preserve_disulfides", "protect_gly_pro")):
                 needs_pyrosetta = True
@@ -651,10 +655,7 @@ def task_requirements(task_cfg: Any) -> dict:
             ],
             "required by SurfPro persistent mutator and MSMS preprocessing",
         )
-    if any(
-        t.lower() in {"proton_pottsmpnn", "proton-pottsmpnn"}
-        for t in mutator_types_used
-    ) or "ph_core_network" in loss_types:
+    if proton_used:
         _note_env(
             [
                 "weight_path.proton_pottsmpnn",
