@@ -50,6 +50,7 @@ astrolabe paper prepare-inputs --out-dir data/paper
 | 软件检查与科学验收状态 | [发布验证](release_acceptance.md) |
 | 显式 Beam、常驻预测与 CPU Score | [Beam refinement](beam_refinement.md) |
 | 模块耗时、CPU 并发与 GPU 活动诊断 | [Profiling](profiling.md) |
+| 近期优化分支、合并范围与性能证据 | [2026-11-13 优化整合](optimization_integration_20261113.md) |
 | RFD4 联合生成与产物来源 | [RFD4 接入](rfd4_codesign.md) |
 | BioEmu2 代表构象及适用范围 | [BioEmu2 接入](bioemu2.md) |
 

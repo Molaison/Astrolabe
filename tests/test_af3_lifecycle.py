@@ -14,7 +14,6 @@ from astrolabe.evaluators.inference_service import call
 from astrolabe.protein_beam import load_config
 
 TASK=Path(__file__).resolve().parents[1]/'config/interface.yaml'
-INPUT=Path('/case/inputs/001_binder_interface/01_astrolabe_beam/03_bind_target_homologies')
 FAKE='''
 import os,sys
 from astrolabe.evaluators.af3_lifecycle import guard_owner_parent
@@ -25,6 +24,40 @@ mark('fake_model_load',cuda=os.environ.get('CUDA_VISIBLE_DEVICES'),
      torch='torch' in sys.modules,jax_imported='jax' in sys.modules)
 serve(lambda payload:payload,sys.argv[1])
 '''
+
+
+@pytest.fixture
+def interface_inputs(tmp_path):
+    """Synthetic CPU echo inputs, following test_interface_budget's fixture."""
+    from Bio.SeqUtils import seq3
+
+    directory = tmp_path / "inputs"
+    directory.mkdir()
+    binder, target = "AAAACCCCGGGGTTTT", "DEFGHIKLMNPQRSTVWY"
+    lines = []
+    serial = 0
+    for chain, sequence, y in (("A", binder, 0.0), ("B", target, 4.0)):
+        for residue, aa in enumerate(sequence, 1):
+            for atom, offset, element in (
+                ("N", 0.0, "N"), ("CA", 1.2, "C"),
+                ("C", 2.4, "C"), ("O", 3.0, "O"),
+            ):
+                serial += 1
+                lines.append(
+                    f"ATOM  {serial:5d} {atom:^4s} {seq3(aa).upper():3s} {chain}"
+                    f"{residue:4d}    {residue * 3.8 + offset:8.3f}{y:8.3f}"
+                    f"{0.0:8.3f}{1.0:6.2f}{0.0:6.2f}          {element:>2s}\n"
+                )
+        lines.append("TER\n")
+    for number in range(3):
+        (directory / f"complex_{number}.pdb").write_text("".join(lines) + "END\n")
+    (directory / "target.json").write_text(json.dumps({
+        "name": "cpu_echo_fixture", "modelSeeds": [17], "dialect": "alphafold3", "version": 1,
+        "sequences": [{"protein": {"id": "B", "sequence": target,
+                                   "unpairedMsa": f">query\n{target}\n",
+                                   "pairedMsa": "", "templates": []}}],
+    }))
+    return directory
 
 
 @pytest.fixture
@@ -666,7 +699,7 @@ mark('service_ready',socket=sys.argv[1]);time.sleep(600)
     assert json.loads(owner.state_path.read_text())['status']=='shutdown_failed'
 
 
-def test_batch_auto_starts_one_model_and_completed_resume_starts_none(tmp_path,monkeypatch,fake_command):
+def test_batch_auto_starts_one_model_and_completed_resume_starts_none(tmp_path,monkeypatch,fake_command,interface_inputs):
     from astrolabe.interface import run_interface
     import astrolabe.protein_beam as beam
     import astrolabe.protein_beam_recovery as recovery
@@ -690,7 +723,7 @@ def test_batch_auto_starts_one_model_and_completed_resume_starts_none(tmp_path,m
         value=dict(status='complete',records=[{'id':0}],budget_complete=False)
         checkpoint.write_text(json.dumps(value));return value
     monkeypatch.setattr(beam,'run_beam',fake)
-    args=dict(input_path=INPUT,target_homology=INPUT/'gd-ctd_data.json',output_root=tmp_path/'batch')
+    args=dict(input_path=interface_inputs,target_homology=interface_inputs/'target.json',output_root=tmp_path/'batch')
     assert run_interface(**args)==0
     assert len(observed)==3 and len(set(observed))==1
     owners=list((tmp_path/'batch/services').glob('*/lifecycle.json'))
@@ -701,7 +734,7 @@ def test_batch_auto_starts_one_model_and_completed_resume_starts_none(tmp_path,m
     assert len(recovered)==3
 
 
-def test_explicit_service_is_reused_and_never_stopped(config,tmp_path,monkeypatch,fake_command):
+def test_explicit_service_is_reused_and_never_stopped(config,tmp_path,monkeypatch,fake_command,interface_inputs):
     from astrolabe.interface import run_interface
     import astrolabe.protein_beam as beam
     def fake(cfg,destination,socket,**kwargs):
@@ -710,16 +743,16 @@ def test_explicit_service_is_reused_and_never_stopped(config,tmp_path,monkeypatc
     monkeypatch.setattr(beam,'run_beam',fake)
     owner=lifecycle.OwnedAF3(config,tmp_path/'external',os.environ)
     with owner as socket:
-        run_interface(input_path=INPUT/'D5056_D15.pdb',target_homology=INPUT/'gd-ctd_data.json',output_root=tmp_path/'batch',socket_path=socket)
+        run_interface(input_path=interface_inputs/'complex_0.pdb',target_homology=interface_inputs/'target.json',output_root=tmp_path/'batch',socket_path=socket)
         assert owner.process.poll() is None
         assert not (tmp_path/'batch/services').exists()
         assert not any(m['event']=='shutdown_received' for m in events(owner))
 
 
-def test_prepare_only_does_not_start_any_service(tmp_path,monkeypatch):
+def test_prepare_only_does_not_start_any_service(tmp_path,monkeypatch,interface_inputs):
     from astrolabe.interface import run_interface
     monkeypatch.setattr(lifecycle,'OwnedAF3',lambda *a:pytest.fail('Preparation must not load any model'))
-    assert run_interface(input_path=INPUT/'D5056_D15.pdb',target_homology=INPUT/'gd-ctd_data.json',output_root=tmp_path/'out',prepare_only=True)==0
+    assert run_interface(input_path=interface_inputs/'complex_0.pdb',target_homology=interface_inputs/'target.json',output_root=tmp_path/'out',prepare_only=True)==0
     assert not (tmp_path/'out/services').exists()
 
 
@@ -778,7 +811,7 @@ def test_real_stuck_cpu_worker_is_reaped_on_error():
     assert future.done()
 
 
-def test_environment_restored_for_repeated_api_calls_and_errors(tmp_path,monkeypatch):
+def test_environment_restored_for_repeated_api_calls_and_errors(tmp_path,monkeypatch,interface_inputs):
     from astrolabe.interface import run_interface,cpu_coordinator_environment
     monkeypatch.setenv('CUDA_VISIBLE_DEVICES','GPU-original')
     monkeypatch.setenv('JAX_PLATFORMS','cuda')
@@ -789,12 +822,12 @@ def test_environment_restored_for_repeated_api_calls_and_errors(tmp_path,monkeyp
         assert captured['CUDA_VISIBLE_DEVICES']=='GPU-original'
         assert os.environ['CUDA_VISIBLE_DEVICES']=='' and os.environ['JAX_PLATFORMS']=='cpu'
         assert 'JAX_PLATFORM_NAME' not in os.environ
-    args=dict(input_path=INPUT/'D5056_D15.pdb',target_homology=INPUT/'gd-ctd_data.json',prepare_only=True)
+    args=dict(input_path=interface_inputs/'complex_0.pdb',target_homology=interface_inputs/'target.json',prepare_only=True)
     for name in ['first','second']:
         run_interface(**args,output_root=tmp_path/name)
         assert {k:os.environ.get(k) for k in keys}==before
     with pytest.raises(FileNotFoundError):
-        run_interface(input_path=tmp_path/'absent.pdb',target_homology=INPUT/'gd-ctd_data.json',output_root=tmp_path/'bad')
+        run_interface(input_path=tmp_path/'absent.pdb',target_homology=interface_inputs/'target.json',output_root=tmp_path/'bad')
     assert {k:os.environ.get(k) for k in keys}==before
 
 
