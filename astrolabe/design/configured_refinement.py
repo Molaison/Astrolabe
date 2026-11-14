@@ -1981,7 +1981,9 @@ def _run_configured_refinement_locked(
                 search.execution_mode == "serial"
                 and search.proposal_batch_size == 1
             ),
-            cap_error=True,
+            # Attempts, including duplicates, consume the proposal budget.
+            # Exhausting that budget is a normal stop with a final beam.
+            cap_error=False,
         )
 
         journal_path = output / "01_evaluations.jsonl"
