@@ -26,6 +26,7 @@ from pathlib import Path
 import numpy as np
 
 from astrolabe.core import global_config
+from astrolabe.utils.mmcif_ids import int_id_to_str_id
 from astrolabe.mutators.proton_pottsmpnn import (
     CANONICAL_AA,
     ProtonPottsMPNNMutator,
@@ -174,6 +175,7 @@ def _pair_queue(protomer, before, pair):
 
 class VdmProtonMutator(ProtonPottsMPNNMutator):
     name = "vdm_proton"
+    requires_pre_update_stack = False
 
     def __init__(self, *, proposal_manifest=None, proposal_id=None, hbond_handoff=None,
                  pairset_handoff=None, pairset_handoff_sha256=None,
@@ -412,6 +414,26 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
                                         raw_proposal_preserved=True))
         return roles, str(checked["p10_joint_preview"]), trace
 
+    def _validate_input_contract(self, protomers, prepared=None):
+        self._validate_segment_manager(protomers)
+        for name, features in (prepared or {}).items():
+            evidence = features["vdm_proton"]
+            budget = evidence["budget"]
+            if (self._mutation_budget() != budget["total"]
+                    or self.n_mutations() != budget["native_consumer_n_mutations"]):
+                raise ValueError("vdm_proton global/consumer mutation budget changed after preparation.")
+            binder = features["binder_protomer"]
+            before, pair = evidence["before_sequence"], evidence["pair_sequence"]
+            if str(protomers[binder].sequence) != before:
+                raise ValueError("vdm_proton binder changed after proposal preparation.")
+            if _pair_queue(protomers[binder], before, pair) != evidence["queued_pair_mutations"]:
+                raise ValueError("vdm_proton pending pair queue changed after preparation.")
+            for index, proto in enumerate(name):
+                chain = int_id_to_str_id(index + 1)
+                expected = before if chain == features["binder_chain"] else features["chain_sequences"][chain]
+                if str(protomers[proto].sequence) != expected:
+                    raise ValueError("vdm_proton context changed after proposal preparation.")
+
     def prepare_mutation_input(self, protomers, evaluation_scores, runtime_config):
         # A rejected/malformed handoff must not expose the last sibling's roles.
         # Clear before any validation, including the pre-super preview checks.
@@ -579,20 +601,15 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
     def prepare_mutation_output(self, mutation_output, protomers, evaluation_scores, runtime_config):
         if len(mutation_output or {}) != 1:
             raise ValueError("vdm_proton requires one complete joint output.")
+        self._validate_input_contract(protomers, {
+            name: output["feature_dict"] for name, output in mutation_output.items()
+        })
         normalized = copy.deepcopy(mutation_output)
         audits = {}
         for name, output in normalized.items():
             features, selected = output["feature_dict"], output["selected"]
             evidence = features["vdm_proton"]
-            budget = evidence["budget"]
-            if (self._mutation_budget() != budget["total"]
-                    or self.n_mutations() != budget["native_consumer_n_mutations"]):
-                raise ValueError("vdm_proton global/consumer mutation budget changed after preparation.")
             before, pair = evidence["before_sequence"], evidence["pair_sequence"]
-            if str(protomers[features["binder_protomer"]].sequence) != before:
-                raise ValueError("vdm_proton binder changed after proposal preparation.")
-            if _pair_queue(protomers[features["binder_protomer"]], before, pair) != evidence["queued_pair_mutations"]:
-                raise ValueError("vdm_proton pending pair queue changed after preparation.")
             after = _sequence(selected["canonical_sequence"])
             total = canonical_edits(before, after, fixed_positions=evidence["original_fixed_positions"])
             roles = evidence["role_contract"]["network_pair_roles"][features["binder_protomer"]]
@@ -621,25 +638,7 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
             features["binder_sequence"] = pair if pending else before
             features["fixed_positions"] = (features["fixed_positions"] if pending
                                            else evidence["original_fixed_positions"])
-        # Preserve coherent queue delivery if a manager rejects/partially queues
-        # a proposal. Never apply sequences here, and restore only our queues.
-        snapshots = {name: copy.deepcopy(segment.mutations)
-                     for name, segment in global_config.segments.items()}
-        try:
-            super().prepare_mutation_output(normalized, protomers, evaluation_scores, runtime_config)
-            unique_segments = {id(segment): segment for segment in global_config.segments.values()}
-            queued = sum(len(segment.mutations or []) for segment in unique_segments.values())
-            expected = sum(len(canonical_edits(a["before_sequence"], a["after_sequence"]))
-                           for a in audits.values())
-            if queued != expected:
-                raise ValueError("vdm_proton manager did not retain the complete coherent genotype.")
-            for audit in audits.values():
-                _pair_queue(protomers[audit["input"]["binder_protomer"]],
-                            audit["before_sequence"], audit["after_sequence"])
-        except BaseException:
-            for name, mutations in snapshots.items():
-                global_config.segments[name].mutations = mutations
-            raise
+        super().prepare_mutation_output(normalized, protomers, evaluation_scores, runtime_config)
         role_runtime = {}
         for name, audit in audits.items():
             self.last_mutation_telemetry["oligos"][name]["vdm_proton"] = audit

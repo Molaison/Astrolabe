@@ -2635,11 +2635,16 @@ def execute_mutation_step_continuation(
         getattr(mutator, "requires_exclusive_mutation", False) for mutator in mutators
     ):
         raise ValueError("The selected joint mutator cannot run in a mutation stack")
+    pre_update = bool(runtime_config.get("mutator_stack_pre_update", False))
+    if len(mutators) > 1 and not pre_update and any(
+        getattr(mutator, "requires_pre_update_stack", False) for mutator in mutators
+    ):
+        raise ValueError("Proton-PottsMPNN mutation stacks require explicit pre-update.")
     secondary_structure_by_proto = extract_secondary_structure_by_proto(evaluation_result)
     runtime_config["mutator_selector_score_contexts"] = []
-    pre_update = bool(runtime_config.get("mutator_stack_pre_update", False))
     if pre_update:
         global_config.segment_manager.begin_pre_update_step()
+    sequence_constraints = []
     max_entropy = runtime_config.get("mutator_stack_pre_update_max_entropy")
     max_entropy = None if max_entropy in (None, "null", "None") else float(max_entropy)
     for index, mutator in enumerate(mutators):
@@ -2673,6 +2678,19 @@ def execute_mutation_step_continuation(
                 mutation_result = native_call("mutation", mutator.mutate,
                     global_config.mutable_protomers, evaluation_result, runtime_config
                 )
+            limit = getattr(mutator, "max_total_mutations", None)
+            if limit is not None:
+                from astrolabe.utils.mmcif_ids import int_id_to_str_id
+                for name, record in mutator.last_mutation_telemetry["oligos"].items():
+                    chains = {int_id_to_str_id(i + 1): proto for i, proto in enumerate(name)}
+                    binder = record.get("binder_protomer") or chains[record["binder_chain"]]
+                    sequence_constraints.append((global_config.protomers[binder],
+                                                 mutator.reference_sequence, int(limit)))
+            for protomer, reference, limit in sequence_constraints:
+                projected = str(protomer.mutated_sequence)
+                if (len(projected) != len(reference)
+                        or sum(a != b for a, b in zip(projected, reference)) > limit):
+                    raise ValueError("Mutation stack exceeds the original-parent reference mutation budget.")
             from astrolabe.design.generated_structure import publish_generated_structure
             from astrolabe.mutators.rfd4_types import GenerationResult
 
@@ -2731,6 +2749,8 @@ def execute_mutation_step_continuation(
             global_config.segment_manager.preapply_pending_mutations(
                 max_entropy=max_entropy
             )
+            if getattr(mutator, "requires_pre_update_stack", False):
+                mutator._validate_input_contract(global_config.mutable_protomers)
 
 
 def _finalize_mutator_stack_pre_update(runtime_config: Dict, accepted: bool) -> None:
