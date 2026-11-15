@@ -596,3 +596,273 @@ def test_legacy_cached_packet_retains_full_native_queue(science, monkeypatch, qu
     assert runner.calls[0]["vdm_proton"]["mode"] == "cached_packet"
     assert science.proto.mutated_sequence == "HKLA"
     assert sum(len(s.mutations or []) for s in science.manager.unique_segments.values()) == 3
+
+
+@pytest.fixture
+def source_science(science):
+    target = Protomer("B", "+GG", "p")
+    global_config.protomers["B"] = target
+    global_config.mutable_protomers["B"] = target
+    path = structure(science.root / "source.pdb", {"A": "AAAA", "B": "GG"})
+    science.scores = StandardScores(names=["AB"], plddt={}, complex_paths={"AB": path})
+    return science
+
+
+def test_preupdate_freezes_source_before_exposing_working_sequence(source_science):
+    science = source_science
+    mutator, runner = plain("VALA")
+    runtime = {"mutator_stack_pre_update": True}
+    try:
+        run.execute_mutation_step([QueueSource(), mutator], science.scores, runtime, 1)
+        features = runner.calls[0]
+        assert features["structure_chain_sequences"] == {"A": "AAAA", "B": "GG"}
+        assert features["chain_sequences"] == {"A": "VAAA", "B": "GG"}
+        assert features["binder_sequence"] == "VAAA"
+        assert features["criteria"]["seed_source"] == "inverse"
+    finally:
+        run._finalize_mutator_stack_pre_update(runtime, False)
+    assert science.proto.sequence == "AAAA"
+
+
+@pytest.mark.parametrize("mode", ["native", "network_only", "gibbs", "mpnn_sample", "network_proposal"])
+def test_preupdate_rejects_methods_without_external_seed_support(source_science, monkeypatch, mode):
+    from astrolabe.mutators import proton_network_geometry
+    science = source_science
+    geometry_calls = []
+    monkeypatch.setattr(proton_network_geometry, "build_network_pair_preferences",
+                        lambda *args, **kwargs: (geometry_calls.append(args) or [], {}))
+    kwargs = {"network_only": True} if mode == "network_only" else {}
+    if mode == "network_proposal":
+        kwargs.update(network_proposal={"enabled": True}, criteria={
+            "method": "greedy_energy_block", "infill_scope": "chain", "center_count": 0,
+            "network_pair_bias": 1.0})
+    runner = SelectedRunner("VALA")
+    criteria = kwargs.pop("criteria", {"method": "greedy_energy_block", "infill_scope": "chain", "center_count": 0})
+    if mode == "native":
+        criteria["seed_source"] = "native"
+    elif mode in proton.WHOLE_CHAIN_METHODS:
+        criteria = {"method": mode}
+        global_config.set_variable("mutation_num", 4)
+    mutator = proton.ProtonPottsMPNNMutator(sequence_model_runner=runner, criteria=criteria, **kwargs)
+    before = copy.deepcopy(mutator.criteria)
+    runtime = {"mutator_stack_pre_update": True}
+    try:
+        with pytest.raises(ValueError, match="source|structure|external seed"):
+            run.execute_mutation_step([QueueSource(), mutator], science.scores, runtime, 1)
+        assert runner.calls == []
+        assert geometry_calls == []
+        assert mutator.criteria == before
+    finally:
+        run._finalize_mutator_stack_pre_update(runtime, False)
+
+
+@pytest.mark.parametrize("working", ["VAAA", "VAA"])
+@pytest.mark.parametrize("explicit", [False, True])
+def test_direct_source_metadata_requires_preupdate_and_matching_lengths(science, working, explicit):
+    segment = global_config.segments[science.proto.components[0]]
+    segment.sequence = working
+    mutator, runner = plain(working)
+    runtime = {"structure_chain_sequences": {"A": "AAAA"}}
+    if explicit:
+        runtime["mutator_stack_pre_update"] = True
+        runtime["mutator_stack_source_sequences"] = {"A": "AAAA"}
+    if explicit and len(working) != 4:
+        with pytest.raises(ValueError, match="length"):
+            mutator.prepare_mutation_input(global_config.protomers, science.scores, runtime)
+        assert runner.calls == []
+        return
+    features = mutator.prepare_mutation_input(global_config.protomers, science.scores, runtime)
+    if not explicit:
+        assert "structure_chain_sequences" not in features["A"]
+    elif len(working) == 4:
+        assert features["A"]["structure_chain_sequences"] == {"A": "AAAA"}
+    assert runner.calls == []
+
+
+@pytest.mark.parametrize("protection,source,position", [
+    ("protect_gly_pro", "GAAA", 0),
+    ("protect_gly_pro", "APAA", 1),
+    ("preserve_disulfides", "CAAA", 0),
+])
+@pytest.mark.parametrize("touch_protected", [False, True])
+def test_source_protection_mask_cannot_be_bypassed_by_staged_seed(
+    science, monkeypatch, protection, source, position, touch_protected,
+):
+    from astrolabe.losses import ph_sensitive
+    segment = global_config.segments[science.proto.components[0]]
+    segment.sequence = source
+    path = structure(science.scores.complex_paths["A"], {"A": source})
+    pose_calls = []
+
+    class Pose:
+        def total_residue(self):
+            return len(source)
+
+        def pdb_info(self):
+            return SimpleNamespace(chain=lambda index: "A")
+
+        def residue(self, index):
+            return SimpleNamespace(name1=lambda: source[index - 1],
+                                   type=lambda: SimpleNamespace(is_disulfide_bonded=lambda: source[index - 1] == "C"))
+
+    def load_pose(source_path):
+        pose_calls.append(str(source_path))
+        return Pose()
+
+    monkeypatch.setattr(ph_sensitive, "_load_pose", load_pose)
+    site = position if touch_protected else 3
+    current = source[:site] + "V" + source[site + 1:]
+    mutator, runner = plain(current, **{protection: True})
+    runtime = {"mutator_stack_pre_update": True}
+    try:
+        if touch_protected:
+            with pytest.raises(ValueError, match="protected"):
+                run.execute_mutation_step([QueueSource(site), mutator], science.scores, runtime, 1)
+            assert runner.calls == []
+        else:
+            run.execute_mutation_step([QueueSource(site), mutator], science.scores, runtime, 1)
+            assert runner.calls[0]["fixed_positions"] == [position]
+            assert runner.calls[0]["structure_chain_sequences"] == {"A": source}
+            assert runner.calls[0]["binder_sequence"] == current
+        assert pose_calls == [str(path)]
+    finally:
+        run._finalize_mutator_stack_pre_update(runtime, False)
+
+
+@pytest.fixture
+def native_source_runner(monkeypatch, tmp_path):
+    pytest.importorskip("atomworks", reason="requires the isolated Proton parser environment")
+    from astrolabe.mutators.wrappers import proton_pottsmpnn_daemon as daemon
+    import sys
+
+    root = Path(__file__).resolve().parents[1] / "vendor" / "proton_pottsmpnn" / "foundry"
+    monkeypatch.syspath_prepend(str(root / "src"))
+    monkeypatch.syspath_prepend(str(root / "models" / "mpnn" / "src"))
+    from mpnn.inference_engines.potts_mpnn_ph import PHDesignCriteria
+
+    class Runner(SelectedRunner):
+        def __init__(self, sequence):
+            super().__init__(sequence)
+            self.engine_calls = []
+
+        def run_ph_redesign(self, **kwargs):
+            self.engine_calls.append(kwargs)
+            selected = SelectedRunner.design_sequences(self, **{})["selected"]
+            self.calls.pop()
+            return [SimpleNamespace(canonical_sequence=selected["canonical_sequence"],
+                                    extended_tokens=selected["extended_tokens"],
+                                    energy_trajectory=None, to_metadata=lambda: {})]
+
+        def design_sequences(self, **features):
+            self.calls.append(copy.deepcopy(features))
+            return daemon._infer((self, PHDesignCriteria), {"id": f"source-{len(self.calls)}", **features}, tmp_path)
+
+    return Runner
+
+
+@pytest.mark.parametrize("position", ["first", "middle", "last"])
+@pytest.mark.parametrize("accepted", [False, True])
+def test_preupdate_reaches_real_daemon_with_external_inverse_seed(
+    source_science, native_source_runner, position, accepted,
+):
+    from astrolabe.mutators.wrappers import proton_pottsmpnn_daemon as daemon
+    science = source_science
+    path = science.scores.complex_paths["AB"]
+    source_bytes = path.read_bytes()
+    original = daemon._load_atom_array(path)
+    mutator, _ = plain()
+    runner = native_source_runner("AALA" if position == "first" else "VALA")
+    mutator.runner = runner
+    tail = QueueSource(3, "G")
+    stack = ([mutator, QueueSource()] if position == "first" else
+             [QueueSource(), mutator, tail] if position == "middle" else [QueueSource(), mutator])
+    runtime = {"mutator_stack_pre_update": True}
+    try:
+        run.execute_mutation_step(stack, science.scores, runtime, 1)
+        assert len(runner.engine_calls) == 1
+        call = runner.engine_calls[0]
+        assert call["initial_sequences"] == (["AAAA"] if position == "first" else ["VAAA"])
+        assert call["criteria_list"][0].seed_source == "inverse"
+        atoms = call["atom_array"]
+        np.testing.assert_array_equal(atoms.chain_id, original.chain_id)
+        np.testing.assert_array_equal(atoms.res_name, original.res_name)
+        np.testing.assert_array_equal(atoms.atom_name, original.atom_name)
+        np.testing.assert_allclose(atoms.coord, original.coord, equal_nan=True)
+        assert not atoms.mpnn_designed_residue_mask[atoms.chain_id == "B"].any()
+        assert daemon._token_chain_sequences(atoms)[1] == {"A": "AAAA", "B": "GG"}
+        assert path.read_bytes() == source_bytes
+        expected = "VALG" if position == "middle" else "VALA"
+        assert science.proto.mutated_sequence == expected
+        if accepted:
+            science.manager.apply_mutations()
+    finally:
+        run._finalize_mutator_stack_pre_update(runtime, accepted)
+    assert science.proto.sequence == (expected if accepted else "AAAA")
+
+
+@pytest.mark.parametrize("violation", ["no_source", "wrong_source", "target", "length", "native", "gibbs", "mpnn_sample"])
+def test_real_daemon_rejects_unsupported_source_seed_handoffs(
+    source_science, native_source_runner, violation,
+):
+    science = source_science
+    mutator, _ = plain()
+    features = mutator.prepare_mutation_input(global_config.protomers, science.scores, {})["AB"]
+    features.update(binder_sequence="VAAA", chain_sequences={"A": "VAAA", "B": "GG"},
+                    structure_chain_sequences={"A": "AAAA", "B": "GG"})
+    if violation == "no_source":
+        features.pop("structure_chain_sequences")
+    elif violation == "wrong_source":
+        features["structure_chain_sequences"]["A"] = "LAAA"
+    elif violation == "target":
+        features["chain_sequences"]["B"] = "VG"
+    elif violation == "length":
+        features["binder_sequence"] = features["chain_sequences"]["A"] = "VAA"
+    elif violation == "native":
+        features["criteria"]["seed_source"] = "native"
+    else:
+        features["criteria"]["method"] = violation
+    runner = native_source_runner("VALA")
+    with pytest.raises(ValueError, match="source|structure|target|length|external seed"):
+        runner.design_sequences(**features)
+    assert runner.engine_calls == []
+
+
+def test_explicit_source_cannot_authorize_a_target_seed_change(source_science):
+    science = source_science
+    target = global_config.protomers["B"]
+    global_config.segments[target.components[0]].sequence = "VG"
+    mutator, runner = plain()
+    runtime = {"mutator_stack_pre_update": True,
+               "mutator_stack_source_sequences": {"A": "AAAA", "B": "GG"}}
+    with pytest.raises(ValueError, match="target"):
+        mutator.mutate(global_config.protomers, science.scores, runtime)
+    assert runner.calls == []
+
+
+def test_vdm_preview_does_not_inherit_accepted_source_sequences(science, monkeypatch):
+    producer, consumer, runner = vdm_case(science, monkeypatch)
+    runtime = {}
+    producer.mutate(global_config.mutable_protomers, science.scores, runtime)
+    runtime.update(mutator_stack_pre_update=True,
+                   mutator_stack_source_sequences={"A": "AAAA", "B": "GG"})
+    consumer.mutate(global_config.mutable_protomers, science.scores, runtime)
+    assert runner.calls[0]["structure_chain_sequences"] == {"A": "HKAA", "B": "GG"}
+    assert runner.calls[0]["chain_sequences"] == {"A": "HKAA", "B": "GG"}
+    assert science.proto.mutated_sequence == "HKLA"
+    assert runtime["network_pair_roles"] == {"A": {0: "H", 1: "K"}}
+
+
+def test_vdm_preview_source_identity_reaches_real_daemon(science, monkeypatch, native_source_runner):
+    producer, consumer, _ = vdm_case(science, monkeypatch)
+    runner = native_source_runner("HKLA")
+    consumer.runner = runner
+    runtime = {}
+    producer.mutate(global_config.mutable_protomers, science.scores, runtime)
+    runtime.update(mutator_stack_pre_update=True,
+                   mutator_stack_source_sequences={"A": "AAAA", "B": "GG"})
+    consumer.mutate(global_config.mutable_protomers, science.scores, runtime)
+    assert len(runner.engine_calls) == 1
+    assert runner.engine_calls[0]["initial_sequences"] == ["HKAA"]
+    assert runner.calls[0]["structure_chain_sequences"] == {"A": "HKAA", "B": "GG"}
+    assert runtime["network_pair_roles"] == {"A": {0: "H", 1: "K"}}
+    assert science.proto.mutated_sequence == "HKLA"
