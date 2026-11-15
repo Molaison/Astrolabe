@@ -376,6 +376,34 @@ def test_real_vdm_producer_preview_roles_and_consumer_queue(science, monkeypatch
     assert audit["native_output"]["selected"]["extended_tokens"][0] == "HIS-S"
 
 
+@pytest.mark.parametrize("cap", [2, 3])
+def test_vdm_producer_reference_cap_survives_consumer_delivery(science, monkeypatch, cap):
+    producer, consumer, runner = vdm_case(science, monkeypatch)
+    producer.reference_sequence = "AAAA"
+    producer.max_total_mutations = cap
+    runtime = {}
+    if cap == 2:
+        with pytest.raises(ValueError, match="original-parent reference mutation budget"):
+            run.execute_mutation_step([producer, consumer], science.scores, runtime, 1)
+    else:
+        run.execute_mutation_step([producer, consumer], science.scores, runtime, 1)
+    assert len(runner.calls) == 1
+    assert runner.calls[0]["binder_sequence"] == "HKAA"
+    proposal = producer.last_mutation_telemetry["oligos"]["AB"]
+    assert proposal["designed_sequence"] == "HKAA"
+    assert proposal["total_mutations"] == 2
+    assert science.proto.sequence == "AAAA"
+    assert science.proto.mutated_sequence == "HKLA"
+    assert global_config.protomers["B"].mutated_sequence == "GG"
+    assert runtime["network_pair_roles"] == {"A": {0: "H", 1: "K"}}
+    assert sum(len(s.mutations or []) for s in science.manager.unique_segments.values()) == 3
+    audit = consumer.last_mutation_telemetry["oligos"]["AB"]["vdm_proton"]
+    assert audit["pair_sequence"] == "HKAA"
+    assert audit["after_sequence"] == "HKLA"
+    assert audit["microenvironment_edits"] == [(2, "A", "L")]
+    assert audit["native_output"]["selected"]["extended_tokens"][0] == "HIS-S"
+
+
 @pytest.mark.parametrize("corruption", ["partial", "unrelated", "pending_sequence"])
 def test_vdm_real_handoff_rejects_dirty_queue_before_model(science, monkeypatch, corruption):
     producer, consumer, runner = vdm_case(science, monkeypatch)
