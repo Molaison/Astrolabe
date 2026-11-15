@@ -739,6 +739,7 @@ def native_source_runner(monkeypatch, tmp_path):
     monkeypatch.syspath_prepend(str(root / "src"))
     monkeypatch.syspath_prepend(str(root / "models" / "mpnn" / "src"))
     from mpnn.inference_engines.potts_mpnn_ph import PHDesignCriteria
+    assert Path(sys.modules[PHDesignCriteria.__module__].__file__).resolve().is_relative_to(root.resolve())
 
     class Runner(SelectedRunner):
         def __init__(self, sequence):
