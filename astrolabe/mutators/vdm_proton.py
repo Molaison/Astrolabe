@@ -588,6 +588,8 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
                                 proposal_manifest_sha256=_sha(self.proposal_manifest),
                                 hbond_handoff=str(self.hbond_handoff), hbond_handoff_sha256=_sha(self.hbond_handoff),
                                 packet=packet, hbond_support=support)
+            if "structure_chain_sequences" in features:
+                features["structure_chain_sequences"] = dict(expected_preview)
             features.update(pdb_path=preview_path, binder_sequence=pair_sequence,
                             chain_sequences=expected_preview, fixed_positions=fixed,
                             criteria=criteria, pin_budget=len(centers), vdm_proton=evidence)

@@ -803,6 +803,26 @@ class ProtonPottsMPNNMutator(Mutator):
                     )
                 owner_by_mutable_segment[segment_name] = oligo_label
             binder_sequence = str(binder_proto.sequence).upper()
+            chain_sequences = {chain: str(protomers[proto].sequence).upper()
+                               for chain, proto in chain_protos}
+            structure_chain_sequences = None
+            runtime = runtime_config or {}
+            source_sequences = runtime.get("mutator_stack_source_sequences")
+            if runtime.get("mutator_stack_pre_update", False) and source_sequences is not None:
+                from astrolabe.mutators.wrappers.proton_pottsmpnn_daemon import _validate_structure_seed
+                if not isinstance(source_sequences, Mapping) or any(
+                    proto not in source_sequences for _, proto in chain_protos
+                ):
+                    raise ValueError("Proton-PottsMPNN pre-update source sequences must include every active protomer.")
+                structure_chain_sequences = {chain: str(source_sequences[proto]).upper()
+                                             for chain, proto in chain_protos}
+                _validate_structure_seed(binder_sequence, binder_chain, chain_sequences,
+                                         structure_chain_sequences, self.criteria)
+                if self.network_proposal.enabled and structure_chain_sequences[binder_chain] != binder_sequence:
+                    raise ValueError("Proton-PottsMPNN network_proposal geometry does not support "
+                                     "different source and working binder sequences.")
+            structure_binder_sequence = (binder_sequence if structure_chain_sequences is None
+                                         else structure_chain_sequences[binder_chain])
             excluded_tokens = tokens_for_excluded_aas(global_config.exclude_AA)
             excluded_aas = {
                 TOKEN_TO_CANONICAL_AA[token]
@@ -848,12 +868,14 @@ class ProtonPottsMPNNMutator(Mutator):
                 pose = _load_pose(pdb_path)
                 indices = [i for i in range(1, pose.total_residue() + 1)
                            if pose.pdb_info().chain(i) == binder_chain]
-                if "".join(pose.residue(i).name1() for i in indices) != binder_sequence:
-                    raise ValueError("Protected-residue pose sequence does not match the binder.")
+                if "".join(pose.residue(i).name1() for i in indices) != structure_binder_sequence:
+                    raise ValueError("Protected-residue pose sequence does not match the source binder.")
                 for position, index in enumerate(indices):
                     residue = pose.residue(index)
                     if ((self.preserve_disulfides and residue.type().is_disulfide_bonded())
                             or (self.protect_gly_pro and residue.name1() in {"G", "P"})):
+                        if binder_sequence[position] != structure_binder_sequence[position]:
+                            raise ValueError("Proton-PottsMPNN staged seed changes a source-structure protected residue.")
                         binder_mask[position] = False
                 fixed_positions = sorted(int(p) for p in np.where(~binder_mask)[0].tolist())
             if self.max_total_mutations is not None:
@@ -877,10 +899,9 @@ class ProtonPottsMPNNMutator(Mutator):
                 "binder_chain": binder_chain,
                 "binder_protomer": binder_proto_name,
                 "binder_sequence": binder_sequence,
-                "chain_sequences": {
-                    chain: str(protomers[proto].sequence).upper()
-                    for chain, proto in chain_protos
-                },
+                "chain_sequences": chain_sequences,
+                **({"structure_chain_sequences": structure_chain_sequences}
+                   if structure_chain_sequences is not None else {}),
                 "fixed_positions": fixed_positions,
                 "criteria": criteria,
                 "max_mutations": budget,

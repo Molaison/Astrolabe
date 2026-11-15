@@ -2642,7 +2642,11 @@ def execute_mutation_step_continuation(
         raise ValueError("Proton-PottsMPNN mutation stacks require explicit pre-update.")
     secondary_structure_by_proto = extract_secondary_structure_by_proto(evaluation_result)
     runtime_config["mutator_selector_score_contexts"] = []
+    runtime_config.pop("mutator_stack_source_sequences", None)
     if pre_update:
+        runtime_config["mutator_stack_source_sequences"] = {
+            name: str(protomer.sequence) for name, protomer in global_config.protomers.items()
+        }
         global_config.segment_manager.begin_pre_update_step()
     sequence_constraints = []
     max_entropy = runtime_config.get("mutator_stack_pre_update_max_entropy")
@@ -2757,6 +2761,7 @@ def _finalize_mutator_stack_pre_update(runtime_config: Dict, accepted: bool) -> 
     if not bool(runtime_config.get("mutator_stack_pre_update", False)):
         return
     global_config.segment_manager.finish_pre_update_step(accepted=bool(accepted))
+    runtime_config.pop("mutator_stack_source_sequences", None)
 
 
 def _make_native_decision(decisions, *args, **kwargs):
