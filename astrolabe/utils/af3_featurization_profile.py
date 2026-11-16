@@ -38,6 +38,52 @@ class FeaturizationProfile:
     times_s: Mapping[str, float]
 
 
+def profile_msa_row_cache(*, sequence_length=512, msa_depth=2048, runs=5, seed=42):
+    """Measure native AF3 row encoding for query mutations, with exact parity.
+
+    This is a CPU substage benchmark, not full featurisation or model inference.
+    It uses the installed native encoder and does not require model weights.
+    """
+    import numpy as np
+
+    from astrolabe.evaluators.preparation_cache import MsaRowCache
+
+    if min(sequence_length, msa_depth, runs) <= 0:
+        raise ValueError("sequence_length, msa_depth and runs must be positive")
+    _ensure_af3_on_sys_path()
+    from alphafold3.constants import mmcif_names
+    from alphafold3.data.msa_features import extract_msa_features
+
+    rng = np.random.default_rng(seed)
+    alphabet = np.array(list("ACDEFGHIKLMNPQRSTVWY-"))
+    rows = ["".join(row) for row in rng.choice(alphabet, size=(msa_depth, sequence_length))]
+    cache = MsaRowCache()
+    start = time.perf_counter()
+    cache.extract(extract_msa_features, rows, mmcif_names.PROTEIN_CHAIN)
+    cold_s = time.perf_counter() - start
+    native_s, delta_s, encoded_rows = [], [], []
+    for run in range(runs):
+        position = run % sequence_length
+        residue = "A" if rows[0][position] != "A" else "C"
+        mutant = [rows[0][:position] + residue + rows[0][position + 1:], *rows[1:]]
+        start = time.perf_counter()
+        expected = extract_msa_features(mutant, mmcif_names.PROTEIN_CHAIN)
+        native_s.append(time.perf_counter() - start)
+        before = cache.encoded_rows
+        start = time.perf_counter()
+        actual = cache.extract(extract_msa_features, mutant, mmcif_names.PROTEIN_CHAIN)
+        delta_s.append(time.perf_counter() - start)
+        encoded_rows.append(cache.encoded_rows - before)
+        for expected_array, actual_array in zip(expected, actual, strict=True):
+            np.testing.assert_array_equal(expected_array, actual_array)
+    return {"scope": "native AF3 MSA row encoding on CPU", "sequence_length": sequence_length,
+            "msa_depth": msa_depth, "runs": runs, "cold_s": cold_s,
+            "native_s": native_s, "delta_s": delta_s,
+            "native_median_s": statistics.median(native_s),
+            "delta_median_s": statistics.median(delta_s),
+            "encoded_rows_per_mutant": encoded_rows, "bitwise_equal": True}
+
+
 def _nan_check(np_example: Mapping[str, Any], *, fold_name: str, random_seed: int) -> None:
     import numpy as np
 
@@ -432,7 +478,9 @@ def profile_featurization_steps(
         bonded_atom_pairs=None,
         user_ccd=None,
     )
-    ccd = chemical_components.Ccd(user_ccd=fold_input.user_ccd)
+    from astrolabe.utils.af3_ccd import create_isolated_ccd
+
+    ccd = create_isolated_ccd(chemical_components, user_ccd=fold_input.user_ccd)
 
     # Warm-up runs (populate caches, filesystem reads, etc).
     for _ in range(warmup):

@@ -4,6 +4,7 @@ These records do not own candidate state or assert an unknown sample identity.
 """
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Mapping
@@ -189,11 +190,14 @@ def merge_evidence_metadata(
     derived = {}
     records = []
     groups = []
+    loss_backends = {}
     for result in results:
         reports.update(result.post_eval_hook_reports or {})
         for oligo, artifacts in (result.derived_structures or {}).items():
             derived.setdefault(oligo, []).extend(artifacts)
         records.extend(result.evaluation_records or ())
+        for oligo, observations in (result.loss_backend_records or {}).items():
+            loss_backends.setdefault(oligo, []).extend(copy.deepcopy(observations))
         if result.candidate_groups:
             groups.extend(result.candidate_groups)
         elif result.candidate_scores:
@@ -212,4 +216,5 @@ def merge_evidence_metadata(
     merged.derived_structures = derived or None
     merged.evaluation_records = tuple(records) or None
     merged.candidate_groups = groups or None
+    merged.loss_backend_records = loss_backends or None
     return merged

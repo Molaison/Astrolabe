@@ -98,7 +98,7 @@ def test_typed_evidence_construction_clone_filter_and_score_field_contract():
         derived_structures={'AB': [derived]}, evaluation_records=(record,), candidate_groups=groups,
     )
     metadata_fields = {'candidate_scores', 'post_eval_hook_reports', 'derived_structures',
-                       'evaluation_records', 'candidate_groups'}
+                       'evaluation_records', 'candidate_groups', 'loss_backend_records'}
     declared = {field.name: field for field in fields(StandardScores)}
     assert {name for name, field in declared.items() if field.metadata.get('evidence')} == metadata_fields
     assert StandardScores.score_field_names() == set(declared) - metadata_fields

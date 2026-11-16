@@ -1517,7 +1517,6 @@ def _validate_loss_outputs(args: Any, run_module: Any) -> None:
         extract_best_namespace_terms(stage.get("prefix_early_stopping"))
     )
     defined = selected_loss["loss_terms"]
-    pose_types = set(getattr(run_module, "PYROSETTA_LOSS_TYPES", ()) or ())
     hook_types = set(getattr(run_module, "POST_EVAL_HOOK_LOSS_TYPES", ()) or ())
     for name in sorted(referenced | set(defined)):
         configured = _mapping(defined.get(name), name=f"loss.loss_terms.{name}")
@@ -1529,13 +1528,15 @@ def _validate_loss_outputs(args: Any, run_module: Any) -> None:
                 )
             continue
         function = loss_registry.get_function(type_name)
+        from astrolabe.loss_backend_policy import loss_requires_rosetta
+
+        native_requirement = loss_requires_rosetta(type_name, configured)
         code = getattr(function, "__code__", None)
         names = set(getattr(code, "co_names", ()))
         if (
-            type_name in pose_types
+            run_module._loss_spec_needs_complex_poses(type_name, function, configured)
             or type_name in hook_types
-            or "_require_pyrosetta" in names
-            or "complex_poses" in names
+            or (native_requirement is None and "complex_poses" in names)
         ):
             raise UnsupportedPortableNativeProfile(
                 f"portable native cannot persist live Pose loss output {name!r}"

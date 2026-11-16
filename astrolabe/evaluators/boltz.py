@@ -29,6 +29,9 @@ class BoltzEvaluator(Evaluator):
 
     def shutdown(self) -> None:
         shutdown_model_handles(self.model_runner)
+        cache = getattr(self.model_runner, "_ccd_cache", None)
+        if cache is not None:
+            cache.clear()
 
     @local_evaluator_guard("boltz1", "model_runner")
     def run_function(self, input_feat):

@@ -43,6 +43,10 @@ def _parse_args() -> argparse.Namespace:
     )
     p.add_argument("--runs", type=int, default=3, help="Timed runs to average.")
     p.add_argument("--warmup", type=int, default=1, help="Warmup runs to discard.")
+    p.add_argument("--msa-delta", action="store_true",
+                   help="Benchmark native MSA row encoding for query mutations only (CPU substage).")
+    p.add_argument("--msa-depth", type=int, default=2048,
+                   help="Alignment depth for --msa-delta (default: 2048).")
     p.add_argument(
         "--sequence-mode",
         choices=("random", "polyA"),
@@ -93,6 +97,16 @@ def main() -> None:
 
     all_results = {}
     for length in args.lengths:
+        if args.msa_delta:
+            from astrolabe.utils.af3_featurization_profile import profile_msa_row_cache
+
+            result = profile_msa_row_cache(sequence_length=length, msa_depth=args.msa_depth,
+                                           runs=args.runs, seed=args.sequence_seed)
+            all_results[str(length)] = result
+            print(f"AF3 MSA row encoding only: {args.msa_depth} rows x {length} residues")
+            print(f"native={result['native_median_s']:.6f}s delta={result['delta_median_s']:.6f}s "
+                  f"bitwise_equal={result['bitwise_equal']} encoded_rows={result['encoded_rows_per_mutant']}")
+            continue
         seq = _make_sequence(length, seed=args.sequence_seed, mode=args.sequence_mode)
         result = profile_featurization_steps(
             sequence=seq,

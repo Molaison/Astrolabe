@@ -68,6 +68,7 @@ loss:
       sse_type: L
     interface_sc:
       _type: protomer_shape_complementarity
+      backend: rosetta  # Preserve this established protocol definition.
     binder_ptm:
       _type: binder_ptm
       binder_chain: A

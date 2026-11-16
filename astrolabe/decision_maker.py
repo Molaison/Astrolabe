@@ -68,6 +68,7 @@ def _snapshot_result(result):
         for name, default in (
             ("complex_paths", {}), ("evaluation_records", ()),
             ("derived_structures", {}), ("candidate_groups", ()),
+            ("loss_backend_records", {}),
         )
     }
 

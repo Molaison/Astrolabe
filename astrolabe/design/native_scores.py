@@ -763,9 +763,17 @@ def _validate_field_layout(
     names = tuple(row.name for row in envelope.fields)
     field_count = len(expected_fields)
     if names[:field_count] != expected_fields:
-        raise UnsupportedNativeScoresState(
-            "native score envelope field names/order do not match StandardScores"
-        )
+        # Earlier v2 snapshots predate this optional scoring observation. Its
+        # absence means unrecorded provenance, never an inferred backend.
+        previous = expected_fields[:-1]
+        if (expected_fields[-1:] == ("loss_backend_records",)
+                and "loss_backend_records" not in names
+                and names[:len(previous)] == previous):
+            field_count = len(previous)
+        else:
+            raise UnsupportedNativeScoresState(
+                "native score envelope field names/order do not match StandardScores"
+            )
     extensions = envelope.fields[field_count:]
     extension_names = tuple(row.name for row in extensions)
     if len(set(names)) != len(names):
@@ -814,6 +822,9 @@ def _restore_scores(
             )
         values[row.name] = value
 
+    # The only supported additive v2 layout is validated above. Preserve the
+    # absence of historical scoring provenance instead of inferring a backend.
+    values.setdefault("loss_backend_records", None)
     restored = object.__new__(StandardScores)
     for name in expected_fields:
         object.__setattr__(restored, name, values[name])

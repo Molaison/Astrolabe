@@ -58,6 +58,10 @@ class AlphaFold3Evaluator(Evaluator):
         self.af3_conf = af3_conf
         self._pre_eval_hook_reports = {}
         self._af3_antibody_msa_cache = None
+        from astrolabe.evaluators.preparation_cache import AF3CcdCache, MsaRowCache
+
+        self._msa_rows = MsaRowCache()
+        self._ccd_cache = AF3CcdCache()
         from astrolabe.af3_buckets import PREFERRED_BUCKETS
 
         self._bucket_size = 40
@@ -108,6 +112,9 @@ class AlphaFold3Evaluator(Evaluator):
 
     def shutdown(self) -> None:
         shutdown_model_handles(self.model_runner)
+        self._msa_rows.clear()
+        with featurisation_environment(None):
+            self._ccd_cache.clear()
 
     def evaluate(self, inputs=None, runtime_config=None):
         # Legacy scientific configuration is not qualified for concurrent use.
@@ -316,6 +323,8 @@ class AlphaFold3Evaluator(Evaluator):
                 model_runner=self.model_runner,
                 buckets=self.buckets.get(oligo),
                 featurisation_config=self.af3_conf,
+                msa_row_cache=self._msa_rows,
+                ccd_cache=self._ccd_cache,
                 **self.kwargs[oligo],
             )
         return output
@@ -659,7 +668,8 @@ class AlphaFold3Evaluator(Evaluator):
         return patched
 
     @staticmethod
-    def predict_structure(fold_input, model_runner, buckets, *, featurisation_config=None, **kwargs):
+    def predict_structure(fold_input, model_runner, buckets, *, featurisation_config=None,
+                          msa_row_cache=None, ccd_cache=None, **kwargs):
         """Runs the full inference pipeline to predict structures for each seed."""
 
         cyclic_asym_ids = tuple(
@@ -675,23 +685,33 @@ class AlphaFold3Evaluator(Evaluator):
             model_runner.set_cyclic_relative_patches(cyclic_relative_patches)
         logging.debug(f"Featurising data for seeds {fold_input.rng_seeds}...")
         featurisation_start_time = time.time()
-        ccd = chemical_components.Ccd(user_ccd=fold_input.user_ccd)
-        if "init_guess_path" in kwargs:
-            if "init_guess_chain" not in kwargs:
-                raise ValueError("init_guess_chain not found in kwargs")
-            init_guess_positions = featurisation.generate_initial_guess(
-                init_guess_path=kwargs["init_guess_path"], ccd=ccd
-            )
-            kwargs["init_guess_positions"] = init_guess_positions
         query_residue_index_jumps = tuple(kwargs.pop("query_residue_index_jumps", ()) or ())
         from astrolabe.af3_buckets import TokenBuckets, install_bucket_dispatch
+        from astrolabe.evaluators.preparation_cache import (
+            af3_ccd_scope, install_msa_row_dispatch, msa_row_cache_scope,
+        )
+        from alphafold3.data import msa_features
+        from alphafold3.model import features
+
+        install_msa_row_dispatch(msa_features)
 
         if isinstance(buckets, TokenBuckets):
             install_bucket_dispatch(featurisation.pipeline)
         with featurisation_environment(featurisation_config), allow_all_x_protein_chains_during_featurisation(fold_input):
-            featurised_examples = featurisation.featurise_input(
-                fold_input=fold_input, buckets=buckets, ccd=ccd, verbose=True, **kwargs
-            )
+            with af3_ccd_scope(ccd_cache, chemical_components, features, fold_input.user_ccd) as ccd:
+                if "init_guess_path" in kwargs:
+                    if "init_guess_chain" not in kwargs:
+                        raise ValueError("init_guess_chain not found in kwargs")
+                    kwargs["init_guess_positions"] = featurisation.generate_initial_guess(
+                        init_guess_path=kwargs["init_guess_path"], ccd=ccd,
+                    )
+                use_msa_cache = os.environ.get("ALPHAFOLD3_MSA_CACHE", "").strip().lower() in {
+                    "1", "true", "t", "yes", "y", "on",
+                }
+                with msa_row_cache_scope(msa_row_cache if use_msa_cache else None):
+                    featurised_examples = featurisation.featurise_input(
+                        fold_input=fold_input, buckets=buckets, ccd=ccd, verbose=True, **kwargs
+                    )
         featurised_examples = AlphaFold3Evaluator._apply_query_residue_index_jumps(
             featurised_examples,
             fold_input,

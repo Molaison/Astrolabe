@@ -30,11 +30,19 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 | Shared design / edits | `core/protomer_config_parser.py` | Object identity, pending vs accepted, pre-update rollback and locked/fixed/PTM/covalent constraints. |
 | Prediction / evidence | `core/folding_input.py`, `evaluators/{utils,evidence}.py` | Isolated outgoing transport graph; numerical and evidence fields merge separately; unknown sample alignment stays unknown. |
 | Assessment / acceptance | `losses/base.py`, `decision_context.py`, `decision_maker.py` | Higher is better; last accepted baseline; hard gates; rejected evidence can affect prefix stopping. |
+| Structural losses | `losses/{independent,metric_dispatch,selection}.py`, `loss_backend_policy.py` | Explicit backend, chemistry and region. Chain-first identities and 1-based chain ordinals are shared; native selectors retain their Pose dependency. Backend metadata is replaced per alias across oligomers and survives cached scoring and durable snapshots. |
 | Stage entry | `stage_manager.py`, `stage_transaction.py`, `stage_transition.py` | Committed source may differ from execution target. A rejected direct stage entry does not undo an already accepted mutation. |
 | Structure transformation | `structure_processors/`, `post_eval_hooks/` | Changed geometry is not a new prediction. Keep original confidence and derived-path provenance distinct. |
 | Resources / overlap | `runtime_support.py`, backend lifecycle methods, `run.py` | Explicit deduplicated cleanup; serial prediction, bounded ordered CPU finalization. |
 | Persistence | `decision_maker.py`, `run_config_lifecycle.py`, `execution_audit.py`, `posthoc/` | Same CSV row/column semantics. Single-file atomic replacement is not exact resume. |
 | AF3 compilation reuse | `af3_buckets.py`, `af3_compilation.py`, `launcher.py` | Native chemical token counts select the 40-token grid with inclusive 256/512/1024 windows. JAX owns executable compatibility; the launcher mounts its default disk cache outside ephemeral container HOME. Predictions and RNG remain fresh. See [cache controls](adaptive_runtime.md#af3-compilation-buckets-and-persistent-cache). |
+
+AF3-family deterministic preparation belongs to `evaluators/preparation_cache.py`
+and the AF3/Boltz/Protenix owners. Reuse exact MSA rows, unchanged CCD assets and
+parsed templates; assemble current features and preserve native RNG, topology
+and validation. Custom CCD overlays never modify the shared base; releasing an
+overlay invalidates native identity-keyed references. See
+[preparation controls](adaptive_runtime.md#af3-family-input-preparation-reuse).
 
 ## Constraints that are easy to miss
 

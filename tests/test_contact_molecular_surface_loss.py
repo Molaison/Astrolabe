@@ -14,10 +14,10 @@ from astrolabe.losses.interaction import ligand_buried_unsat_hbonds
 from astrolabe.losses.interaction import normalize_contact_molecular_surface
 
 
-def _eval_result(oligo_name: str = "AB") -> SimpleNamespace:
+def _eval_result(oligo_name: str = "AB", pose=None) -> SimpleNamespace:
     return SimpleNamespace(
         names=[oligo_name],
-        complex_poses=SimpleNamespace(poses={oligo_name: object()}),
+        complex_poses=SimpleNamespace(poses={oligo_name: object() if pose is None else pose}),
     )
 
 
@@ -31,7 +31,7 @@ def test_contact_molecular_surface_returns_raw_value(monkeypatch) -> None:
         lambda pose, chain_a, chain_b, **kwargs: 250.0,
     )
 
-    out = contact_molecular_surface(_eval_result())
+    out = contact_molecular_surface(_eval_result(), backend="rosetta")
 
     assert out["AB"] == pytest.approx(250.0)
 
@@ -61,9 +61,42 @@ def test_contact_molecular_surface_norm_uses_runtime_loss(monkeypatch) -> None:
         lambda pose, chain_a, chain_b, **kwargs: 400.0,
     )
 
-    out = contact_molecular_surface_norm(_eval_result())
+    out = contact_molecular_surface_norm(_eval_result(), backend="rosetta")
 
     assert out["AB"] == pytest.approx(0.8)
+
+
+@pytest.mark.parametrize("options", [
+    {"midpoint": 0}, {"midpoint": float("inf")}, {"midpoint_value": 1.5},
+    {"midpoint_value": float("nan")}, {"lower_scale": -2}, {"upper_scale": "invalid"},
+])
+def test_normalization_settings_are_validated_before_computing_surface(monkeypatch, options):
+    monkeypatch.setattr("astrolabe.losses.interaction.contact_molecular_surface",
+                        lambda *args, **kwargs: pytest.fail("invalid parameters reached expensive calculation"))
+    result = _eval_result()
+    with pytest.raises(ValueError):
+        contact_molecular_surface_norm(result, **options)
+    assert getattr(result, "loss_backend_records", None) is None
+
+
+def test_normalized_surface_records_formula_without_changing_prior_raw_evidence(monkeypatch):
+    monkeypatch.setattr("astrolabe.losses.interaction._compute_contact_molecular_surface_between_chains",
+                        lambda *args, **kwargs: 300.0)
+    result = _eval_result()
+    contact_molecular_surface(result, backend="rosetta")
+    normalized = contact_molecular_surface_norm(result, backend="rosetta", midpoint=300.0,
+                                                midpoint_value=0.7, lower_scale=100.0, upper_scale=50.0)
+    raw_record, norm_record = result.loss_backend_records["AB"]
+    assert "normalization" not in raw_record
+    definition = norm_record["normalization"]
+    assert definition["midpoint"] == 300.0
+    assert definition["midpoint_value"] == 0.7
+    assert definition["lower_scale"] == 100.0
+    assert definition["upper_scale"] == 50.0
+    assert definition["formula"]
+    assert definition["output_units"] == "dimensionless"
+    assert definition["raw_value"] == 300.0
+    assert definition["output_value"] == normalized["AB"] == pytest.approx(0.7)
 
 
 def test_contact_molecular_surface_passes_chain_relative_residue_range(
@@ -86,7 +119,8 @@ def test_contact_molecular_surface_passes_chain_relative_residue_range(
     )
 
     out = contact_molecular_surface(
-        _eval_result(),
+        _eval_result(pose=_FakePose(["A"] * 10 + ["B"] * 350)),
+        backend="rosetta",
         protomer_a="A",
         protomer_b="B",
         protomer_b_residues="138-343",
@@ -94,7 +128,7 @@ def test_contact_molecular_surface_passes_chain_relative_residue_range(
     )
 
     assert out["AB"] == pytest.approx(500.0)
-    assert captured["protomer_b_residues"] == "138-343"
+    assert captured["selected_residues_b"] == list(range(148, 354))
     assert captured["distance_weight"] == 1.0
 
 
@@ -120,6 +154,7 @@ def test_contact_molecular_surface_treats_target_chains_as_one_group(
 
     out = contact_molecular_surface(
         _eval_result("ABCD"),
+        backend="rosetta",
         protomer_a="A",
         protomer_b=["B", "C", "D"],
     )
@@ -162,6 +197,7 @@ def test_contact_molecular_surface_loads_pose_from_complex_path(monkeypatch) -> 
 
     out = contact_molecular_surface(
         eval_result,
+        backend="rosetta",
         protomer_a="A",
         protomer_b=["B", "C", "D"],
     )
@@ -202,6 +238,7 @@ def test_interface_buns_uses_grouped_target_and_complex_path(monkeypatch) -> Non
 
     out = interface_buried_unsatisfied_hbonds(
         eval_result,
+        backend="rosetta",
         protomer_a="A",
         protomer_b=["B", "C", "D"],
     )

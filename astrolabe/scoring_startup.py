@@ -7,6 +7,7 @@ Required/unknown keys and component names belong to startup_validation.
 from __future__ import annotations
 
 import math
+import re
 from pathlib import Path
 import shutil
 
@@ -15,6 +16,12 @@ _INTERFACE_PAE = {"ipae", "ipae_min", "ipae_minimal", "ipae_max", "ipsae"}
 _CHAIN_PAIRS = _INTERFACE_PAE | {
     "protomer_shape_complementarity", "interface_buried_unsatisfied_hbonds",
     "interface_holes", "binder_pair_tmscore",
+}
+_REGION_LOSSES = {
+    "protomer_shape_complementarity", "interface_shape_complementarity",
+    "contact_molecular_surface", "contact_molecular_surface_norm",
+    "interface_buried_unsatisfied_hbonds", "interface_holes", "interface_hbond_count",
+    "ligand_shape_complementarity", "ligand_protein_hbond",
 }
 _AUTODOCK = {"autodock_vina", "autodock_gpu"}
 _HADDOCK = {"haddock3", "haddock3_nucleic", "HADDOCK3_nucleic"}
@@ -84,11 +91,72 @@ def validate_scoring_settings(family, kind, options, *, path, check_paths) -> li
             fail(key, "asset does not exist")
 
     if family == "loss":
-        if kind in _CHAIN_PAIRS:
+        if kind in _CHAIN_PAIRS | _REGION_LOSSES:
             for key in ("chain_a", "chain_b"):
                 chain(key, multiple=True)
             for key in ("protomer_a", "protomer_b"):
-                chain(key, multiple=kind in {"interface_holes", "interface_buried_unsatisfied_hbonds"})
+                chain(key, multiple=kind in _REGION_LOSSES)
+        if kind in _REGION_LOSSES:
+            if "surface_side" in options and (not isinstance(options["surface_side"], str) or options["surface_side"] not in {"a", "b"}):
+                fail("surface_side", "expected a or b; this selects the reported molecular surface side")
+            for key in ("binder_chains", "target_chains"):
+                chain(key, multiple=True)
+            if "backend" in options and (not isinstance(options["backend"], str) or options["backend"] not in {"auto", "independent", "rosetta"}):
+                fail("backend", "expected auto, independent, or rosetta")
+            if kind == "interface_holes" and options.get("backend") == "independent":
+                fail("backend", "RosettaHoles decoy15 has no validated independent equivalent; use auto or rosetta")
+            for side in ("a", "b"):
+                range_key, selector_key = f"protomer_{side}_residues", f"position_selector_{side}"
+                if options.get(range_key) is not None and options.get(selector_key) is not None:
+                    fail(selector_key, f"cannot be combined with {range_key}")
+                if options.get(selector_key) is not None and (not isinstance(options[selector_key], str) or not options[selector_key].strip()):
+                    fail(selector_key, "expected a nonempty positional selector expression")
+                value = options.get(range_key)
+                if value is not None:
+                    parts = value.split(",") if isinstance(value, str) else value if isinstance(value, (tuple, list)) else []
+                    valid = bool(parts)
+                    for part in parts:
+                        token = str(part).strip()
+                        if not re.fullmatch(r"[1-9][0-9]*(?:-[1-9][0-9]*)?", token):
+                            valid = False
+                        elif "-" in token:
+                            start, end = map(int, token.split("-"))
+                            valid = valid and start <= end
+                    if not valid:
+                        fail(range_key, "expected one-based chain-relative residue positions/ranges")
+            if options.get("included_protomers") is not None:
+                value = options["included_protomers"]
+                if isinstance(value, str) and len(value.split(",")) != 1:
+                    fail("included_protomers", "accepts one legacy selector; use protomer_a for chain groups")
+                if options.get("protomer_a") is not None:
+                    first = options["protomer_a"]
+                    first = [p.strip() for p in first.split(",")] if isinstance(first, str) else list(first) if isinstance(first, (tuple, list)) else [first]
+                    if first != [value]:
+                        fail("included_protomers", "disagrees with protomer_a")
+            feedback_options_nullable = kind in {"interface_shape_complementarity", "interface_hbond_count"}
+            for key in ("cutoff_distance", "sasa_probe_radius", "saturation_constant"):
+                number(key, positive=True, nullable=feedback_options_nullable and key == "sasa_probe_radius")
+            number("cutoff_angle", positive=True, maximum=180)
+            for key in ("buried_sasa_cutoff", "distance_weight"):
+                number(key, nonnegative=True, nullable=feedback_options_nullable and key == "buried_sasa_cutoff")
+            number("ph")
+            number("hbond_energy_cutoff", nullable=True)
+            integer("sasa_point_number")
+            if "hydrogen_policy" in options and (not isinstance(options["hydrogen_policy"], str) or options["hydrogen_policy"] not in {"add", "require"}):
+                fail("hydrogen_policy", "expected add or require")
+            if "use_rosetta_radii" in options and options["use_rosetta_radii"] is not None and not isinstance(options["use_rosetta_radii"], bool):
+                fail("use_rosetta_radii", "expected a boolean or null for the selected backend's default")
+            if options.get("backend") == "independent":
+                if options.get("use_rosetta_radii") is True:
+                    fail("use_rosetta_radii", "the Rosetta radius table requires backend=rosetta")
+                if options.get("ignore_surface_res") is True:
+                    fail("ignore_surface_res", "this filter option requires backend=rosetta")
+                if options.get("hbond_energy_cutoff") is not None:
+                    fail("hbond_energy_cutoff", "an energy cutoff requires backend=rosetta")
+        if kind == "contact_molecular_surface_norm":
+            for key in ("midpoint", "lower_scale", "upper_scale"):
+                number(key, positive=True)
+            number("midpoint_value", nonnegative=True, maximum=1)
         if kind in {"single_chain_rog", "single_chain_ca_rog"}:
             chain("included_protomers", multiple=True)
         if kind in {"secondary_structure_fraction", "protomer_shape_complementarity", "interface_buried_unsatisfied_hbonds"}:

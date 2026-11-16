@@ -80,6 +80,7 @@ loss:
       sse_type: L
     hbonds:
       _type: ligand_protein_hbond
+      backend: rosetta  # Preserve this established protocol definition.
     ligand_burial:
       _type: ligand_delta_sasa_fraction
     holes:

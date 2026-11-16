@@ -898,9 +898,8 @@ def _validate_configured_losses(run_module: Any, cfg: Any) -> None:
                     f"configured refinement cannot resolve active loss {name!r}"
                 ) from exc
             continue
-        code = getattr(function, "__code__", None)
-        needs_pose = spec_name in run_module.PYROSETTA_LOSS_TYPES or (
-            code is not None and "_require_pyrosetta" in code.co_names
+        needs_pose = run_module._loss_spec_needs_complex_poses(
+            spec_name, function, configured,
         )
         if spec_name in run_module.POST_EVAL_HOOK_LOSS_TYPES or (needs_pose and not isolated):
             raise ValueError(

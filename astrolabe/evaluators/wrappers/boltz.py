@@ -19,6 +19,7 @@ from tqdm import tqdm
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import ProteinChain, Ligand, RnaChain, DnaChain
 from astrolabe.evaluators.x_masking import preserve_unknown_residue_sequence
+from astrolabe.evaluators.preparation_cache import CopyOnAccessMapping, FileObjectCache
 try:
     from alphafold3.common.folding_input import (
         ProteinChain as AF3ProteinChain,
@@ -270,6 +271,7 @@ def process_inputs(  # noqa: C901, PLR0912, PLR0915
     msa_pairing_strategy: str,
     max_msa_seqs: int = 4096,
     use_msa_server: bool = False,
+    ccd_cache: FileObjectCache | None = None,
 ) -> None:
     """Process the input data and output directory.
 
@@ -308,9 +310,11 @@ def process_inputs(  # noqa: C901, PLR0912, PLR0915
     processed_msa_dir.mkdir(parents=True, exist_ok=True)
     predictions_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load CCD
-    with ccd_path.open("rb") as file:
-        ccd = pickle.load(file)  # noqa: S301
+    # Reuse the loaded asset, while native parsers receive private molecule copies.
+    if ccd_cache is None:
+        ccd = _load_ccd(ccd_path)
+    else:
+        ccd = CopyOnAccessMapping(ccd_cache.load(ccd_path, _load_ccd))
 
     # Parse input data
     records: list[Record] = []
@@ -687,9 +691,15 @@ def from_af3_to_boltz(input_obj):
     return result, chain2input_chain
 
 
+def _load_ccd(path):
+    with path.open("rb") as file:
+        return pickle.load(file)  # noqa: S301
+
+
 class Boltz1Runner:
     def __init__(self, config):
         self.config = config
+        self._ccd_cache = FileObjectCache()
         self.accelerator = config["accelerator"]
         self.cache = pathlib.Path(config["cache"])
         self.checkpoint = config["checkpoint"]
@@ -818,6 +828,7 @@ class Boltz1Runner:
             use_msa_server=self.use_msa_server,
             msa_server_url=self.msa_server_url,
             msa_pairing_strategy=self.msa_pairing_strategy,
+            ccd_cache=self._ccd_cache,
         )
         return data
 

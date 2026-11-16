@@ -364,7 +364,9 @@ def test_restore_rejects_missing_colliding_and_dunder_extension_rows(tmp_path):
     blob = snapshot_scores(scores, data)
     envelope = data.get(blob, NATIVE_SCORES_ENVELOPE_CODEC)
 
-    missing = replace(envelope, fields=envelope.fields[:-1])
+    # The trailing optional backend evidence may be absent in earlier v2
+    # snapshots. Missing a required owner field still fails closed.
+    missing = replace(envelope, fields=envelope.fields[:-2])
     missing_blob = data.put(missing, NATIVE_SCORES_ENVELOPE_CODEC)
     with pytest.raises(UnsupportedNativeScoresState, match="field names/order"):
         restore_scores(missing_blob, data, tmp_path / "missing")

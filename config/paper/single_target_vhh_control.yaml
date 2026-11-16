@@ -69,6 +69,7 @@ loss:
       sse_type: L
     interface_sc:
       _type: protomer_shape_complementarity
+      backend: rosetta  # Preserve this established protocol definition.
   expression_terms:
     globin_rog: 0.395 * (A_length ** 0.6) + 7.257
     shape_penalty: 0.3 * sigmoid((binder_rog - globin_rog) / 5.0) + 0.6 * min(binder_loop_frac, 1.0)

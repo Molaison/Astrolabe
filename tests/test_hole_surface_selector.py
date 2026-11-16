@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
@@ -302,6 +303,34 @@ def test_construct_position_selector_accepts_pore_bottleneck_expression(tmp_path
 
     np.testing.assert_array_equal(selection["A"], np.array([False, True, False]))
     np.testing.assert_array_equal(selection["B"], np.array([False]))
+
+
+@pytest.mark.parametrize("selector,writer,expected", [
+    ("hole_surface", _write_channel_artifacts, [False, True, True]),
+    ("pore_bottleneck", _write_bottleneck_artifacts, [False, True, False]),
+])
+@pytest.mark.parametrize("empty_path_wrapper", [False, True])
+def test_hole_selectors_acquire_required_pose_when_only_prediction_path_exists(
+    tmp_path, monkeypatch, selector, writer, expected, empty_path_wrapper,
+):
+    protomers = {"A": _protomer(3, ProtomerTypes.PROTEIN), "B": _protomer(1, ProtomerTypes.CCD)}
+    global_config.init_const("protomers", protomers)
+    global_config.init_const("raw_model_results_dir", tmp_path / "raw_model_results")
+    global_config.set_variable("step", 0)
+    reference, spheres = writer(tmp_path / "raw_model_results")
+    result = SimpleNamespace(complex_poses=ComplexPoses({}) if empty_path_wrapper else None,
+                             complex_paths={"AB": reference})
+    calls = []
+    def construct(cls, evaluation_result):
+        assert evaluation_result is result
+        calls.append("constructed")
+        return ComplexPoses({"AB": _Pose()})
+    monkeypatch.setattr(ComplexPoses, "construct_complex_poses", classmethod(construct))
+    extra = ", top_n=1" if selector == "pore_bottleneck" else ""
+    expression = f"{selector}(reference_structure_path={str(reference)!r}, reference_spheres_path={str(spheres)!r}, surface_gap_max=2.0{extra})"
+    selected = construct_position_selector(expression, result, protomers)
+    assert calls == ["constructed"]
+    np.testing.assert_array_equal(selected["A"], expected)
 
 
 def test_pore_bottleneck_selects_blockers_from_multiple_target_limiting_regions(tmp_path: Path) -> None:

@@ -34,6 +34,7 @@ loss:
   loss_terms:
     interface_sc:
       _type: protomer_shape_complementarity
+      backend: rosetta  # Preserve this established protocol definition.
     ipsae:
       _type: ipsae
       chain_a: A

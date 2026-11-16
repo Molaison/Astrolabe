@@ -1,0 +1,146 @@
+{
+  "date": "2026-11-16",
+  "repository_baseline": "09f0460feb733b4675923ee580c977c7f7423e13",
+  "measurement_boundary": "Shared x86_64 CPU; no isolated-core or Rosetta/GPU/whole-trajectory speedup claim.",
+  "cms": {
+    "baseline": "py-contact-ms 0.1.1 public calculate_contact_ms",
+    "surface_side": "b",
+    "input": "examples/input/9TP_cid.cif; canonical amino acids; chains A and B",
+    "input_sha256": "8d2603eb6c3dd9f092fe859cd341cfe98116de3c86017db6fe6c53f3f984b900",
+    "atoms_a": 698,
+    "atoms_b": 714,
+    "completed_calls": 10,
+    "errors": 0,
+    "versions": {
+      "numpy": "2.5.5",
+      "scipy": "1.17.0",
+      "biotite": "1.8.0",
+      "py-contact-ms": "0.1.1"
+    },
+    "python": "3.12.14",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "observations": [
+      {
+        "round": 1,
+        "method": "reference",
+        "seconds": 19.47885359400061,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 1,
+        "method": "optimized",
+        "seconds": 5.715001950000442,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 2,
+        "method": "optimized",
+        "seconds": 4.508045938999203,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 2,
+        "method": "reference",
+        "seconds": 20.2057690849997,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 3,
+        "method": "reference",
+        "seconds": 10.03995164600019,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 3,
+        "method": "optimized",
+        "seconds": 3.988910808999208,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 4,
+        "method": "optimized",
+        "seconds": 3.872516915000233,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 4,
+        "method": "reference",
+        "seconds": 13.813700547998451,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 5,
+        "method": "reference",
+        "seconds": 9.229356238000037,
+        "score": 482.5949197282182
+      },
+      {
+        "round": 5,
+        "method": "optimized",
+        "seconds": 4.2033056230011425,
+        "score": 482.5949197282182
+      }
+    ],
+    "median_seconds": {
+      "reference": 13.813700547998451,
+      "optimized": 4.2033056230011425
+    },
+    "speedup_over_python_reference": 3.2863897577201455,
+    "maximum_absolute_error": 1.0658141036401503e-14,
+    "scope": "CPU surface calculation only; no PyRosetta/GPU/trajectory throughput comparison"
+  },
+  "af3_msa": {
+    "native_source": "Molaison/alphafold3@4b154d922759c918dd4b5a4d5a779853100fd20e",
+    "source_scope": "Original native Python encoder plus its constants; full AF3 not installed.",
+    "command": "python examples/benchmarks/af3_featurization_profile.py --msa-delta --lengths 512 --msa-depth 2048 --runs 5 --sequence-seed 42 --json-out /tmp/af3-msa-delta.json",
+    "results": {
+      "512": {
+        "bitwise_equal": true,
+        "cold_s": 0.2632236819990794,
+        "delta_median_s": 0.005164416999832611,
+        "delta_s": [
+          0.005164416999832611,
+          0.012619626000741846,
+          0.00415651399998751,
+          0.010672944999896572,
+          0.004724188000182039
+        ],
+        "encoded_rows_per_mutant": [
+          1,
+          1,
+          1,
+          1,
+          1
+        ],
+        "msa_depth": 2048,
+        "native_median_s": 0.2452324090008915,
+        "native_s": [
+          0.28711680299966247,
+          0.23441011999966577,
+          0.23714866500085918,
+          0.24582289300087723,
+          0.2452324090008915
+        ],
+        "runs": 5,
+        "scope": "native AF3 MSA row encoding on CPU",
+        "sequence_length": 512
+      }
+    }
+  },
+  "pinned_dependency_validation": {
+    "python": "3.11.18",
+    "versions": {
+      "numpy": "1.26.4",
+      "biotite": "1.5.0",
+      "hydride": "1.2.3",
+      "scipy": "1.17.0",
+      "shape-complementarity": "0.2.0",
+      "py-contact-ms": "0.1.1"
+    },
+    "command": "python -m pytest -q tests/test_independent_structure_metrics.py",
+    "passed": 34,
+    "failed": 0,
+    "skipped": 0,
+    "scope": "Independent CPU-library behavior on the deployed dependency pins; no full container or native inference run."
+  }
+}

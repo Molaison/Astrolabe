@@ -114,7 +114,8 @@ def build_execution_audit(*, run_id: str, status: str, decisions=None, journal=N
         if snapshot is None:
             result = record.evaluation_result
             snapshot = {name: getattr(result, name, None) for name in (
-                "evaluation_records", "complex_paths", "derived_structures", "candidate_groups"
+                "evaluation_records", "complex_paths", "derived_structures", "candidate_groups",
+                "loss_backend_records",
             )}
         assessments.append({
             "assessment_id": record.assessment_id,
@@ -129,6 +130,7 @@ def build_execution_audit(*, run_id: str, status: str, decisions=None, journal=N
             "complex_paths": snapshot.get("complex_paths") or {},
             "derived_structures": snapshot.get("derived_structures") or {},
             "candidate_groups": snapshot.get("candidate_groups") or (),
+            "loss_backend_records": snapshot.get("loss_backend_records") or {},
         })
     return _json_value({
         "schema_version": 1, "run_id": run_id, "terminal_status": status,

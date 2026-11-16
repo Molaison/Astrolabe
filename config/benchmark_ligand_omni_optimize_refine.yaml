@@ -91,6 +91,7 @@ loss:
       included_protomers: A
     hbonds:
       _type: ligand_protein_hbond
+      backend: rosetta  # Preserve this established protocol definition.
       ligand_targets:
         - B
       saturation_constant: 4.0
