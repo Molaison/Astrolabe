@@ -212,3 +212,21 @@ prefer independent implementations by default. HB/BUNS methods and surface
 radius tables differ, so existing thresholds require calibration or an explicit
 Rosetta backend. The change is reviewable on a feature branch and does not
 constitute a deployed native/GPU qualification.
+
+The first remote CI attempt exposed an already-stale durable-recovery coverage
+record: the unchanged baseline and this branch both rejected
+`model_execution.py`. Review against the recorded `c8cdc4b5` anchor traced the
+only covered-file change to the earlier `5400e797` Mol-1 `poolable` option.
+The four journal/operation files and imported RNG helpers were unchanged;
+the owner-selection change does not alter the modeled single-owner call
+boundary. An independent review confirmed the correspondence. Updated the
+coverage and project-skill review anchors to `21d6688b31a1170e0d197e650c533722ba31fcfc`,
+without changing the model, runner, invariants or product code.
+
+`python scripts/validation/verify_runtime_recovery.py --self-test --jar
+<verified-tla2tools-1.7.4.jar> --output <fresh-directory>` passed with TLC 2.19,
+OpenJDK 21.0.13 and Python 3.12.14. Both normal budgets passed (24 and 178
+distinct states), the real-code suite passed all 18 cases before and after
+mutation checks, and each of the three broken models and corresponding real
+code mutations failed its required property. This reestablishes the existing
+bounded recovery qualification; it does not add native model/GPU coverage.

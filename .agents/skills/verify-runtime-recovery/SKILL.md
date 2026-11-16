@@ -86,7 +86,11 @@ its dependency files.
 records the sync commit and SHA256 values of `runtime.py`, `operations.py`,
 `store.py`, `types.py`, and `model_execution.py`.
 The last code review anchor is
-`46501fc12136c915516d9a39455767c6f9dbe48b`.
+`21d6688b31a1170e0d197e650c533722ba31fcfc`.
+The 2026-11-16 review covered the intervening `NativeModelClient.poolable`
+owner-selection change. Journal transitions, invocation ordering, budget
+accounting and the imported RNG helpers remained unchanged; the model and
+negative controls retain their existing properties and bounds.
 Dependency hashes trigger review; they do not claim that all their functions
 are modeled. The runner refuses stale hashes.
 

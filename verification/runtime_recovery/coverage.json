@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sync_commit": "c8cdc4b5f7e393a26bd0b1fe7fb00e92c9759d99",
+  "sync_commit": "21d6688b31a1170e0d197e650c533722ba31fcfc",
   "tool": {
     "name": "TLC",
     "version": "2.19 / TLA+ 1.7.4",
@@ -21,6 +21,6 @@
     "astrolabe/design/operations.py": "3ef8ce48fc2147507b9d799228c4e50fa54e55ba1892a83e154b790a7fa8e2a5",
     "astrolabe/design/store.py": "3712567caf158acf25a7bb8204c55b7f744b9d41584b9c2c2e880a631a78db7d",
     "astrolabe/design/types.py": "52438ef0f5207b2e1f0fcecd0974565aec205cc6e70e80ff030eb749667922fd",
-    "astrolabe/model_execution.py": "9acc1878802bfa3275b602b15f277867548f8e96a248d3180da9d66c89fa0ea5"
+    "astrolabe/model_execution.py": "04e002ae57430cdc02808149396538cc457d015e9d80f1ce32bbe2589f393955"
   }
 }
