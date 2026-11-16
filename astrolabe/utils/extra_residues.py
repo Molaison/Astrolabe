@@ -33,6 +33,7 @@ except ImportError:
 
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
+from astrolabe.utils.af3_ccd import create_isolated_ccd
 
 
 _ONE_TO_THREE_AA = {
@@ -2267,7 +2268,7 @@ def setup_extra_residues(
                 user_ccd = getattr(global_config, "user_ccd")
             except Exception:
                 user_ccd = None
-            ccd_obj = chemical_components.Ccd(user_ccd=user_ccd)
+            ccd_obj = create_isolated_ccd(chemical_components, user_ccd=user_ccd)
         return ccd_obj
 
     # resname -> owner/source info to enforce cross-scope uniqueness.

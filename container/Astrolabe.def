@@ -39,7 +39,7 @@ From: nvidia/cuda:12.6.2-cudnn-runtime-ubuntu22.04
     /opt/micromamba/bin/micromamba create -y -n gh python=3.11 pip
 
     # Install this repo + CLI dependencies (declared in setup.py).
-    /opt/micromamba/bin/micromamba run -n gh python -m pip install -e /opt/Astrolabe
+    /opt/micromamba/bin/micromamba run -n gh python -m pip install -e '/opt/Astrolabe[structure-metrics]'
 
 %files
     ./ /opt/Astrolabe

@@ -49,6 +49,7 @@ loss:
   loss_terms:
     interface_sc:
       _type: protomer_shape_complementarity
+      backend: rosetta  # Preserve this established protocol definition.
       protomer_a: protomer:A
       protomer_b: protomer:B
     ipsae:

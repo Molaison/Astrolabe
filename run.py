@@ -1457,11 +1457,12 @@ def calculate_token_numbers(inputs: Dict[str, "Input"]) -> Dict[str, int]:
         allow_all_x_protein_chains_during_featurisation,
         to_af3_input,
     )
+    from astrolabe.utils.af3_ccd import create_isolated_ccd
 
     num_tokens: dict[str, int] = {}
     for oligo_name, input_data in inputs.items():
         af3_input = to_af3_input(input_data)
-        ccd = chemical_components.Ccd(user_ccd=af3_input.user_ccd)
+        ccd = create_isolated_ccd(chemical_components, user_ccd=af3_input.user_ccd)
         with allow_all_x_protein_chains_during_featurisation(af3_input):
             token_count = count_tokens(fold_input=af3_input, ccd=ccd)
         num_tokens[oligo_name] = int(token_count)
@@ -1516,14 +1517,23 @@ def _loss_computer_needs_complex_poses(loss_computer: LossEngine | None) -> bool
     for spec_tuple in getattr(loss_computer, "loss_specs", {}).values():
         if not spec_tuple:
             continue
-        spec_name = spec_tuple[0]
-        if spec_name in PYROSETTA_LOSS_TYPES:
-            return True
-        loss_func = spec_tuple[1] if len(spec_tuple) > 1 else None
-        code = getattr(loss_func, "__code__", None)
-        if code is not None and "_require_pyrosetta" in code.co_names:
+        if _loss_spec_needs_complex_poses(*spec_tuple):
             return True
     return False
+
+
+def _loss_spec_needs_complex_poses(spec_name, loss_func=None, params=None) -> bool:
+    from astrolabe.loss_backend_policy import loss_requires_rosetta, loss_selectors_require_rosetta
+
+    if loss_selectors_require_rosetta(params):
+        return True
+    requirement = loss_requires_rosetta(spec_name, params)
+    if requirement is not None:
+        return requirement
+    code = getattr(loss_func, "__code__", None)
+    return spec_name in PYROSETTA_LOSS_TYPES or (
+        code is not None and "_require_pyrosetta" in code.co_names
+    )
 
 
 def _loss_computer_needs_pyrosetta_runtime(loss_computer: LossEngine | None) -> bool:

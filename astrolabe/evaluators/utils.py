@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import copy
 import logging
 import pathlib
 import sys
@@ -819,6 +820,9 @@ class StandardScores:
     candidate_groups: tuple[CandidateGroup, ...] | None = dataclasses.field(
         default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
     )
+    loss_backend_records: dict[str, list[dict[str, typing.Any]]] | None = dataclasses.field(
+        default=None, metadata={"evidence": True}, repr=False, compare=False, kw_only=True
+    )
 
     @classmethod
     def score_field_names(cls) -> set[str]:
@@ -1063,6 +1067,11 @@ class StandardScores:
             )
         if self.candidate_groups is not None:
             result.candidate_groups = filter_candidate_groups(self.candidate_groups, allowed_oligos)
+        if self.loss_backend_records is not None:
+            result.loss_backend_records = copy.deepcopy({
+                name: records for name, records in self.loss_backend_records.items()
+                if name in allowed_oligos
+            })
         return result
 
     def clone(self) -> StandardScores:

@@ -1,7 +1,49 @@
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass, field
 from typing import Any, Mapping
+
+
+def selected_loss_configurations(task_cfg: Mapping[str, Any], known_types: set[str]):
+    """Yield active explicit and reachable implicit losses without importing them.
+
+    Expression settings inherit from the default stage; active_loss_terms does
+    not. The same traversal serves package and external-binary preflight.
+    """
+    loss = task_cfg.get("loss") or {}
+    terms = loss.get("loss_terms") or {}
+    expressions = loss.get("expression_terms") or {}
+    stages = task_cfg.get("stages") or {}
+    default = stages.get("default") or {}
+    contexts = [(f"stages.{name}", stage) for name, stage in stages.items()
+                if stage is not None] or [("", {})]
+    for stage_path, stage in contexts:
+        active = stage.get("active_loss_terms")
+        for alias, spec in terms.items():
+            if spec is not None and (active is None or alias in active):
+                yield f"loss.loss_terms.{alias}._type", spec
+        pending = []
+        for field in ("weighted_score_expression", "acceptance_threshold", "acceptance_gate",
+                      "early_stopping", "prefix_early_stopping", "_entrance"):
+            owner = stage if field in stage else default
+            expression = owner.get(field)
+            if isinstance(expression, str) and expression:
+                owner_path = stage_path if field in stage else "stages.default"
+                pending.append((f"{owner_path}.{field}", expression))
+        visited = set()
+        while pending:
+            field_path, expression = pending.pop()
+            tree = ast.parse(expression, mode="eval")
+            names = {node.id if isinstance(node, ast.Name) else node.attr
+                     for node in ast.walk(tree) if isinstance(node, (ast.Name, ast.Attribute))}
+            for name in sorted(names):
+                if name in expressions and name not in visited:
+                    visited.add(name)
+                    pending.append((f"loss.expression_terms.{name}", expressions[name]))
+                elif (name not in terms and name not in expressions and name in known_types
+                      and (active is None or name in active)):
+                    yield field_path, {"_type": name}
 
 
 @dataclass(frozen=True)

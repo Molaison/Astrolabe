@@ -701,6 +701,11 @@ def _msa_dir_for_protenix(*, cplx: str, entity_id: int) -> Path:
 
 
 def _write_text_atomic(path: Path, text: str) -> None:
+    try:
+        if path.read_text(encoding="utf-8") == text:
+            return
+    except FileNotFoundError:
+        pass
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + f".{os.getpid()}.tmp")
     tmp.write_text(text, encoding="utf-8")
@@ -737,8 +742,12 @@ def _inline_template_pdb_id(mmcif: str) -> str:
     return match.group(1).lower()
 
 
+def _parse_inline_template(mmcif: str):
+    return TemplateParser.parse(file_id=_inline_template_pdb_id(mmcif), mmcif_string=mmcif)
+
+
 def _materialize_inline_templates(
-    *, chain: ProteinChain, cplx: str, entity_id: int
+    *, chain: ProteinChain, cplx: str, entity_id: int, template_cache=None,
 ) -> str | None:
     templates = getattr(chain, "templates", None) or ()
     if not templates:
@@ -767,7 +776,8 @@ def _materialize_inline_templates(
         if not isinstance(mmcif, str) or not mmcif.strip():
             raise ValueError("Inline AF3 template is missing its mmCIF content.")
         pdb_id = _inline_template_pdb_id(mmcif)
-        parsed = TemplateParser.parse(file_id=pdb_id, mmcif_string=mmcif)
+        parsed = (_parse_inline_template(mmcif) if template_cache is None else
+                  template_cache.get_or_create(mmcif, _parse_inline_template))
         if parsed.mmcif_object is None:
             raise ValueError(
                 f"Failed to parse inline AF3 template {pdb_id}: {parsed.errors!r}"
@@ -852,6 +862,7 @@ def from_af3_to_protenix(
     *,
     use_constraints: bool = True,
     use_templates: bool = False,
+    template_cache=None,
 ):
     protenix_inputs = {"name": cplx, "sequences": []}
     chain_id_to_entities: dict[str, list[int]] = defaultdict(list)
@@ -902,7 +913,8 @@ def from_af3_to_protenix(
             }
             if use_templates:
                 templates_path = _materialize_inline_templates(
-                    chain=chain, cplx=cplx, entity_id=entity_id
+                    chain=chain, cplx=cplx, entity_id=entity_id,
+                    template_cache=template_cache,
                 )
                 if templates_path is not None:
                     chain_input["templatesPath"] = templates_path

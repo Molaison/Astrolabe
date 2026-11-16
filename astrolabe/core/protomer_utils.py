@@ -11,6 +11,7 @@ import termcolor
 from omegaconf import DictConfig
 
 from astrolabe.core.folding_input import Template
+from astrolabe.utils.af3_ccd import create_isolated_ccd
 from astrolabe.core.msa_utils import parse_a3m_sequences, apply_position_mask
 from astrolabe.core.sequence_parsing import (
     parse_hierarchy_string,
@@ -43,7 +44,7 @@ def cached_ccd(user_ccd: Optional[str] = None):
     """Get cached chemical component dictionary.
 
     Args:
-        user_ccd: Optional path to custom CCD file
+        user_ccd: Optional custom CCD mmCIF text
 
     Returns:
         Cached Ccd instance (requires AF3 python package)
@@ -55,7 +56,7 @@ def cached_ccd(user_ccd: Optional[str] = None):
             "PTM parsing requires the AlphaFold3 python package (`alphafold3`). "
             "Install the vendored AF3 deps, or remove PTM annotations like `[PTM]` / `(CCD)`."
         ) from exc
-    return chemical_components.Ccd(user_ccd=user_ccd)
+    return create_isolated_ccd(chemical_components, user_ccd=user_ccd)
 
 
 def parse_protomer_statements(

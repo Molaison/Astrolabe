@@ -9,7 +9,6 @@ No PyRosetta, model, configuration framework, or GPU imports are needed here.
 
 from __future__ import annotations
 
-import ast
 import importlib
 import math
 import os
@@ -19,6 +18,9 @@ import shlex
 import subprocess
 import sys
 from collections.abc import Sequence
+
+from astrolabe.loss_backend_policy import loss_requires_rosetta
+from astrolabe.runtime_usage import selected_loss_configurations
 
 
 # Verified against losses/interaction.py, interface_holes.py and
@@ -41,10 +43,6 @@ DALPHABALL_LOSSES = frozenset({
     "bindcraft_binder_score",
     "bindcraft_surface_hydrophobicity",
 })
-_EXPRESSION_FIELDS = (
-    "weighted_score_expression", "acceptance_threshold", "acceptance_gate",
-    "early_stopping", "prefix_early_stopping", "_entrance",
-)
 
 # Protocol provenance: the local astrolabe/assets/DAlphaBall.gcc ELF's main
 # (0x401150) reads NPOINTS, an integer, COORDS, that many x/y/z/r rows, then END.
@@ -128,15 +126,6 @@ def dalphaball_init_options(init_opts: str) -> str:
     return init_opts
 
 
-def _expression_names(expression: str) -> set[str]:
-    tree = ast.parse(expression, mode="eval")
-    return {
-        node.id if isinstance(node, ast.Name) else node.attr
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.Name, ast.Attribute))
-    }
-
-
 def dalphaball_required_by(cfg: dict) -> tuple[str, ...]:
     """Identify selected DAlphaBall losses without importing the loss registry.
 
@@ -148,39 +137,11 @@ def dalphaball_required_by(cfg: dict) -> tuple[str, ...]:
     implicit registered loss names in expressions are included. Configuration
     shape/syntax validation remains the caller's responsibility.
     """
-    loss = cfg.get("loss") or {}
-    terms = loss.get("loss_terms") or {}
-    expressions = loss.get("expression_terms") or {}
-    stages = cfg.get("stages") or {}
-    default = stages.get("default") or {}
-    contexts = [(f"stages.{name}", stage) for name, stage in stages.items()
-                if stage is not None] or [("", {})]
     required = []
-    for stage_path, stage in contexts:
-        active = stage.get("active_loss_terms")
-        for alias, spec in terms.items():
-            if (spec is not None and spec.get("_type") in DALPHABALL_LOSSES
-                    and (active is None or alias in active)):
-                required.append(f"loss.loss_terms.{alias}._type ({spec['_type']})")
-
-        pending = []
-        for field in _EXPRESSION_FIELDS:
-            owner = stage if field in stage else default
-            expression = owner.get(field)
-            if isinstance(expression, str) and expression:
-                owner_path = stage_path if field in stage else "stages.default"
-                pending.append((f"{owner_path}.{field}", expression))
-        visited = set()
-        while pending:
-            field_path, expression = pending.pop()
-            for name in sorted(_expression_names(expression)):
-                if name in expressions and name not in visited:
-                    visited.add(name)
-                    pending.append((f"loss.expression_terms.{name}", expressions[name]))
-                elif (name not in terms and name not in expressions
-                      and name in DALPHABALL_LOSSES
-                      and (active is None or name in active)):
-                    required.append(f"{field_path} ({name})")
+    for path, spec in selected_loss_configurations(cfg, DALPHABALL_LOSSES):
+        name = spec.get("_type")
+        if name in DALPHABALL_LOSSES and loss_requires_rosetta(name, spec) is not False:
+            required.append(f"{path} ({name})")
     return tuple(dict.fromkeys(required))
 
 

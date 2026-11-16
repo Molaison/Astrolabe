@@ -30,16 +30,20 @@ class _SelectorExpressionTransformer(ast.NodeTransformer):
 
 
 def construct_position_selector(
-    expression, evaluation_result, protomers
+    expression, evaluation_result, protomers, *, missing="all"
 ):
+    if missing not in {"all", "empty", "error"}:
+        raise ValueError("missing selector policy must be all, empty, or error")
     default_sites = {name: np.ones(protomer.length, dtype=bool) for name, protomer in protomers.items()}
     if expression == "None" or expression is None:
         return default_sites
 
     position_vars = extract_variables(expression)
     complex_poses = getattr(evaluation_result, "complex_poses", None)
-    if complex_poses is None:
-        pose_vars = position_vars & SelectorRegistry.pose_required_variables()
+    pose_vars = position_vars & SelectorRegistry.pose_required_variables()
+    path_only_vars = SelectorRegistry.path_only_variables()
+    needs_native_poses = bool(pose_vars - path_only_vars)
+    if complex_poses is None or (needs_native_poses and not getattr(complex_poses, "poses", None)):
         if pose_vars:
             complex_paths = getattr(evaluation_result, "complex_paths", None)
             if not complex_paths:
@@ -49,7 +53,6 @@ def construct_position_selector(
                 )
             from astrolabe.evaluators.utils import ComplexPoses
 
-            path_only_vars = SelectorRegistry.path_only_variables()
             if pose_vars <= path_only_vars:
                 complex_poses = ComplexPoses({})
                 complex_poses.complex_paths = dict(complex_paths)
@@ -99,8 +102,14 @@ def construct_position_selector(
     for proto, base_mask in default_sites.items():
         selector_mask = final_selector.sites.get(proto)
         if selector_mask is None:
-            result[proto] = base_mask.copy()
+            if missing == "error":
+                raise ValueError(f"Position selector has no mask for protomer {proto!r}")
+            result[proto] = base_mask.copy() if missing == "all" else np.zeros_like(base_mask)
         else:
+            if missing != "all":
+                mask = np.asarray(selector_mask)
+                if mask.dtype != np.bool_ or mask.shape != base_mask.shape:
+                    raise ValueError(f"Position selector for {proto!r} must be a boolean mask of shape {base_mask.shape}")
             result[proto] = np.logical_and(base_mask, selector_mask)
     return result
 

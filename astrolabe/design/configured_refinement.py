@@ -532,6 +532,11 @@ def _model_component_assets(
     if selected in {"mol1", "mol-1"}:
         from astrolabe.evaluators.mol1_contract import local_assets
 
+        for key in ("repo_path", "mol_root_dir"):
+            if _config_path(mapping.get(key)) is None:
+                raise ValueError(
+                    f"{role} mol1 {key} is not resolvable for durable resume"
+                )
         # Config-wide assets include both weights for auto/base (late Input IR
         # can upgrade base). This is not a single native request's asset set.
         paths, _ = local_assets(mapping)
@@ -898,9 +903,8 @@ def _validate_configured_losses(run_module: Any, cfg: Any) -> None:
                     f"configured refinement cannot resolve active loss {name!r}"
                 ) from exc
             continue
-        code = getattr(function, "__code__", None)
-        needs_pose = spec_name in run_module.PYROSETTA_LOSS_TYPES or (
-            code is not None and "_require_pyrosetta" in code.co_names
+        needs_pose = run_module._loss_spec_needs_complex_poses(
+            spec_name, function, configured,
         )
         if spec_name in run_module.POST_EVAL_HOOK_LOSS_TYPES or (needs_pose and not isolated):
             raise ValueError(

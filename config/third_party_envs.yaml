@@ -110,7 +110,7 @@ envs:
       # AF3 vendored dependency builds expect Catch2 headers (libcifpp tests).
       - "catch2"
     pip:
-      - "-e {{REPO_ROOT}}"
+      - "-e {{REPO_ROOT}}[structure-metrics]"
       # Vendored evaluator deps (single-env mode).
       #
       # NOTE: this assumes the dependency stacks are compatible. If you hit a

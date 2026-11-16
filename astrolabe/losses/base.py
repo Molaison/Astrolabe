@@ -723,13 +723,19 @@ class LossEngine:
         try:
             # Reuse the native score codec: arrays, evidence and referenced
             # structure bytes all enter the identity. No file is persisted.
-            raw_identity = snapshot_scores(eval_result, DataStore()).identity
+            raw = eval_result
+            if getattr(eval_result, "loss_backend_records", None) is not None:
+                # Scoring observations are outputs, not native prediction inputs.
+                raw = copy.copy(eval_result)
+                raw.loss_backend_records = None
+            raw_identity = snapshot_scores(raw, DataStore()).identity
             binding = self._score_cache_token(raw_identity)
         except (TypeError, ValueError, OSError, RecursionError):
             # Live poses/opaque values have no complete revision contract.
             # Recompute rather than treating their object address as proof.
             return self._extract_scores_from_specs(eval_result, self.loss_specs)
-        result = self._extract_scores_with_registry_cached(eval_result, binding)
+        result, records = self._extract_scores_with_registry_cached(eval_result, binding)
+        self._replace_loss_evidence(eval_result, self.loss_specs, records)
         # Callers own their result mappings, never the memoized instance.
         return copy.deepcopy(result)
 
@@ -768,7 +774,49 @@ class LossEngine:
     @functools.lru_cache(maxsize=4)
     def _extract_scores_with_registry_cached(self, eval_result, _cache_token) -> tuple:
         """Extract scores using registered loss functions."""
-        return self._extract_scores_from_specs(eval_result, self.loss_specs)
+        scores = self._extract_scores_from_specs(eval_result, self.loss_specs)
+        records = {
+            name: [copy.deepcopy(row) for row in rows
+                   if row.get("loss_alias") in self.loss_specs]
+            for name, rows in (getattr(eval_result, "loss_backend_records", None) or {}).items()
+        }
+        return scores, {name: rows for name, rows in records.items() if rows}
+
+    @staticmethod
+    def _replace_loss_evidence(eval_result, aliases, observations):
+        """Replace only the aliases evaluated by this call, across all oligomers."""
+        if not hasattr(eval_result, "loss_backend_records"):
+            return
+        aliases = set(aliases)
+        records = {
+            name: [copy.deepcopy(row) for row in rows
+                   if row.get("loss_alias") not in aliases]
+            for name, rows in (eval_result.loss_backend_records or {}).items()
+        }
+        for name, rows in (observations or {}).items():
+            records.setdefault(name, []).extend(copy.deepcopy(rows))
+        eval_result.loss_backend_records = {
+            name: rows for name, rows in records.items() if rows
+        } or None
+
+    @staticmethod
+    def _call_loss_with_evidence(eval_result, selected, alias, spec, function, params):
+        if not hasattr(selected, "loss_backend_records"):
+            return function(selected, **params)
+        previous = selected.loss_backend_records
+        selected.loss_backend_records = None
+        try:
+            scores = function(selected, **params)
+            observations = copy.deepcopy(selected.loss_backend_records or {})
+        finally:
+            selected.loss_backend_records = previous
+        tagged = {
+            name: [{**row, "loss_alias": alias, "loss_type": spec}
+                   for row in observations.get(name, [])]
+            for name in selected.names
+        }
+        LossEngine._replace_loss_evidence(eval_result, (alias,), tagged)
+        return scores
 
     def _extract_scores_from_specs(self, eval_result, loss_specs) -> tuple:
         """Extract scores using an explicit set of loss specs."""
@@ -805,9 +853,12 @@ class LossEngine:
             ) as span:
                 if oligomer_specific is not None and not oligo_names:
                     scores = {}
+                    self._replace_loss_evidence(eval_result, (loss_name,), {})
                     span.skip(result="no_matching_oligomer", result_count=0)
                 else:
-                    scores = loss_func(this_eval_result, **call_params)
+                    scores = self._call_loss_with_evidence(
+                        eval_result, this_eval_result, loss_name, spec, loss_func, call_params,
+                    )
                     if isinstance(scores, dict):
                         values = list(scores.values())
                         span.finish(

@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 from collections import defaultdict
 from pathlib import Path
-from typing import Dict, Iterable, Mapping, Optional, Sequence, Set, Union
+from typing import TYPE_CHECKING, Dict, Iterable, Mapping, Optional, Sequence, Set, Union
 
 import numpy as np
 from astrolabe.utils.mmcif_ids import int_id_to_str_id, str_id_to_int_id
@@ -15,7 +17,9 @@ from astrolabe.core.repeat_symmetry import (
 )
 from astrolabe.evaluators.utils import ComplexPoses
 from astrolabe.selectors.base import PositionSelector
-from resources.ligand_hbond_filter import LigandHBondFilter
+
+if TYPE_CHECKING:
+    from resources.ligand_hbond_filter import LigandHBondFilter
 
 
 class _LigandSelectionConfig(object):
@@ -158,6 +162,8 @@ class LigandUnsatisfiedPolarPositionSelector(PositionSelector):
         chain2proto: Mapping[str, str],
         selected_sites: Mapping[str, np.ndarray],
     ) -> None:
+        from resources.ligand_hbond_filter import LigandHBondFilter
+
         ligand_filter = LigandHBondFilter(
             pose=pose,
             ligand_chain=ligand_chain,

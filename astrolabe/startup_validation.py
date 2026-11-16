@@ -470,6 +470,9 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                 ))
             if family == "loss":
                 active_losses[alias] = resolved
+                for field in ("position_selector_a", "position_selector_b"):
+                    if isinstance(resolved.get(field), str):
+                        _check_selector(resolved[field], f"{path}.{field}", errors)
                 if kind not in loss_names:
                     errors.append(f"{path}._type: unknown loss {kind!r}")
                 metadata = None

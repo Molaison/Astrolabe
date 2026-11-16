@@ -38,8 +38,16 @@ setup(
         "omegaconf>=2.3,<2.4",
         "pandas>=2,<3",
         "prompt-toolkit>=3.0,<4",
+        "termcolor>=2,<4",
     ],
     extras_require={
+        "structure-metrics": [
+            "scipy>=1.13,<2",
+            "biotite>=1.5,<2",
+            "hydride>=1.2.3,<2",
+            "shape-complementarity==0.2.0",
+            "py-contact-ms==0.1.1",
+        ],
         "dev": [
             "pytest>=7.0",
             "build>=1",

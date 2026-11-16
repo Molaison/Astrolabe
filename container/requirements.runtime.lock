@@ -170,6 +170,8 @@ attrs==25.4.0 \
     #   -r container/requirements.runtime.in
     #   aiohttp
     #   dm-tree
+    #   jsonschema
+    #   referencing
 beartype==0.22.9 \
     --hash=sha256:8f82b54aa723a2848a56008d18875f91c1db02c32ef6a62319a002e3e25a975f \
     --hash=sha256:d16c9bbc61ea14637596c5f6fbff2ee99cbe3573e46a716401734ef50c3060c2
@@ -225,6 +227,7 @@ biopython==1.86 \
     # via
     #   -r container/requirements.runtime.in
     #   prody
+    #   shape-complementarity
 biotite==1.5.0 \
     --hash=sha256:08397a8d5f506465f2b5f93f34b45274bc338efdf157c6283d72c6c6641ec9dc \
     --hash=sha256:1e1ac1d4aae111fef6a7b716c61730d50ed72df0d7cfd3523d264703dfedb5b8 \
@@ -243,7 +246,9 @@ biotite==1.5.0 \
     --hash=sha256:c751a7c490ced3572dab8377715d944b348de2f613d552ff652599903466c459 \
     --hash=sha256:e2d0be6e74167d8868d47f57fd2a3c2d3069bae8eeef50116f8ba683583c1455 \
     --hash=sha256:ea2b3321b1116b737f25920e9c82662776df5917cb7a6d59bc9bdc91eb318f0e
-    # via -r container/requirements.runtime.in
+    # via
+    #   -r container/requirements.runtime.in
+    #   hydride
 biotraj==1.2.2 \
     --hash=sha256:0accd626b3cb6b29fb4491d593c41daa694edddde8e8dc113228b1969a30c9f6 \
     --hash=sha256:1372bdb6cbdcc246f09efcefdf039f63f93a93fd601a0a8b16b99f63f5134843 \
@@ -1277,6 +1282,21 @@ hydra-core==1.3.2 \
     --hash=sha256:8a878ed67216997c3e9d88a8e72e7b4767e81af37afb4ea3334b269a4390a824 \
     --hash=sha256:fa0238a9e31df3373b35b0bfb672c34cc92718d21f81311d8996a16de1141d8b
     # via -r container/requirements.runtime.in
+hydride==1.2.3 \
+    --hash=sha256:051de12202d675e551b741e9f1734f375b504bd63486c5aa8b565f89d20c444d \
+    --hash=sha256:2b7221eceb732539e42419c6612e5f9c6a33074ad0547e5048d0d5c38a23734c \
+    --hash=sha256:3884f4969f2df7237e5bc8c82e47026b6c4ba91de3bbc546b5ac938b4365bac5 \
+    --hash=sha256:5b249a18109d60ce990c0a47d07620863dfe3f23495aa1e04ca15e9e086ffc9e \
+    --hash=sha256:6220f9159bcb1a5e985382dff5d25fcf0c848896190265d4d43a0252a039691e \
+    --hash=sha256:6c2bd5adfe7bcfb5c45de084fc2b77358c495364104820dd61cabf3b8a589e66 \
+    --hash=sha256:76ecdf1cebe6042549fa4580ee829670c472563a8b66b25cb74c48d4e0f1e2d2 \
+    --hash=sha256:7e4cb5cf8e3d91e2c112cc5eb14a74128bd9cdc9c0ec459ebe97c7ecdf97688d \
+    --hash=sha256:86fe627e9fd4cbc0ffcf0bfd753c9981efd9faacf012f78db3dcc696d27603eb \
+    --hash=sha256:8de87d9e874a68d2aec0f86bed83de9922904b4bbe917c057b8779c9e6f9cca3 \
+    --hash=sha256:c196b287c7dd6ceb6e98d52aec1f8755f9bd641146b55a3236bae58c48ddf6be \
+    --hash=sha256:d1d06dcfb4c4957f109bd2445a115021cf69ff7c1639cb3f96961c58b38c6453 \
+    --hash=sha256:f6ef6875d6f720de694fe53254648e886c83681d05fe4988a823a2dbd06d38fb
+    # via -r container/requirements.runtime.in
 idna==3.18 \
     --hash=sha256:7f952cbe720b688055e3f87de14f5c3e5fdaa8bc3928985c4077ca689de849a2 \
     --hash=sha256:ffb385a7e039654cef1ab9ef32c6fafe283c0c0467bba1d9029738ce4a14a848
@@ -2044,6 +2064,7 @@ numpy==1.26.4 \
     #   einx
     #   fairscale
     #   h5py
+    #   hydride
     #   jax
     #   jaxlib
     #   jmp
@@ -2053,9 +2074,11 @@ numpy==1.26.4 \
     #   numba
     #   pandas
     #   prody
+    #   py-contact-ms
     #   rdkit
     #   scikit-learn
     #   scipy
+    #   shape-complementarity
     #   tensorboard
     #   tensorflow-cpu
     #   tmtools
@@ -2364,7 +2387,9 @@ pandas==2.3.3 \
     --hash=sha256:ee67acbbf05014ea6c763beb097e03cd629961c8a632075eeb34247120abcb4b \
     --hash=sha256:f086f6fe114e19d92014a1966f43a3e62285109afe874f067f5abbdcbb10e59c \
     --hash=sha256:f8bfc0e12dc78f777f323f55c58649591b2cd0c43534e8355c51d3fede5f4dee
-    # via -r container/requirements.runtime.in
+    # via
+    #   -r container/requirements.runtime.in
+    #   shape-complementarity
 pandera==0.28.1 \
     --hash=sha256:6d2bbe8e36392a63c5d35143f4deffcd5fcd70bb193428ade4dc0ad183cfd6f1 \
     --hash=sha256:84da487d9348dfd01b91ae3349eb872a9802df6a6c2da589ac52bb9c080fe8f4
@@ -2647,6 +2672,10 @@ psutil==7.2.2 \
     # via
     #   torch-geometric
     #   wandb
+py-contact-ms==0.1.1 \
+    --hash=sha256:0019b90119ad3eaa1775e454b2c1c772022f26e4ac707fcc6ce17e1b1f7a91d2 \
+    --hash=sha256:4d7a5872f70607541d7e54b4ca8b1797714910be9c1ddd82de987fc82b5e9e47
+    # via -r container/requirements.runtime.in
 pyarrow==23.0.0 \
     --hash=sha256:068701f6823449b1b6469120f399a1239766b117d211c5d2519d4ed5861f75de \
     --hash=sha256:075c29aeaa685fd1182992a9ed2499c66f084ee54eea47da3eb76e125e06064c \
@@ -3393,6 +3422,7 @@ scipy==1.17.0 \
     #   jax
     #   jaxlib
     #   prody
+    #   py-contact-ms
     #   scikit-learn
 sentry-sdk==2.66.0 \
     --hash=sha256:096136c214c602be2b323524d30755dc5b30ec5a218a206207f33b12c05c6f11 \
@@ -3507,6 +3537,14 @@ setuptools==83.0.0 \
     #   tensorflow-cpu
     #   triton
     #   wandb
+shape-complementarity==0.2.0 \
+    --hash=sha256:0ddd20953550dcb31e66b2d32cd392dff2d6339bc48815f16905d1aa2497b471 \
+    --hash=sha256:25a93dda13e1ebbe214dd56fd6d8188e712d2d2cd23d2389249c20ad1b20c241 \
+    --hash=sha256:3ec68d67d2c69957b3612153b86bebadb8be1bab1b74028a549f9f4721f62fe2 \
+    --hash=sha256:45b0cd9f5e7d337d2fc8ab9240b853a68b64e5763d53cb65872f0f99ad7c352f \
+    --hash=sha256:5d015b1daaf41ec268158467d7a48ec6fcae2e5d8b1ed3da92bbd71f24244041 \
+    --hash=sha256:ce7431b9fc9b06eb9f473d6a3f71906f6800d2f01b7e34fa17c8b2bd6c4d5541
+    # via -r container/requirements.runtime.in
 shellingham==1.5.4 \
     --hash=sha256:7ecfff8f2fd72616f7481040475a65b2bf8af90a56c89140852d1120324e8686 \
     --hash=sha256:8dbca0739d487e5bd35ab3ca4b36e11c4078f3a234bfce294b0a0291363404de
@@ -3725,6 +3763,7 @@ typing-extensions==4.15.0 \
     #   pydantic
     #   pydantic-core
     #   pytorch-lightning
+    #   referencing
     #   tensorflow-cpu
     #   torch
     #   typer

@@ -4,23 +4,17 @@ import ast
 import importlib.util
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, Iterable
 
-from astrolabe.runtime_usage import analyze_runtime_usage
+from astrolabe.runtime_usage import analyze_runtime_usage, selected_loss_configurations
+from astrolabe.loss_backend_policy import (
+    INDEPENDENT_LOSS_IMPORTS, NATIVE_STRUCTURAL_LOSSES, independent_loss_imports,
+    loss_requires_rosetta, selector_requires_rosetta,
+)
 
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
-
-
-def _extract_selector_vars(expr: Optional[str]) -> set[str]:
-    if not expr or expr == "None":
-        return set()
-    try:
-        tree = ast.parse(expr, mode="eval")
-    except SyntaxError as exc:
-        raise ValueError(f"Invalid position_selector expression: {expr!r}") from exc
-    return {node.id for node in ast.walk(tree) if isinstance(node, ast.Name)}
 
 
 def _source_segment(lines: list[bytes], node: ast.FunctionDef) -> str:
@@ -143,10 +137,14 @@ def task_requirements(task_cfg: Any) -> dict:
     )
 
     usage = analyze_runtime_usage(task_cfg)
+    pyro_losses = _pyrosetta_loss_types_from_source() | NATIVE_STRUCTURAL_LOSSES
+    loss_configurations = list(selected_loss_configurations(
+        task_cfg, pyro_losses | set(INDEPENDENT_LOSS_IMPORTS),
+    ))
     evaluator_terms_used = usage.evaluator_terms
     mutator_terms_used = usage.mutator_terms
     predocker_terms_used = usage.predocker_terms
-    loss_types = usage.loss_types
+    loss_types = usage.loss_types | {str(conf.get("_type") or "") for _, conf in loss_configurations}
     evaluator_types_used = usage.evaluator_types
     mutator_types_used = usage.mutator_types
     predocker_types_used = usage.predocker_types
@@ -166,6 +164,11 @@ def task_requirements(task_cfg: Any) -> dict:
         expr = conf.get("position_selector")
         if isinstance(expr, str) and expr.strip():
             selector_exprs.append(expr.strip())
+    for _, conf in loss_configurations:
+        for field in ("position_selector_a", "position_selector_b", "position_selector", "select_expression"):
+            expr = conf.get(field)
+            if isinstance(expr, str) and expr.strip():
+                selector_exprs.append(expr.strip())
 
     # Evaluator requirements
     af3_terms_used = [
@@ -513,12 +516,14 @@ def task_requirements(task_cfg: Any) -> dict:
         req_env_keys.add("ananas_path")
 
     # PyRosetta requirement inference
-    pyro_losses = _pyrosetta_loss_types_from_source()
-    pyro_losses |= {
-        "interface_shape_complementarity", "interface_hbond_count",
-        "interface_polar_satisfaction", "short_range_interface_pair_energy",
-    }
-    needs_pyrosetta = any(t in pyro_losses for t in loss_types)
+    needs_pyrosetta = False
+    for _, conf in loss_configurations:
+        name = str(conf.get("_type") or "")
+        requirement = loss_requires_rosetta(name, conf)
+        if requirement is False:
+            req_imports.update(independent_loss_imports(name, conf))
+        elif requirement is True or name in pyro_losses:
+            needs_pyrosetta = True
     proton_defaults = (
         (task_cfg.get("mutator") or {}).get("ProtonPottsMPNN") or {}
         if isinstance(task_cfg, dict) else {}
@@ -535,10 +540,7 @@ def task_requirements(task_cfg: Any) -> dict:
         rosetta_hook = post_eval_hooks.get("rosetta_minimize") or post_eval_hooks.get("rosetta_repack")
         if isinstance(rosetta_hook, dict) and bool(rosetta_hook.get("enabled", False)):
             needs_pyrosetta = True
-    selector_vars: set[str] = set()
-    for expr in selector_exprs:
-        selector_vars |= _extract_selector_vars(expr)
-    if selector_vars & {"sse", "cdr", "bfactor", "interface", "surface", "long_helix_core", "long_loop"}:
+    if any(selector_requires_rosetta(expr) for expr in selector_exprs):
         needs_pyrosetta = True
 
     if needs_pyrosetta:

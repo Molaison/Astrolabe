@@ -137,3 +137,108 @@ Release CPU checks include the new protocol suites and a configured-refinement
 cut after proposal terminal publication: the resumed next proposal matches the
 uninterrupted baseline. Native scientific canary, CI and deployed commit
 identities are recorded separately in release evidence.
+
+### Independent structural losses and AF3 preparation reuse (2026-11-16)
+
+Implemented against `09f0460feb733b4675923ee580c977c7f7423e13`, with three
+isolated implementation worktrees, one integrator and executed cross-review
+reproductions following the poteto workflow. No change to mutation acceptance,
+attempt budgets, RNG consumption or stage commit rules was intended.
+
+| Requested outcome | Implemented boundary | Qualification |
+|---|---|---|
+| Reduce Rosetta scoring overhead | Independent SC, CMS, geometric HB and interface BUNS; `auto` / `independent` / `rosetta`; backend-sensitive Pose/package/DAlphaBall acquisition. | Real independent libraries on CPU, including official Python 3.11 / NumPy 1.26.4 / Biotite 1.5.0 pins. RosettaHoles and unsupported chemistry retain native definitions. No measured independent-versus-Rosetta speedup. |
+| Consistent loss parameters and selectors | Shared chain groups, residue ordinals and DSL; no empty-to-all or duplicate-copy truncation; CMS reported side; strict normalization; startup and runtime use selector ownership. | Real selected-fragment/CMS/HB calculations plus controlled native seams. Full-structure BUNS environment and explicit fragment surface semantics are tested. |
+| Reuse AF3-family preparation | Owner-scoped MSA rows, isolated CCD, Boltz asset loading, Protenix template parsing. | Exact native MSA encoder parity, cache/content/RNG boundary tests and actual AF3 coordinator lifecycle with optional dependencies doubled. Full native/GPU inference remains unqualified here. |
+
+Candidate comparison selected Rust sc-rs for SC and the installable
+`py-contact-ms 0.1.1` for CMS. The latter retains its surface construction;
+pair tensors are processed in chunks and nearest buried-dot distances use a
+KD-tree. Atom-neighbor construction still has a dense quadratic matrix.
+`cms-cuda`'s CPU route did not supply an independent faster CPU implementation.
+Holes candidates were rejected as substitutes because cavity measurements do
+not reproduce the trained RosettaHoles score. See the
+[loss definitions and sources](user_guide.md#61-结构-lossbackend选区与指标定义).
+
+Cross-review found and fixed CMS A/B direction reversal, partial explicit-H
+coverage, protonated carboxyl acceptors, empty surface queues, generic unknown
+radii, hidden SC radius overrides, selector dependency omissions, stale alias
+evidence after `_for` changes and cache hits deleting gate observations.
+The earlier v2 snapshot layout was restored from an actual blob written by the
+baseline code; absent backend evidence remains `None`. Pinned native Python
+CCD code reproduced shared-base pollution before the fix and isolated custom
+entries afterwards (C++ CIF/resource I/O doubled). All retained findings were
+independently re-executed by the integrator or cross-reviewer.
+
+The [recorded benchmark data](../examples/benchmarks/results/structural_losses_af3_preparation_20261116.json)
+contains every timed round, dependency versions, input identity and parity.
+
+| CPU component | Baseline median | New median | Correctness/work evidence |
+|---|---:|---:|---|
+| CMS, 1,412 heavy atoms, explicit side B | 13.8137 s | 4.2033 s | Five alternating rounds / ten successful calls; max total/per-atom error `1.07e-14`; 3.29× against public Python CMS, with visible shared-host timing variance. |
+| Native AF3 MSA encoder, 2,048 × 512 | 245.23 ms | 5.16 ms | Five native/delta pairs; bitwise equality; exactly one newly encoded query row per mutant. Cold cache 263.22 ms. |
+
+Reproduce CMS with `ASTROLABE_METRICS_BENCHMARK=1 python -m pytest -q -s
+tests/test_independent_structure_metrics_benchmark.py`; the optional
+`ASTROLABE_METRICS_BENCHMARK_OUTPUT` path retains JSON. Reproduce MSA with the
+[existing profile command](adaptive_runtime.md#af3-family-input-preparation-reuse).
+Neither measurement establishes complete featurisation, Rosetta, GPU or design
+trajectory speedup. MSA-free inputs have much less reuse opportunity.
+
+The first broad release CPU run completed with 1,758 passed, 81 failed,
+17 skipped and 10 errors. Six failures from an untracked implementation file,
+uninitialized release submodules and an uninstalled package were rerun after
+tracking/installing the sources: all six passed. Remaining failure classes are
+Unix-socket creation denied by this host, and the existing Mol-1 empty-options
+`KeyError: repo_path`, reproduced unchanged on both baseline and implementation.
+An unrestricted full pytest attempt stopped at 19 collection errors for absent
+native AF3/AF2/PyRosetta/Boltz/RhoFold and related optional dependencies. These
+runs are not reported as a green full-suite or native release qualification.
+
+Final focused runs: 142 passed across the independent metrics, selector/backend,
+evidence and AF3-family preparation suites; 166 passed / 21 native skips across
+configuration, existing CMS/feedback and loss-expression consumers; 151 passed
+across distribution, installation and container-alignment tests. A separate
+Python 3.11 environment with the exact runtime geometry pins passed all 34 real
+independent-library tests. The real-file LossEngine integration computes all
+four independent metric families, retains backend records on a cache hit and
+rejects any PyRosetta acquisition. Counts describe separate commands with
+overlapping tests, not an accumulated unique total.
+
+Host and container dependency manifests include the new packages; release CPU
+CI includes the new regression suites. Paper, ligand benchmark and RFD4
+protocols pin Rosetta to preserve historical definitions. Other migrated losses
+prefer independent implementations by default. HB/BUNS methods and surface
+radius tables differ, so existing thresholds require calibration or an explicit
+Rosetta backend. The change is reviewable on a feature branch and does not
+constitute a deployed native/GPU qualification.
+
+The first remote CI attempt exposed an already-stale durable-recovery coverage
+record: the unchanged baseline and this branch both rejected
+`model_execution.py`. Review against the recorded `c8cdc4b5` anchor traced the
+only covered-file change to the earlier `5400e797` Mol-1 `poolable` option.
+The four journal/operation files and imported RNG helpers were unchanged;
+the owner-selection change does not alter the modeled single-owner call
+boundary. An independent review confirmed the correspondence. Updated the
+coverage and project-skill review anchors to `21d6688b31a1170e0d197e650c533722ba31fcfc`,
+without changing the model, runner, invariants or product code.
+
+`python scripts/validation/verify_runtime_recovery.py --self-test --jar
+<verified-tla2tools-1.7.4.jar> --output <fresh-directory>` passed with TLC 2.19,
+OpenJDK 21.0.13 and Python 3.12.14. Both normal budgets passed (24 and 178
+distinct states), the real-code suite passed all 18 cases before and after
+mutation checks, and each of the three broken models and corresponding real
+code mutations failed its required property. This reestablishes the existing
+bounded recovery qualification; it does not add native model/GPU coverage.
+
+The subsequent GitHub Actions Python 3.11 run at `fc5e695` reached the full CPU
+suite: its JUnit artifact recorded 1,915 cases, zero errors, 17 skips and one
+failure, the same baseline Mol-1 missing-`repo_path` defect. A five-line guard
+in the existing asset-discovery owner now reports absent Mol-1 asset roots
+through the established unverified-descriptor contract. Actual missing source
+files still fail, both checkpoint contents remain in the identity, and
+unverified assets still cannot authorize durable resume. No native asset,
+source-pin or checkpoint validation was relaxed. The registry, registry-seam
+and parallel-refinement suites passed all 59 tests in both the implementation
+worktree and an independent integrator rerun; the original failure was
+reproduced before the fix.

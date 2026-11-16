@@ -44,6 +44,9 @@ class ProtenixEvaluator(Evaluator):
         self.use_constraints = bool(use_constraints)
         self._evaluation_lock = RLock()
         self._prediction_kernel = None
+        from astrolabe.evaluators.preparation_cache import ContentCache
+
+        self._template_cache = ContentCache()
         dump_dir = getattr(model_runner.configs, "dump_dir", None)
         self.output_dir = Path(dump_dir) if dump_dir is not None else None
 
@@ -53,6 +56,7 @@ class ProtenixEvaluator(Evaluator):
                 self._prediction_kernel.close()
                 self._prediction_kernel = None
             shutdown_model_handles(self.model_runner)
+            self._template_cache.clear()
 
     def evaluate(self, inputs=None, runtime_config=None):
         with self._evaluation_lock:
@@ -146,6 +150,7 @@ class ProtenixEvaluator(Evaluator):
                     use_templates=bool(
                         getattr(self.model_runner.configs, "use_template", False)
                     ),
+                    template_cache=self._template_cache,
                 ),
                 configs=self.model_runner.configs,
             )

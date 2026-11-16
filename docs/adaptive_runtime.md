@@ -112,6 +112,49 @@ qualified PJRT serialization hotfix below. A persistent directory alone cannot
 repair that binary defect. Existing services retain the configuration with
 which they started; their clients do not reconfigure the owner's cache.
 
+## AF3-family input preparation reuse
+
+Each evaluator owns and releases its deterministic preparation caches. This is
+separate from executable caching and from native inference results.
+
+| Backend | Reused component | Work that remains fresh |
+|---|---|---|
+| AF3 | Exact MSA rows keyed by encoder, polymer type and complete aligned text, including insertions; one isolated CCD overlay keyed by class and custom CCD text. | Changed query rows; native validation, deduplication, pairing, species, profile, crop, tokenisation, assembly and seeded reference features. Changed CCD text invalidates its identity-keyed reference conformers. |
+| Boltz | Unchanged CCD pickle per runner; requested molecule entries copied lazily into request-local mappings. | File path/device/inode/size/mtime/ctime changes invalidate the asset. Sequence/PTM/bond parsing and random features remain per request. |
+| Protenix | Parsed template content in a bounded owner cache with defensive copies. | Changed content, sequence, PTM, covalent layout, residue numbering and random polymer/reference preparation. |
+
+AF3 keeps at most 32,768 encoded rows and 64 MiB of encoded payload plus row text;
+Python object overhead is additional. Invalid/incompatible rows retain native
+validation errors. Returned arrays own their memory. A request-local ContextVar
+and the existing shared featurisation lock isolate cache selection. The existing
+`msa_cache: true` setting enables row reuse; `msa_cache: false` disables it via
+`ALPHAFOLD3_MSA_CACHE`. Static callers without an evaluator owner release custom
+CCD references on both success and failure. Startup token counting and PTM/CCD
+helpers also construct isolated overlays instead of modifying the native base.
+
+The normal `AlphaFold3Evaluator.evaluate → run_function → predict_structure`
+route prepares inputs before local, native-daemon or service model execution.
+`af3_pipeline` receives freshly assembled `features`; its later prepare stage
+concerns filtering/upload. All current sequence and RNG-dependent tensors are
+assembled again. No in-place `aatype` patch or cached model output is used.
+
+Reproduce the CPU MSA component measurement with the pinned native AF3 encoder:
+
+```bash
+python examples/benchmarks/af3_featurization_profile.py \
+  --msa-delta --lengths 512 --msa-depth 2048 --runs 5 --sequence-seed 42 \
+  --json-out /tmp/af3-msa-delta.json
+```
+
+Five alternating native/delta rounds on the implementation host gave median
+245.23 ms versus 5.16 ms for 2,048 rows × 512 residues. Each mutant encoded one
+new query row; every result was bitwise equal to the native encoder, from
+`Molaison/alphafold3@4b154d922759c918dd4b5a4d5a779853100fd20e`.
+This is row encoding on CPU, not complete featurisation or GPU throughput.
+MSA-free inputs have little row-encoding work to reuse. Native feature/GPU parity
+requires separate qualification. Use the existing full preparation profiler
+without `--msa-delta` to measure the actual preparation share in the target runtime.
+
 ## Opt-in AF3 cache hotfix and native beam ownership
 
 Use the ordinary command with shared configuration and an already-valid

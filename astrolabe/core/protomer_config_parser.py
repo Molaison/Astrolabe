@@ -16,6 +16,7 @@ from astrolabe.core.msa_utils import parse_homology_arg, mask_msa_fixpos
 from astrolabe.core.nonstandard_residues import resolve_nonstandard_alias
 from astrolabe.core.structure_parser import create_structure_parser
 from astrolabe.utils.constant import aa_freq, aa_order
+from astrolabe.utils.af3_ccd import create_isolated_ccd
 
 
 def cached_ccd(*args, **kwargs):
@@ -33,7 +34,7 @@ def cached_ccd(*args, **kwargs):
             "Install the vendored AF3 deps (recommended: `gh doctor --strict`), "
             "or remove PTM annotations like `[PTM]` / `(CCD)` from sequences."
         ) from exc
-    return chemical_components.Ccd(*args, **kwargs)
+    return create_isolated_ccd(chemical_components, *args, **kwargs)
 
 
 class ProtomerTypes(Enum):

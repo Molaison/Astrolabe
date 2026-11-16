@@ -569,6 +569,84 @@ stages:
 `mutator.mutator_weights` 不是当前新配置入口。迁移时把实现放入 terms alias，
 再由 stage 引用。
 
+### 6.1 结构 loss：backend、选区与指标定义
+
+安装独立依赖：`python -m pip install '.[structure-metrics]'`。标准 host 配置与
+container lock 已包含这些包。支持的 loss 默认 `backend: auto`，优先独立实现；
+`independent` 固定独立定义，`rosetta` 固定旧定义。缺少依赖或超出化学支持范围
+可触发 auto 回退；非法坐标、空选区、非有限结果直接报错。
+
+| Loss | 独立实现与单位 | 选区及兼容边界 |
+|---|---|---|
+| `protomer_shape_complementarity`、`ligand_shape_complementarity`、`interface_shape_complementarity` | `shape-complementarity==0.2.0` / sc-rs；dimensionless | 两侧所选重原子构造 surface；使用库自带 SC radii，当前验证范围为 canonical protein 原子。 |
+| `contact_molecular_surface`、`contact_molecular_surface_norm` | `py-contact-ms==0.1.1`；raw 为 Å² | 两侧所选重原子构造 surface；默认 `surface_side: a` 保持旧 Rosetta selector1 方向，也可选 `b`；distance weight 默认 `0.5 Å⁻²`。 |
+| `interface_hbond_count`、`ligand_protein_hbond` | Biotite Baker–Hubbard geometry；count | 完整结构供 H 准备，仅计跨选区 donor–H–acceptor triples；默认 H–acceptor 距离 2.5 Å、角度 120°。 |
+| `interface_buried_unsatisfied_hbonds` | Biotite SASA + geometric H bonds；count | `max(0, bound − separated)` polar-heavy-atom unsatisfied count；保留完整 bound 环境，分离完整链组，仅报告所选残基。 |
+| `interface_holes`、`chain_holes_diff`、`ligand_local_holes` | 保留 RosettaHoles / DAlphaBall | 未找到并验证同定义独立实现；cavity volume 不能替代 Holes。`interface_holes` 接入统一选区。 |
+
+SC/CMS 未选残基不参与两个 surface，匹配 Rosetta residue-selector 路径。
+HB/BUNS 的几何定义与 Rosetta energy/filter 定义不同；旧数值门槛需重新标定，
+复现旧任务请固定 `backend: rosetta`。独立 HB/BUNS 目前支持 canonical amino acids
+与 water；ligand、核酸、PTM 应选 Rosetta。SC/CMS 不对未知原子静默使用 generic
+radius。`ligand_buried_unsat_hbonds` 的 bound-only 定义、physical feedback energy
+和 polar satisfaction 仍保留原生实现。
+
+已有 paper、ligand benchmark 与 RFD4 codesign 配置显式固定 `backend: rosetta`，
+保留这些既定 protocol 的定义；其他已迁移 loss 的默认值为 auto。
+
+`use_rosetta_radii: true`、旧 feedback energy 参数、BUNS 的
+`ignore_surface_res: true` 或非默认 `separation_distance` 在 auto 下保留 native
+语义。运行时回退要求正常初始化 owner 已加载本任务 chemistry；未初始化时提示
+提前指定 `backend: rosetta`，不会构建缺少非标准 residue 参数的 Pose。
+
+`protomer_a` / `protomer_b` 接受 chain/protomer selector：裸 `A` 优先 chain A，
+`protomer:A` 展开所有 A copies，`chain:AA` 指多字符链。`protomer_a_residues` /
+`protomer_b_residues` 是每条选中链内 **1-based ordinal**，如 `"2-8,12"`，不是
+PDB residue number；插入码不合并。`position_selector_a` / `position_selector_b`
+使用现有 DSL；同侧 range 与 DSL 互斥，空结果报错。`_for` 仅选择 oligomer。
+
+以下 overlay 假定 protomer A 已定义 `patch` hotspot alias：
+
+```yaml
+enable_pyrosetta: false
+loss:
+  loss_terms:
+    interface_cms:
+      _type: contact_molecular_surface
+      _for: [AAB]
+      backend: independent
+      protomer_a: protomer:A
+      protomer_b: protomer:B
+      position_selector_a: "hotspot('patch')"
+      protomer_b_residues: "1-20"
+      surface_side: a
+      distance_weight: 0.5
+```
+
+`surface()`、`interface()`、`buried_unsat()` 等 native selectors 自身仍需要 Pose；
+startup 与 Pose 构建读取 SelectorRegistry，即使 loss 是 independent 也满足 selector
+依赖。简单 range / hotspot 不会仅因这些结构 loss 而初始化 PyRosetta。
+
+`hydrogen_policy: add` 默认用 Hydride 在 `ph: 7.0` 添加 H，不移动重原子或做 H
+relaxation；`require` 使用输入显式 H、检查 donor 氢覆盖，无需 Hydride。独立 BUNS
+默认 `sasa_probe_radius: 1.1` Å、`buried_sasa_cutoff: 0.2` Å²、`sasa_point_number: 1000`。
+CMS norm 的 `midpoint`、`midpoint_value`、`lower_scale`、`upper_scale` 仅控制归一化；
+非法范围在计算前报错，不再自动 clamp。
+
+独立 BUNS 分别删除另一完整链组以形成两侧 separated 环境，spectator 保留在各侧。
+这与多链 Rosetta 平移分离的环境不同，不代表相同 unbinding 模型。
+
+成功评分将 alias/type、实际 backend/method/version、单位、半径、选区和选项记录到
+`StandardScores.loss_backend_records`；CMS norm 还记录公式、参数和 raw/output 值。
+这些 metadata 随 clone/filter/merge、Score cache、durable snapshot 和 execution audit
+保留，不进入 numerical score 字段。旧 v2 snapshot 缺少它时恢复为 `None`。
+
+来源：[sc-rs](https://github.com/cytokineking/sc-rs)、
+[py-contact-ms](https://github.com/ullahsamee/py_contact_ms)、
+[Biotite hbond](https://www.biotite-python.org/latest/apidoc/biotite.structure.hbond.html)、
+[Rosetta CMS](https://github.com/RosettaCommons/rosetta/blob/main/source/src/core/scoring/sc/ContactMolecularSurfaceCalculator.cc)、
+[RosettaHoles2 原论文](https://pmc.ncbi.nlm.nih.gov/articles/PMC2998733/)。
+
 ## 7. 证据化调参闭环
 
 ### 7.1 一次只改一个 owner 家族
