@@ -532,6 +532,11 @@ def _model_component_assets(
     if selected in {"mol1", "mol-1"}:
         from astrolabe.evaluators.mol1_contract import local_assets
 
+        for key in ("repo_path", "mol_root_dir"):
+            if _config_path(mapping.get(key)) is None:
+                raise ValueError(
+                    f"{role} mol1 {key} is not resolvable for durable resume"
+                )
         # Config-wide assets include both weights for auto/base (late Input IR
         # can upgrade base). This is not a single native request's asset set.
         paths, _ = local_assets(mapping)

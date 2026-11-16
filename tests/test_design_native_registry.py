@@ -371,6 +371,89 @@ def test_empty_options_build_every_real_registered_family_type_without_load(
         assert operation.owner._value is None
 
 
+@pytest.mark.parametrize("name", ["mol1", "mol-1"])
+@pytest.mark.parametrize("missing", ["repo_path", "mol_root_dir"])
+@pytest.mark.parametrize("value", [pytest.param("omitted", id="omitted"), None, ""])
+def test_mol1_missing_asset_paths_are_diagnostic_unverified_cold_descriptors(
+    tmp_path, name, missing, value,
+):
+    from astrolabe.design.configured_refinement import _model_component_assets
+    from astrolabe.design.native_registry import _asset_identity_record
+
+    term = {"_type": name, "repo_path": str(tmp_path), "mol_root_dir": str(tmp_path)}
+    if value == "omitted":
+        del term[missing]
+    else:
+        term[missing] = value
+    with pytest.raises(ValueError, match=f"{missing}.*not resolvable"):
+        _model_component_assets("evaluator:selected", name, term)
+    config = {"evaluator_terms": {"selected": term}}
+    record = _asset_identity_record(family="evaluator", type_name=name, alias="selected",
+                                     terms_field="evaluator_terms", effective_config=config)
+    assert record["complete"] is False
+    assert record["files"] == []
+    assert record["components"][0]["state"] == "unsupported"
+    assert missing in record["components"][0]["detail"]
+    operation = EvaluatorRegistry.build_operation(
+        name, alias="selected", options={},
+        context=_context(_minimal_bindings(tmp_path), evaluator_terms=config["evaluator_terms"]),
+    )
+    assert operation.owner._value is None
+    assert operation.resume_assets_verified is False
+
+
+@pytest.mark.parametrize("name", ["mol1", "mol-1"])
+def test_mol1_absent_assets_never_authorize_durable_resume(tmp_path, name):
+    bindings = _minimal_bindings(tmp_path)
+    context = _context(bindings, evaluator_terms={"selected": {"_type": name}})
+    operation = EvaluatorRegistry.build_operation(name, alias="selected", options={}, context=context)
+    root = tmp_path / "runtime"
+    with Runtime((operation,), root=root, data=bindings.data):
+        assert operation.owner._value is None
+    with pytest.raises(ContractConflict, match="assets cannot be content-verified"):
+        Runtime((operation,), root=root, data=bindings.data)
+
+
+@pytest.mark.parametrize("name", ["mol1", "mol-1"])
+def test_mol1_explicit_missing_source_is_not_downgraded_to_unverified(tmp_path, name):
+    context = _context(_minimal_bindings(tmp_path), evaluator_terms={"selected": {
+        "_type": name, "repo_path": str(tmp_path / "missing-source"), "mol_root_dir": str(tmp_path),
+    }})
+    with pytest.raises(FileNotFoundError, match="missing-source"):
+        EvaluatorRegistry.build_operation(name, alias="selected", options={}, context=context)
+
+
+def test_mol1_cold_identity_delegates_asset_validation_and_hashes_both_checkpoints(tmp_path, monkeypatch):
+    from astrolabe.evaluators import mol1_contract
+
+    base, constraint = tmp_path / "mol-1-base.pt", tmp_path / "mol-1-constraint.pt"
+    base.write_bytes(b"base checkpoint")
+    constraint.write_bytes(b"constraint checkpoint v1")
+    term = {"_type": "mol1", "repo_path": str(tmp_path), "mol_root_dir": str(tmp_path),
+            "base_checkpoint_path": str(base), "constraint_checkpoint_path": str(constraint)}
+    calls = []
+    def assets(settings, *, model_name=None):
+        # Controlled native asset-owner seam; actual checkpoint naming and
+        # config-wide selection remain in the Mol-1 contract implementation.
+        assert settings == term and model_name is None
+        calls.append(dict(settings))
+        return list(mol1_contract.checkpoint_paths(settings).values()), {}
+    monkeypatch.setattr(mol1_contract, "local_assets", assets)
+    context = _context(_minimal_bindings(tmp_path), evaluator_terms={"selected": term})
+    first = EvaluatorRegistry.build_operation("mol1", alias="selected", options={}, context=context)
+    constraint.write_bytes(b"constraint checkpoint v2")
+    changed = EvaluatorRegistry.build_operation("mol1", alias="selected", options={}, context=context)
+    assert len(calls) == 2
+    assert first.owner._value is changed.owner._value is None
+    assert first.resume_assets_verified is changed.resume_assets_verified is True
+    assert first.descriptor.identity != changed.descriptor.identity
+    with pytest.raises(ValueError, match="constraint_checkpoint_path"):
+        mol1_contract.checkpoint_paths({"base_checkpoint_path": str(base)})
+    with pytest.raises(ValueError, match="never another model's weights"):
+        mol1_contract.checkpoint_paths({"base_checkpoint_path": str(constraint),
+                                        "constraint_checkpoint_path": str(base)})
+
+
 @pytest.mark.parametrize("family", ["evaluator", "mutator"])
 @pytest.mark.parametrize("has_asset", [False, True])
 def test_native_resume_requires_content_verified_assets(tmp_path, family, has_asset):

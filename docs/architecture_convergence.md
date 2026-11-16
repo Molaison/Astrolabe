@@ -230,3 +230,15 @@ distinct states), the real-code suite passed all 18 cases before and after
 mutation checks, and each of the three broken models and corresponding real
 code mutations failed its required property. This reestablishes the existing
 bounded recovery qualification; it does not add native model/GPU coverage.
+
+The subsequent GitHub Actions Python 3.11 run at `fc5e695` reached the full CPU
+suite: its JUnit artifact recorded 1,915 cases, zero errors, 17 skips and one
+failure, the same baseline Mol-1 missing-`repo_path` defect. A five-line guard
+in the existing asset-discovery owner now reports absent Mol-1 asset roots
+through the established unverified-descriptor contract. Actual missing source
+files still fail, both checkpoint contents remain in the identity, and
+unverified assets still cannot authorize durable resume. No native asset,
+source-pin or checkpoint validation was relaxed. The registry, registry-seam
+and parallel-refinement suites passed all 59 tests in both the implementation
+worktree and an independent integrator rerun; the original failure was
+reproduced before the fix.
