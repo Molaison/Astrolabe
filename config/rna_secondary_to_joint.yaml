@@ -39,7 +39,7 @@ evaluator:
   alphafold3:
     run_data_pipeline: false
     num_seeds: 1
-    num_samples: 1
+    samples: 1
 
 loss:
   loss_terms:

@@ -36,6 +36,53 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 | Persistence | `decision_maker.py`, `run_config_lifecycle.py`, `execution_audit.py`, `posthoc/` | Same CSV row/column semantics. Single-file atomic replacement is not exact resume. |
 | AF3 compilation reuse | `af3_buckets.py`, `af3_compilation.py`, `launcher.py` | Native chemical token counts select the 40-token grid with inclusive 256/512/1024 windows. JAX owns executable compatibility; the launcher mounts its default disk cache outside ephemeral container HOME. Predictions and RNG remain fresh. See [cache controls](adaptive_runtime.md#af3-compilation-buckets-and-persistent-cache). |
 
+## Configuration and mutation ownership
+
+The configuration migration is grounded at `09f0460feb733b4675923ee580c977c7f7423e13`.
+The ownership contract below guides that work. Its implementation and acceptance
+status are recorded in the [implementation ledger](architecture_convergence.md#configuration-and-mutation-boundaries).
+
+| Configuration class | Owner | Examples and boundary |
+|---|---|---|
+| Task intent | Task/profile and stage | Inputs, optimization steps, scores, selectors, selected models and supported inference controls. `base.yaml` is the short entry point. |
+| Environment | Environment config or local overlay | Interpreters, checkout/checkpoint locations, caches and execution resources. Published defaults remain portable. |
+| Backend invariants | Adapter and checkpoint/model preset | Architecture dimensions, trained embeddings and training-only settings. Task files select a supported model instead of redefining its internals. |
+| Current runtime state | Proposal/evaluation owner | Current sequences, structures, eligible positions, masks, token counts and resolved mutation budgets. Recompute these when the state changes. |
+
+Hydra config groups organize composition; they do not make parameters private.
+The selected-component boundary must validate public controls and reject
+unsupported or contradictory overrides before constructing a model. Equivalent
+controls can share a public name only when their semantics match; native
+translation stays with the backend. A sampling count is not a mutation count,
+and an inference recycle count is not an optimizer step count.
+
+`component_config.merge_component_config` merges defaults and an alias before
+resolving its interpolations into an independent snapshot. That is appropriate
+for initialization settings, not for live scientific state. A config expression
+referencing a mutable count does not become a proposal-time dependency after
+this conversion. Pass current state to the runtime owner instead.
+
+The mutation contract has one stage policy, `stages.*.mutation_num`, normalized
+to a typed policy and resolved at each proposal. Supported intent is a
+nonnegative integer, a percentage, or `all`; booleans, negative values and
+nonintegral counts are invalid. Resolution uses the current eligible pool and
+the selected-position cap, preserving shared Segment identity and the existing
+fixed/locked/PTM/covalent constraints. Zero permits no point edits. The budget controls
+eligible edits, not a promise that every proposed residue differs from its
+starting identity.
+
+Backend-native joint or reconstruction operations need an explicit contract for
+how they consume that policy. A joint sample cannot be made budget-compliant by
+silently replacing some of its residues afterwards. Sample multiplicity,
+trajectory acceptance and mutation-budget resolution remain separate owners.
+
+User profiles may intentionally contain `???`. Preserve those missing values
+until the actual case supplies them; validation must not invent inputs, scores
+or defaults that change the scientific question. Validate only selected
+components so unrelated backend assets can remain unresolved. Keep public
+examples, saved configurations and CLI overrides aligned with the same
+configuration boundary.
+
 ## Constraints that are easy to miss
 
 - Mol-1 (`mol1`/`mol-1`) defaults to automatic base/Constraint selection using the existing native family/client owner and strict protein/SITE/CONTACT/EXCLUSION translation. Config/durable identity freezes both switchable weights; each native client binds its actual selected model/checkpoint/source/references. Late input IR reselects per job; switching shuts down the old client, without clearing failure fences or retaining two local models. Real deterministic base → Constraint → base requests matched native coordinates/confidence exactly on the main integration tree; full recovery/service/performance qualification remains pending. See [Mol-1 usage](mol1_constraint.md).

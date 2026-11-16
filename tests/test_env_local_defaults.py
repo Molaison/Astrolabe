@@ -130,10 +130,11 @@ def test_write_gh_python_hint_for_config_dir_writes_under_config_env(tmp_path: P
     assert hint_path.read_text(encoding="utf-8") == f"{python_bin}\n"
 
 
-def test_base_defaults_to_env_local() -> None:
+def test_base_defaults_to_portable_env() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    base_text = (repo_root / "config" / "base.yaml").read_text(encoding="utf-8")
-    assert "- env: env_local" in base_text
+    from omegaconf import OmegaConf
+    base = OmegaConf.load(repo_root / "config" / "base.yaml")
+    assert {"env": "env"} in OmegaConf.to_container(base.defaults)
 
 
 def test_gh_dev_reports_unavailable_configured_interpreter(tmp_path: Path) -> None:

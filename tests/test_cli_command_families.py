@@ -35,10 +35,9 @@ def _run(argv: list[str]) -> int:
 
 
 def _yaml_from_output(text: str):
-    marker = "task_name:"
-    idx = text.find(marker)
-    assert idx >= 0, text
-    return OmegaConf.create(text[idx:])
+    cfg = OmegaConf.create(text)
+    assert "task_name" in cfg, text
+    return cfg
 
 
 def _config_dir_with_env(tmp_path: Path, *config_names: str) -> Path:
@@ -47,6 +46,8 @@ def _config_dir_with_env(tmp_path: Path, *config_names: str) -> Path:
     (dst_root / "env" / "env_local.yaml").write_text("{}\n", encoding="utf-8")
     shutil.copy2(CONFIG_DIR / "base.yaml", dst_root / "base.yaml")
     shutil.copy2(CONFIG_DIR / "env.yaml", dst_root / "env.yaml")
+    shutil.copy2(CONFIG_DIR / "env" / "env.yaml", dst_root / "env" / "env.yaml")
+    shutil.copytree(CONFIG_DIR / "components", dst_root / "components")
     for name in config_names:
         shutil.copy2(CONFIG_DIR / f"{name}.yaml", dst_root / f"{name}.yaml")
     return dst_root
@@ -1973,7 +1974,7 @@ def test_cli_refine_ligand_pocket_accepts_short_flags_num_runs_seed_and_steps(
     assert cfg.repeats == 2
     assert cfg.seed == 23
     assert cfg.steps == 10
-    assert cfg.mutation_num == 4
+    assert "mutation_num" not in cfg
     assert cfg.stages.default.mutation_num == 4
     assert (
         cfg.mutator.mutator_terms.LMPNN_allala_vina.position_selector

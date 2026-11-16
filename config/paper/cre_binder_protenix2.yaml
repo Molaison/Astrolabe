@@ -10,11 +10,9 @@ evaluator:
     model_name: protenix-v2
     use_template: true
     load_checkpoint_path: null
-    model:
-      N_cycle: 10
-    sample_diffusion:
-      N_sample: 1
-      N_step: 200
+    recycles: 10
+    samples: 1
+    diffusion_steps: 200
     use_msa: false
 stages:
   default:

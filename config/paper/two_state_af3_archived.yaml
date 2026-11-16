@@ -46,11 +46,9 @@ evaluator:
     load_checkpoint_path: ${paper_protocol.historical_protenix_checkpoint}
     use_msa: false
     use_template: false
-    model:
-      N_cycle: 4
-    sample_diffusion:
-      N_step: 200
-      N_sample: 5
+    recycles: 4
+    diffusion_steps: 200
+    samples: 5
   evaluator_terms:
     historical_protenix:
       _type: Protenix

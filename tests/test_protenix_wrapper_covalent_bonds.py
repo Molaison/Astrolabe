@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from omegaconf import OmegaConf
+import pytest
 
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import Input, ProteinChain
@@ -17,7 +18,7 @@ def test_normalize_protenix_v2_preserves_model_specific_architecture() -> None:
         {
             "model_name": "protenix-v2",
             "load_checkpoint_path": "/tmp/protenix-v2.pt",
-            "model": {"N_cycle": 1, "pairformer": {"c_z": 128}},
+            "recycles": 1,
             "sample_diffusion": {"N_sample": 1, "N_step": 5},
             "use_deepspeed_evo_attention": False,
             "data": {
@@ -266,14 +267,8 @@ def test_construct_evaluators_uses_constraint_checkpoint_for_raw_protenix_constr
             "evaluator_terms": {"Protenix": {"_type": "protenix"}},
             "protenix": {
                 "load_checkpoint_path": str(default_ckpt),
-                "model": {
-                    "constraint_embedder": {
-                        "pocket_embedder": {"enable": False},
-                        "contact_embedder": {"enable": False},
-                        "substructure_embedder": {"enable": False},
-                        "contact_atom_embedder": {"enable": False},
-                    }
-                },
+                "model_name": "protenix-v2",
+                "execution_mode": "in_process",
             },
             "weight_path": {"protenix_constraint": str(constraint_ckpt)},
         }
@@ -329,14 +324,8 @@ def test_construct_evaluators_uses_constraint_checkpoint_for_dynamic_binding_sit
             },
             "protenix": {
                 "load_checkpoint_path": str(default_ckpt),
-                "model": {
-                    "constraint_embedder": {
-                        "pocket_embedder": {"enable": False},
-                        "contact_embedder": {"enable": False},
-                        "substructure_embedder": {"enable": False},
-                        "contact_atom_embedder": {"enable": False},
-                    }
-                },
+                "model_name": "protenix-v2",
+                "execution_mode": "in_process",
             },
             "weight_path": {"protenix_constraint": str(constraint_ckpt)},
         }
@@ -349,9 +338,8 @@ def test_construct_evaluators_uses_constraint_checkpoint_for_dynamic_binding_sit
             resolved = OmegaConf.to_container(conf, resolve=True)
             captured["load_checkpoint_path"] = resolved["load_checkpoint_path"]
             captured["dynamic_binding_site"] = resolved.get("dynamic_binding_site")
-            captured["pocket_enabled"] = resolved["model"]["constraint_embedder"][
-                "pocket_embedder"
-            ]["enable"]
+            captured["model_name"] = resolved["model_name"]
+            assert "constraint_embedder" not in resolved.get("model", {})
 
     monkeypatch.setattr("astrolabe.evaluators.wrappers.protenix.ProtenixRunner", _FakeRunner)
     monkeypatch.setattr(
@@ -368,7 +356,7 @@ def test_construct_evaluators_uses_constraint_checkpoint_for_dynamic_binding_sit
     assert captured == {
         "load_checkpoint_path": str(constraint_ckpt),
         "dynamic_binding_site": None,
-        "pocket_enabled": True,
+        "model_name": "protenix_base_constraint_v0.5.0",
     }
 
 
@@ -409,14 +397,8 @@ def test_construct_evaluators_use_constraints_false_keeps_base_checkpoint(
             },
             "protenix": {
                 "load_checkpoint_path": str(default_ckpt),
-                "model": {
-                    "constraint_embedder": {
-                        "pocket_embedder": {"enable": False},
-                        "contact_embedder": {"enable": False},
-                        "substructure_embedder": {"enable": False},
-                        "contact_atom_embedder": {"enable": False},
-                    }
-                },
+                "model_name": "protenix-v2",
+                "execution_mode": "in_process",
             },
             "weight_path": {"protenix_constraint": str(constraint_ckpt)},
         }
@@ -448,3 +430,37 @@ def test_construct_evaluators_use_constraints_false_keeps_base_checkpoint(
         "load_checkpoint_path": str(default_ckpt),
         "use_constraints": False,
     }
+
+
+def test_protenix_architecture_override_rejected_before_native_import(monkeypatch):
+    monkeypatch.setattr("astrolabe.evaluators.wrappers.protenix._lazy_import_protenix",
+                        lambda: pytest.fail("invalid config imported native model"))
+    with pytest.raises(ValueError, match="model.pairformer"):
+        _normalize_protenix_configs({"model": {"pairformer": {"c_z": 128}}})
+
+
+@pytest.mark.parametrize("options,field", [
+    ({"model": {"pairformer": {"c_z": 128}}}, "model.pairformer"),
+    ({"skip_amp": {"confidence_head": True}}, "skip_amp"),
+])
+def test_protenix_constructor_validates_before_native_import(monkeypatch, options, field):
+    from astrolabe.evaluators.wrappers.protenix import ProtenixRunner
+
+    monkeypatch.setattr("astrolabe.evaluators.wrappers.protenix._lazy_import_protenix",
+                        lambda: pytest.fail("invalid config imported native model"))
+    with pytest.raises(ValueError, match=field):
+        ProtenixRunner(options)
+
+
+def test_protenix_precision_is_recomputed_without_request_state_leaking():
+    from astrolabe.evaluators.wrappers.protenix import update_inference_configs
+
+    base = OmegaConf.create({"model_name": "protenix-v2"})
+    large = update_inference_configs(base, 4000)
+    medium = update_inference_configs(large, 3000)
+    small = update_inference_configs(large, 2000)
+    assert "skip_amp" not in base
+    assert dict(large.skip_amp) == {"confidence_head": False, "sample_diffusion": False}
+    assert dict(medium.skip_amp) == {"confidence_head": False, "sample_diffusion": True}
+    assert dict(small.skip_amp) == {"confidence_head": True, "sample_diffusion": True}
+    assert large.skip_amp is not small.skip_amp

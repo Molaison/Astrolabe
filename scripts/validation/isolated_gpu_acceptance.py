@@ -261,7 +261,8 @@ def _full_run_reasons(cfg: Any, case_config: Path) -> list[str]:
     elif not homology.is_file():
         reasons.append(f"fixed target MSA is unavailable: {homology}")
 
-    alpha = cfg.evaluator.alphafold3
+    from astrolabe.component_config import merge_component_config
+    alpha = merge_component_config(cfg.evaluator, "alphafold3", None, family="evaluator")
     if int(alpha.get("num_samples", 0)) != 1:
         reasons.append("AF3 num_samples must remain 1")
     if int(alpha.get("num_recycles", 0)) != 3:

@@ -324,7 +324,9 @@ class OwnedAF3:
         self.log_path = self.directory / 'owner.jsonl'
         self.diagnostics_path = self.directory / 'owner.stderr.log'
         self.state_path = self.directory / 'lifecycle.json'
-        owner = OmegaConf.create(OmegaConf.to_container(cfg.evaluator.alphafold3, resolve=True))
+        from astrolabe.component_config import merge_component_config
+
+        owner = merge_component_config(cfg.evaluator, "alphafold3", {}, family="evaluator")
         owner.service_socket = None
         self.transport = str(owner.get('service_transport', 'pickle'))
         if self.transport not in {'pickle', 'buffers'}:

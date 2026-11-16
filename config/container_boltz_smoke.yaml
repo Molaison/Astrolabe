@@ -6,7 +6,6 @@ defaults:
 task_name: sif_boltz_smoke
 out_dir: /tmp/gh_boltz_smoke_runs
 steps: 2
-mutation_num: 0
 
 types:
   A: "p"
@@ -21,9 +20,9 @@ evaluator:
     Boltz:
       _type: Boltz
       accelerator: gpu
-      recycling_steps: 1
-      sampling_steps: 2
-      diffusion_samples: 1
+      recycles: 1
+      diffusion_steps: 2
+      samples: 1
       num_workers: 0
       write_full_pae: false
 

@@ -1,0 +1,182 @@
+# @package _global_
+
+# Adapter defaults. Task files configure named aliases; machine paths come from env.
+mutator:
+  selector_expression: null
+  state_conflict_diagnostics:
+    enabled: false
+    output_dir: null
+  stack_pre_update: false
+  stack_pre_update_max_entropy: null
+  MCMC:
+    mutation_method: frequency_adjusted
+    select_positions: plddt
+  LigandMPNN:
+    batch_size: 1
+    bias_AA: ${oc.select:aa_bias.bias_AA,""}
+    chains_to_design: null
+    checkpoint_global_label_membrane_mpnn: ${weight_path.ligandmpnn}/global_label_membrane_mpnn_v_48_020.pt
+    checkpoint_ligand_mpnn: ${weight_path.ligandmpnn}/ligandmpnn_v_32_020_25.pt
+    checkpoint_per_residue_label_membrane_mpnn: ${weight_path.ligandmpnn}/per_residue_label_membrane_mpnn_v_48_020.pt
+    checkpoint_protein_mpnn: ${weight_path.ligandmpnn}/proteinmpnn_v_48_020.pt
+    checkpoint_soluble_mpnn: ${weight_path.ligandmpnn}/solublempnn_v_48_020.pt
+    design_pattern: ''
+    design_pattern_range: ''
+    fasta_seq_separation: ':'
+    file_ending: ''
+    global_transmembrane_label: 0
+    homo_oligomer: 0
+    ligand_mpnn_cutoff_for_score: 8.0
+    ligand_mpnn_use_atom_context: 1
+    ligand_mpnn_use_side_chain_context: 1
+    model_type: ligand_mpnn
+    number_of_batches: 1
+    omit_AA: ${exclude_AA}
+    out_folder: null
+    parse_atoms_with_zero_occupancy: 1
+    save_stats: 0
+    seed: ${seed}
+    temperature: 0.3
+    verbose: 0
+    zero_indexed: 0
+    fixed_residues: ''
+    fixed_residues_multi: ''
+    bias_mode: ${oc.select:aa_bias.mode,"additive"}
+    omit_AA_per_residue: ${oc.select:aa_bias.omit_AA_per_residue,""}
+    omit_AA_per_residue_multi: ${oc.select:aa_bias.omit_AA_per_residue_multi,""}
+    bias_AA_per_residue: ${oc.select:aa_bias.bias_AA_per_residue,""}
+    bias_AA_per_residue_multi: ${oc.select:aa_bias.bias_AA_per_residue_multi,""}
+    parse_these_chains_only: ''
+    pdb_path: null
+    pdb_path_multi: ''
+    redesigned_residues: ''
+    redesigned_residues_multi: ''
+    symmetry_residues: ''
+    symmetry_weights: ''
+    transmembrane_buried: ''
+    transmembrane_interface: ''
+  DynamicMPNN:
+    execution_mode: null
+    torch_device: null
+    repo_path: null
+    checkpoint: null
+    backend_factory: null
+    backend_callable: null
+    command_template: null
+    temperature: 0.3
+    num_samples: 1
+    probabilities_path: probabilities.npy
+    probabilities_key: probabilities
+    timeout: null
+    request_timeout: null
+    python_bin: null
+    output_dir: null
+    env: {}
+  SurfDesign:
+    python_bin: ${subprocess_envs.surfdesign.python_bin}
+    repo_path: ${subprocess_envs.surfdesign.repo_path}
+    experiment_path: ${weight_path.surfdesign}
+    checkpoint: best.ckpt
+    device: cuda
+    max_iter: 5
+    strategy: denoise
+    temperature: 0.0
+    logit_temperature: 1.0
+    seed: ${seed}
+    surface_mode: pymol
+    daemon: true
+    startup_timeout: 600
+    request_timeout: null
+    output_dir: null
+  SurfPro:
+    python_bin: ${subprocess_envs.surfpro.python_bin}
+    repo_path: ${subprocess_envs.surfpro.repo_path}
+    checkpoint_dir: ${weight_path.surfpro}
+    checkpoint: checkpoint_best.pt
+    msms_bin: ${subprocess_envs.surfpro.msms_bin}
+    pdb_to_xyzrn_bin: ${subprocess_envs.surfpro.pdb_to_xyzrn_bin}
+    device: cuda
+    logit_temperature: 1.0
+    max_surface_vertices: 5000
+    seed: ${seed}
+    daemon: true
+    startup_timeout: 600
+    request_timeout: null
+    output_dir: null
+  ProtonPottsMPNN:
+    python_bin: ${subprocess_envs.proton_pottsmpnn.python_bin}
+    repo_path: ${subprocess_envs.proton_pottsmpnn.repo_path}
+    checkpoint_path: ${weight_path.proton_pottsmpnn}/potts_v6_afdb_edge_his0.3_acid0.06/epoch-0125.ckpt
+    hbplus_bin: ${subprocess_envs.proton_pottsmpnn.hbplus_bin}
+    extended_vocab: v6
+    device: auto
+    design_mask_adapter: none
+    daemon: true
+    startup_timeout: 600
+    request_timeout: null
+    output_dir: null
+    seed: ${seed}
+    n_jobs: 1
+    binder_chain: null
+    runtime_key: null
+    network_only: false
+    preserve_disulfides: false
+    protect_gly_pro: false
+    reference_sequence: null
+    max_total_mutations: null
+    network_proposal:
+      enabled: false
+    criteria:
+      method: block_descent
+      backend: potts
+      selective: true
+      combined_lambda: 0.3
+      block_size: 2
+      temperature: 0.0
+      topk_sites: 1
+      samples_per_site: 1
+      center_count: 1
+      neighbour_k: 16
+      dep_map:
+        HIS-P:
+        - HIS-S
+        ASP-P:
+        - ASP-D
+        GLU-P:
+        - GLU-D
+  CarbonDesign:
+    repo_path: ${carbondesign.repo_path}
+    model_ckpt: ${carbondesign.model_ckpt}
+    model_config: ${carbondesign.model_config}
+    model_features: ${carbondesign.model_features}
+    device: cuda
+    batch_size: 1
+    temperature: 1.0
+    max_seq_len: 1000
+    output_dir: null
+  NAMPNN:
+    repo_path: ${subprocess_envs.nampnn.repo_path}
+    python_bin: ${subprocess_envs.nampnn.python_bin}
+    checkpoint: null
+    temperature: 0.1
+    batch_size: 1
+    number_of_batches: 1
+    design_na_only: 0
+    parse_na_only: 0
+    na_shared_tokens: 0
+    output_pdbs: 0
+    extra_args: {}
+  DPLM:
+    python_bin: ${subprocess_envs.dplm.python_bin}
+    repo_path: ${subprocess_envs.dplm.repo_path}
+    model_name: airkingbd/dplm_150m
+    device: auto
+    sampling_strategy: gumbel_argmax
+    max_iter: 500
+    num_samples: 10
+    temperature: 1.0
+  rfd4:
+    python_bin: ${subprocess_envs.rfd4.python_bin}
+    source_dir: ${subprocess_envs.rfd4.repo_path}
+    model_dir: ${weight_path.rfd4}
+    cache_dir: ${rfd4.cache_dir}

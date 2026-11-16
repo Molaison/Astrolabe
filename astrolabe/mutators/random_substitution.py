@@ -236,9 +236,7 @@ class RandomSubstitutionMutator(Mutator):
 
         mutations = sort_by_score(mutations)
 
-        n_mutations = round(global_config.mutation_num * self.mutation_weight)
-        if self.max_mutations is not None:
-            n_mutations = min(n_mutations, self.max_mutations)
+        n_mutations = self.n_mutations(maximum=self.max_mutations)
 
         global_config.segment_manager.add_mutations(mutations, n_mutations)
 
@@ -434,9 +432,7 @@ class PoreBlockingSubstitutionMutator(RandomSubstitutionMutator):
             global_config.segment_manager.add_mutations(mutations, 0)
             return mutation_output
 
-        n_mutations = len(mutations)
-        if self.max_mutations is not None:
-            n_mutations = min(n_mutations, self.max_mutations)
+        n_mutations = min(len(mutations), self.n_mutations(maximum=self.max_mutations))
 
         self.last_mutation_telemetry.setdefault("metrics", {})[
             "pore_blocker_candidate_mutations"

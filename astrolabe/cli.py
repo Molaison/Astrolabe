@@ -3331,7 +3331,6 @@ def _apply_refine_ligand_pocket_overrides(
         if int(mutation_num) <= 0:
             raise ValueError("--mutation-num must be > 0")
         with open_dict(cfg):
-            cfg.mutation_num = int(mutation_num)
             cfg.stages.default.mutation_num = int(mutation_num)
 
     initial_temperature = getattr(ns, "initial_temperature", None)
@@ -4434,7 +4433,9 @@ def _compose_default_config_tree(config_dir: pathlib.Path) -> dict:
     base_path = config_dir / "base.yaml"
     if not base_path.exists():
         return {}
-    cfg = OmegaConf.load(str(base_path))
+    cfg = _compose_hydra_config(
+        config_dir=config_dir.resolve(), config_name="base", overrides=["env=env"]
+    )
     obj = OmegaConf.to_container(cfg, resolve=False)
     return obj if isinstance(obj, dict) else {}
 
@@ -4505,7 +4506,7 @@ def _compose_get_section_status(overlay_obj: dict) -> dict:
     stages = _get_by_dotted_key(overlay_obj, "stages") or {}
     pred_terms = _get_by_dotted_key(overlay_obj, "predocker.predocker_terms") or {}
     return {
-        "basic": any(k in overlay_obj for k in ["task_name", "out_dir", "steps", "seed", "mutation_num"]),
+        "basic": any(k in overlay_obj for k in ["task_name", "out_dir", "steps", "seed"]),
         "evaluator": bool(isinstance(eval_terms, dict) and eval_terms),
         "mutator": bool(isinstance(mut_terms, dict) and mut_terms),
         "loss": bool(isinstance(loss_terms, dict) and loss_terms),
@@ -4657,7 +4658,7 @@ def _compose_section_basic(overlay_obj: dict) -> None:
         "task_name": "string",
         "out_dir": "dir_may_create",
         "steps": "int",
-        "mutation_num": "int",
+        "stages.default.mutation_num": "nonnegative integer|percentage|all",
         "seed": "int|null",
         "initializer.mode": "string(random|dplm|aa_set|pssm|all_a|mask_mix|x_mix|structure|rfd3)",
         "initializer.aa_set": "string|list",

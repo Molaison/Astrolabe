@@ -1,0 +1,91 @@
+# @package _global_
+
+# Adapter defaults. Task files configure named aliases; machine paths come from env.
+predocker:
+  predocker_terms: {}
+  symmetry_canonicalizer:
+    rpxdock_python_bin: ${oc.select:subprocess_envs.rpxdock.python_bin,null}
+    rpxdock_vendor_repo: ${oc.select:subprocess_envs.rpxdock.repo_path,null}
+    rpxdock_willutil_repo: ${oc.select:subprocess_envs.rpxdock.willutil_repo_path,null}
+    rpxdock_failure_fallback: rfdiffusion
+  autodock_gpu:
+    autodock_gpu_path: ${autodock.autodock_gpu_path}
+    obabel_path: ${obabel_path}
+    autogrid4_path: ${autodock.autogrid4_path}
+    mk_prepare_receptor: ${autodock.mk_prepare_receptor}
+    mk_prepare_ligand: ${autodock.mk_prepare_ligand}
+    mk_prepare_python_bin: ${subprocess_envs.meeko.python_bin}
+    mk_prepare_pythonpath: ${oc.select:subprocess_envs.meeko.pythonpath,null}
+    exhaustiveness: 8
+    num_samples: 20
+  autodock_vina:
+    vina_path: ${autodock.vina_path}
+    obabel_path: ${obabel_path}
+    mk_prepare_ligand: ${autodock.mk_prepare_ligand}
+    mk_prepare_python_bin: ${subprocess_envs.meeko.python_bin}
+    mk_prepare_pythonpath: ${oc.select:subprocess_envs.meeko.pythonpath,null}
+    exhaustiveness: 8
+    num_samples: 20
+  RAPiDock:
+    python_bin: ${subprocess_envs.rapidock.python_bin}
+    repo_path: ${subprocess_envs.rapidock.repo_path}
+    model_dir: ${weight_path.rapidock}
+    ckpt: rapidock_global.pt
+    daemon: true
+    response_cache: true
+    response_cache_dir: ~/.cache/gh/rapidock_runner
+    num_samples_bank: 5
+    batch_size: 4
+    inference_steps: 20
+    actual_steps: null
+    no_final_step_noise: false
+    scoring_function: null
+    fastrelax: false
+    save_visualisation: false
+    cpu: 1
+    conformation_type: E
+    conformation_partial: null
+  haddock3:
+    haddock3_bin: ${oc.select:subprocess_envs.haddock3.haddock3_bin,null}
+    binder_chain: A
+    target_chains: null
+    anchor_chains: null
+    max_anchor_chains: 1
+    nucleic_only: true
+    contact_cutoff: 4.0
+    skip_if_contact: true
+    require_contact: true
+    sampling: 100
+    ncores: 1
+    restraint_distance:
+    - 2.0
+    - 4.0
+    - 8.0
+    max_restraints: 64
+    update_dynamic_binding_site: true
+    binding_site_mode: both
+    binding_site_max_distance: 6.0
+    binding_site_min_distance: 0.0
+    max_binding_site_pairs: 16
+  haddock3_nucleic:
+    haddock3_bin: ${oc.select:subprocess_envs.haddock3.haddock3_bin,null}
+    binder_chain: A
+    target_chains: null
+    anchor_chains: null
+    max_anchor_chains: 1
+    nucleic_only: true
+    contact_cutoff: 4.0
+    skip_if_contact: true
+    require_contact: true
+    sampling: 100
+    ncores: 1
+    restraint_distance:
+    - 2.0
+    - 4.0
+    - 8.0
+    max_restraints: 64
+    update_dynamic_binding_site: true
+    binding_site_mode: both
+    binding_site_max_distance: 6.0
+    binding_site_min_distance: 0.0
+    max_binding_site_pairs: 16

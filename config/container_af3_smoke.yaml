@@ -6,7 +6,6 @@ defaults:
 task_name: sif_af3_smoke
 out_dir: /tmp/gh_af3_smoke_runs
 steps: 3
-mutation_num: 0
 
 # Protein-only, minimal length to reduce compile/runtime.
 types:
@@ -23,8 +22,8 @@ evaluator:
       _type: Alphafold3
       # Reduce runtime as much as possible
       num_seeds: 1
-      num_recycles: 1
-      num_samples: 1
+      recycles: 1
+      samples: 1
       run_data_pipeline: false
       run_inference: true
       # Keep consistent with typical AF3 setups; can be overridden.

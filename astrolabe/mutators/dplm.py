@@ -583,17 +583,7 @@ class DPLMMutator(Mutator):
         if not planned_mutations:
             return mutation_output
 
-        mutation_budget = getattr(global_config, "mutation_num", None)
-        if mutation_budget is None:
-            mutation_limit = len(planned_mutations)
-        else:
-            mutation_limit = max(
-                0,
-                min(
-                    len(planned_mutations),
-                    int(round(mutation_budget * getattr(self, "mutation_weight", 1.0))),
-                ),
-            )
+        mutation_limit = self.n_mutations(maximum=len(planned_mutations))
         if mutation_limit > 0:
             global_config.segment_manager.add_mutations(
                 planned_mutations,

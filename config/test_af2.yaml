@@ -9,7 +9,6 @@ steps: 2
 seqs:
   A: "SMEEIQKKIKEELEEFLEEAPSLSDIERLTKFLELLTKILENAEYITDEILELLKKTVEELLKLLSPEYASLAKAAYEATLAALEKYKAA"
 
-mutation_num: 10
 
 mutator:
   mutator_terms:
@@ -27,6 +26,7 @@ evaluator:
 
 stages:
   default:
+    mutation_num: 10
     oligo: ["A"]
     mutators: ["MCMC", "LMPNN_wt_center"]
     evaluator: alphafold2

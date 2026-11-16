@@ -133,7 +133,7 @@ def _merge_conf_with_defaults(
 
     try:
         evaluator_name = {"mol-1": "mol1"}.get(evaluator_name, evaluator_name)
-        merged = merge_component_config(evaluator_conf, evaluator_name, override_conf)
+        merged = merge_component_config(evaluator_conf, evaluator_name, override_conf, family="evaluator")
         merged.pop("_type", None)
         return merged
     except Exception as exc:
@@ -587,29 +587,16 @@ def _build_protenix_evaluator(
     ) or dynamic_binding_site_enabled or raw_constraint is not None
 
     if use_constraints and constraint_guidance_enabled:
-        # Enable embedders if present in config tree.
+        # The native checkpoint preset owns its constraint embedder architecture.
+        # Resolve the selected checkpoint in the original config root.
         try:
-            ce = protenix_conf.model.constraint_embedder
-            for key in (
-                "pocket_embedder",
-                "contact_embedder",
-                "substructure_embedder",
-                "contact_atom_embedder",
-            ):
-                if hasattr(ce, key) and hasattr(getattr(ce, key), "enable"):
-                    getattr(ce, key).enable = True
-        except Exception:
-            # If the config tree doesn't match, fail fast: binding_site should not
-            # silently become a no-op.
-            raise ValueError(
-                "constraint guidance is set but Protenix constraint embedders are missing from config."
-            )
+            from astrolabe.component_config import merge_component_config
 
-        # Use the constraint-capable checkpoint (configured at the global Hydra root).
-        protenix_conf.model_name = "protenix_base_constraint_v0.5.0"
-        protenix_conf.load_checkpoint_path = "${weight_path.protenix_constraint}"
-        try:
-            resolved = OmegaConf.to_container(protenix_conf, resolve=True)  # type: ignore[arg-type]
+            selected = OmegaConf.to_container(protenix_conf, resolve=False)
+            selected.update(model_name="protenix_base_constraint_v0.5.0",
+                            load_checkpoint_path="${weight_path.protenix_constraint}")
+            protenix_conf = merge_component_config(evaluator_conf, (), selected)
+            resolved = OmegaConf.to_container(protenix_conf, resolve=True)
         except Exception as exc:
             raise ValueError(
                 "constraint guidance is set but failed to resolve `weight_path.protenix_constraint` "

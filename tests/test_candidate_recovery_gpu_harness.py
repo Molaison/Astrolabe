@@ -67,10 +67,11 @@ def test_candidate_recovery_harness_prepares_fixed_bounded_plan(
         assert int(cfg.steps) == 2
         assert len(str(cfg.seqs.A).lstrip("+")) == 20
         assert int(cfg.evaluator.alphafold3.num_seeds) == 1
-        assert int(cfg.evaluator.alphafold3.num_recycles) == 1
-        assert int(cfg.evaluator.alphafold3.num_samples) == 1
+        assert int(cfg.evaluator.alphafold3.recycles) == 1
+        assert int(cfg.evaluator.alphafold3.samples) == 1
         assert cfg.stages.default.weighted_score_expression == "plddt"
-        assert int(cfg.mutation_num) == 1
+        assert "mutation_num" not in cfg
+        assert int(cfg.stages.default.mutation_num) == 1
         assert list(cfg.stages.default.mutators) == ["MCMC"]
         assert cfg.mutator.mutator_terms.MCMC._type == "MCMC"
 

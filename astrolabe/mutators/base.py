@@ -5,6 +5,7 @@ from typing import Any, Dict
 
 from astrolabe.runtime_support import ResourceOwner
 from astrolabe.core import global_config
+from astrolabe.mutation_budget import current_mutation_count
 from astrolabe.model_execution import ExecutionMode, execution_mode
 from astrolabe.mutators.capabilities import (
     MutatorCapabilities,
@@ -141,17 +142,12 @@ class Mutator:
         """
         pass
 
-    def n_mutations(self):
-        base_value = getattr(global_config, "mutation_num", None)
-        if base_value is None:
-            base_value = getattr(global_config, "n_mutations", 0)
-        if base_value is None:
-            base_value = 0
-        weight = getattr(self, "mutation_weight", 1.0)
-        try:
-            return max(0, int(round(float(base_value) * float(weight))))
-        except (TypeError, ValueError):
-            return 0
+    def n_mutations(self, *, maximum=None):
+        return current_mutation_count(
+            weight=getattr(self, "mutation_weight", 1.0),
+            maximum=maximum,
+            runtime=global_config,
+        )
 
 
 def _merge_runner_conf(base_conf, overrides):
@@ -201,7 +197,7 @@ def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path", *,
                 "proton-pottsmpnn": ("ProtonPottsMPNN",),
                 "dynamicmpnn": ("DynamicMPNN",), "surfdesign": ("SurfDesign",),
                 "surfpro": ("SurfPro",), "carbondesign": ("CarbonDesign",),
-                "dplm": ("DPLM",), "nampnn": ("NAMPNN",),
+                "dplm": ("DPLM",), "nampnn": ("NAMPNN",), "rfd4": ("rfd4",),
             }.get(raw_kind, ())
             conf = OmegaConf.to_container(merge_component_config(mutator_conf, default_keys, conf), resolve=True)
             name = conf.pop("_type", None)

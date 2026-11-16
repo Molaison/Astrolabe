@@ -83,9 +83,11 @@ def test_pin_reserve_and_center_free_budget() -> None:
     block = {"method": "block_descent", "center_count": 1}
     assert adapter.estimate_pin_count(block) == 1
     assert adapter.resolve_designable_cap(block, 8, binder_length=10) == (7, 1)
-    assert adapter.resolve_designable_cap(
-        {**block, "max_mutations": 4}, 8, binder_length=10
-    ) == (4, 1)
+    assert adapter.resolve_designable_cap(block, 4, binder_length=10) == (3, 1)
+    with pytest.raises(ValueError, match="derived per proposal"):
+        adapter.resolve_designable_cap(
+            {**block, "max_mutations": 4}, 8, binder_length=10
+        )
 
     centre_free = {
         "method": "greedy_energy_block",
@@ -94,9 +96,11 @@ def test_pin_reserve_and_center_free_budget() -> None:
     }
     assert adapter.estimate_pin_count(centre_free) == 0
     assert adapter.resolve_designable_cap(centre_free, 8, binder_length=10) == (8, 0)
-    assert adapter.resolve_designable_cap(
-        {**centre_free, "max_mutations": 3}, 8, binder_length=10
-    ) == (3, 0)
+    assert adapter.resolve_designable_cap(centre_free, 4, binder_length=10) == (4, 0)
+    with pytest.raises(ValueError, match="derived per proposal"):
+        adapter.resolve_designable_cap(
+            {**centre_free, "max_mutations": 3}, 8, binder_length=10
+        )
 
 
 def test_pin_budget_must_be_strictly_below_gh_budget() -> None:
@@ -117,7 +121,7 @@ def test_center_free_rejects_implicit_or_invalid_modes() -> None:
             8,
             binder_length=10,
         )
-    with pytest.raises(ValueError, match="exceeds the GH mutation budget"):
+    with pytest.raises(ValueError, match="derived per proposal"):
         adapter.resolve_designable_cap(
             {
                 "method": "greedy_energy_block",

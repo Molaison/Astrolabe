@@ -8,7 +8,6 @@ out_dir: /tmp/gh_smiles_smoke_runs
 
 # Keep runtime small but still exercise: SMILES parsing -> RDKit/OpenBabel -> AF3 inference.
 steps: 2
-mutation_num: 0
 
 types:
   A: "p"
@@ -28,8 +27,8 @@ evaluator:
     Alphafold3:
       _type: Alphafold3
       num_seeds: 1
-      num_recycles: 1
-      num_samples: 1
+      recycles: 1
+      samples: 1
       run_data_pipeline: false
       run_inference: true
       flash_attention_implementation: cudnn

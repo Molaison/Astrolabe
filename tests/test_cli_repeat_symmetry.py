@@ -51,6 +51,8 @@ def _config_dir_with_env(tmp_path: Path, *config_names: str) -> Path:
     (dst_root / "env" / "env_local.yaml").write_text("{}\n", encoding="utf-8")
     shutil.copy2(CONFIG_DIR / "base.yaml", dst_root / "base.yaml")
     shutil.copy2(CONFIG_DIR / "env.yaml", dst_root / "env.yaml")
+    shutil.copy2(CONFIG_DIR / "env" / "env.yaml", dst_root / "env" / "env.yaml")
+    shutil.copytree(CONFIG_DIR / "components", dst_root / "components")
     for name in config_names:
         shutil.copy2(CONFIG_DIR / f"{name}.yaml", dst_root / f"{name}.yaml")
     return dst_root

@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import numpy as np
 import pytest
 from omegaconf import OmegaConf
+from astrolabe.configuration import load_composed_config
 
 from astrolabe.core import global_config
 from astrolabe.mutators.base import build_mutators
@@ -301,7 +302,7 @@ def test_task_requirements_include_surfdesign_runtime_and_experiment() -> None:
 
 def test_configs_expose_surfdesign_runtime_fields() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    base = OmegaConf.load(repo_root / "config" / "base.yaml")
+    base = load_composed_config(repo_root / "config" / "base.yaml")
     env = OmegaConf.load(repo_root / "config" / "env.yaml")
     container_env = OmegaConf.load(repo_root / "config" / "env_container.yaml")
     third_party = OmegaConf.load(repo_root / "config" / "third_party_envs.yaml")

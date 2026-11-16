@@ -95,13 +95,9 @@ evaluator:
     use_constraints: false
     dynamic_binding_site: false
     use_rna_msa: false
-    model:
-      N_cycle: 10
-      template_embedder:
-        n_blocks: 2
-    sample_diffusion:
-      N_sample: 5
-      N_step: 200
+    recycles: 10
+    samples: 5
+    diffusion_steps: 200
 paper_protocol:
   source:
   - MainPaper 205-206 (2026-10-08 revision)

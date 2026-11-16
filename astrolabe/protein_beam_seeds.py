@@ -20,7 +20,9 @@ def load_root(cfg, source_state, contract):
         if plain(old[key]) != plain(cfg[key]):
             raise ValueError(f'Root prediction contract differs: {key}')
     def prediction_settings(config):
-        value=OmegaConf.to_container(config.evaluator.alphafold3,resolve=True)
+        from astrolabe.component_config import merge_component_config
+        value=OmegaConf.to_container(merge_component_config(
+            config.evaluator, "alphafold3", {}, family="evaluator"),resolve=True)
         value.pop('service_socket',None)
         return value
     if prediction_settings(old)!=prediction_settings(cfg):

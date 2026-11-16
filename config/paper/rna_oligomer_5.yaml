@@ -29,9 +29,9 @@ evaluator:
     Alphafold3:
       _type: Alphafold3
   alphafold3:
-    num_samples: 5
+    samples: 5
     num_seeds: 1
-    num_recycles: 10
+    recycles: 10
     run_data_pipeline: false
     flash_attention_implementation: cudnn
 search:

@@ -432,8 +432,6 @@ def calculate_temperature(step):
     )
 
 
-def mutation_number_scheduler(n_mutation, step): ...
-
 
 def construct_standard_input(oligo_names, seed):
     inputs = {}

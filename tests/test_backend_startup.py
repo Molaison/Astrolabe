@@ -30,6 +30,8 @@ def test_each_registered_evaluator_has_a_boundary(kind):
     options = {'repo_path': '/repo', 'weights_path': '/weights', 'checkpoint': '/ckpt',
                'python_bin': sys.executable, 'ckpt_path': 'model_identifier',
                'lm_weights_path': '/lm'}
+    if kind == 'protenix':
+        options = {'model_name': 'protenix-v2', 'load_checkpoint_path': '/weights/model.pt'}
     assert check('evaluator', kind, options) == []
 
 

@@ -264,20 +264,11 @@ def _normalize_criteria(criteria: Any) -> dict[str, Any]:
             "for centre-free greedy_energy_block; the current sequence must be the optimization start."
         )
     criteria["seed_source"] = seed_source
-    configured_max = criteria.get("max_mutations", None)
-    if configured_max not in (None, "", "None", "null"):
-        configured_max = int(configured_max)
-        if configured_max == 0:
-            raise ValueError(
-                "Proton-PottsMPNN criteria.max_mutations=0 means 'no native cap' "
-                "upstream, which is incompatible with a finite GH mutation budget. "
-                "Use null to derive the designable cap from the GH budget."
-            )
-        if configured_max < 0:
-            raise ValueError(
-                "Proton-PottsMPNN criteria.max_mutations must be positive."
-            )
-        criteria["max_mutations"] = configured_max
+    if criteria.get("max_mutations") not in (None, "", "None", "null"):
+        raise ValueError(
+            "Proton-PottsMPNN criteria.max_mutations is derived per proposal; "
+            "configure stages.*.mutation_num instead."
+        )
 
     dep_map = criteria.get("dep_map")
     if dep_map is None:
@@ -365,6 +356,11 @@ def resolve_designable_cap(
             "Proton-PottsMPNN requires a positive GH mutation budget "
             "(mutation_num * mutation_weight)."
         )
+    if criteria.get("max_mutations") not in (None, "", "None", "null"):
+        raise ValueError(
+            "Proton-PottsMPNN criteria.max_mutations is derived per proposal; "
+            "configure stages.*.mutation_num instead."
+        )
     method = str(criteria.get("method") or "converged_mcmc").strip().lower()
     if method in WHOLE_CHAIN_METHODS:
         if budget < binder_length:
@@ -376,21 +372,7 @@ def resolve_designable_cap(
         return budget, 0
 
     if _is_centre_free(criteria):
-        configured = criteria.get("max_mutations", None)
-        if configured in (None, "", "None", "null"):
-            return budget, 0
-        configured = int(configured)
-        if configured <= 0:
-            raise ValueError(
-                "Proton-PottsMPNN criteria.max_mutations must be positive."
-            )
-        if configured > budget:
-            raise ValueError(
-                "Proton-PottsMPNN criteria.max_mutations "
-                f"({configured}) exceeds the GH mutation budget ({budget}); "
-                "increase mutation_num or lower the native cap."
-            )
-        return configured, 0
+        return budget, 0
 
     pin_budget = estimate_pin_count(criteria)
     if pin_budget <= 0:
@@ -406,19 +388,7 @@ def resolve_designable_cap(
             f"budget {pin_budget}; increase mutation_num or reduce center_count/"
             "center_types."
         )
-    configured = criteria.get("max_mutations", None)
-    if configured in (None, "", "None", "null"):
-        return budget - pin_budget, pin_budget
-    configured = int(configured)
-    if configured <= 0:
-        raise ValueError("Proton-PottsMPNN criteria.max_mutations must be positive.")
-    if configured + pin_budget > budget:
-        raise ValueError(
-            "Proton-PottsMPNN criteria.max_mutations "
-            f"({configured}) + centre pins ({pin_budget}) exceeds the GH mutation "
-            f"budget ({budget}); increase mutation_num or lower the native cap."
-        )
-    return configured, pin_budget
+    return budget - pin_budget, pin_budget
 
 def _mutable_positions(protomer, excluded_positions) -> np.ndarray:
     mask = np.asarray(protomer.mutable_mask, dtype=bool).copy()

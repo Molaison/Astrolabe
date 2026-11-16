@@ -312,11 +312,9 @@ def _prepare_pdb(*, source: Path, chain: str, destination: Path) -> Path:
 
 def _model_config(*, seed: int, checkpoint: Path, output_dir: Path) -> dict[str, Any]:
     from omegaconf import OmegaConf
+    from astrolabe.configuration import load_composed_config
 
-    cfg = OmegaConf.merge(
-        OmegaConf.load(ROOT / "config" / "env" / "env.yaml"),
-        OmegaConf.load(ROOT / "config" / "base.yaml"),
-    )
+    cfg = load_composed_config(ROOT / "config" / "base.yaml")
     cfg.seed = seed
     cfg.exclude_AA = ""
     cfg.weight_path.ligandmpnn = str(checkpoint.parent)
@@ -334,6 +332,7 @@ def _source_identity() -> dict[str, str]:
         Path(__file__).resolve(),
         ROOT / "config" / "env" / "env.yaml",
         ROOT / "config" / "base.yaml",
+        *sorted((ROOT / "config" / "components").glob("*.yaml")),
         ROOT / "astrolabe" / "model_execution.py",
         ROOT / "astrolabe" / "model_daemon.py",
         ROOT / "astrolabe" / "mutators" / "native_daemons.py",

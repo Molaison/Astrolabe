@@ -272,6 +272,47 @@ antibody 示例：
 
 ## 3. 配置来源与覆盖顺序
 
+### 3.0 从任务入口开始
+
+`config/base.yaml` 只保留任务级通用入口。后端默认值由
+`config/components/{evaluator,mutator,predocker,initializer}.yaml` 组合，
+不再在 base 中复制模型训练配置。按下面的所有权放置参数：
+
+| 内容 | 配置位置 / owner |
+|---|---|
+| 输入、输出、seed、steps、命名组件、loss、stage | 当前任务 YAML |
+| Python、源码、checkpoint、缓存目录 | `config/env/*.yaml` 或环境变量 |
+| 模型维度、训练 loss/optimizer、checkpoint 固定结构 | 原生模型 preset 和 checkpoint，不是任务参数 |
+| 当前长度、可变位点、原生调用的动态 mutation cap | runtime 每次 proposal 计算 |
+
+base 默认选择可发布的 `env`；已有机器安装仍可显式使用 `env=env_local`。
+RFD4 的四个路径从 `ASTROLABE_RFD4_PYTHON/SOURCE/MODEL/CACHE` 进入 env，
+任务别名不需要重复列出。Mol-1 不再默认为某一台机器上的安装目录。
+
+等价的 evaluator 推理控制统一使用 `recycles`、`samples`、`diffusion_steps`。
+仅支持该控制的 backend 才接受相应字段；不同模型保留原有默认计算预算。
+例如 AF3 与 Protenix 的命名组件都可使用下面的写法：
+
+```yaml
+evaluator:
+  evaluator_terms:
+    Fold:
+      _type: alphafold3
+      recycles: 3
+      samples: 1
+```
+
+原生拼写只在 adapter 边界归一化。同一层同时指定相互矛盾的公共名和原生名
+会报错。不要用 `model.pairformer`、`adam`、`data.train_sets` 等字段改变
+Protenix 模型 preset，也不要把请求输入/输出路径写进 AF3 任务参数。
+这些错误在模型加载前拒绝。
+
+[`rfd4_mol1_partial.yaml`](../config/rfd4_mol1_partial.yaml) 是简化后的方法 profile。
+其中 `???` 保留为待接入的输入和评分，不能直接运行，也不把缺失的 PAE 当作 PDE。
+Python 工具需要完整配置时使用
+`astrolabe.configuration.load_composed_config(path)`，单独 `OmegaConf.load(base.yaml)`
+不会展开 Hydra defaults。
+
 ### 3.1 三类配置来源
 
 1. `--task <name>`：选择 `config/<name>.yaml`，由该模板的 Hydra `defaults:`
@@ -616,8 +657,10 @@ stages:
 ### 7.3 区分 stage mutation_num 与 mutator_weights
 
 `mutation_num` 是本 step 的总 mutation budget，owner 在
-`stages.<s>.mutation_num`。百分比会按当前 mutable protomer 的总可变长度解析为
-整数。`mutator_weights` 随后归一化，并把这个整数预算分给各 mutator。例如：
+`stages.<s>.mutation_num`。支持非负整数、`"0%"` 到 `"100%"` 和 `"all"`。
+百分比在每次 proposal 时按当前唯一可变位点数解析，shared Segment 不重复计数，
+固定、locked 和 PTM 位点不计入。长度或锁定状态变化后会重新计算。
+`mutator_weights` 随后归一化，并把整数预算分给各 mutator。例如：
 
 ```yaml
 stages:
@@ -633,8 +676,21 @@ stages:
 - stage 中列出的 mutator 会按顺序逐个执行，`mutator_weights` **不是**随机选择某个
   alias 的概率。position selector、固定残基、取整和模型输出仍会使实际变更位点数
   少于预算；
-- `100%` 按所有 mutable protomer 的可变长度求预算，不等于每个位点最终都改变；
-- 当前运行以 stage 字段为准，根层 `mutation_num` 仅作旧配置兼容镜像。
+- `100%` / `all` 取当前唯一可变位点总数，仍受 selector 与可用候选约束；
+- `0`、`0%` 得到零预算；百分比在空可变集合上也得到零预算，不会被强制提升到一次突变。
+  整数保留请求数量，但选区为空时无法产生点突变；
+- 根层 `mutation_num`、`mutator.mutation_num`、负数、布尔值和非整数数量被拒绝。
+
+MCMC 的 `max_mutations` 是某个 alias 的额外上限，与 stage 请求预算一起交给同一
+resolver，不是第二个预算入口。它保留既有 paper protocol 中对局部 MCMC 的独立
+上限。PoreBlocker 也遵守 stage 预算；需要整个选区时显式用 `all`。
+Proton 的 `criteria.max_mutations` 是减去中心 pin 后的原生 cap，只能在每次调用
+时派生，不能在初始配置里固定。
+
+预算不等于精确的序列 Hamming distance。等长 RFD4 限制释放位点；变长 reconstruction
+是单独启用的整体提议，不使用点突变数量（包括零）限制重构范围，而由其显式长度与
+结构约束控制；不按数量截断联合生成结果。portable native / beam 的已限定
+执行 profile 仍要求整数预算，不因此获得百分比或重构路径的新资格。
 
 ### 7.4 区分 backend sampling temperature 与 decision initial_temperature
 

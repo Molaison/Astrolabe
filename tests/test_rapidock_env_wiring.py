@@ -25,7 +25,7 @@ def test_task_requirements_for_rapidock_include_subprocess_env_keys() -> None:
 
 def test_base_and_env_configs_expose_rapidock_runner_fields() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    base_text = (repo_root / "config" / "base.yaml").read_text(encoding="utf-8")
+    base_text = (repo_root / "config" / "components" / "predocker.yaml").read_text(encoding="utf-8")
     env_text = (repo_root / "config" / "env.yaml").read_text(encoding="utf-8")
     env_container_text = (repo_root / "config" / "env_container.yaml").read_text(
         encoding="utf-8"

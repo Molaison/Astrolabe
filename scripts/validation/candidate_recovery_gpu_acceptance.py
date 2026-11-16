@@ -405,11 +405,19 @@ def _validate_scenario(
                 f"{scenario}/{job_id} lacks completed CLI provenance"
             )
         final = receipt.final_config
-        af3 = final["evaluator"]["alphafold3"]
-        term = final["evaluator"]["evaluator_terms"]["Alphafold3"]
+        from astrolabe.component_config import merge_component_config
+        from omegaconf import OmegaConf
+
+        evaluator_config = OmegaConf.create(final).evaluator
+        af3 = merge_component_config(evaluator_config, "alphafold3", None,
+                                     family="evaluator")
+        term = merge_component_config(
+            evaluator_config, "alphafold3",
+            evaluator_config.evaluator_terms.Alphafold3, family="evaluator",
+        )
         if (
             int(final["steps"]) != CANDIDATE_STEPS
-            or int(final["mutation_num"]) != 1
+            or int(final["stages"]["default"]["mutation_num"]) != 1
             or final["stages"]["default"]["mutators"] != ["MCMC"]
             or final["stages"]["default"]["weighted_score_expression"]
             != "plddt"

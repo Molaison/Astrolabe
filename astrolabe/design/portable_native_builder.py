@@ -674,11 +674,6 @@ def _selected_run_payload(
         "exclude_AA": (
             _resolved_child(args, name="exclude_AA", path="cfg") or []
         ),
-        "mutation_num_fallback": (
-            None
-            if "mutation_num" in stage
-            else _canonical_optional(args, "mutation_num")
-        ),
         "use_metropolis_acceptance": use_metropolis,
         "initial_temperature": (
             _canonical_optional(args, "initial_temperature")
@@ -1914,7 +1909,7 @@ def _validate_hooks(
 
 
 def _sampling_policy(args: Any, data: DataStore, *, stage: Mapping[str, Any]) -> SamplingPolicy:
-    mutation_num = stage.get("mutation_num", getattr(args, "mutation_num", None))
+    mutation_num = stage.get("mutation_num")
     if type(mutation_num) is not int or mutation_num < 0:
         raise UnsupportedPortableNativeProfile(
             "portable native stage.mutation_num must be a non-negative integer"

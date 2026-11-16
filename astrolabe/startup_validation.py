@@ -32,6 +32,7 @@ _STAGE_FIELDS = frozenset({
     "mutator_weights", "transition_consistency_gate", "mutation_num", "_entrance",
 })
 _MUTATOR_DEFAULTS = {
+    "rfd4": ("rfd4",),
     "mcmc": ("MCMC",), "pore_blocker_mcmc": ("MCMC",),
     "ligandmpnn": ("LigandMPNN",), "grouped_ligandmpnn": ("LigandMPNN",),
     "proteinmpnn": ("LigandMPNN",), "multistateproteinmpnn": ("LigandMPNN",),
@@ -205,6 +206,12 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
     raw = OmegaConf.to_container(cfg, resolve=False) if OmegaConf.is_config(cfg) else dict(cfg)
     if not isinstance(raw, dict):
         raise StartupValidationError("config: expected a mapping")
+
+    for path, value in (("mutation_num", raw.get("mutation_num")),
+                        ("mutator.mutation_num", (raw.get("mutator") or {}).get("mutation_num")
+                         if isinstance(raw.get("mutator"), Mapping) else None)):
+        if value is not None:
+            errors.append(f"{path}: obsolete count location; configure stages.*.mutation_num")
 
     reference_info = {}
     errors.extend(validate_task_config(
@@ -390,7 +397,7 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                 if family == "evaluator":
                     raw_kind = selected_kind.lower()
                     base_kind = {"mol-1": "mol1"}.get(raw_kind, raw_kind)
-                    merged_cfg = merge_component_config(section_cfg, (base_kind,), selected_term_cfg, resolve=resolve_environment)
+                    merged_cfg = merge_component_config(section_cfg, (base_kind,), selected_term_cfg, resolve=resolve_environment, family="evaluator")
                     resolved = OmegaConf.to_container(merged_cfg, resolve=resolve_environment)
                 elif family == "mutator":
                     raw_kind = selected_kind.lower()

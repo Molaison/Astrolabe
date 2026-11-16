@@ -6,7 +6,6 @@ defaults:
 task_name: sif_protenix_smoke
 out_dir: /tmp/gh_protenix_smoke_runs
 steps: 2
-mutation_num: 0
 
 types:
   A: "p"
@@ -24,12 +23,9 @@ evaluator:
       diffusion_batch_size: 1
       diffusion_chunk_size: 1
       num_workers: 0
-      model:
-        N_cycle: 1
-      sample_diffusion:
-        N_sample: 1
-        N_step: 2
-
+      recycles: 1
+      samples: 1
+      diffusion_steps: 2
 mutator:
   mutator_terms:
     MCMC:

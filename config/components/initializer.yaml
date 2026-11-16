@@ -1,0 +1,29 @@
+# @package _global_
+
+# Adapter defaults. Task files configure named aliases; machine paths come from env.
+initializer:
+  mode: random
+  aa_set: null
+  pssm: null
+  dplm_alias: null
+  sequence_designer: null
+  structure:
+    source: null
+    chain_map: {}
+    allow_partial_mapping: false
+  rfd3:
+    repo_path: ${rfd3.repo_path}
+    ckpt_path: ${rfd3.ckpt_path}
+    python_bin: ${subprocess_envs.rf3.python_bin}
+    specification: null
+    chain_map: {}
+    motif_map: {}
+    allow_partial_mapping: false
+    n_batches: 1
+    sample_index: 0
+    diffusion_batch_size: 1
+    low_memory_mode: false
+    skip_existing: false
+    prevalidate_inputs: true
+    read_sequence_from_sequence_head: true
+    seed: ${seed}

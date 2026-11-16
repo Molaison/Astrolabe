@@ -12,7 +12,6 @@ seqs:
   B: "EEELLNKLKEAFRKFVTALAKFFSPEMAKLVLELVDTIVEETKTIKDFIELATEFLERLLEVETLEELEELREEILRKLEERKAKE"
   C: "CCCCCOC(=O)Nc1nc(=O)n(cc1F)[C@@H]1O[C@H](C)[C@@H](O)[C@H]1O"
 
-mutation_num: 10
 
 predocker:
   predocker_terms:
@@ -66,6 +65,7 @@ loss:
 
 stages:
   default:
+    mutation_num: 10
     oligo: ["ABC"]
     mutators: ["MCMC","LMPNN_wt_center"]
     evaluator: Alphafold3
