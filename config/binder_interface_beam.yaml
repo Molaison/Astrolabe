@@ -41,7 +41,6 @@ evaluator:
     num_recycles: 3
     num_samples: 1
     refstructure_workers: 1
-    jax_compilation_cache_dir: /tmp/beam_jax_cache
 loss:
   loss_terms:
     interface_ipae:

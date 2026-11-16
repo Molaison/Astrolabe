@@ -733,6 +733,9 @@ def alphafold3_setup(config):
     _configure_msa_env(config)
     if getattr(config, "service_socket", None):
         return RemoteModelRunner(config)
+    from astrolabe.af3_compilation import configure_compilation_cache
+
+    configure_compilation_cache(config)
     device_hint = configured_device_hint(config)
     try:
         devices = jax.local_devices(backend="cpu" if device_hint == "cpu" else "gpu")
@@ -747,32 +750,6 @@ def alphafold3_setup(config):
     device_index = int(device_hint.split(":", 1)[1]) if device_hint and device_hint.startswith("cuda:") else 0
     if device_index >= len(devices):
         raise ValueError(f"Configured AF3 device {device_hint} is not visible to JAX")
-    cache_dir = getattr(config, "jax_compilation_cache_dir", None)
-    if cache_dir:
-        cache_dir_path = pathlib.Path(os.path.expanduser(str(cache_dir)))
-        try:
-            cache_dir_path.mkdir(parents=True, exist_ok=True)
-        except OSError as exc:
-            fallback = pathlib.Path("/tmp/jax_cache")
-            try:
-                fallback.mkdir(parents=True, exist_ok=True)
-            except OSError:
-                logging.warning(
-                    "Failed to create JAX cache dir %s and fallback %s; compilation cache disabled.",
-                    cache_dir_path,
-                    fallback,
-                )
-                cache_dir_path = None
-            else:
-                logging.warning(
-                    "Failed to create JAX cache dir %s (%s); falling back to %s.",
-                    cache_dir_path,
-                    exc,
-                    fallback,
-                )
-                cache_dir_path = fallback
-        if cache_dir_path is not None:
-            jax.config.update("jax_compilation_cache_dir", str(cache_dir_path))
     model_runner = ModelRunner(
         config=make_model_config(
             flash_attention_implementation=typing.cast(

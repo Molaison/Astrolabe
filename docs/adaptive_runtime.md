@@ -60,6 +60,58 @@ mutator adapters. It uses their actual registered families and aliases; new
 model families mentioned in the architecture proposal require their own
 adapter and qualification.
 
+## AF3 compilation buckets and persistent cache
+
+With `evaluator.alphafold3.buckets: null`, the default `bucket_size: 40`
+rounds the native token count up to a multiple of 40. Before rounding, it
+prefers 256, 512 or 1024 when the count is within the inclusive interval
+`[N - bucket_pad_tolerance, N]`; the default tolerance is 40. Thus 215 → 240,
+216–256 → 256, 257 → 280, 472–512 → 512 and 984–1024 → 1024.
+There is no upper bucket-list limit. AF3 chooses after chemical tokenisation:
+ordinary proteins use total residues across all chains, and ligands add their
+native atom tokens. A request's immutable policy is independent of other
+requests. Ordinary native bucket lists and `None` retain native semantics.
+
+An explicit `buckets` list retains Astrolabe's previous nearby-bucket/exact
+policy and ignores `bucket_size`. To use that policy with the old default list,
+set `bucket_size: 0`; set `bucket_pad_tolerance: 50` as well to recover both
+previous defaults. Padding can change numerical results; this feature does
+not promise identical predictions between different padded shapes.
+
+The model-owning process configures JAX's persistent executable cache before
+device setup. The default directory is `JAX_COMPILATION_CACHE_DIR`, or
+`~/.cache/jax_cache`. Native container launches resolve this directory on the
+host, mount it read/write and pass the absolute path into the container, even
+when its `HOME` is `/tmp`. For a custom host directory, use:
+
+```bash
+export JAX_COMPILATION_CACHE_DIR=/absolute/persistent/af3-cache
+```
+
+An explicit YAML cache path overrides that default; as with other explicit
+container paths, it must be absolute and covered by the runtime profile's
+binds. Use the environment setting above when the launcher should create and
+mount it automatically. Local processes can still use relative or `~` paths.
+Unreadable/unwritable configured directories fail instead of silently falling
+back to `/tmp`. `jax_compilation_cache_dir: null` disables the disk cache
+independently of bucketing. JAX's process-wide cache handle is reset when its
+directory or enabled state changes; use one shared directory for model owners
+in the same process.
+
+Both native write thresholds are disabled (compile time 0, minimum entry size
+-1), so small compilations can be reused too. JAX retains its HLO, jaxlib,
+compile-option and device compatibility checks. Current weights, features and
+RNG are still runtime inputs; prediction outputs are not cached. Compatible
+bucket size alone does not guarantee a hit. Inspect JAX's
+`Persistent compilation cache hit` log for the model executable to establish
+reuse; tracing, model loading and inference still occur in a new process.
+See [JAX's cache contract](https://docs.jax.dev/en/latest/501/compilation-cache.html).
+
+The affected JAX 0.4.34 CUDA12/cuDNN runtime also needs the independently
+qualified PJRT serialization hotfix below. A persistent directory alone cannot
+repair that binary defect. Existing services retain the configuration with
+which they started; their clients do not reconfigure the owner's cache.
+
 ## Opt-in AF3 cache hotfix and native beam ownership
 
 Use the ordinary command with shared configuration and an already-valid

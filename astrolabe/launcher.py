@@ -116,7 +116,10 @@ def _input_mounts(argv, cwd):
     }
     for i, argument in enumerate(argv):
         key, equal, value = argument.partition("=")
-        if key not in path_options and key.lstrip("+") not in {"out_dir", "raw_model_results_dir"}:
+        if key not in path_options and key.lstrip("+") not in {
+            "out_dir", "raw_model_results_dir",
+            "evaluator.alphafold3.jax_compilation_cache_dir",
+        }:
             continue
         if not equal:
             if i + 1 >= len(argv):
@@ -167,6 +170,24 @@ def runtime_command(root, argv, profile, environment=None, cwd=None):
     values["ASTROLABE_RUNTIME_ACTIVE"] = "1"
     values["PYTHONPATH"] = container_root + (":" + values["PYTHONPATH"] if values.get("PYTHONPATH") else "")
     binds = [f"{root}:{container_root}:ro", *profile.get("binds", [])]
+    # --no-home / HOME=/tmp must not turn the default JAX cache into an
+    # ephemeral container path. Resolve and mount it on the host instead.
+    from astrolabe.af3_compilation import DEFAULT_CACHE_DIR
+
+    cache_directory = env.get(
+        "JAX_COMPILATION_CACHE_DIR",
+        values.get("JAX_COMPILATION_CACHE_DIR", DEFAULT_CACHE_DIR),
+    )
+    if cache_directory:
+        cache_path = Path(cache_directory).expanduser()
+        if not cache_path.is_absolute():
+            cache_path = cwd / cache_path
+        cache_path = cache_path.resolve()
+        cache_path.mkdir(mode=0o700, parents=True, exist_ok=True)
+        values["JAX_COMPILATION_CACHE_DIR"] = str(cache_path)
+        binds.append(f"{cache_path}:{cache_path}")
+    elif "JAX_COMPILATION_CACHE_DIR" in env:
+        values["JAX_COMPILATION_CACHE_DIR"] = ""
     binds.extend(f"{p}:{p}" for p in _input_mounts(argv, cwd))
     if env.get("GH_DALPHABALL"):
         binary = Path(os.path.expandvars(env["GH_DALPHABALL"])).expanduser()

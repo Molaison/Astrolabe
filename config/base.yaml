@@ -248,11 +248,14 @@ evaluator:
     run_inference: True
     # Prefer a persistent cache to reduce recompilation between runs.
     # NOTE: `~` must be quoted in YAML (otherwise it's parsed as null).
-    jax_compilation_cache_dir: "~/.cache/jax_cache"
-    # If padding to the next default bucket is small, use the default bucket list
-    # (enables higher cache reuse). Otherwise, use exact token length (no padding).
-    bucket_pad_tolerance: 50
-    # Optional override for bucket list (strictly increasing). Default is 256..5120.
+    jax_compilation_cache_dir: '${oc.env:JAX_COMPILATION_CACHE_DIR,"~/.cache/jax_cache"}'
+    # Select using the final native token count (total aa for ordinary proteins).
+    # Round up to a multiple of 40; prefer N=256/512/1024 in [N-40, N].
+    # Set bucket_size=0 for the legacy nearby-bucket/exact-length policy.
+    bucket_size: 40
+    bucket_pad_tolerance: 40
+    # Explicit lists retain the legacy nearby/exact policy, ignoring bucket_size.
+    # Leave null for the new 40-token grid with preferred 256/512/1024 sizes.
     buckets: null
     # Optional RefStructure featurisation acceleration knobs (protein-only mutants).
     # When set, these are applied via env vars consumed by the vendored AF3 code:

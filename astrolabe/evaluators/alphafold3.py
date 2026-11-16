@@ -58,15 +58,20 @@ class AlphaFold3Evaluator(Evaluator):
         self.af3_conf = af3_conf
         self._pre_eval_hook_reports = {}
         self._af3_antibody_msa_cache = None
-        self._bucket_pad_tolerance = 50
+        from astrolabe.af3_buckets import PREFERRED_BUCKETS
+
+        self._bucket_size = 40
+        self._bucket_anchors = PREFERRED_BUCKETS
+        self._bucket_pad_tolerance = 40
         self._default_buckets: Sequence[int] = BUCKETS
         if af3_conf is not None:
             try:
                 self._bucket_pad_tolerance = int(
-                    getattr(af3_conf, "bucket_pad_tolerance", 50) or 50
+                    getattr(af3_conf, "bucket_pad_tolerance", 40)
                 )
             except Exception:
-                self._bucket_pad_tolerance = 50
+                self._bucket_pad_tolerance = 40
+            self._bucket_size = int(getattr(af3_conf, "bucket_size", 40))
             try:
                 override_buckets = getattr(af3_conf, "buckets", None)
             except Exception:
@@ -85,6 +90,8 @@ class AlphaFold3Evaluator(Evaluator):
                     )
                 else:
                     self._default_buckets = buckets
+                    # Existing explicit lists retain the nearby/exact policy.
+                    self._bucket_size = 0
         self.buckets = {}
         self.output_dir = output_dir
         self.save_all_samples = (
@@ -373,6 +380,15 @@ class AlphaFold3Evaluator(Evaluator):
         buckets_by_oligo = {}
         for oligo in inputs.keys():
             num_tokens = num_tokens_by_oligo.get(oligo)
+            if self._bucket_size:
+                from astrolabe.af3_buckets import TokenBuckets
+
+                buckets_by_oligo[oligo] = TokenBuckets(
+                    width=self._bucket_size,
+                    preferred=self._bucket_anchors,
+                    tolerance=self._bucket_pad_tolerance,
+                )
+                continue
             use_defaults = self._should_use_default_buckets(num_tokens)
             buckets_by_oligo[oligo] = self._default_buckets if use_defaults else None
             logging.debug(
@@ -668,6 +684,10 @@ class AlphaFold3Evaluator(Evaluator):
             )
             kwargs["init_guess_positions"] = init_guess_positions
         query_residue_index_jumps = tuple(kwargs.pop("query_residue_index_jumps", ()) or ())
+        from astrolabe.af3_buckets import TokenBuckets, install_bucket_dispatch
+
+        if isinstance(buckets, TokenBuckets):
+            install_bucket_dispatch(featurisation.pipeline)
         with featurisation_environment(featurisation_config), allow_all_x_protein_chains_during_featurisation(fold_input):
             featurised_examples = featurisation.featurise_input(
                 fold_input=fold_input, buckets=buckets, ccd=ccd, verbose=True, **kwargs

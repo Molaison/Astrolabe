@@ -133,7 +133,7 @@ def _validate_common_options(family, kind, cfg, root, *, allow_unresolved=False)
             for field in ('num_samples', 'num_seeds'):
                 numeric(field, 1)
             for field in ('num_recycles', 'refstructure_workers', 'refstructure_cache_max_entries',
-                          'msa_cache_max_entries', 'bucket_pad_tolerance'):
+                          'msa_cache_max_entries', 'bucket_pad_tolerance', 'bucket_size'):
                 numeric(field)
             for field in ('refstructure_cache', 'msa_cache'):
                 boolean(field, binary=True)
