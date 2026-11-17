@@ -12,7 +12,6 @@ from collections import Counter
 from functools import lru_cache
 
 import numpy as np
-from scipy.spatial import cKDTree
 
 
 @lru_cache(maxsize=1)
@@ -88,6 +87,8 @@ def _surface_calculator(pose, native=False):
 
 
 def _trim(dots):
+    from scipy.spatial import cKDTree
+
     if not len(dots):
         raise RuntimeError("No molecular surface dots were generated")
     coordinates, directions, flags = [], [], []
@@ -122,6 +123,8 @@ def _trim(dots):
 
 
 def _median_shape(coords, normals, other_coords, other_normals):
+    from scipy.spatial import cKDTree
+
     tree = cKDTree(other_coords)
     distances, nearest = tree.query(coords, k=2)
     selected = nearest[:, 0].copy()

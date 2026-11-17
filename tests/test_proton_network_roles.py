@@ -6,7 +6,7 @@ import numpy as np
 import pytest
 
 from astrolabe.core import global_config
-from astrolabe.core.protomer_config_parser import ProtomerTypes
+from astrolabe.core.protomer_config_parser import Protomer, SegmentManager
 from astrolabe.mutators import proton_network_geometry as geometry
 from astrolabe.mutators import proton_pottsmpnn as adapter
 
@@ -18,21 +18,21 @@ def _pair(i, j, aa_j="LYS", quality=1.0):
 @pytest.fixture
 def producer(monkeypatch):
     global_config.reset()
-    proto = SimpleNamespace(
-        name="P1", sequence="AAAA", type=ProtomerTypes.PROTEIN,
-        mutable_mask=np.array([True, True, True, False]),
-        tied_positions=[], ptm_dict={}, components=["S1"],
-        components_slices=[slice(0, 4)],
-    )
+    manager = SegmentManager()
+    global_config.init_const("segments", {})
+    global_config.init_const("segment_manager", manager)
+    global_config.init_const("named_files", {})
+    proto = Protomer("P1", "AAA +A", "p")
     queued = []
+    add = manager.add_mutations
 
     def add_mutations(records, count):
         assert count == len(records)
+        add(records, count)
         queued.extend(records)
 
+    monkeypatch.setattr(manager, "add_mutations", add_mutations)
     global_config.init_const("protomers", {"P1": proto})
-    global_config.init_const("segments", {"S1": SimpleNamespace(mutations=[])})
-    global_config.init_const("segment_manager", SimpleNamespace(add_mutations=add_mutations))
     global_config.init_const("exclude_AA", [])
     mutator = adapter.ProtonPottsMPNNMutator(
         sequence_model_runner=SimpleNamespace(close=lambda: None), network_only=True,
@@ -45,8 +45,15 @@ def producer(monkeypatch):
         global_config.reset()
 
 
+def _set_sequence(proto, sequence):
+    for name, span in zip(proto.components, proto.components_slices):
+        segment = global_config.segments[name]
+        segment.sequence = sequence[span]
+        segment.clear_mutations()
+
+
 def _emit(mutator, proto, current, designed, preferences, runtime):
-    proto.sequence = current
+    _set_sequence(proto, current)
     tokens = {"A": "ALA", "H": "HIS-S", "K": "LYS", "R": "ARG"}
     output = {("P1",): {
         "feature_dict": dict(
@@ -100,7 +107,7 @@ def test_next_prepare_clears_roles_before_selection_without_permanent_locks(prod
     _emit(mutator, proto, "AKAA", "HKAA", [_pair(0, 1)], runtime)
     assert runtime["network_pair_roles"] == {"P1": {0: "H", 1: "K"}}
     queued.clear()  # Simulate accepting the previous proposal, then starting a new step.
-    proto.sequence = "HKAA"
+    _set_sequence(proto, "HKAA")
     criteria_before = dict(mutator.criteria)
 
     def select(*args, **kwargs):

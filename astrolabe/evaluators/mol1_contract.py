@@ -137,6 +137,10 @@ def checkpoint_paths(settings, *, model_name=None, allow_unresolved=False):
 
 def local_assets(settings, *, model_name=None):
     """Enumerate config-wide or selected native assets, without imports/downloads."""
+    for key in ("repo_path", "mol_root_dir"):
+        value = settings.get(key)
+        if not isinstance(value, (str, os.PathLike)) or not str(value).strip():
+            raise ValueError(f"Mol-1 requires {key} for local asset verification")
     source = Path(settings["repo_path"]).expanduser().resolve(strict=True)
     for name in ("mol/__init__.py", "mol/constraint/inference.py", "mol/constraint/model.py",
                  "mol/constraint/checkpoint.py", "mol/constraint/schema.py", "mol/runner/batch_inference.py"):

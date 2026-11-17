@@ -51,9 +51,11 @@ class Astrolabe:
     def run(self) -> RunResult | None:
         """Run a direct design composition or the configured repeat lifecycle."""
         from astrolabe.startup_validation import startup_validation_scope
+        from astrolabe.profiling.integration import configured_profile
 
         with startup_validation_scope(self.config, require_inputs=True):
-            return self._run_validated()
+            with configured_profile(self.config):
+                return self._run_validated()
 
     def _run_validated(self) -> RunResult | None:
         os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")

@@ -14,6 +14,8 @@ import threading
 import time
 from typing import Any, Callable, Mapping, Sequence
 
+from astrolabe.profiling import event as profile_event, span
+
 
 @dataclass(frozen=True)
 class Stage:
@@ -67,7 +69,8 @@ class PipelineExecutor:
                 raise KeyError(stage.executor)
         if finalize is not None and finalizer_executor not in self.executors:
             raise KeyError(finalizer_executor)
-        self._slots.acquire()
+        with span("pipeline.admission_wait"):
+            self._slots.acquire()
         with self._condition:
             if self._closed:
                 self._slots.release()
@@ -85,6 +88,8 @@ class PipelineExecutor:
         result.add_done_callback(release)
 
         def emit(event, stage, **fields):
+            profile_event("pipeline." + event, identity=identity, stage=stage.name,
+                          executor=stage.executor, **fields)
             if self.on_event is not None:
                 try:
                     self.on_event(dict(event=event, ts=time.time(), identity=identity,
@@ -129,7 +134,8 @@ class PipelineExecutor:
             def run():
                 emit('stage_start', stage)
                 try:
-                    output = stage.run(value)
+                    with span("pipeline.stage_host", stage=stage.name, executor=stage.executor):
+                        output = stage.run(value)
                 except BaseException:
                     emit('stage_return', stage, ok=False)
                     raise
@@ -149,6 +155,7 @@ class PipelineExecutor:
                             # an externally retained Future does not retain VRAM.
                             pending = held.pop()
                             try:
+                                # Completion is already signalled; do not add a device sync.
                                 completion.result()
                             except BaseException as error:
                                 emit('stage_end', stage, ok=False)
@@ -179,7 +186,8 @@ class PipelineExecutor:
         """Stop admission and drain every accepted request, including finalizers."""
         with self._condition:
             self._closed = True
-            self._condition.wait_for(lambda: self._active == 0)
+            with span("pipeline.drain_wait"):
+                self._condition.wait_for(lambda: self._active == 0)
         self._waiters.shutdown(wait=True)
 
     def __enter__(self):

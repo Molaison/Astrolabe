@@ -1086,3 +1086,24 @@ def test_esm3_daemon_keeps_tokenizer_in_parent_and_serializes_prompt(
         assert second["second"]["name"] == "second"
     finally:
         mutator.shutdown()
+
+
+@pytest.mark.parametrize("kind,expected", [("local", False), ("borrowed_remote", False),
+                                           ("direct_remote", False), ("remote", True)])
+def test_cooperative_sequence_transport_excludes_main_thread_owners(kind, expected):
+    """Review P2: even a borrowed remote socket is not transport-thread safe."""
+    from astrolabe.model_daemon import LocalModelOwner, OwnedModelDaemon
+    from astrolabe.runtime.model_pool import BorrowedOwner
+
+    remote = object.__new__(OwnedModelDaemon)
+    remote._socket_path = Path("/not-contacted.sock")
+    if kind == "local":
+        owner = object.__new__(LocalModelOwner)
+    elif kind == "borrowed_remote":
+        owner = object.__new__(BorrowedOwner)
+        owner._entry = SimpleNamespace(owner=remote)
+    else:
+        owner = remote
+    runner = object.__new__(NativeSequenceRunner)
+    runner.client = SimpleNamespace(owner=owner, direct_payload=kind == "direct_remote")
+    assert runner.supports_cooperative_transport is expected

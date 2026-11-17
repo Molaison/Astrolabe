@@ -103,6 +103,8 @@ mutator:
     startup_timeout: 600
     request_timeout: null
     output_dir: null
+  VDMPair:
+    library_path: ${oc.env:GH_VDM_PAIR_LIBRARY,null}
   ProtonPottsMPNN:
     python_bin: ${subprocess_envs.proton_pottsmpnn.python_bin}
     repo_path: ${subprocess_envs.proton_pottsmpnn.repo_path}

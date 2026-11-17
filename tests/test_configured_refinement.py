@@ -1118,6 +1118,52 @@ def test_proposal_cap_is_explicit_and_defaults_to_one_fewer_evaluation(tmp_path)
         _search_settings(cfg)
 
 
+@pytest.mark.parametrize("generation_limit", [0, 2])
+def test_configured_generation_limit_stops_before_new_proposal(tmp_path, monkeypatch, generation_limit):
+    raw = _base_config(tmp_path)
+    raw["search"].update(max_generations=generation_limit, max_evaluations=20, proposal_cap=10)
+    probe = _Probe(tmp_path / "raw" / "models")
+    _install_probe(monkeypatch, probe)
+    repeat = RepeatRun(index=0, total=1, seed=71, output=tmp_path / "outputs")
+    summary = run_configured_refinement(_cfg(raw), repeat)
+    assert summary["search"]["stop_reason"] == "generation_limit"
+    assert summary["search"]["max_generations"] == generation_limit
+    assert summary["search"]["proposals"] == generation_limit
+    assert len(probe.evaluator_calls) == generation_limit + 1
+    assert max(row["generation"] for row in summary["evaluations"]) == generation_limit
+    saved = OmegaConf.load(Path(summary["out_dir"]) / "config.yaml")
+    assert saved.search.max_generations == generation_limit
+
+
+@pytest.mark.parametrize("duplicate", [False, True])
+def test_configured_proposal_cap_exports_without_replaying_models(tmp_path, monkeypatch, duplicate):
+    raw = _base_config(tmp_path)
+    raw["search"].update(max_evaluations=20, proposal_cap=2, proposals_per_parent=4)
+    probe = _Probe(tmp_path / "raw" / "models")
+    _install_probe(monkeypatch, probe)
+    if duplicate:
+        monkeypatch.setattr(run, "execute_mutation_step_continuation", lambda *args, **kwargs: iter(()))
+    repeat = RepeatRun(index=0, total=1, seed=71, output=tmp_path / "outputs")
+    summary = run_configured_refinement(_cfg(raw), repeat)
+    assert summary["search"]["stop_reason"] == "proposal_cap"
+    assert summary["search"]["proposals"] == 2
+    # Both proposals branch from the same parent. The fake mutator generates
+    # the same child twice; only the first distinct genotype is evaluated.
+    assert len(probe.evaluator_calls) == (1 if duplicate else 2)
+    assert summary["search"]["duplicates"] == (2 if duplicate else 1)
+    output = Path(summary["out_dir"])
+    assert (output / "03_final_beam.json").is_file()
+    assert json.loads((output / "provenance.json").read_text())["state"] == "completed"
+
+
+@pytest.mark.parametrize("invalid", [-1, True, 1.5, "12"])
+def test_configured_generation_limit_rejects_invalid_before_models(tmp_path, invalid):
+    raw = _base_config(tmp_path)
+    raw["search"]["max_generations"] = invalid
+    with pytest.raises(ValueError, match="max_generations.*non-negative"):
+        _search_settings(_cfg(raw))
+
+
 def test_isolated_beam_settings_use_generation_batch_and_bounded_workers(tmp_path):
     raw = _base_config(tmp_path)
     raw["search"].update(

@@ -1,0 +1,49 @@
+# CPU-only demonstration: sequence composition, not structural prediction.
+defaults:
+  - base
+  - override env: env
+  - _self_
+
+task_name: profiling_cpu
+out_dir: outputs
+seed: 17
+repeats: 1
+steps: 3
+seqs:
+  A: ACDEFGHIKLMNPQRSTVWY
+types:
+  A: protein
+initializer:
+  mode: random
+skip_complex_poses: true
+enable_pyrosetta: false
+obabel_path: null
+ananas_path: null
+dssp_path: null
+usalign_path: null
+evaluator:
+  evaluator_terms:
+    sequence:
+      _type: sequence
+mutator:
+  mutator_terms:
+    MCMC:
+      _type: MCMC
+loss:
+  loss_terms:
+    fraction:
+      _type: sequence_residue_fraction
+      included_protomers: A
+      residues: A,G
+stages:
+  default:
+    evaluator: sequence
+    oligo: [A]
+    mutators: [MCMC]
+    mutation_num: 1
+    weighted_score_expression: fraction
+    acceptance_threshold: null
+    early_stopping: null
+profiling:
+  enabled: true
+  gpu: false

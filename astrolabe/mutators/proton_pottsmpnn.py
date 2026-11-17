@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import logging
 import json
 from collections.abc import Mapping
@@ -518,6 +519,7 @@ class ProtonPottsMPNNMutator(Mutator):
     """Joint Potts redsigner from christian-creator/ProtonPottsMPNN."""
 
     name = "ProtonPottsMPNN"
+    requires_pre_update_stack = True
     capabilities = MutatorCapabilities(
         supported_types=PROTEIN_ONLY,
         needs_structure=True,
@@ -617,9 +619,51 @@ class ProtonPottsMPNNMutator(Mutator):
             for oligo_name in evaluation_scores.names
             if oligo_name not in excluded_complexes
         ]
-        if active_oligos and active_oligos != list(evaluation_scores.names):
+        if active_oligos != list(evaluation_scores.names):
             return evaluation_scores.filter_by_oligomer(active_oligos)
         return evaluation_scores
+
+    def _validate_segment_manager(self, protomers):
+        manager = global_config.segment_manager
+        for segment in global_config.segments.values():
+            if manager.unique_segments.get(id(segment)) is not segment:
+                raise ValueError("Proton-PottsMPNN segment_manager identity mismatch.")
+        for protomer in protomers.values():
+            for name in protomer.components:
+                if manager.segments.get(name) is not global_config.segments[name]:
+                    raise ValueError("Proton-PottsMPNN segment_manager identity mismatch.")
+        if any(segment.pending_sequence is not None for segment in manager.unique_segments.values()):
+            raise ValueError("Proton-PottsMPNN cannot consume a pending_sequence proposal.")
+        return manager
+
+    def _validate_input_contract(self, protomers, prepared=None):
+        manager = self._validate_segment_manager(protomers)
+        if any(segment.mutations for segment in manager.unique_segments.values()):
+            raise ValueError("Proton-PottsMPNN requires an empty physical mutation queue.")
+        for name, features in (prepared or {}).items():
+            binder = features["binder_protomer"]
+            if str(protomers[binder].sequence) != features["binder_sequence"]:
+                raise ValueError("Proton-PottsMPNN binder changed after preparation.")
+            for index, proto in enumerate(name):
+                chain = int_id_to_str_id(index + 1)
+                expected = features.get("chain_sequences", {}).get(chain)
+                if expected is not None and str(protomers[proto].sequence) != expected:
+                    raise ValueError("Proton-PottsMPNN context changed after preparation.")
+            if "max_mutations" in features and features["max_mutations"] != self._mutation_budget():
+                raise ValueError("Proton-PottsMPNN mutation budget changed after preparation.")
+
+    def _validate_output_contract(self, protomers, mutation_output):
+        for name, output in mutation_output.items():
+            features = output["feature_dict"]
+            designed = output["selected"]["canonical_sequence"]
+            if str(protomers[features["binder_protomer"]].mutated_sequence) != designed:
+                raise ValueError("Proton-PottsMPNN physical queue differs from the full selected genotype.")
+            for index, proto in enumerate(name):
+                chain = int_id_to_str_id(index + 1)
+                expected = (designed if chain == features["binder_chain"]
+                            else features.get("chain_sequences", {}).get(chain))
+                if expected is not None and str(protomers[proto].mutated_sequence) != expected:
+                    raise ValueError("Proton-PottsMPNN physical queue changed the selected complex.")
 
     def prepare_mutation_input(
         self,
@@ -630,6 +674,11 @@ class ProtonPottsMPNNMutator(Mutator):
         # This reservation belongs to one proposal step, never a permanent His lock.
         if runtime_config is not None:
             runtime_config.pop("network_pair_roles", None)
+        from astrolabe.mutators.wrappers.proton_pottsmpnn_runner import (
+            proton_request_seed_features,
+        )
+
+        seed_features = proton_request_seed_features(runtime_config)
         active_scores = self._active_scores(evaluation_scores, runtime_config)
         active_names = list(active_scores.names)
         if len(active_names) != 1:
@@ -639,6 +688,7 @@ class ProtonPottsMPNNMutator(Mutator):
                 f"({active_names!r}). Multiple active contexts would each require "
                 "the full GH budget and are not a supported joint model."
             )
+        self._validate_input_contract(protomers)
         excluded_positions = prepare_exclude_sites(
             self.position_selector,
             active_scores,
@@ -723,6 +773,26 @@ class ProtonPottsMPNNMutator(Mutator):
                     )
                 owner_by_mutable_segment[segment_name] = oligo_label
             binder_sequence = str(binder_proto.sequence).upper()
+            chain_sequences = {chain: str(protomers[proto].sequence).upper()
+                               for chain, proto in chain_protos}
+            structure_chain_sequences = None
+            runtime = runtime_config or {}
+            source_sequences = runtime.get("mutator_stack_source_sequences")
+            if runtime.get("mutator_stack_pre_update", False) and source_sequences is not None:
+                from astrolabe.mutators.wrappers.proton_pottsmpnn_daemon import _validate_structure_seed
+                if not isinstance(source_sequences, Mapping) or any(
+                    proto not in source_sequences for _, proto in chain_protos
+                ):
+                    raise ValueError("Proton-PottsMPNN pre-update source sequences must include every active protomer.")
+                structure_chain_sequences = {chain: str(source_sequences[proto]).upper()
+                                             for chain, proto in chain_protos}
+                _validate_structure_seed(binder_sequence, binder_chain, chain_sequences,
+                                         structure_chain_sequences, self.criteria)
+                if self.network_proposal.enabled and structure_chain_sequences[binder_chain] != binder_sequence:
+                    raise ValueError("Proton-PottsMPNN network_proposal geometry does not support "
+                                     "different source and working binder sequences.")
+            structure_binder_sequence = (binder_sequence if structure_chain_sequences is None
+                                         else structure_chain_sequences[binder_chain])
             excluded_tokens = tokens_for_excluded_aas(global_config.exclude_AA)
             excluded_aas = {
                 TOKEN_TO_CANONICAL_AA[token]
@@ -768,12 +838,14 @@ class ProtonPottsMPNNMutator(Mutator):
                 pose = _load_pose(pdb_path)
                 indices = [i for i in range(1, pose.total_residue() + 1)
                            if pose.pdb_info().chain(i) == binder_chain]
-                if "".join(pose.residue(i).name1() for i in indices) != binder_sequence:
-                    raise ValueError("Protected-residue pose sequence does not match the binder.")
+                if "".join(pose.residue(i).name1() for i in indices) != structure_binder_sequence:
+                    raise ValueError("Protected-residue pose sequence does not match the source binder.")
                 for position, index in enumerate(indices):
                     residue = pose.residue(index)
                     if ((self.preserve_disulfides and residue.type().is_disulfide_bonded())
                             or (self.protect_gly_pro and residue.name1() in {"G", "P"})):
+                        if binder_sequence[position] != structure_binder_sequence[position]:
+                            raise ValueError("Proton-PottsMPNN staged seed changes a source-structure protected residue.")
                         binder_mask[position] = False
                 fixed_positions = sorted(int(p) for p in np.where(~binder_mask)[0].tolist())
             if self.max_total_mutations is not None:
@@ -797,19 +869,20 @@ class ProtonPottsMPNNMutator(Mutator):
                 "binder_chain": binder_chain,
                 "binder_protomer": binder_proto_name,
                 "binder_sequence": binder_sequence,
-                "chain_sequences": {
-                    chain: str(protomers[proto].sequence).upper()
-                    for chain, proto in chain_protos
-                },
+                "chain_sequences": chain_sequences,
+                **({"structure_chain_sequences": structure_chain_sequences}
+                   if structure_chain_sequences is not None else {}),
                 "fixed_positions": fixed_positions,
                 "criteria": criteria,
                 "max_mutations": budget,
                 "pin_budget": pin_budget,
                 "n_jobs": self.n_jobs,
+                **seed_features,
             }
         return prepared
 
     def compute_mutation(self, mutation_input_features: Dict[str, Any]):
+        self._validate_input_contract(global_config.protomers, mutation_input_features)
         mutation_output: dict[str, dict[str, Any]] = {}
         for oligo_name, input_feat in mutation_input_features.items():
             output = self.runner.design_sequences(**input_feat)
@@ -826,7 +899,7 @@ class ProtonPottsMPNNMutator(Mutator):
         ] = []
         pending_telemetry: dict[str, dict[str, Any]] = {}
         network_pair_roles: dict[str, dict[int, str]] = {}
-        claimed_sites: set[tuple[str, int]] = set()
+        claimed_sites: set[tuple[int, int]] = set()
         for oligo_name, output in (mutation_output or {}).items():
             features = output["feature_dict"]
             selected = output["selected"]
@@ -875,7 +948,7 @@ class ProtonPottsMPNNMutator(Mutator):
             for position, from_aa, to_aa in edits:
                 segment_name, segment_site = _segment_site(protomer, position)
                 segment = global_config.segments[segment_name]
-                site_key = (segment_name, segment_site)
+                site_key = (id(segment), segment_site)
                 if site_key in claimed_sites:
                     raise ValueError(
                         f"Proton-PottsMPNN[{oligo_name}] duplicate proposed site "
@@ -922,14 +995,34 @@ class ProtonPottsMPNNMutator(Mutator):
                 "designs_considered": output.get("designs_considered"),
                 "raw_output_path": output.get("raw_output_path"),
                 "seed_energies": output.get("seed_energies"),
+                "seed": output.get("seed"),
+                "seed_provenance": output.get("seed_provenance"),
                 "declared_network_pair_roles": network_pair_roles.get(binder_proto_name, {}),
                 "pair_identity_source": "deterministic supported canonical match; not an engine pair-id claim",
             }
 
-        if pending_mutations:
-            global_config.segment_manager.add_mutations(
-                pending_mutations, len(pending_mutations)
-            )
+        self._validate_input_contract(protomers, {
+            name: output["feature_dict"] for name, output in (mutation_output or {}).items()
+        })
+        manager = global_config.segment_manager
+        snapshots = {key: (segment, copy.deepcopy(segment.mutations), segment.pending_sequence)
+                     for key, segment in manager.unique_segments.items()}
+        expected = {key: list(mutations or []) for key, (_, mutations, _) in snapshots.items()}
+        for name, mutation in pending_mutations:
+            expected[id(global_config.segments[name])].append(mutation)
+        try:
+            if pending_mutations:
+                manager.add_mutations(pending_mutations, len(pending_mutations))
+            for key, (segment, _, pending_sequence) in snapshots.items():
+                if (list(segment.mutations or []) != expected[key]
+                        or segment.pending_sequence != pending_sequence):
+                    raise ValueError("Proton-PottsMPNN manager did not retain the complete joint queue.")
+            self._validate_output_contract(protomers, mutation_output or {})
+        except BaseException:
+            for segment, mutations, pending_sequence in snapshots.values():
+                segment.mutations = mutations
+                segment.pending_sequence = pending_sequence
+            raise
         self.last_mutation_telemetry["oligos"] = pending_telemetry
         self.last_mutation_telemetry["network_pair_roles"] = network_pair_roles
         if runtime_config is not None:

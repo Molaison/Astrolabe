@@ -502,7 +502,12 @@ class ResourceBroker:
         if self._closed:
             raise BrokerClosed("broker closed")
         if self.log.error or self._sample_error or self._fence_error or self._ram_observation_error or time.monotonic() - self._sample_at > self.max_age:
-            raise AdmissionError("telemetry unavailable; admission closed")
+            detail = (self.log.error or self._sample_error_detail or self._sample_error
+                      or self._fence_error or self._ram_observation_error
+                      or "sample exceeded maximum age")
+            error = AdmissionError("telemetry unavailable; admission closed")
+            error.add_note(f"Admission telemetry detail: {detail}")
+            raise error
 
     def _admission_sample_ready(self):
         # Only sampler failure/staleness is waitable. Preserve fatal errors and

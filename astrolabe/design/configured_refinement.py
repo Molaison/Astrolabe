@@ -36,6 +36,7 @@ _SEARCH_KEYS = frozenset(
         "width",
         "proposals_per_parent",
         "max_evaluations",
+        "max_generations",
         "proposal_cap",
         "measurement",
         "resume",
@@ -51,6 +52,7 @@ _EXCLUDED_SCIENTIFIC_KEYS = frozenset(
     {
         "debug",
         "logging",
+        "profiling",
         "out_dir",
         "raw_model_results_dir",
         "repeat_index",
@@ -60,6 +62,7 @@ _EXCLUDED_SCIENTIFIC_KEYS = frozenset(
         "scheduling",
         "summary_format",
         "task_name",
+        "root_prediction_receipt",
     }
 )
 _ASSET_MANIFEST_SCHEMA = "astrolabe.configured-refinement.assets/v1"
@@ -124,6 +127,10 @@ class _SearchSettings:
     evaluation_width: int
     prediction_rng: str
     model_sharing: str
+    reuse_durable_closures: bool = False
+    async_mutator: bool = False
+    score_queue_size: int = 0
+    max_generations: int | None = None
 
 
 @dataclass(frozen=True)
@@ -239,6 +246,9 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         {"max_evaluations": search.get("max_evaluations", cfg.get("steps"))},
         "max_evaluations",
     )
+    max_generations = search.get("max_generations")
+    if max_generations is not None and (type(max_generations) is not int or max_generations < 0):
+        raise ValueError("cfg.search.max_generations must be null or a non-negative integer")
     raw_proposal_cap = search.get("proposal_cap")
     proposal_cap = (
         max(1, max_evaluations - 1)
@@ -250,7 +260,8 @@ def _search_settings(cfg: Any) -> _SearchSettings:
     execution = search.get("execution", {})
     if not isinstance(execution, Mapping):
         raise ValueError("search.execution must be a mapping")
-    unknown_execution = set(execution) - {"mode", "workers", "in_flight", "model_sharing"}
+    unknown_execution = set(execution) - {"mode", "workers", "in_flight", "model_sharing",
+                                            "reuse_durable_closures", "async_mutator", "score_queue_size"}
     if unknown_execution:
         raise ValueError(f"Unsupported search.execution fields: {sorted(unknown_execution)}")
     mode = str(execution.get("mode", "serial"))
@@ -270,6 +281,14 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         raise ValueError("search.execution.model_sharing must be replicated or shared")
     if mode == "serial" and sharing != "replicated":
         raise ValueError("Model sharing applies to isolated evaluator workers")
+    for name in ("reuse_durable_closures", "async_mutator"):
+        if type(execution.get(name, False)) is not bool:
+            raise ValueError(f"search.execution.{name} must be a boolean")
+    score_queue_size = execution.get("score_queue_size", 0)
+    if type(score_queue_size) is not int or score_queue_size < 0:
+        raise ValueError("search.execution.score_queue_size must be a nonnegative integer")
+    if score_queue_size and (mode != "isolated" or sharing != "shared"):
+        raise ValueError("Separate Score capacity requires isolated shared-model execution")
     width = _positive_int({"width": search.get("width", 2)}, "width")
     per_parent = _positive_int(
         {"proposals_per_parent": search.get("proposals_per_parent", 2)},
@@ -301,6 +320,10 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         evaluation_width=in_flight,
         prediction_rng=prediction_rng,
         model_sharing=sharing,
+        reuse_durable_closures=execution.get("reuse_durable_closures", False),
+        async_mutator=execution.get("async_mutator", False),
+        score_queue_size=score_queue_size,
+        max_generations=max_generations,
     )
 
 
@@ -584,6 +607,20 @@ def _model_component_assets(
         files = (_hash_selected_file(role, data_dir / "params" / f"params_{model_name}.npz"),)
         return _AssetComponent(role, selected, "hashed"), files
 
+    checkpoint_location = {
+        "surfdesign": ("experiment_path", "checkpoints", "best.ckpt"),
+        "surfpro": ("checkpoint_dir", "", "checkpoint_best.pt"),
+    }.get(selected)
+    if checkpoint_location is not None:
+        directory_key, subdirectory, default_name = checkpoint_location
+        checkpoint = Path(str(_case_value(mapping, "checkpoint") or default_name)).expanduser()
+        if not checkpoint.is_absolute():
+            directory = _config_path(_case_value(mapping, directory_key))
+            if directory is None:
+                raise ValueError(f"{role} requires {directory_key} for a relative checkpoint")
+            checkpoint = directory / subdirectory / checkpoint
+        mapping = _merge_component_mapping(mapping, {"checkpoint": str(checkpoint)})
+
     files = _generic_selected_files(role, mapping)
     if files:
         return _AssetComponent(role, selected, "hashed"), files
@@ -700,6 +737,11 @@ def _selected_asset_manifest(cfg: Any) -> _SelectedAssetManifest:
     except (ImportError, TypeError, ValueError):
         objective_names = set()
     for name in sorted(objective_names):
+        if name in expression_terms and name not in loss_terms:
+            # Derived score expressions are strings, not component mappings.
+            # Their exact formulas are already bound by the canonical config.
+            components.append(_AssetComponent(f"objective:{name}", "expression", "config_only"))
+            continue
         configured = loss_terms.get(name, expression_terms.get(name))
         if configured is None:
             continue
@@ -1187,6 +1229,7 @@ def _canonical_config(cfg: Any, repeat: RepeatRun, search: _SearchSettings) -> A
             "width": search.width,
             "proposals_per_parent": search.proposals_per_parent,
             "max_evaluations": search.max_evaluations,
+            "max_generations": search.max_generations,
             "proposal_cap": search.proposal_cap,
             "measurement": search.measurement,
             "summary_format": search.summary_format,
@@ -1197,6 +1240,9 @@ def _canonical_config(cfg: Any, repeat: RepeatRun, search: _SearchSettings) -> A
                 "mode": search.execution_mode,
                 "workers": search.workers,
                 "in_flight": search.evaluation_width,
+                "reuse_durable_closures": search.reuse_durable_closures,
+                "async_mutator": search.async_mutator,
+                "score_queue_size": search.score_queue_size,
                 "model_sharing": search.model_sharing,
             },
         }
@@ -1554,12 +1600,90 @@ def _write_json_atomic(path: Path, value: Any) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _prepare_root_prediction_import(args, search, selected_assets, candidate):
+    """Verify a raw-only root in a separate source epoch, before model loading.
+
+    Deliberately not resume/migration: only loss configuration and the stage's
+    derived score expression may differ. Candidate/System bind the initialized
+    sequence, assembly, templates/MSAs and fixed constraints by content.
+    """
+    from omegaconf import OmegaConf
+    from .refinement_worker import read_root_prediction, _blob
+    from .runtime import ContractConflict
+
+    value = args.get("root_prediction_receipt")
+    if value is None:
+        return None
+    if (search.resume or search.execution_mode != "isolated"
+            or search.prediction_rng != "fixed_request"
+            or int(args.get("repeats", 1)) != 1):
+        raise ContractConflict("root_prediction_receipt requires one fresh isolated fixed_request run")
+    path = Path(str(value)).expanduser().resolve(strict=True)
+    source_root = path.parents[2]
+    if Path(args.out_dir).resolve() == source_root:
+        raise ContractConflict("root prediction import must use a NEW run directory")
+    receipt, source_data, original = read_root_prediction(path)
+    saved_path = source_root / "config.yaml"
+    saved_bytes = saved_path.read_bytes()
+    provenance = json.loads((source_root / "provenance.json").read_text())
+    if hashlib.sha256(saved_bytes).hexdigest() != provenance["config"]["sha256"]:
+        raise ContractConflict("source persisted config differs from its provenance")
+    saved = OmegaConf.create(saved_bytes.decode())
+    saved_search = _search_settings(saved)
+    if saved_search.prediction_rng != "fixed_request" or saved_search.execution_mode != "isolated":
+        raise ContractConflict("source root has no fixed-request isolated prediction contract")
+    saved_assets = _read_asset_manifest(source_root / ".framework" / "assets.json")
+    old_science, new_science = _scientific_config_payload(saved), _scientific_config_payload(args)
+    old_protocol = key_for((
+        "astrolabe.configured-refinement.protocol/v3",
+        key_for(("astrolabe.configured-refinement.scientific/v1", old_science)),
+        _asset_manifest_identity(saved_assets),
+    ))
+    if receipt["scoring_identity"] != old_protocol.digest:
+        raise ContractConflict("source receipt is not bound to its saved config/assets")
+    for payload in (old_science, new_science):
+        payload.pop("loss", None)
+        # These broker-only controls cannot change a completed prediction.
+        # Device allocation, execution mode and all prediction controls remain
+        # exact; import never relaxes live resource admission.
+        for key in ("telemetry_path", "telemetry_recovery"):
+            payload.get("execution", {}).pop(key, None)
+        # A future generation stop cannot change an already completed root.
+        payload.get("search", {}).pop("max_generations", None)
+        for stage in payload.get("stages", {}).values():
+            stage.pop("weighted_score_expression", None)
+    if old_science != new_science:
+        raise ContractConflict("root import prediction/input configuration changed")
+    # Ignore mutator/objective qualification: neither produced this root.
+    def prediction_assets(manifest):
+        record = _asset_manifest_record(manifest)
+        components = [item for item in record["components"] if item["role"].startswith("evaluator:")]
+        if not components or any(item["state"] not in {"hashed", "weight_free"} for item in components):
+            raise ContractConflict("root import evaluator assets cannot be content-verified")
+        return (components, [item for item in record["files"] if item["role"].startswith("evaluator:")])
+    if prediction_assets(saved_assets) != prediction_assets(selected_assets):
+        raise ContractConflict("root import selected prediction asset contents changed")
+    source_candidate = source_data.get(_blob(receipt["candidate_blob"]), design_codec)
+    if (source_candidate != candidate or receipt["seed"] != int(args.seed)
+            or receipt["sequence"] != _candidate_label(candidate)):
+        raise ContractConflict("root import initialized Candidate/System/sequence/seed changed")
+    # Confirm the original raw structures cover precisely the selected assembly.
+    from .native_scores import NATIVE_SCORES_ENVELOPE_CODEC
+    envelope = source_data.get(_blob(receipt["raw_scores"]), NATIVE_SCORES_ENVELOPE_CODEC)
+    assemblies = tuple(args.stages.default.oligo)
+    if {item.assembly for item in envelope.structures} != set(assemblies):
+        raise ContractConflict("root import raw structures do not match the selected assemblies")
+    return {"path": str(path), "source_sha256": hashlib.sha256(original).hexdigest()}
+
+
 def run_configured_refinement(cfg: Any, repeat: RepeatRun) -> dict[str, Any]:
     """Run one refinement repeat under the shared scientific state owner."""
 
     if not isinstance(repeat, RepeatRun):
         raise TypeError("repeat must be a design.repeats.RepeatRun")
     search = _search_settings(cfg)
+    if cfg.get("root_prediction_receipt") is not None and (repeat.total != 1 or repeat.index != 0):
+        raise ValueError("root_prediction_receipt requires exactly one repeat")
     run_cfg = _canonical_config(cfg, repeat, search)
     _validate_resume_root(run_cfg, search, repeat)
     selected_assets = _selected_asset_manifest(run_cfg)
@@ -1667,6 +1791,7 @@ def _run_configured_refinement_locked(
                 _asset_manifest_record(selected_assets),
             )
         data = DataStore(runtime_root / "data")
+        data.reuse_durable_closures = search.reuse_durable_closures
         runtime = Runtime(
             root=runtime_root,
             data=data,
@@ -1763,6 +1888,9 @@ def _run_configured_refinement_locked(
         if translated_assembly_names != assemblies:
             raise ValueError("translated assemblies differ from selected stage assemblies")
         expected_assemblies = assemblies
+        root_prediction_import = _prepare_root_prediction_import(
+            args, search, selected_assets, initial_candidate,
+        )
 
         def score_context(step):
             name = f"configured-refinement/score-context/{step}"
@@ -1823,7 +1951,7 @@ def _run_configured_refinement_locked(
                 ) from None
             return _OwnedComponent(session.stage_manager.current_evaluator)
 
-        def propose(
+        def propose_continuation(
             mutators: _OwnedComponent,
             parent: Candidate,
             scores: Any,
@@ -1837,6 +1965,7 @@ def _run_configured_refinement_locked(
         ) -> NativeProposal:
             del parent, generation, parent_id, proposal_index, output
             set_random_seeds(seed)
+            runtime_config["proposal_seed"] = seed
             global_config.set_variable("step", int(step))
             try:
                 session = session_holder["session"]
@@ -1847,15 +1976,17 @@ def _run_configured_refinement_locked(
             # Spawned Score workers do not initialize Rosetta in this process,
             # and their poses are deliberately absent from the score receipt.
             # Rebuild the parent's private selector view without rescoring.
+            # skip_complex_poses suppresses eager score views, not the native
+            # runtime required by a mutator's lazy pose-backed selector.
+            if bool(getattr(args, "enable_pyrosetta", False)) and bool(getattr(args, "skip_complex_poses", False)):
+                run_module._init_pyrosetta_runtime(structure_files=scores.complex_paths)
             run_module._ensure_evaluation_complex_poses(
                 args, scores, session.loss_computer,
             )
             try:
-                run_module.execute_mutation_step(
-                    session.stage_manager.current_mutators,
-                    scores,
-                    runtime_config,
-                    int(step),
+                yield from run_module.execute_mutation_step_continuation(
+                    session.stage_manager.current_mutators, scores, runtime_config,
+                    int(step), cooperative=search.async_mutator,
                 )
             except BaseException as error:
                 try:
@@ -1883,6 +2014,13 @@ def _run_configured_refinement_locked(
                 data=data,
             ).candidate
             return NativeProposal(child, _candidate_label(child))
+
+        def propose(*args, **kwargs):
+            from .continuation import complete
+            return complete(propose_continuation(*args, **kwargs))
+
+        if search.async_mutator:
+            propose.continuation = propose_continuation
 
         def evaluate(
             evaluator: _OwnedComponent,
@@ -1949,12 +2087,16 @@ def _run_configured_refinement_locked(
             expansion="round_robin",
             proposal_batch_size=search.proposal_batch_size,
             evaluation_width=search.evaluation_width,
+            score_queue_size=search.score_queue_size,
             pipeline=search.execution_mode == "isolated",
             immediate_evaluation=(
                 search.execution_mode == "serial"
                 and search.proposal_batch_size == 1
             ),
-            cap_error=True,
+            # Attempts, including duplicates, consume the proposal budget.
+            # Exhausting that budget is a normal stop with a final beam.
+            max_generations=search.max_generations,
+            cap_error=False,
         )
 
         journal_path = output / "01_evaluations.jsonl"
@@ -1993,6 +2135,7 @@ def _run_configured_refinement_locked(
                             "width": search.width,
                             "proposals_per_parent": search.proposals_per_parent,
                             "max_evaluations": search.max_evaluations,
+                            "max_generations": search.max_generations,
                             "proposal_cap": search.proposal_cap,
                             "assemblies": assemblies,
                             "proposal_batch_size": search.proposal_batch_size,
@@ -2000,6 +2143,9 @@ def _run_configured_refinement_locked(
                                 "mode": search.execution_mode,
                                 "workers": search.workers,
                                 "in_flight": search.evaluation_width,
+                                "reuse_durable_closures": search.reuse_durable_closures,
+                                "async_mutator": search.async_mutator,
+                                "score_queue_size": search.score_queue_size,
                                 "model_sharing": search.model_sharing,
                                 "prediction_rng": (
                                     "fixed-request-seed/v1"
@@ -2041,8 +2187,12 @@ def _run_configured_refinement_locked(
                         workers=search.workers,
                         worker_output=output / ".prediction_workers",
                         model_sharing=search.model_sharing,
+                        score_queue_size=search.score_queue_size,
+                        prediction_width=search.evaluation_width,
+                        async_mutator=search.async_mutator,
                         loss_order=lambda: tuple(session_holder["session"].loss_computer.loss_specs),
                         score_context=score_context,
+                        root_prediction_import=root_prediction_import,
                     )
                 else:
                     result = run_native_refinement(
@@ -2097,12 +2247,16 @@ def _run_configured_refinement_locked(
                         "width": search.width,
                         "proposals_per_parent": search.proposals_per_parent,
                         "max_evaluations": search.max_evaluations,
+                        "max_generations": search.max_generations,
                         "proposal_cap": search.proposal_cap,
                         "proposal_batch_size": search.proposal_batch_size,
                         "execution": {
                             "mode": search.execution_mode,
                             "workers": search.workers,
                             "in_flight": search.evaluation_width,
+                            "reuse_durable_closures": search.reuse_durable_closures,
+                            "async_mutator": search.async_mutator,
+                            "score_queue_size": search.score_queue_size,
                             "prediction_rng": search.prediction_rng,
                             "model_sharing": search.model_sharing,
                         },

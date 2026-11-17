@@ -11,6 +11,7 @@ from astrolabe.core.chain_resolution import (
     chain_ids_for_oligo,
     resolve_selector_chain_ids,
 )
+from astrolabe.evaluators.confidence_sidecar import resolve_af3_confidence_path
 from astrolabe.losses.base import loss_registry
 from astrolabe.losses.utils import pae_residue_aggregation
 
@@ -402,18 +403,20 @@ def _maybe_get_global_config_value(name: str):
         return None
 
 
-def _load_af3_residue_level_pae_matrices(oligo_name: str) -> list[np.ndarray]:
+def _load_af3_residue_level_pae_matrices(
+    oligo_name: str, *, structure_path=None
+) -> list[np.ndarray]:
     raw_model_results_dir = _maybe_get_global_config_value("raw_model_results_dir")
-    if raw_model_results_dir is None:
-        return []
-
     step_value = _maybe_get_global_config_value("step")
     step_value = 0 if step_value is None else int(step_value)
     identifier = f"step_{step_value:03d}_{oligo_name}"
-    confidence_path = (
-        raw_model_results_dir / "alphafold3" / identifier / f"{identifier}_confidences.json"
+    confidence_path = resolve_af3_confidence_path(
+        structure_path,
+        raw_model_results_dir=raw_model_results_dir,
+        identifier=identifier,
+        oligo_name=oligo_name,
     )
-    if not confidence_path.exists():
+    if confidence_path is None:
         return []
 
     try:
@@ -448,7 +451,14 @@ def _resolve_residue_level_pae_matrices(eval_result, *, oligo_name: str) -> list
     mats = _stack_pae_matrices((pae_by_oligo or {}).get(oligo_name))
     if mats:
         return mats
-    return _load_af3_residue_level_pae_matrices(str(oligo_name))
+    complex_paths = (
+        eval_result.get("complex_paths", {})
+        if isinstance(eval_result, dict)
+        else getattr(eval_result, "complex_paths", {})
+    )
+    return _load_af3_residue_level_pae_matrices(
+        str(oligo_name), structure_path=(complex_paths or {}).get(oligo_name)
+    )
 
 
 def _to_numpy_float_array(value) -> np.ndarray:

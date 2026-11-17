@@ -336,10 +336,11 @@ def test_container_af3_cold_build_ignores_missing_inactive_rf3_and_hashes_assets
 
 
 def test_registered_families_stay_unloaded_and_reject_missing_required_assets(
-    tmp_path,
+    tmp_path, monkeypatch,
 ):
     from astrolabe.configuration import load_composed_config
 
+    monkeypatch.chdir(tmp_path)
     bindings = _minimal_bindings(tmp_path)
     import astrolabe.evaluators.utils  # noqa: F401
     import astrolabe.mutators.base  # noqa: F401
@@ -352,7 +353,7 @@ def test_registered_families_stay_unloaded_and_reject_missing_required_assets(
         "weights.bin", "af3.bin", "params/params_model_3_multimer_v3.npz",
         "global_label_membrane_mpnn_v_48_020.pt", "ligandmpnn_v_32_020_25.pt",
         "per_residue_label_membrane_mpnn_v_48_020.pt", "proteinmpnn_v_48_020.pt",
-        "solublempnn_v_48_020.pt", "best.ckpt", "checkpoint_best.pt",
+        "solublempnn_v_48_020.pt", "checkpoints/best.ckpt", ".hydra/config.yaml", "checkpoint_best.pt",
         "potts_v6_afdb_edge_his0.3_acid0.06/epoch-0125.ckpt",
         "params/carbondesign_default.ckpt",
         "config/config_model_mrf_pair_enable_esm_sc.json", "config/config_data_mrf2.json",

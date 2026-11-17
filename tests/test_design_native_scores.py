@@ -413,6 +413,8 @@ def test_round_trip_preserves_none_nesting_and_empty_mappings(tmp_path):
         complex_poses=None,
         score_contributions=None,
     )
+    # vdM residue-role maps use integer sites; "53" must remain distinct.
+    scores.configured_runtime_config = {"network_pair_roles": {"A": {53: "H", "53": "string-site"}}}
     data = DataStore()
     blob = snapshot_scores(scores, data)
     restored = restore_scores(blob, data, tmp_path / "empty")
@@ -429,6 +431,7 @@ def test_round_trip_preserves_none_nesting_and_empty_mappings(tmp_path):
     assert restored.chain_pair_scores is None
     assert restored.complex_poses is None
     assert restored.score_contributions is None
+    assert restored.configured_runtime_config == scores.configured_runtime_config
 
 
 def test_live_complex_poses_fail_explicitly(tmp_path):

@@ -138,9 +138,14 @@ class AlphaFold3Evaluator(Evaluator):
                 context["protomers"] = {key: copy.copy(value) for key, value in context["protomers"].items()}
             request._request_context = SimpleNamespace(**context)
             frozen_runtime_config = copy.deepcopy(runtime_config)
-            prepared_inputs = request.prepare_input(copy.deepcopy(inputs), frozen_runtime_config)
-            output = request.run_function(prepared_inputs)
-            scores = request.prepare_output(output, prepared_inputs, frozen_runtime_config)
+            from astrolabe.profiling import span
+
+            with span("evaluator.prepare_input", backend=type(self).__name__):
+                prepared_inputs = request.prepare_input(copy.deepcopy(inputs), frozen_runtime_config)
+            with span("evaluator.run_host", backend=type(self).__name__):
+                output = request.run_function(prepared_inputs)
+            with span("evaluator.prepare_output", backend=type(self).__name__):
+                scores = request.prepare_output(output, prepared_inputs, frozen_runtime_config)
             # Reuse the hook cache only after this request has finished. All
             # per-request kwargs, buckets, reports and inputs stay on its copy.
             self._af3_antibody_msa_cache = request._af3_antibody_msa_cache

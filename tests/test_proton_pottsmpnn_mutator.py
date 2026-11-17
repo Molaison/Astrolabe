@@ -9,13 +9,25 @@ import numpy as np
 import pytest
 
 from astrolabe.core import global_config
-from astrolabe.core.protomer_config_parser import ProtomerTypes
+from astrolabe.core.protomer_config_parser import ProtomerTypes, Segment, SegmentManager
 from astrolabe.mutators import proton_pottsmpnn as adapter
 from astrolabe.mutators.base import MutatorRegistry
 from astrolabe.mutators.registry import MutatorRegistry as Registry
 from astrolabe.mutators.wrappers import proton_pottsmpnn_daemon as daemon
 from astrolabe.mutators.wrappers.proton_pottsmpnn_runner import ProtonPottsMPNNRunner
 from astrolabe.runtime_requirements import task_requirements
+
+
+def _register_segments(protomers):
+    manager = SegmentManager()
+    segments = {}
+    for proto in protomers.values():
+        for name, span in zip(proto.components, proto.components_slices):
+            segments[name] = Segment(proto.sequence[span], ptm_dict={})
+            manager.add_segment(name, segments[name])
+    global_config.init_const("protomers", protomers)
+    global_config.init_const("segments", segments)
+    global_config.init_const("segment_manager", manager)
 
 
 def _executable(path: Path) -> Path:
@@ -471,6 +483,7 @@ def test_prepare_passes_excluded_c_and_keeps_fixed_c_undesignable(
     )
     global_config.reset()
     global_config.init_const("exclude_AA", ["C"])
+    _register_segments(protomers)
     global_config.set_variable("mutation_num", 8)
     try:
         prepared = mutator.prepare_mutation_input(protomers, scores, runtime_config=None)
@@ -534,6 +547,7 @@ def test_greedy_energy_block_rejects_existing_mutable_excluded_residue(
     )
     global_config.reset()
     global_config.init_const("exclude_AA", ["C"])
+    _register_segments({"P1": Proto()})
     global_config.set_variable("mutation_num", 8)
     try:
         with pytest.raises(ValueError, match="greedy_energy_block"):

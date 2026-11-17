@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import atexit
+import hashlib
 import json
 import logging
 import math
@@ -50,6 +51,94 @@ def _register_runtime_owner(runner) -> None:
             raise RuntimeError("Shared Proton runner already belongs to another resource owner")
         owner.add(runner, "proton_pottsmpnn")
         runner._runtime_owner = owner
+
+
+def _proposal_seed(value: Any) -> int:
+    # Match the daemon's NumPy seed range; do not silently coerce floats/bools.
+    if isinstance(value, bool):
+        raise ValueError("Proton proposal_seed must be a uint32 integer.")
+    try:
+        seed = operator.index(value)
+    except TypeError as exc:
+        raise ValueError("Proton proposal_seed must be a uint32 integer.") from exc
+    if not 0 <= seed < 2**32:
+        raise ValueError("Proton proposal_seed must be a uint32 integer.")
+    return seed
+
+
+def _request_identity(value: Any) -> str:
+    if not isinstance(value, (str, Mapping)) or not value:
+        raise ValueError("Proton branch_request_identity must be a nonempty string or JSON mapping.")
+
+    def check(item):
+        if isinstance(item, Mapping):
+            if any(not isinstance(key, str) for key in item):
+                raise ValueError("Proton branch_request_identity requires string JSON keys.")
+            return {key: check(child) for key, child in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [check(child) for child in item]
+        if item is None or isinstance(item, (str, int, float, bool)):
+            return item
+        raise ValueError("Proton branch_request_identity must contain only JSON values.")
+
+    try:
+        return json.dumps(check(value), sort_keys=True, separators=(",", ":"),
+                          ensure_ascii=True, allow_nan=False)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Proton branch_request_identity must be finite canonical JSON.") from exc
+
+
+def proton_request_seed_features(runtime_config) -> dict[str, Any]:
+    """Forward explicit, replayable seed inputs without storing branch state.
+
+    Native owners must persist proposal_seed (request.sample.seed) or a stable
+    branch_request_identity in their runtime-config blob before invocation.
+    Missing fields deliberately preserve revision39's sequential seed policy.
+    """
+    features = {}
+    if runtime_config is None:
+        return features
+    if "proposal_seed" in runtime_config:
+        features["proposal_seed"] = _proposal_seed(runtime_config["proposal_seed"])
+    if "branch_request_identity" in runtime_config:
+        identity = runtime_config["branch_request_identity"]
+        _request_identity(identity)
+        # Freeze caller-owned mappings before they can change between phases.
+        features["branch_request_identity"] = json.loads(_request_identity(identity))
+    return features
+
+
+def configure_proton_proposal_seed(mutator, runtime_config, *, request, **kwargs):
+    """Composable NativeOperationHooks.configure adapter; does not set budgets.
+
+    The beam/stack owner calls this within its configure hook. It must not drop
+    the returned fields when it then calls the producer and consumer.
+    """
+    config = dict(runtime_config)
+    seed = _proposal_seed(request.sample.seed)
+    if "proposal_seed" in config and _proposal_seed(config["proposal_seed"]) != seed:
+        raise ValueError("Proton runtime proposal_seed differs from native request.sample.seed.")
+    config["proposal_seed"] = seed
+    proton_request_seed_features(config)
+    return config
+
+
+def resolve_proton_request_seed(base_seed, request_index, features):
+    """Stable explicit seed, otherwise identity hash, otherwise legacy counter."""
+    explicit = proton_request_seed_features(features)
+    if "proposal_seed" in explicit:
+        return explicit["proposal_seed"], {"policy": "native_proposal_seed/v1",
+                                            **explicit}
+    if "branch_request_identity" in explicit:
+        canonical = _request_identity(explicit["branch_request_identity"])
+        digest = hashlib.sha256(json.dumps(
+            ["proton-branch-seed/v1", int(base_seed), canonical],
+            separators=(",", ":"), ensure_ascii=True).encode("ascii")).hexdigest()
+        return int(digest[:8], 16), {"policy": "branch_request_identity/v1",
+                                    "base_seed": int(base_seed), "identity_sha256": digest,
+                                    **explicit}
+    return base_seed + request_index, {"policy": "legacy_request_index/v1",
+                                      "base_seed": base_seed, "request_index": request_index}
 
 
 def _config_fingerprint(config: Mapping[str, Any]) -> str:
@@ -371,9 +460,10 @@ class ProtonPottsMPNNRunner:
             command.extend(["--design-mask-adapter", "preserve"])
         return command
 
-    @staticmethod
-    def _subprocess_env() -> dict[str, str]:
+    def _subprocess_env(self) -> dict[str, str]:
         env = os.environ.copy()
+        if self.device == "cpu":
+            env["CUDA_VISIBLE_DEVICES"] = ""
         env.pop("PYTHONPATH", None)
         env.pop("APPTAINERENV_PYTHONPATH", None)
         isolated_pythonpath = env.get("GH_PROTON_POTTSMPNN_PYTHONPATH", "").strip()
@@ -500,6 +590,9 @@ class ProtonPottsMPNNRunner:
 
         request_id = uuid.uuid4().hex
         with self._lock:
+            request_seed, seed_provenance = resolve_proton_request_seed(
+                self.seed, self._request_index, features
+            )
             payload = {
                 "type": "infer",
                 "id": request_id,
@@ -514,7 +607,8 @@ class ProtonPottsMPNNRunner:
                 "criteria": criteria,
                 "max_mutations": max_mutations,
                 "n_jobs": n_jobs,
-                "seed": self.seed + self._request_index,
+                "seed": request_seed,
+                "seed_provenance": seed_provenance,
             }
             self._request_index += 1
             proc = self._ensure_daemon()
@@ -548,6 +642,8 @@ class ProtonPottsMPNNRunner:
             "designs_considered": int(response.get("designs_considered") or 0),
             "raw_output_path": response.get("raw_output_path"),
             "seed_energies": response.get("seed_energies"),
+            "seed": request_seed,
+            "seed_provenance": seed_provenance,
             "request_id": request_id,
             "daemon_pid": response.get("pid"),
             "model_load_count": response.get("model_load_count"),

@@ -13,6 +13,8 @@ This is in-place migration on baseline `b537b8a`, not a second engine. Public CL
 | Persistence | Atomic compatible CSV/provenance plus additive terminal execution audit. | No cross-file transaction, power-loss durability or exact checkpoint/resume. |
 | CPU dependency | NumPy confidence losses register without importing Torch. | Real tensor/device paths need their own environment evidence. |
 | AF3 compilation reuse | Immutable 40-token policy at native tokenisation; inclusive preferred 256/512/1024 windows; JAX disk-cache setup/reset and a persistent host mount for native containers. | Explicit old bucket lists retain nearby/exact behavior. No output cache or same-result promise across different padding; JAX 0.4.34/cuDNN still needs its qualified PJRT serialization fix. |
+| Module profiling | Opt-in shared configuration, spans across execution owners, process/resource sampling and offline HTML/JSON/Perfetto reports. | Diagnostic host spans and device samples do not prove kernel parallelism, scientific equivalence or performance improvement; original scientific and cleanup owners remain authoritative. |
+| Fresh root raw import | Explicit `root_prediction_receipt`, original worker validation, new raw/import/Score evidence; root inference count zero. | Not checkpoint migration; fresh isolated fixed-request root only, unchanged prediction inputs/assets. Child predictions and old unknown fences unchanged. |
 
 ## Compatibility and recovery
 
@@ -313,3 +315,66 @@ native Protenix construction to distinguish documented behavior from inference.
 - [OmegaConf 2.3 resolvers](https://omegaconf.readthedocs.io/en/2.3_branch/custom_resolvers.html) documents caching by resolver argument strings, which does not supply a live runtime dependency.
 - [Protenix model presets](https://github.com/bytedance/Protenix/blob/main/configs/configs_model_type.py) and [inference construction](https://github.com/bytedance/Protenix/blob/main/runner/inference.py) establish the model-name/preset boundary. [Inference controls](https://github.com/bytedance/Protenix/blob/main/configs/configs_inference.py) are defined separately.
 - [Pinned Protenix model implementation](https://github.com/bytedance/Protenix/blob/2475421477ab414b571149ad4a875c390ff8a35d/protenix/model/protenix.py) confirms noise/guidance controls are consumed by inference, while mini-rollout counts belong to training; the latter and request-derived precision are not public task overrides.
+
+## Native vdM and normalized pH metric integration
+
+The qualified vdM pair proposal, role projection and local Proton adapter are
+integrated through the existing native mutator factory rather than restoring
+the historical base/runtime wholesale. Fixed/target constraints, starting-root
+site identity, proposal budgets and current ResourceOwner/seed boundaries remain
+owned by their existing components. Frozen historical runs are not migrated.
+
+The raw `ph_binding_endpoint` loss supplies local three-system Proton-H,
+Rosetta and fa_elec S/P descriptors. Shared normalization/ensemble expressions
+use the existing LossEngine; they do not introduce a second optimization loop.
+Saved float32 Proton tables are promoted before changed-entry subtraction.
+Old/new Rosetta readouts agree on the same saved poses; serialized-pose versus
+original in-memory differences are retained separately. These checks do not
+establish live model/relaxation parity or experimentally calibrated pH release.
+
+### Opt-in cooperative refinement pipeline (r58 validated)
+
+The configured native owner shares Runtime's durable call lifecycle with a
+main-thread continuation. It freezes LigandMPNN daemon requests before leaving
+legacy activation and moves transport wait only, preserving ordered application
+and private intermediate RNG. Unsupported stacks and main-thread-only local or
+borrowed owners retain explicit synchronous fallback. Score waiting+running and
+prediction/raw-holding use independent bounded lanes; completed unpublished
+results still occupy a fixed reorder window. Recovery rebases occupancy via a
+credit epoch without replaying unknown inference. All three execution toggles
+remain off by default. CPU checks and six native D5056_D15 AF3/Rosetta runs
+passed exact scientific and continuation-RNG comparison. The profiled candidate
+used staged proposals 12/12 and overlapped main control persistence with remote
+wait; Score concurrency remained one. Two unprofiled replicates per version
+averaged 347.722 s before and 339.769 s after (2.29% observed reduction).
+This fell below the predeclared 3% benefit threshold; it is not a confirmed
+throughput improvement or qualification for other workloads.
+
+
+## 2026-11-10: configured budget stop and read-only finalization
+
+The TNFa p10/p14 run produced 66 complete Scores, but the configured builder
+forced `cap_error=True` and did not expose a generation stop. The builder now
+uses normal proposal-cap termination and accepts explicit
+`search.max_generations` (root generation zero); `steps` is not reinterpreted.
+
+An explicit native CLI budget-snapshot export validates a terminal/drained old
+journal and completed measurement evidence, then writes a separate result.
+It neither bypasses source-bound resume contracts nor writes old checkpoints,
+receipts or failed provenance. The historical generation-13 overrun remains
+reported. Scope: CPU/control-flow checks and read-only export from the actual
+retained run; no new AF3/Proton inference or pH experimental validation.
+
+### PR #16 integration with current main
+
+The merge against `38bf2d4` retains root prediction receipts, profiling
+validation and vdM component defaults alongside the new configuration layout.
+Native asset verification now follows the SurfDesign and SurfPro checkpoint
+locations used by their runners. The registry check uses an empty working
+directory and model-free fixture files at those locations.
+
+The registry, AF3 lifecycle, startup validation and Proton mutator selection
+passed 157 local CPU cases. The recovery coverage manifest matches the seven
+affected-source hashes from main. The earlier unrestricted test run encountered
+storage errors and missing external fixtures. Release verification uses the
+repository's clean-install CI matrix on the merged source.

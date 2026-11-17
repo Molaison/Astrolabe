@@ -35,6 +35,7 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 | Resources / overlap | `runtime_support.py`, backend lifecycle methods, `run.py` | Explicit deduplicated cleanup; serial prediction, bounded ordered CPU finalization. |
 | Persistence | `decision_maker.py`, `run_config_lifecycle.py`, `execution_audit.py`, `posthoc/` | Same CSV row/column semantics. Single-file atomic replacement is not exact resume. |
 | AF3 compilation reuse | `af3_buckets.py`, `af3_compilation.py`, `launcher.py` | Native chemical token counts select the 40-token grid with inclusive 256/512/1024 windows. JAX owns executable compatibility; the launcher mounts its default disk cache outside ephemeral container HOME. Predictions and RNG remain fresh. See [cache controls](adaptive_runtime.md#af3-compilation-buckets-and-persistent-cache). |
+| Profiling | `profiling/`, public application/repeat scopes and module spans | Optional observations, separate per-process files and bounded resource sampling; no RNG, synchronization, scheduling or recovery authority. See [profiling](profiling.md). |
 
 ## Configuration and mutation ownership
 
@@ -132,6 +133,22 @@ The release CPU suite includes protocol fault injection, raw-only Score
 recovery and child-owner cleanup checks. Native scientific qualification and
 deployment evidence are recorded for the exact release separately.
 
+## Configured search limits and budget snapshots
+
+Configured native branching stops normally when its `search.proposal_cap` is
+exhausted, even when deduplication or scientific rejection leaves fewer than
+`search.max_evaluations` scored members. `steps` remains the evaluation-budget
+fallback, not a generation limit. Set `search.max_generations` explicitly:
+generation zero is the evaluated root, and a limit of 12 prevents generation 13.
+`null` preserves an unbounded generation count; zero evaluates the root only.
+
+`astrolabe run --finalize-run RUN --finalize-output DIR` derives a budget-stop
+beam from a terminal, drained configured refinement journal. The source run is
+read-only; the separate output binds its checkpoint and completed measurements.
+It does not resume the old policy, migrate a checkpoint, rerun a model or change
+an original failed provenance to completed. `--dry-run` validates without
+exporting. Missing, corrupt, pending or unknown evidence cannot be finalized.
+
 ## Scientific restoration and initialization protocols
 
 Runtime contexts retain an immutable run identity. Old explicit stores remain
@@ -147,6 +164,23 @@ feedback state in its original Runtime at proposal boundaries, including
 consumption by rejected proposals. Recovery validates prior proposal receipts
 before initialization and restores all selected projections before new mutation.
 Missing/stale state cannot authorize continuation; unknown stays unknown.
+An explicit top-level `root_prediction_receipt` can instead import a verified
+original raw-only `evaluate/0` (generation/step 0, no parent) into **one fresh
+isolated fixed-request run**, through `astrolabe run`. This is not checkpoint
+migration. Preflight binds original config/protocol/assets and initialized
+Candidate/System (including template/MSA content), sequence, assembly and seed;
+only loss configuration and the stage's derived score expression may differ.
+Unsupported evaluator assets or incomplete/corrupt evidence fail before model
+loading, without inference fallback. Mutator/objective assets are not prediction
+assets. The new run copies only reachable raw/RNG blobs and raw sidecars, keeps
+their original hashes, and saves the exact source receipt under
+`.prediction_workers/imports/`. Its new raw receipt has a
+`root_prediction_import` provenance bridge and `inference_count: 0`; original
+worker/timing metadata describe the historical inference, not new work. Score
+and its receipt belong to the new epoch. Child jobs still predict normally.
+Set this individual field to the absolute original
+`.prediction_workers/receipts/<hash>.json` and choose a new output/task; do not
+set `search.resume`. Old journals, checkpoints and unknown fences are untouched.
 DPLM requires `response_cache=false` for this durable profile. Predocker bank
 projections alone do not cover dynamic-site/sidecar state, so configured durable
 refinement rejects predockers before initialization. The legacy trajectory,
@@ -201,4 +235,48 @@ centres and native energies remain mutation evidence, not prediction confidence.
 `proton-states` and `proton-parity` are explicit opt-in commands, not automatic
 scientific acceptance. Patched source and external checkpoint/EV6 assets have
 separate provenance; see [installation](proton_installation.md) and
-[pH interfaces](ph_sensitive_design.md). This port adds no AF3 or vdM implementation.
+[pH interfaces](ph_sensitive_design.md). No AF3 implementation is changed here.
+
+`vdm_pair` and `vdm_proton` use the same native factory/selection boundaries.
+The former searches natural pair geometry and supplies a fresh preview/role
+packet; the latter consumes those validated roles for local Proton redesign.
+Root site-map identity, fixed pair/target positions and the shared mutation
+budget remain scientific inputs, not an opportunity to reuse stale previews.
+The qualified geometry and role helpers are retained rather than replacing
+the current orchestration or Proton resource ownership.
+The surface selector accepts explicit `core_cutoff`/`surface_cutoff` SASA
+values in A^2. The vdM task selects its historical 20/40 values explicitly;
+omitting them preserves the current defaults for unrelated tasks.
+
+`ph_binding_endpoint` exposes raw local-His three-system S/P differences for
+Proton H, ref2015 and fa_elec. Explicit frozen residue masks and disjoint
+physical chain lists define the compared systems. Proton canonical reference
+tokens are installed before encoding; Rosetta uses isolated, fixed-backbone
+local repack/chi-minimization with matched bound/free seeds. Normalization and
+metric combinations stay in existing `loss.expression_terms`. Archived-table
+and same-saved-pose readout parity is distinct from new live model/relaxation
+or end-to-end optimization qualification; none implies experimental pH efficacy.
+
+## Opt-in refinement pipeline (r58 validated)
+
+`search.execution.async_mutator` runs a cooperative, single-live-proposal
+continuation: main prepares and applies scientific state/RNG; only a frozen
+remote transport waits off-thread, outside LegacyContext activation. Local and
+borrowed main-thread model owners keep synchronous fallback. Runtime's ordinary
+issued/result/RNG journal also owns suspended calls; interruption is not replay
+permission.
+
+Positive `score_queue_size` separates Score waiting+running capacity from the
+bounded prediction/raw-holding producer lane. Durable raw verification releases
+prediction execution; full Score applies nonblocking, bounded handoff pressure.
+Final evaluation still waits Score and ordered publication. Pending evaluations,
+including completed unpublished suffixes, are capped at `in_flight +
+score_queue_size`. Recovery replaces process-local stage occupancy with a new
+credit-epoch snapshot; paid receipts remain authoritative. The closure-reuse,
+async-mutator and separate-credit switches default to false/false/0.
+The D5056_D15 workload passed exact candidates, structures, complete Rosetta
+scores, selection and continuation RNG across six native runs. Staged proposals
+and bounded credits were observed; Score's active peak remained one. Two
+unprofiled repeats per version showed 2.29% lower mean CLI time, below the
+predeclared 3% benefit threshold. Numerical equivalence and measured scheduling
+behavior therefore have stronger evidence than a general throughput claim.

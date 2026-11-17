@@ -424,15 +424,17 @@ def _normalize_dotlist_overrides(overrides: List[str]) -> List[str]:
 
 def _run_from_config(cfg: Any, *, autoselect_gpu: bool) -> None:
     from astrolabe.startup_validation import startup_validation_scope
+    from astrolabe.profiling.integration import configured_profile
 
     with startup_validation_scope(cfg, require_inputs=True):
-        _maybe_autoselect_cuda_visible_devices(enabled=autoselect_gpu)
-        _preinitialize_cuda_driver(argparse.Namespace(_cuda_preinitialize=True, dry_run=False))
+        with configured_profile(cfg):
+            _maybe_autoselect_cuda_visible_devices(enabled=autoselect_gpu)
+            _preinitialize_cuda_driver(argparse.Namespace(_cuda_preinitialize=True, dry_run=False))
 
-        # Import late so `astrolabe env doctor` doesn't drag heavy deps.
-        from astrolabe.app import run_from_cfg
+            # Import late so `astrolabe env doctor` doesn't drag heavy deps.
+            from astrolabe.app import run_from_cfg
 
-        run_from_cfg(cfg)
+            run_from_cfg(cfg)
 
 
 def _maybe_autoselect_cuda_visible_devices(*, enabled: bool) -> None:
@@ -646,6 +648,23 @@ def _probe_rapidock_daemon(
 
 
 def _cmd_run(ns: argparse.Namespace) -> int:
+    if getattr(ns, "finalize_run", None) or getattr(ns, "finalize_output", None):
+        if not getattr(ns, "finalize_run", None) or not getattr(ns, "finalize_output", None):
+            raise ValueError("--finalize-run and --finalize-output must be supplied together")
+        if any(getattr(ns, field, None) for field in (
+            "task", "standalone", "overlay", "overrides", "overrides_file",
+            "hydra_overrides", "config_dir", "print_config", "autoselect_gpu",
+        )) or not getattr(ns, "chdir", True):
+            raise ValueError("Finalization cannot be mixed with run configuration, overrides or GPU options")
+        from astrolabe.design.refinement_finalization import finalize_run
+        summary = finalize_run(ns.finalize_run, ns.finalize_output, dry_run=ns.dry_run)
+        print(json.dumps({
+            "dry_run": bool(ns.dry_run), "out_dir": summary["out_dir"],
+            "finalization": summary["finalization"],
+            "evaluations": len(summary["evaluations"]),
+            "selected_evaluation_ids": [member["evaluation_id"] for member in summary["beam"]],
+        }, indent=2, allow_nan=False))
+        return 0
     if not any(
         [
             getattr(ns, "task", None),
@@ -729,6 +748,10 @@ def _cmd_run(ns: argparse.Namespace) -> int:
                 cfg = merge_configs(cfg, dot_cfg)
     cfg = _apply_override_config_file(cfg, ns.overlay)
 
+    if getattr(ns, "profile", False):
+        with open_dict(cfg):
+            OmegaConf.update(cfg, "profiling.enabled", True, force_add=True)
+
     if ns.dry_run:
         from astrolabe.startup_validation import validate_startup_config
 
@@ -747,6 +770,24 @@ def _cmd_completion_bash(_ns: argparse.Namespace) -> int:
 
     print(render_bash_completion(init=bool(getattr(_ns, "init", False))), end="")
     return 0
+
+
+def _cmd_profile_report(ns: argparse.Namespace) -> int:
+    from astrolabe.profiling.cli import main
+
+    arguments = ["report", ns.directory]
+    if ns.output:
+        arguments.extend(["--output", ns.output])
+    return main(arguments)
+
+
+def _cmd_profile_compare(ns: argparse.Namespace) -> int:
+    from astrolabe.profiling.cli import main
+
+    arguments = ["compare", ns.baseline, ns.candidate]
+    if ns.output:
+        arguments.extend(["--output", ns.output])
+    return main(arguments)
 
 
 def _cmd_completion_zsh(_ns: argparse.Namespace) -> int:
@@ -6557,6 +6598,19 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
+    profile_p = sub.add_parser("profile", help="Summarize and compare module profiling sessions.")
+    profile_p.set_defaults(_cuda_preinitialize=False)
+    profile_sub = profile_p.add_subparsers(dest="profile_cmd", required=True)
+    profile_report = profile_sub.add_parser("report", help="Write HTML, JSON and Perfetto timeline.")
+    profile_report.add_argument("directory", help="Directory containing session.json.")
+    profile_report.add_argument("--output", default=None, help="Report output directory.")
+    cli_defs.set_handler(profile_report, _cmd_profile_report)
+    profile_compare = profile_sub.add_parser("compare", help="Compare two diagnostic sessions.")
+    profile_compare.add_argument("baseline")
+    profile_compare.add_argument("candidate")
+    profile_compare.add_argument("--output", default=None, help="Comparison output directory.")
+    cli_defs.set_handler(profile_compare, _cmd_profile_compare)
+
     from astrolabe.paper import register_commands as register_paper_commands
     register_paper_commands(sub)
 
@@ -6575,6 +6629,14 @@ def _build_parser() -> argparse.ArgumentParser:
             "Use -o/--overlay to layer an overlay on top of the chosen base."
         ),
         formatter_class=argparse.RawTextHelpFormatter,
+    )
+    run_p.add_argument(
+        "--finalize-run", default=None, metavar="RUN",
+        help="Read-only derivative export of a drained, proposal-cap-failed native run; never resumes optimization.",
+    )
+    run_p.add_argument(
+        "--finalize-output", default=None, metavar="DIR",
+        help="New directory outside the source run for final beam and finalization receipt. --dry-run validates without writing.",
     )
     run_p.add_argument(
         "-t",
@@ -6623,6 +6685,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "hydra_overrides",
         nargs=argparse.REMAINDER,
         help="Additional Hydra overrides (pass-through).",
+    )
+    run_p.add_argument(
+        "--profile",
+        action="store_true",
+        help="Enable module profiling (same as profiling.enabled=true). Place before overrides.",
     )
     cli_defs.set_handler(run_p, _cmd_run, parser_ref=True)
 

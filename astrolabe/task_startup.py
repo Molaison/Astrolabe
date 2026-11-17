@@ -137,6 +137,16 @@ def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=F
 
     for key in _BOOLEAN_FIELDS:
         boolean(read(key), key)
+    root_receipt = read("root_prediction_receipt")
+    if root_receipt is not _MISSING and root_receipt is not None:
+        path_value(root_receipt, "root_prediction_receipt")
+        if (read("search", "algorithm") != "branching"
+                or read("search", "owner") != "native_refinement"
+                or read("search", "execution", "mode") != "isolated"
+                or read("search", "prediction_rng") != "fixed_request"
+                or read("search", "resume") is True
+                or read("repeats") not in (_MISSING, 1)):
+            fail("root_prediction_receipt", "requires one fresh native_refinement isolated fixed_request run")
     name = read("task_name")
     if name is not _MISSING and (name is not None or require_inputs):
         if not isinstance(name, str) or not name.strip():
@@ -418,6 +428,9 @@ def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=F
     boolean(read("search", "resume"), "search.resume")
     native = read("search", "algorithm") == "branching" and read("search", "owner") == "native_refinement"
     if native:
+        generations = read("search", "max_generations")
+        if generations is not _MISSING and generations is not None and (type(generations) is not int or generations < 0):
+            fail("search.max_generations", "expected null or a non-negative integer")
         for key in ("width", "proposals_per_parent", "max_evaluations", "proposal_cap"):
             value = read("search", key)
             if value is None and key == "proposal_cap":

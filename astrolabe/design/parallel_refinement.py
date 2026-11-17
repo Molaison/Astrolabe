@@ -6,10 +6,12 @@ before dispatch and refuses to replay a request without terminal evidence.
 """
 from __future__ import annotations
 
-from concurrent.futures import Future, ProcessPoolExecutor, wait
+from concurrent.futures import (ALL_COMPLETED, FIRST_COMPLETED, Future,
+                                ProcessPoolExecutor, ThreadPoolExecutor, wait)
 from collections import deque
 from collections.abc import Mapping
 from contextlib import contextmanager
+from contextvars import copy_context
 from dataclasses import asdict, replace
 import hashlib
 import inspect
@@ -18,6 +20,9 @@ import multiprocessing as mp
 import os
 from pathlib import Path
 import sys
+import threading
+
+from astrolabe.profiling import event as profile_event, span
 
 from .branch_owner import NativeBranchTrial
 from .branch_types import BranchAction, BranchEvent, BranchProposal, branch_codec
@@ -128,107 +133,342 @@ def _shared_models(owner, enabled):
 
 
 class _PredictionPool:
-    def __init__(self, owner, pool):
+    def __init__(self, owner, pool, *, asynchronous=False):
         self.owner, self.pool = owner, pool
+        self.asynchronous = asynchronous
         self._proposals = deque()
+        self._live = None
+        self._action = None
+        self._transport = ThreadPoolExecutor(max_workers=1, thread_name_prefix="mutator-wait")
 
     def submit(self, worker, task):
         if task["kind"] == "evaluate":
+            if self.owner.root_prediction_import is not None and task["id"] == 0:
+                from .refinement_worker import import_root_prediction
+                imported = import_root_prediction(
+                    **self.owner.root_prediction_import, task=task,
+                    data=self.owner.data, output_root=self.owner.worker_output,
+                )
+                self.owner.spec.event(
+                    "root_prediction_imported", evaluation_id=0,
+                    **imported["root_prediction_import"],
+                )
+                if isinstance(self.pool, _ScoreHandoff):
+                    return self.pool.submit_score(task)
+                # Combined worker sees the imported raw receipt; never infers.
             return self.pool.submit(worker, task)
-        # Proposals own legacy state and the parent's RNG. Never submit them
-        # to an executor thread, even when several are admitted in one round.
         future = Future()
+        future.set_running_or_notify_cancel()
         runtime = self.owner.runtime
         self._proposals.append((future, task, runtime._work, runtime.history))
         return future
 
     def advance(self, action):
-        # Dispatch-only turns never do proposal work. An any turn yields after
-        # one proposal so control can dispatch its committed prefix to Score.
-        limit = len(self._proposals) if action.wait == "all" else int(action.wait == "any")
-        for _ in range(min(limit, len(self._proposals))):
-            self._advance_one()
+        self._action = action
+        if action.wait == "none":
+            return
+        limit = len(self._proposals) + int(self._live is not None) if action.wait == "all" else 1
+        for _ in range(limit):
+            if not self._advance_one():
+                break
 
     def _advance_one(self):
-        future, task, work, history = self._proposals.popleft()
+        from .continuation import TransportWait
+        from .native_refinement_runtime import DurableProposalRequest
         runtime = self.owner.runtime
+        if self._live is None:
+            if not self._proposals:
+                return False
+            future, task, work, history = self._proposals.popleft()
+            job = self.owner.data.get(_blob(task["job"]), self.owner.job_codec)
+            self._live = dict(future=future, task=task, work=work, history=history,
+                              job=job, iterator=None, waiting=None, rng=None)
+        live = self._live
+        if live["waiting"] is not None and not live["waiting"].done():
+            return False
         previous = runtime._work, runtime.history
         try:
-            if work is None or runtime._work is None:
+            if live["work"] is None or runtime._work is None:
                 raise RuntimeError("Queued proposals require a bound Runtime work entry")
-            # _terminal's explicit job work_id fixes receipt/replay identity;
-            # the admitted job fixes the proposal seed. This metadata swap is
-            # only for the promised original admission scope of deferred work,
-            # not needed for those identities. Keep the active parent's RNG:
-            # bind() cannot nest, and reentering an old binding would restore
-            # its entry RNG across intervening proposals/Score. No RNG restore
-            # or new receipt is introduced here; issued work still needs proof.
-            runtime._work, runtime.history = work, history
-            job = self.owner.data.get(_blob(task["job"]), self.owner.job_codec)
-            terminal = self.owner._terminal(job)
-            reference = self.owner.data.put(terminal.value, self.owner.proposal_codec)
-            rng = self.owner.runtime._capture_rng()
+            runtime._work, runtime.history = live["work"], live["history"]
+            if not self.asynchronous:
+                proposal = self.owner._terminal(live["job"]).value
+            else:
+                if live["iterator"] is None:
+                    job = live["job"]
+                    live["iterator"] = runtime.call_continuation(
+                        f"native-refinement/propose/{job.id}/proposal",
+                        self.owner.proposal_operation,
+                        DurableProposalRequest(job, self.owner.protocol, self.owner.spec.output.as_posix()),
+                        work_id=self.owner._job_work_id(job),
+                    )
+                value, error = None, None
+                if live["waiting"] is not None:
+                    # Intermediate continuation RNG is private to this proposal;
+                    # Score/control publication must never replace it.
+                    runtime._restore_rng(live["rng"])
+                    try:
+                        value = live["waiting"].result()
+                    except BaseException as failure:
+                        error = failure
+                try:
+                    pending = (live["iterator"].throw(error) if error is not None
+                               else live["iterator"].send(value))
+                except StopIteration as done:
+                    proposal = done.value
+                else:
+                    if not isinstance(pending, TransportWait):
+                        raise TypeError("Proposal yielded work other than frozen transport")
+                    if self.owner.spec.context._active:
+                        raise RuntimeError("Remote wait cannot retain LegacyContext activation")
+                    live["rng"] = runtime._capture_rng()
+                    context = copy_context()
+                    live["waiting"] = self._transport.submit(context.run, pending.transport)
+                    return False
+            reference = self.owner.data.put(proposal, self.owner.proposal_codec)
+            rng = runtime._capture_rng()
             self.owner.data.persist((reference, rng))
-            future.set_result({
-                **task, "proposal": asdict(reference), "after_rng": asdict(rng),
+            live["future"].set_result({
+                **live["task"], "proposal": asdict(reference), "after_rng": asdict(rng),
             })
+            self._live = None
+            return True
         except BaseException as error:
-            future.set_exception(error)
+            # Closing a suspended call records unknown through the exact same
+            # Runtime error path; never prepare/reenter the operation again.
+            if live["iterator"] is not None:
+                try:
+                    live["iterator"].close()
+                except BaseException as close_error:
+                    error.add_note(f"Continuation close also failed: {close_error!r}")
+            live["future"].set_exception(error)
+            self._live = None
+            return True
         finally:
             runtime._work, runtime.history = previous
 
+    def progress(self, action):
+        if isinstance(self.pool, _ScoreHandoff):
+            return self.pool.progress(action)
+        return BranchEvent(())
+
+    def wait(self, futures, *, return_when):
+        while True:
+            if return_when == ALL_COMPLETED:
+                if all(future.done() for future in futures):
+                    return set(futures), set()
+            elif any(future.done() for future in futures):
+                return {f for f in futures if f.done()}, {f for f in futures if not f.done()}
+            extra = []
+            if isinstance(self.pool, _ScoreHandoff) and self.pool.capacity:
+                # Snapshot signal before checking progress to avoid a lost wake.
+                extra.append(self.pool.wakeup())
+                progress = self.progress(self._action)
+                if (progress.prediction_done or progress.score_admitted or progress.score_done
+                        or progress.credit_epoch is not None):
+                    return set(), set(futures)
+            if self._live is not None and self._live["waiting"] is not None:
+                extra.append(self._live["waiting"])
+            ready, _ = wait([*futures, *extra], return_when=FIRST_COMPLETED)
+            if self._live is not None and self._live["waiting"] in ready:
+                self.advance(self._action)
+            if self._live is None and self._proposals and return_when == ALL_COMPLETED:
+                self.advance(self._action)
+
+    def close(self):
+        # Own the transport lifetime even when control failed or was cancelled.
+        self._transport.shutdown(wait=True)
+        if self._live is not None:
+            live = self._live
+            runtime = self.owner.runtime
+            previous = runtime._work, runtime.history
+            try:
+                runtime._work, runtime.history = live["work"], live["history"]
+                if live["rng"] is not None:
+                    runtime._restore_rng(live["rng"])
+                if live["iterator"] is not None:
+                    live["iterator"].close()
+            finally:
+                runtime._work, runtime.history = previous
+                self._live = None
+
 
 class _ScoreHandoff:
-    """Join resident prediction and Score without touching parent science state."""
+    """Bounded producer/raw-holding lane and independent waiting+running Score.
 
-    def __init__(self, prediction_pool, score_pool, score_worker):
-        self.prediction_pool = prediction_pool
-        self.score_pool = score_pool
+    Callbacks never wait for credits: a full Score lane leaves verified raw in
+    the already reserved producer slot. Only immutable receipts cross threads.
+    """
+
+    def __init__(self, prediction_pool, score_pool, score_worker, *,
+                 prediction_width=None, capacity=0, verify=None):
+        self.prediction_pool, self.score_pool = prediction_pool, score_pool
         self.score_worker = score_worker
-        self.finals = []
-        self.scores = []
+        self.prediction_width, self.capacity = prediction_width, capacity
+        self.verify = verify
+        self._lock = threading.RLock()
+        self._entries = {}
+        self._raw = deque()
+        self._scores = 0
+        self._wake = Future()
+        self._recovery_epoch = None
+        self.finals, self.scores = set(), set()
+
+    def _changed(self, transition, task):
+        profile_event("pipeline.credit", transition=transition, evaluation_id=task["id"],
+                      predicting=sum(e["stage"] == "predicting" for e in self._entries.values()),
+                      raw_ready_held=len(self._raw), score_pending_running=self._scores,
+                      producer_capacity=self.prediction_width, score_capacity=self.capacity)
+        wake, self._wake = self._wake, Future()
+        wake.set_result(None)
+
+    def wakeup(self):
+        with self._lock:
+            return self._wake
+
+    def begin_recovery(self, state):
+        with self._lock:
+            if self.capacity and self._recovery_epoch is None:
+                self._recovery_epoch = state.credit_epoch + 1
+
+    def progress(self, action):
+        if not self.capacity:
+            return BranchEvent(())
+        with self._lock:
+            ids = {job.id for job in action.state.pending}
+            # Completed observations carry no retained model result/future.
+            for identity in tuple(self._entries):
+                if identity not in ids and self._entries[identity]["stage"] == "done":
+                    del self._entries[identity]
+            reset = (self._recovery_epoch if self._recovery_epoch is not None
+                     and self._recovery_epoch > action.state.credit_epoch else None)
+            def delta(name, field):
+                return tuple(sorted(identity for identity in ids
+                                    if identity in self._entries and self._entries[identity][field]
+                                    and (reset is not None or identity not in getattr(action.state, name))))
+            return BranchEvent((), delta("prediction_done", "raw_verified"),
+                               delta("score_admitted", "score_admitted"),
+                               delta("score_done", "score_done"), reset)
+
+    def _entry(self, task, stage):
+        if task["id"] in self._entries:
+            raise ContractConflict("Evaluation already owns pipeline credits")
+        if self.capacity:
+            producers = sum(e["stage"] in {"predicting", "raw"} for e in self._entries.values())
+            if producers >= self.prediction_width:
+                raise RuntimeError("Prediction/raw-holding producer capacity exceeded")
+        final = Future()
+        final.set_running_or_notify_cancel()
+        entry = dict(task=task, final=final, stage=stage,
+                     raw_verified=False, score_admitted=False, score_done=False)
+        self._entries[task["id"]] = entry
+        self.finals.add(final)
+        self._changed("producer_reserved", task)
+        return entry
 
     def submit_score(self, task):
-        future = self.score_pool.submit(self.score_worker, task)
-        self.scores.append(future)
-        return future
+        # Recovery can resume Score only from freshly verified raw evidence.
+        if self.verify is not None:
+            self.verify(task, None)
+        with self._lock:
+            entry = self._entry(task, "raw")
+            entry["raw_verified"] = True
+            self._raw.append(entry)
+            self._changed("raw_verified_recovery", task)
+            self._pump()
+            return entry["final"]
 
     def submit(self, worker, task):
-        final = Future()
-        prediction = self.prediction_pool.submit(worker, task)
-        final.set_running_or_notify_cancel()
-        self.finals.append(final)
-
-        def scored(done):
-            try:
-                final.set_result(done.result())
-            except BaseException as error:
-                final.set_exception(error)
+        with self._lock:
+            entry = self._entry(task, "predicting")
+        try:
+            prediction = self.prediction_pool.submit(worker, task)
+        except BaseException as error:
+            with self._lock:
+                self._failed(entry, error)
+            return entry["final"]
 
         def predicted(done):
             try:
-                done.result()  # Raw receipt is durable; Score reads and verifies it.
-                self.submit_score(task).add_done_callback(scored)
+                raw = done.result()
+                if self.verify is not None:
+                    self.verify(task, raw)
+                with self._lock:
+                    entry.update(stage="raw", raw_verified=True)
+                    self._raw.append(entry)
+                    self._changed("prediction_released_raw_verified", task)
+                    self._pump()
             except BaseException as error:
-                final.set_exception(error)
+                with self._lock:
+                    self._failed(entry, error)
+        context = copy_context()
+        prediction.add_done_callback(lambda done: context.run(predicted, done))
+        return entry["final"]
 
-        prediction.add_done_callback(predicted)
-        return final
+    def _failed(self, entry, error):
+        entry["stage"] = "done"
+        self._changed("failure_release", entry["task"])
+        entry["final"].set_exception(error)
+        self.finals.discard(entry["final"])
+        if not self.capacity:
+            self._entries.pop(entry["task"]["id"], None)
+
+    def _pump(self):
+        # The manager callback must never block on a credit that only another
+        # callback can release. Submission is nonblocking; raw remains bounded.
+        while self._raw and (not self.capacity or self._scores < self.capacity):
+            entry = self._raw.popleft()
+            entry.update(stage="scoring", score_admitted=True)
+            self._scores += 1
+            self._changed("raw_to_score_admitted", entry["task"])
+            try:
+                future = self.score_pool.submit(self.score_worker, entry["task"])
+            except BaseException as error:
+                self._scores -= 1
+                self._failed(entry, error)
+                continue
+            self.scores.add(future)
+
+            def scored(done, entry=entry):
+                try:
+                    value, error = done.result(), None
+                except BaseException as failure:
+                    value, error = None, failure
+                with self._lock:
+                    self._scores -= 1
+                    self.scores.discard(done)
+                    entry.update(stage="done", score_done=error is None)
+                    self._changed("score_released", entry["task"])
+                    if error is None:
+                        entry["final"].set_result(value)
+                    else:
+                        entry["final"].set_exception(error)
+                    self.finals.discard(entry["final"])
+                    if not self.capacity:
+                        self._entries.pop(entry["task"]["id"], None)
+                    self._pump()
+            context = copy_context()
+            future.add_done_callback(lambda done, context=context, scored=scored: context.run(scored, done))
 
     def drain(self):
-        # A final becomes done only after its prediction and Score callback.
-        wait(self.finals)
-        wait(self.scores)
+        while True:
+            with self._lock:
+                pending = tuple(self.finals | self.scores)
+            if not pending:
+                return
+            wait(pending)
 
 
 class ParallelRefinementOwner(DurableNativeRefinementOwner):
     """Single-writer proposal/measurement with bounded resident predictors."""
 
     def __init__(self, spec, runtime, *, protocol, pool, worker, worker_output,
-                 loss_order=None, score_context=None):
+                 loss_order=None, score_context=None, async_mutator=False,
+                 root_prediction_import=None):
         super().__init__(spec, runtime, protocol=protocol)
         from .branch_types import BranchJob
         from .refinement_worker import execute, initialize
+        from . import continuation
 
         self.job_codec = branch_codec(BranchJob)
         self.proposal_codec = branch_codec(BranchProposal)
@@ -238,6 +478,7 @@ class ParallelRefinementOwner(DurableNativeRefinementOwner):
         self.pool, self.worker = pool, worker
         self.loss_order = loss_order
         self.score_context = score_context
+        self.root_prediction_import = root_prediction_import
         from .configured_refinement import measure_configured_scores
         from astrolabe.losses.base import LossEngine, loss_registry
         self.identity = key_for((
@@ -245,19 +486,23 @@ class ParallelRefinementOwner(DurableNativeRefinementOwner):
             inspect.getsource(sys.modules[__name__]),
             inspect.getsource(sys.modules[initialize.__module__]),
             inspect.getsource(NativeBranchTrial),
+            inspect.getsource(continuation),
+            inspect.getsource(type(runtime)),
             inspect.getsource(sys.modules[measure_configured_scores.__module__]),
             inspect.getsource(sys.modules[LossEngine.__module__]),
             tuple((name, _source_identity(loss_registry.get_function(name)))
                   for name in sorted(loss_registry.valid_losses)),
             loss_order,
         ))
-        prediction_pool = _PredictionPool(self, pool)
+        prediction_pool = _PredictionPool(self, pool, asynchronous=async_mutator)
+        self.proposal_pool = prediction_pool
         self.trial = NativeBranchTrial(
             prediction_pool, runtime, identity=self.identity,
             worker=worker, task_factory=self._task, result_factory=self._result,
             probe=self._probe, terminal_proposal_errors=False,
             report=self._report,
             before_wait=prediction_pool.advance, ordered_results=True,
+            waiter=prediction_pool.wait, progress=prediction_pool.progress,
         )
 
     def _task(self, job):
@@ -348,10 +593,12 @@ class ParallelRefinementOwner(DurableNativeRefinementOwner):
         reference = self.data.put(prediction, _RAW_PREDICTION_CODEC)
         self.data.persist((reference,))
         self.spec.event(
-            "prediction_received", evaluation_id=job.id,
+            "prediction_import_received" if "root_prediction_import" in raw else "prediction_received",
+            evaluation_id=job.id,
             worker_pid=raw["worker_pid"],
             worker_constructor_count=raw["constructor_count"],
             prediction_wall_s=raw["prediction_wall_s"],
+            inference_count=0 if "root_prediction_import" in raw else 1,
         )
         raw_dir = Path(raw["job_raw_dir"]).resolve()
         worker_root = self.worker_output.resolve()
@@ -408,13 +655,24 @@ class ParallelRefinementOwner(DurableNativeRefinementOwner):
         self.trial._state, self.trial._request = state, request
 
     def perform(self, request):
+        if isinstance(self.pool, _ScoreHandoff):
+            known = {job.identity for job in self.trial.executor.one_pending.values()}
+            fresh = {job.identity for job in request.jobs}
+            if any(job.identity not in known | fresh for job in request.state.pending):
+                self.pool.begin_recovery(request.state)
         return self.trial.perform(request)
+
+    def shutdown(self):
+        self.proposal_pool.close()
+        super().shutdown()
 
     def recover(self, request):
         # Control recovery precedes the outer action's bind. A checkpoint may
         # have admitted, but not issued, a proposal; its queued submission
         # must therefore carry an explicit valid Runtime work scope.
         action = self._action_identity(request)
+        if isinstance(self.pool, _ScoreHandoff):
+            self.pool.begin_recovery(request.state)
         with self.runtime.bind(
             "parallel-refinement/recovery/" + action.digest,
             History(key_for(()), ()),
@@ -424,9 +682,11 @@ class ParallelRefinementOwner(DurableNativeRefinementOwner):
 
 def run_parallel_native_refinement(
     spec, *, policy, protocol, runtime, config_yaml, workers, worker_output,
-    model_sharing="replicated",
+    model_sharing="replicated", score_queue_size=0, prediction_width=None,
+    async_mutator=False,
     loss_order=None,
     score_context=None,
+    root_prediction_import=None,
 ):
     """Run the same branching policy with spawn-isolated resident evaluators."""
     from astrolabe.app import Astrolabe
@@ -468,12 +728,24 @@ def run_parallel_native_refinement(
         ) as prediction_pool:
             pool = prediction_pool
             if score_pool is not None:
-                handoff = _ScoreHandoff(prediction_pool, score_pool, execute)
+                from .refinement_worker import read_raw_receipt
+                def verify(task, returned):
+                    with span("pipeline.raw_verified", evaluation_id=task["id"]):
+                        raw = read_raw_receipt(spec.data.root, worker_output, task)
+                        if returned is not None and raw != returned:
+                            raise ContractConflict("Returned prediction differs from durable raw receipt")
+                        return raw
+                handoff = _ScoreHandoff(
+                    prediction_pool, score_pool, execute,
+                    prediction_width=prediction_width or workers,
+                    capacity=score_queue_size, verify=verify,
+                )
                 pool = handoff
             owner = ParallelRefinementOwner(
                 spec, runtime, protocol=protocol, pool=pool, worker=execute,
                 worker_output=worker_output,
-                score_context=score_context,
+                score_context=score_context, async_mutator=async_mutator,
+                root_prediction_import=root_prediction_import,
             )
             owner.bootstrap()
             if loss_order is not None:
@@ -504,6 +776,8 @@ def run_parallel_native_refinement(
             owner.checkpoint(final, request=None, report=False)
             return NativeRefinementResult(final.frontier, final, owner)
     finally:
+        if owner is not None:
+            owner.proposal_pool.close()
         if handoff is not None:
             handoff.drain()
         if score_pool is not None:

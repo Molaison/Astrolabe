@@ -88,7 +88,7 @@ def test_lazy_proposals_advance_on_parent_with_original_scope_and_wait_budget(tm
         ))
 
     owner = SimpleNamespace(data=data, job_codec=job_codec, proposal_codec=proposal_codec,
-                            runtime=runtime, _terminal=terminal)
+                            runtime=runtime, _terminal=terminal, root_prediction_import=None)
     pool = _PredictionPool(owner, SimpleNamespace(submit=lambda *args: remote_future))
     futures = [pool.submit(None, {
         "kind": "propose", "job": asdict(data.put(BranchJob("propose", i, 1, i), job_codec)),
@@ -502,3 +502,45 @@ def test_raw_only_probe_restores_real_spawn_future_without_paid_replay(tmp_path)
         owner.shutdown()
     finally:
         case.close()
+
+
+def test_recovered_score_credits_replace_stale_admission_epoch():
+    """Review P1: ID-order raw recovery must not union old live occupancy."""
+    submitted, verified = [], []
+
+    def forbidden_prediction(*args):
+        raise AssertionError("raw recovery must not repeat inference")
+
+    def score(_worker, task):
+        future = Future()
+        submitted.append((task["id"], future))
+        return future
+
+    handoff = _ScoreHandoff(
+        SimpleNamespace(submit=forbidden_prediction), SimpleNamespace(submit=score), object(),
+        prediction_width=2, capacity=1, verify=lambda task, raw: verified.append(task["id"]),
+    )
+    jobs = tuple(BranchJob("evaluate", identifier, 1, 7) for identifier in (1, 2))
+    state = BranchingState(generation=1, next_evaluation=3, pending=jobs,
+                           prediction_done=(1, 2), score_admitted=(2,))
+    policy = BranchingPolicy(width=2, proposals_per_parent=1, max_evaluations=8,
+                             proposal_cap=8, seed=7, evaluation_seed=7,
+                             pipeline=True, evaluation_width=2, score_queue_size=1)
+    handoff.begin_recovery(state)
+    finals = [handoff.submit_score({"id": identifier}) for identifier in (1, 2)]
+    assert verified == [1, 2]
+    assert [identifier for identifier, _ in submitted] == [1]
+    snapshot = handoff.progress(BranchAction(state))
+    assert snapshot.credit_epoch == 1
+    state = policy.tell(state, snapshot)
+    assert state.score_admitted == (1,)
+    assert state.score_done == ()
+    assert state.pending == jobs
+    submitted[0][1].set_result({"id": 1})
+    state = policy.tell(state, handoff.progress(BranchAction(state)))
+    assert state.score_admitted == (1, 2)
+    assert state.score_done == (1,)
+    assert [identifier for identifier, _ in submitted] == [1, 2]
+    submitted[1][1].set_result({"id": 2})
+    handoff.drain()
+    assert [future.result() for future in finals] == [{"id": 1}, {"id": 2}]

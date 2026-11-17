@@ -41,6 +41,32 @@ def test_unused_backend_defaults_are_not_resolved():
     assert validate_startup_config(cfg, check_dependencies=False) == {}
 
 
+@pytest.mark.parametrize("damage", [None, "resume", "owner", "serial", "rng", "repeats", "path"])
+def test_root_prediction_receipt_has_explicit_fresh_native_boundary(damage):
+    cfg = config(root_prediction_receipt="/original/.prediction_workers/receipts/root.json",
+                 repeats=1, search={"algorithm": "branching", "owner": "native_refinement",
+                 "width": 1, "proposals_per_parent": 1, "max_evaluations": 2,
+                 "resume": False, "prediction_rng": "fixed_request",
+                 "execution": {"mode": "isolated", "workers": 1, "in_flight": 1}})
+    if damage == "resume":
+        cfg.search.resume = True
+    elif damage == "owner":
+        cfg.search.owner = "isolated_native"
+    elif damage == "serial":
+        cfg.search.execution.mode = "serial"
+    elif damage == "rng":
+        cfg.search.prediction_rng = "legacy"
+    elif damage == "repeats":
+        cfg.repeats = 2
+    elif damage == "path":
+        cfg.root_prediction_receipt = 123
+    if damage is None:
+        assert validate_startup_config(cfg, check_dependencies=False, resolve_environment=False) == {}
+    else:
+        with pytest.raises(StartupValidationError, match="root_prediction_receipt"):
+            validate_startup_config(cfg, check_dependencies=False, resolve_environment=False)
+
+
 @pytest.mark.parametrize("mode", ["resident_serial", "adaptive"])
 def test_inprocess_af2_rejects_same_process_resource_owner(mode, monkeypatch):
     monkeypatch.delenv("ASTROLABE_RESOURCE_SOCKET", raising=False)

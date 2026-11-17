@@ -83,10 +83,8 @@ its dependency files.
 | `Replay` | Deliberately broken variant only; normal configuration disables it |
 
 [`coverage.json`](../../../verification/runtime_recovery/coverage.json)
-records the sync commit and SHA256 values of `runtime.py`, `operations.py`,
-`store.py`, `types.py`, and `model_execution.py`.
-The last code review anchor is
-`eec8ee27caccdcfc109b15ee19bf3cacb06a5901`.
+records the reviewed source anchor and SHA256 values for the recovery
+implementation and its dependencies.
 Dependency hashes trigger review; they do not claim that all their functions
 are modeled. The runner refuses stale hashes.
 
