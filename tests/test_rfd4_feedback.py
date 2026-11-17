@@ -136,7 +136,7 @@ def test_interface_hbond_count_scalar_registration_and_adapter(monkeypatch):
     options = {"hbond_energy_cutoff": -0.25, "interface_distance": 6.0,
                "buried_sasa_cutoff": 0.5, "sasa_probe_radius": 1.2}
     result = SimpleNamespace(complex_poses=SimpleNamespace(poses=poses))
-    assert loss(result, **GROUPS, **options) == {"bound": 1, "empty": 0}
+    assert loss(result, backend="rosetta", **GROUPS, **options) == {"bound": 1, "empty": 0}
     assert calls == [(GROUPS["binder_chains"], GROUPS["target_chains"], options)] * 2
     assert not interaction.loss_registry.validate_params(
         "interface_hbond_count", [*GROUPS, *options],
@@ -171,7 +171,8 @@ def test_feedback_scalar_prefers_source_paths_over_cached_poses(monkeypatch, tmp
     monkeypatch.setattr(rfd4_feedback, "analyze_interface", analyze)
     monkeypatch.setattr(rfd4_feedback, "analyze_pose_interface", reject_pose)
     loss = interaction.loss_registry.get_function(loss_name)
-    assert loss(result, **GROUPS, **options) == {"AB": pytest.approx(expected)}
+    backend_options = {"backend": "rosetta"} if loss_name in ("interface_hbond_count", "interface_shape_complementarity") else {}
+    assert loss(result, **GROUPS, **backend_options, **options) == {"AB": pytest.approx(expected)}
     assert calls == [(paths["AB"], GROUPS["binder_chains"], GROUPS["target_chains"], options)]
 
     def invalid_source(*args, **kwargs):
@@ -179,7 +180,7 @@ def test_feedback_scalar_prefers_source_paths_over_cached_poses(monkeypatch, tmp
 
     monkeypatch.setattr(rfd4_feedback, "analyze_interface", invalid_source)
     with pytest.raises(ValueError, match="invalid source chemistry"):
-        loss(result, **GROUPS, **options)
+        loss(result, **GROUPS, **backend_options, **options)
 
 
 def test_plan_rejects_stale_chemistry_and_invalid_budget():
@@ -736,3 +737,18 @@ def test_mmcif_loader_ignores_empty_nonatom_metadata(tmp_path, omit_bfactor):
     params_identity = json.loads(json.loads(relocated[0].feedback_json)["feedback"]["provenance"]["extra_residue_params"])
     assert params_identity[0]["name"] == "HIS_P.params"
     assert "path" not in params_identity[0]
+
+
+def test_native_hbond_loss_applies_endpoint_selectors(monkeypatch):
+    from types import SimpleNamespace
+    from astrolabe.losses.rfd4_feedback import interface_hbond_count
+    from astrolabe.mutators import rfd4_feedback
+
+    monkeypatch.setattr(rfd4_feedback, "analyze_pose_interface", lambda *a, **k: feedback())
+    result = SimpleNamespace(complex_poses=SimpleNamespace(poses={"AB": object()}))
+    assert interface_hbond_count(result, **GROUPS, backend="rosetta",
+                                 selector_a="True", selector_b="True") == {"AB": 1}
+    assert interface_hbond_count(result, **GROUPS, backend="rosetta",
+                                 selector_a="False", selector_b="True") == {"AB": 0}
+    assert interface_hbond_count(result, **GROUPS, backend="rosetta",
+                                 selector_a="True", selector_b="False") == {"AB": 0}

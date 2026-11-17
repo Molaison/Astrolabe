@@ -1,0 +1,79 @@
+{
+  "date": "2026-11-17",
+  "code_commit": "81ce9103e07ca9bda5711ef86630d326dac356fa",
+  "base_commit": "38bf2d4497ac383754ff0aeeff435114e63fda38",
+  "scope": "Targeted CPU/control-flow and native physical score/preparation checks; no model inference or GPU timing.",
+  "integrated_pytest": {
+    "tests": 427,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 427,
+    "warnings": 9,
+    "seconds": 93.45,
+    "files": [
+      "tests/test_independent_scoring.py",
+      "tests/test_contact_molecular_surface_loss.py",
+      "tests/test_rfd4_feedback.py",
+      "tests/test_shape_complementarity_loss.py",
+      "tests/test_interface_holes.py",
+      "tests/test_loss_selection_contract.py",
+      "tests/test_loss_engine_oligomer_specific.py",
+      "tests/test_loss_engine_expression_terms.py",
+      "tests/test_startup_dependencies.py",
+      "tests/test_startup_validation.py",
+      "tests/test_scoring_formal_config.py",
+      "tests/test_run_complex_poses.py",
+      "tests/test_loss_backend_runtime_requirements.py",
+      "tests/test_runtime_requirements_source.py",
+      "tests/test_af3_preparation_cache.py",
+      "tests/test_af3_preparation_native.py",
+      "tests/test_input_asset_reuse.py",
+      "tests/test_protenix_wrapper_lazy_import.py",
+      "tests/test_boltz_ccd_cache.py",
+      "tests/test_loss_import_lifecycle.py",
+      "tests/test_design_screening_geometry.py",
+      "tests/test_af3_bucket_policy.py"
+    ],
+    "command": "PYTHONPATH=.:vendor/boltz/src python -m pytest -q -rs --disable-warnings --tb=short tests/test_independent_scoring.py tests/test_contact_molecular_surface_loss.py tests/test_rfd4_feedback.py tests/test_shape_complementarity_loss.py tests/test_interface_holes.py tests/test_loss_selection_contract.py tests/test_loss_engine_oligomer_specific.py tests/test_loss_engine_expression_terms.py tests/test_startup_dependencies.py tests/test_startup_validation.py tests/test_scoring_formal_config.py tests/test_run_complex_poses.py tests/test_loss_backend_runtime_requirements.py tests/test_runtime_requirements_source.py tests/test_af3_preparation_cache.py tests/test_af3_preparation_native.py tests/test_input_asset_reuse.py tests/test_protenix_wrapper_lazy_import.py tests/test_boltz_ccd_cache.py tests/test_loss_import_lifecycle.py tests/test_design_screening_geometry.py tests/test_af3_bucket_policy.py"
+  },
+  "pinned_af3_custom_ccd_and_nested_scope": {
+    "passed": 2,
+    "deselected": 2,
+    "seconds": 0.86,
+    "source_revision": "4b154d922759c918dd4b5a4d5a779853100fd20e",
+    "note": "Pinned Python source with the installed older compiled extension; restricted to native CCD parsing and MSA dispatch."
+  },
+  "af3_root_replay": {
+    "report": "af3_varying_seed_root_replay.json",
+    "numeric_arrays_exact": 295,
+    "object_metadata_exact": true,
+    "runs_per_side": 5
+  },
+  "existing_recipe_parameter_preflight": {
+    "physical_loss_definitions": 39,
+    "errors": [],
+    "method": "validate_scoring_settings(loss, kind, options, check_paths=False) over config and examples YAML physical losses; not model/asset readiness."
+  },
+  "native_boltz": {
+    "source_revision": "cb04aeccdd480fd4db707f0bbafde538397fa2ac",
+    "parser": "parse_boltz_schema",
+    "covered": "Cached/fresh CCD structure arrays and records match; cross-request RDKit conformer edits are isolated.",
+    "lifecycle_evidence": "Actual runner class extracted without importing model-only dependencies; real shutdown_model_handles dispatch clears the cache."
+  },
+  "independent_review_closed": [
+    "Scoped aliases lost shared preparation.",
+    "Partial explicit H silently lost donor typing.",
+    "Active implicit loss and source-stage entrance dependencies were omitted.",
+    "Boltz cache lacked a shutdown endpoint.",
+    "Nested disabled AF3 scope inherited an outer cache.",
+    "Native AF3 user CCD mutated a shared dictionary."
+  ],
+  "limits": [
+    "Holes retains native Rosetta/DAlphaBall.",
+    "Independent CMS remains slower per newly generated surface on the recorded fixture.",
+    "Geometric polar metrics and radius choices are not numerically identical to Rosetta.",
+    "Current pinned AF3 full-template integration needs a matching compiled extension; matched native template tests and identical method AST are recorded separately.",
+    "No complete container build, GPU inference, or full-family preparation timing."
+  ]
+}

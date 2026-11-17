@@ -188,3 +188,124 @@ It neither bypasses source-bound resume contracts nor writes old checkpoints,
 receipts or failed provenance. The historical generation-13 overrun remains
 reported. Scope: CPU/control-flow checks and read-only export from the actual
 retained run; no new AF3/Proton inference or pH experimental validation.
+
+## Physical score backends and incremental preparation (2026-11-17)
+
+This change started at `09f0460feb733b4675923ee580c977c7f7423e13` and was
+rebased onto `38bf2d4497ac383754ff0aeeff435114e63fda38` before integration
+verification. Three isolated implementation worktrees covered independent
+scores, loss/selector contracts and AF3 preparation. The integrator owned
+runtime dependencies, Boltz asset reuse and the final public entrypoint checks.
+
+### Implementation and scientific boundary
+
+SC uses [protein-interface](https://github.com/aarteixeira/protein-interface)
+0.1.3 with its indexed parallel SC implementation. CMS uses
+[py-contact-ms](https://github.com/ullahsamee/py_contact_ms) 0.1.1 to generate
+Connolly SES dots; an exact KD-tree replaces its dense nearest-dot reduction.
+Area/distance arrays are reused across distance weights. A real upstream API
+comparison at weights 0, 0.5 and 1.2 passed at relative tolerance 1e-12 and
+absolute tolerance 1e-9. This establishes equivalence to that pinned Python
+implementation, not to Rosetta's numerical results.
+
+Polar scores combine [Biotite Baker–Hubbard geometry](https://www.biotite-python.org/latest/apidoc/biotite.structure.hbond.html),
+RDKit BaseFeatures donor/acceptor typing and Hydride H placement. Only Donor and
+Acceptor feature families are queried; an all-family oracle verifies identical
+atom sets. Full chemical context remains present for burial and intrachain
+satisfaction. Incomplete explicit H, missing necessary CCD heavy atoms and
+unsupported chemistry fail explicitly. These are geometric definitions, so
+Rosetta energy/burial thresholds need recalibration after a backend change.
+
+Exact [RosettaHoles2](https://pmc.ncbi.nlm.nih.gov/articles/PMC2998733/) depends
+on DAlphaBall volumes and trained atom-type weights. The search did not establish
+an existing standalone implementation with the same definition. Holes therefore
+retains Rosetta; no cavity-volume substitute was introduced. Local/interface
+selectors restrict the reported atoms while keeping their original environment.
+The whole-chain deletion metric remains whole-chain.
+
+`loss_config.py` owns deterministic backend selection, scope normalization and
+selected dependency projection. `losses/selection.py` maps the existing
+positional-selector language onto chain-relative residue ordinals, including
+insertion codes. Native selector dependencies still request native poses.
+Unsupported options, conflicting aliases and nonfinite controls fail before
+evaluation. Existing RFD4 and multidomain recipes with native energy/radii
+controls now explicitly select Rosetta. See the [migration guide](user_guide.md#61-物理评分-backend-与位置选择).
+
+AF3 reuses unchanged MSA homologue encodings and conservatively keyed template
+features. Sequence/seed-dependent native features and complete model batches
+remain fresh. The evaluator owns a bounded cache with detached return values.
+Custom CCD merges are request-local; their native reference cache is disabled
+inside the existing scoped environment because its key includes object IDs.
+Boltz similarly retains one CCD asset per runner with request-local molecule
+copies and explicit shutdown cleanup. Protenix and Mol-1 reuse unchanged input
+assets. See [preparation controls](adaptive_runtime.md#af3-deterministic-preparation-reuse).
+
+### Retained review findings
+
+Independent reviewers reproduced and closed scoped aliases losing their shared
+structure preparation; partial explicit H silently losing donors; implicit
+active losses missing dependency checks; stage entrance dependencies being
+filtered by the destination's whitelist; and Boltz shutdown retaining its new
+CCD cache. The integrator also fixed eager PyRosetta pose creation despite an
+independent backend, nested disabled AF3 scopes inheriting the outer cache, and
+native custom CCD contamination. Public LossEngine evaluation now exercises
+all four independent score families without importing PyRosetta.
+
+### Performance evidence
+
+[Recorded observations](../examples/benchmarks/results/loss_af3_20261117/)
+include complete samples, package versions and reproduction commands.
+All physical timings use one 216-residue, 1,656-heavy-atom fixture, A versus B+C,
+with 20 visible CPUs. SC uses the library's parallel pool. CMS uses
+distance_weight=0.5 on both sides. Native pose and selector residue counts
+were checked after serializing the same coordinates to PDB; the installed
+PyRosetta reader otherwise imported this minimal mmCIF as an empty pose.
+
+| Operation | Baseline median | Changed median | Interpretation |
+|---|---:|---:|---|
+| SC | Rosetta default radii: 6.073 s | Independent: 0.203 s | About 30× on this fixture; different radii/results |
+| CMS | Rosetta default radii: 1.677 s | Independent: 8.909 s | Independent remains about 5.3× slower per new surface |
+| H-bond count | Native public wrapper: 6.649 s | Prepared context: 0.000359 s | Reuse time; add preparation for a new structure |
+| BUNS | Native: 0.616 s | Prepared context: 0.0517 s | Definitions differ; no numerical equivalence claim |
+| Full AF3 preparation, fixed seed | 141.4 ms | 107.4 ms | 24% reduction in the recorded workload |
+| Full AF3 preparation, changing seed | 443.3 ms | 406.8 ms | 8% reduction in the first run |
+| Changing-seed independent replay | 522.1 ms | 492.9 ms | 6% reduction; host timing variation is visible |
+
+Each paired run has five measured iterations after warmup. Polar preparation
+for a fresh structure after library loading took a median 1.757 s in three
+additional observations; the first H-bond call including preparation took
+3.236 s. The small prepared-context H-bond time must not be presented as the
+cost of a new structure. Independent CMS still spends most of its time in
+upstream Python SES generation; its profile measured 10.041 s there and
+2.675 s in the original dense reduction. The new reduction and alias reuse do
+not remove the SES cost. Explicit Rosetta remains the faster CMS choice here.
+
+Each full AF3 run uses 80+80 residues and 1,024 MSA rows with three-residue query
+changes. Current base.yaml preparation settings are enabled and existing native
+caches are isolated between the two sides. All 295 numeric feature arrays per
+run, plus object metadata, matched exactly. No inference or GPU benchmark is
+claimed. The pinned Python source is
+`4b154d922759c918dd4b5a4d5a779853100fd20e`; its installed C++ extension is older.
+These complete-preparation runs contain no templates. Real template parity
+(including entity merge/split, mapping and coordinate changes) was separately
+executed with a matched native Python/C++ installation. The template method's
+AST is identical to the pinned source; matching-current-build template
+qualification remains outstanding.
+
+### Verification
+
+The final targeted suite passed all 427 tests with zero skips/failures; nine
+non-failing warnings were reported. The results and exact pytest file list are in
+[verification.json](../examples/benchmarks/results/loss_af3_20261117/verification.json).
+The retained checks cover public scoring, backend-aware startup and runtime pose
+gating, sparse/insertion-code selectors, scoped preparation sharing, native
+Boltz parser equality, AF3 invalidation/chemistry isolation and real template
+features. The formerly external Holes fixture now uses the repository's C3
+structure in an isolated native process, including selected-atom sum parity.
+All 39 physical loss definitions in existing config/example YAML files also
+passed parameter preflight after the two native recipe migrations.
+
+The runtime dependency lock was regenerated with the repository's Python 3.11,
+manylinux x86_64 hash-generation command. This is CPU/control-flow and native
+feature/scoring evidence. It is not a full container rebuild, GPU inference
+qualification, or a benchmark of complete Boltz/Protenix/Mol-1 preparation.

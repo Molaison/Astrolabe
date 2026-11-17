@@ -19,6 +19,7 @@ from tqdm import tqdm
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import ProteinChain, Ligand, RnaChain, DnaChain
 from astrolabe.evaluators.x_masking import preserve_unknown_residue_sequence
+from astrolabe.evaluators.boltz_ccd import BoltzCcdCache
 try:
     from alphafold3.common.folding_input import (
         ProteinChain as AF3ProteinChain,
@@ -270,6 +271,8 @@ def process_inputs(  # noqa: C901, PLR0912, PLR0915
     msa_pairing_strategy: str,
     max_msa_seqs: int = 4096,
     use_msa_server: bool = False,
+    *,
+    ccd=None,
 ) -> None:
     """Process the input data and output directory.
 
@@ -308,9 +311,9 @@ def process_inputs(  # noqa: C901, PLR0912, PLR0915
     processed_msa_dir.mkdir(parents=True, exist_ok=True)
     predictions_dir.mkdir(parents=True, exist_ok=True)
 
-    # Load CCD
-    with ccd_path.open("rb") as file:
-        ccd = pickle.load(file)  # noqa: S301
+    if ccd is None:
+        with ccd_path.open("rb") as file:
+            ccd = pickle.load(file)  # noqa: S301
 
     # Parse input data
     records: list[Record] = []
@@ -690,6 +693,7 @@ def from_af3_to_boltz(input_obj):
 class Boltz1Runner:
     def __init__(self, config):
         self.config = config
+        self._ccd_cache = BoltzCcdCache()
         self.accelerator = config["accelerator"]
         self.cache = pathlib.Path(config["cache"])
         self.checkpoint = config["checkpoint"]
@@ -704,6 +708,9 @@ class Boltz1Runner:
         self.use_msa_server = config["use_msa_server"]
         self.msa_server_url = config["msa_server_url"] or "https://api.colabfold.com"
         self.msa_pairing_strategy = config["msa_pairing_strategy"]
+
+    def shutdown(self):
+        self._ccd_cache.clear()
 
     def run_inference(self, data, out_dir):
         self.run_prediction(data, out_dir)
@@ -815,6 +822,7 @@ class Boltz1Runner:
             data=data,
             out_dir=out_dir,
             ccd_path=ccd_path,
+            ccd=self._ccd_cache.for_request(ccd_path),
             use_msa_server=self.use_msa_server,
             msa_server_url=self.msa_server_url,
             msa_pairing_strategy=self.msa_pairing_strategy,

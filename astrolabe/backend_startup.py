@@ -137,6 +137,7 @@ def _validate_common_options(family, kind, cfg, root, *, allow_unresolved=False)
                 numeric(field)
             for field in ('refstructure_cache', 'msa_cache'):
                 boolean(field, binary=True)
+            boolean('preparation_cache')
             boolean('save_embeddings')
             text('service_socket', nullable=True)
             buckets = get('buckets')

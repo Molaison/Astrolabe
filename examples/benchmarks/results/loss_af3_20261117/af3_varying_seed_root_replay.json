@@ -1,0 +1,53 @@
+{
+  "preparation_config": {
+    "refstructure_workers": 8,
+    "refstructure_cache": 1,
+    "refstructure_cache_max_entries": 20000,
+    "msa_cache": 1,
+    "msa_cache_max_entries": 8
+  },
+  "template_cif": null,
+  "features_sha256": "0d4ee4262a5f5af2485c56544d5b2cfcde5978d7bfbef070963f367eddf080af",
+  "native_revision": "4b154d922759c918dd4b5a4d5a779853100fd20e",
+  "native_cpp": "<installed older alphafold3>/cpp.cpython-311-x86_64-linux-gnu.so",
+  "existing_native_caches": [
+    "_MSA_FEATURES_CACHE",
+    "_REFSTRUCTURE_REFERENCE_CACHE"
+  ],
+  "classification": "native_CPU_preparation_no_model_inference",
+  "target_length": 80,
+  "design_length": 80,
+  "msa_depth": 1024,
+  "runs_per_side": 5,
+  "fixed_seed": false,
+  "errors": 0,
+  "baseline_s": [
+    0.5106588139897212,
+    0.5221406149794348,
+    0.5255836009746417,
+    0.5402615439961664,
+    0.5090204420266673
+  ],
+  "cached_s": [
+    0.49246512801619247,
+    0.4867632550303824,
+    0.4929423930007033,
+    0.5102993299951777,
+    0.5002516909735277
+  ],
+  "native_source": "vendor/alphafold3/src/alphafold3/model/features.py",
+  "numeric_feature_arrays_checked": 295,
+  "cache_statistics": {
+    "msa_tail_misses": 1,
+    "templates_misses": 1,
+    "msa_tail_hits": 5,
+    "templates_hits": 5,
+    "entries": 2,
+    "bytes": 856960
+  },
+  "baseline_median_s": 0.5221406149794348,
+  "cached_median_s": 0.4929423930007033,
+  "speedup": 1.0592325237052391,
+  "native_build_note": "Pinned Python source with installed older C++ extension; this complete-preparation run uses no templates. Matching current compiled-template qualification remains outstanding.",
+  "reproduce": "PYTHONPATH=. python examples/benchmarks/af3_preparation_reuse.py --af3-source vendor/alphafold3/src --output af3_varying_seed_root_replay.json"
+}

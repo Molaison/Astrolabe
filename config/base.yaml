@@ -288,6 +288,8 @@ evaluator:
     # - ALPHAFOLD3_MSA_CACHE_MAX_ENTRIES
     msa_cache: 1
     msa_cache_max_entries: 8
+    # Reuse deterministic preparation; sequence/RNG-dependent features stay fresh.
+    preparation_cache: true
     # Optional official AF3 data-pipeline settings. These are not required by
     # the maintained GH inference path and default to null in env_container.
     datapipeline:

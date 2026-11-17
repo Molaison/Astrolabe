@@ -9,6 +9,9 @@ from __future__ import annotations
 import math
 from pathlib import Path
 import shutil
+import re
+
+from astrolabe.loss_config import PHYSICAL_SCORE_BACKENDS, loss_backend, validate_loss_selector
 
 
 _INTERFACE_PAE = {"ipae", "ipae_min", "ipae_minimal", "ipae_max", "ipsae"}
@@ -84,14 +87,95 @@ def validate_scoring_settings(family, kind, options, *, path, check_paths) -> li
             fail(key, "asset does not exist")
 
     if family == "loss":
-        if kind in _CHAIN_PAIRS:
+        if kind in PHYSICAL_SCORE_BACKENDS:
+            backend = None
+            try:
+                backend = loss_backend(kind, options)
+            except ValueError as exc:
+                fail("backend", str(exc))
+            for key in ("selector_a", "selector_b"):
+                if key in options:
+                    try:
+                        validate_loss_selector(options[key])
+                    except ValueError as exc:
+                        fail(key, str(exc))
+            for key in ("protomer_a", "protomer_b", "binder_chains", "target_chains", "included_protomers"):
+                chain(key, multiple=True)
+            if options.get("included_protomers") is not None and (
+                options.get("protomer_a") is not None or options.get("protomer_b") is not None
+            ):
+                fail("included_protomers", "conflicts with protomer_a/protomer_b; use one form")
+            for key in ("protomer_a_residues", "protomer_b_residues"):
+                value = options.get(key)
+                if value is None:
+                    continue
+                if not isinstance(value, str) or not value.strip():
+                    fail(key, "expected a nonempty chain-relative residue range or null")
+                    continue
+                for token in value.split(","):
+                    match = re.fullmatch(r"\s*(\d+)(?:\s*-\s*(\d+))?\s*", token)
+                    if match is None or int(match[1]) < 1 or int(match[2] or match[1]) < int(match[1]):
+                        fail(key, f"invalid chain-relative residue range {token!r}")
+            for key in ("distance_weight", "buried_sasa_cutoff"):
+                number(key, nonnegative=True)
+            for key in ("sasa_probe_radius", "separation_distance", "interface_distance", "lower_scale", "upper_scale"):
+                number(key, positive=True)
+            number("midpoint", positive=True)
+            number("midpoint_value", positive=True, maximum=1)
+            number("hbond_energy_cutoff")
+            number("hydrogen_ph", nonnegative=True, maximum=14)
+            number("hbond_distance", positive=True)
+            number("hbond_angle", positive=True, maximum=180)
+            if options.get("hbond_angle") == 180:
+                fail("hbond_angle", "expected an angle below 180 degrees")
+            integer("sasa_points")
+            if type(options.get("sasa_points")) is int and 0 < options["sasa_points"] < 20:
+                fail("sasa_points", "expected at least 20 sphere points")
+            if "hydrogens" in options and (not isinstance(options["hydrogens"], str) or options["hydrogens"] not in {"add", "existing"}):
+                fail("hydrogens", "expected add or existing")
+            if options.get("midpoint_value") == 1:
+                fail("midpoint_value", "expected a value below 1")
+            for key in ("ignore_surface_res", "strict"):
+                if key in options and not isinstance(options[key], bool):
+                    fail(key, "expected a boolean")
+            if options.get("use_rosetta_radii") is not None and not isinstance(options["use_rosetta_radii"], bool):
+                fail("use_rosetta_radii", "expected a boolean or null")
+            if backend == "rosetta" and kind in {
+                "interface_hbond_count", "ligand_protein_hbond",
+                "interface_buried_unsatisfied_hbonds", "ligand_buried_unsat_hbonds",
+            }:
+                # Match the independent backend's native-option guard before any
+                # PyRosetta initialization. Equal defaults preserve old configs.
+                defaults = {
+                    "hydrogens": "add", "hydrogen_ph": 7.0,
+                    "hbond_distance": 2.5, "hbond_angle": 120.0,
+                }
+                if kind in {"interface_buried_unsatisfied_hbonds", "ligand_buried_unsat_hbonds"}:
+                    defaults.update(sasa_probe_radius=1.4, buried_sasa_cutoff=1.0, sasa_points=1000)
+                for key, default in defaults.items():
+                    if key in options and not any(error.startswith(f"{path}.{key}:") for error in errors):
+                        if options[key] != default:
+                            fail(key, "requires backend=biotite")
+            if backend == "py_contact_ms" and options.get("use_rosetta_radii") is True:
+                fail("use_rosetta_radii", "requires backend=rosetta")
+            if backend == "biotite" and kind == "interface_buried_unsatisfied_hbonds":
+                if options.get("ignore_surface_res") is True:
+                    fail("ignore_surface_res", "requires backend=rosetta")
+                separation = options.get("separation_distance", 1000.0)
+                if finite_number(separation) and separation > 0 and separation != 1000.0:
+                    fail("separation_distance", "requires backend=rosetta")
+            if backend not in (None, "rosetta") and kind in {"interface_hbond_count", "interface_shape_complementarity"}:
+                for key in ("hbond_energy_cutoff", "interface_distance"):
+                    if key in options:
+                        fail(key, "is a native feedback control; requires backend=rosetta")
+        if kind in _CHAIN_PAIRS and kind not in PHYSICAL_SCORE_BACKENDS:
             for key in ("chain_a", "chain_b"):
                 chain(key, multiple=True)
             for key in ("protomer_a", "protomer_b"):
-                chain(key, multiple=kind in {"interface_holes", "interface_buried_unsatisfied_hbonds"})
+                chain(key, multiple=kind in PHYSICAL_SCORE_BACKENDS)
         if kind in {"single_chain_rog", "single_chain_ca_rog"}:
             chain("included_protomers", multiple=True)
-        if kind in {"secondary_structure_fraction", "protomer_shape_complementarity", "interface_buried_unsatisfied_hbonds"}:
+        if kind == "secondary_structure_fraction":
             chain("included_protomers", multiple=False)
         if kind == "binder_pair_tmscore":
             for key in ("oligo_a", "oligo_b", "binder_chain"):
@@ -105,18 +189,10 @@ def validate_scoring_settings(family, kind, options, *, path, check_paths) -> li
                     fail("contact_method", "expected sc or a CA method")
         if kind == "ipsae":
             number("pae_cutoff", positive=True)
-        if kind == "interface_holes":
-            number("interface_distance", positive=True)
-        if kind == "interface_buried_unsatisfied_hbonds":
-            number("separation_distance", positive=True)
-            if "ignore_surface_res" in options and not isinstance(options["ignore_surface_res"], bool):
-                fail("ignore_surface_res", "expected a boolean")
         if kind == "secondary_structure_fraction" and "sse_type" in options:
             value = options["sse_type"]
             if not isinstance(value, str) or value.upper() not in {"E", "H", "L"}:
                 fail("sse_type", "expected E, H, or L")
-        if kind == "protomer_shape_complementarity" and "strict" in options and not isinstance(options["strict"], bool):
-            fail("strict", "expected a boolean")
         return errors
 
     if kind in _AUTODOCK:

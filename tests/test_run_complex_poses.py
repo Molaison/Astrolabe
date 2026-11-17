@@ -683,3 +683,33 @@ def test_single_chain_complex_poses_allows_oligomer_specific_hotspot_loss(
     assert set(out.complex_poses.poses) == {"A"}
     assert score == 1.4
     assert "hotspot" in details
+
+@pytest.mark.parametrize("kind", [
+    "protomer_shape_complementarity", "interface_shape_complementarity",
+    "ligand_shape_complementarity", "contact_molecular_surface",
+    "contact_molecular_surface_norm", "interface_hbond_count",
+    "interface_buried_unsatisfied_hbonds", "ligand_protein_hbond",
+    "ligand_buried_unsat_hbonds",
+])
+def test_independent_loss_defaults_do_not_request_native_poses(kind):
+    loss_computer = SimpleNamespace(loss_specs={"metric": (kind, lambda: None, {})})
+    assert not run._loss_computer_needs_complex_poses(loss_computer)
+    args = SimpleNamespace(enable_pyrosetta=False)
+    assert not run._sync_enable_pyrosetta_from_loss_computer(args, loss_computer)
+    assert args.enable_pyrosetta is False
+
+
+def test_explicit_rosetta_backend_and_native_selector_request_poses(monkeypatch):
+    from dataclasses import replace
+    from astrolabe.selectors.registry import SelectorRegistry
+
+    kind = "contact_molecular_surface"
+    native = SimpleNamespace(loss_specs={"cms": (kind, lambda: None, {"backend": "rosetta"})})
+    assert run._loss_computer_needs_complex_poses(native)
+    monkeypatch.setitem(SelectorRegistry._registrations, "selected_surface",
+                        replace(SelectorRegistry.get("surface"), name="selected_surface"))
+    for selector in ("surface()", "buried_unsat()", "selected_surface()"):
+        independent = SimpleNamespace(
+            loss_specs={"cms": (kind, lambda: None, {"selector_a": selector})}
+        )
+        assert run._loss_computer_needs_complex_poses(independent)

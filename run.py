@@ -49,6 +49,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 # Local imports
 from astrolabe import run_config_lifecycle
+from astrolabe.loss_config import loss_backend, loss_selectors_require_pose
 from astrolabe.core.folding_input import snapshot_folding_inputs
 from astrolabe.evaluators.evidence import (
     attach_evaluation_records, merge_evidence_metadata, observe_evaluation_inputs,
@@ -1453,6 +1454,7 @@ def calculate_token_numbers(inputs: Dict[str, "Input"]) -> Dict[str, int]:
         )
         return int(len(all_tokens.atom_name))
 
+    from astrolabe.af3_preparation import create_request_ccd
     from astrolabe.utils.af3_compat import (
         allow_all_x_protein_chains_during_featurisation,
         to_af3_input,
@@ -1461,7 +1463,7 @@ def calculate_token_numbers(inputs: Dict[str, "Input"]) -> Dict[str, int]:
     num_tokens: dict[str, int] = {}
     for oligo_name, input_data in inputs.items():
         af3_input = to_af3_input(input_data)
-        ccd = chemical_components.Ccd(user_ccd=af3_input.user_ccd)
+        ccd = create_request_ccd(user_ccd=af3_input.user_ccd)
         with allow_all_x_protein_chains_during_featurisation(af3_input):
             token_count = count_tokens(fold_input=af3_input, ccd=ccd)
         num_tokens[oligo_name] = int(token_count)
@@ -1517,6 +1519,14 @@ def _loss_computer_needs_complex_poses(loss_computer: LossEngine | None) -> bool
         if not spec_tuple:
             continue
         spec_name = spec_tuple[0]
+        params = spec_tuple[2] if len(spec_tuple) > 2 else {}
+        if loss_selectors_require_pose(params):
+            return True
+        backend = loss_backend(spec_name, params)
+        if backend is not None:
+            if backend == "rosetta":
+                return True
+            continue
         if spec_name in PYROSETTA_LOSS_TYPES:
             return True
         loss_func = spec_tuple[1] if len(spec_tuple) > 1 else None

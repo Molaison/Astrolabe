@@ -1,0 +1,13 @@
+{
+  "scope": "AST identity of Templates.compute_features only; not proof of complete native build equivalence.",
+  "implementations": [
+    {
+      "path": "<matched installed AF3 Python>/model/features.py",
+      "ast_sha256": "043f37db65759da0fd2a5935991a4424ebf63a75fb5b4ce87088edf68f419be9"
+    },
+    {
+      "path": "vendor/alphafold3/src/alphafold3/model/features.py",
+      "ast_sha256": "043f37db65759da0fd2a5935991a4424ebf63a75fb5b4ce87088edf68f419be9"
+    }
+  ]
+}

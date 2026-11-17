@@ -569,6 +569,80 @@ stages:
 `mutator.mutator_weights` 不是当前新配置入口。迁移时把实现放入 terms alias，
 再由 stage 引用。
 
+
+### 6.1 物理评分 backend 与位置选择
+
+物理评分现在显式选择 backend。未配置时使用下表默认值；依赖缺失会报错，
+不会按本机是否安装 Rosetta 自动更换算法。安装独立实现可用
+`python -m pip install -e '.[scoring]'`；标准环境配置和 container lock 已包含对应依赖。
+
+| 指标 | 默认 backend | Rosetta 替代与定义边界 |
+|---|---|---|
+| `protomer_shape_complementarity`、`interface_shape_complementarity`、`ligand_shape_complementarity` | `sc_rs`，protein-interface 的并行空间索引实现 | `backend: rosetta`；原子半径可能造成数值差异 |
+| `contact_molecular_surface`、`contact_molecular_surface_norm` | `py_contact_ms`，Connolly SES 与距离加权面积 | `backend: rosetta`；当前独立 CPU 表面生成在测试结构上仍较慢 |
+| `interface_hbond_count`、`ligand_protein_hbond` | `biotite`，化学 donor/acceptor typing 与 D–H–A 几何 | `backend: rosetta`；几何氢键与能量氢键不是同一判据 |
+| `interface_buried_unsatisfied_hbonds`、`ligand_buried_unsat_hbonds` | `biotite`，几何氢键与 SASA burial | `backend: rosetta`；不等同于 Rosetta/DAlphaBall 的 BUNS 定义 |
+| `interface_holes`、`chain_holes_diff`、`ligand_local_holes` | `rosetta` | 保留 Holes 的 DAlphaBall 体积与训练权重，没有用 cavity volume 替代 |
+
+需要复现旧分数或沿用旧阈值时，显式配置 `backend: rosetta`。切换算法后重新标定
+threshold、gate 与 loss 权重。 内置 RFD4 与 multidomain recipe 原有 native energy/radii 参数已显式固定 Rosetta。独立 CMS 的表面生成在代表结构上仍慢于 Rosetta；
+相同选择的 raw/norm alias 与不同 distance weight 会复用表面，但每个新结构仍需生成 SES。
+速度优先的 CMS 配置可显式选 Rosetta。独立 polar 评分首次加载与化学 typing 也有冷启动成本，
+后续 loss 在同一进程、同一结构上复用准备结果；具体测量见下方 ledger。
+
+`_for` 选择 oligomer，`protomer_a` / `protomer_b` 选择两侧链，
+`selector_a` / `selector_b` 在各侧进一步选位置。例如：
+
+```yaml
+loss:
+  loss_terms:
+    patch_sc:
+      _type: protomer_shape_complementarity
+      _for: ABC
+      backend: sc_rs
+      protomer_a: A
+      protomer_b: [B, C]
+      selector_a: "hotspot('binding_patch')"
+    patch_hbonds:
+      _type: interface_hbond_count
+      _for: ABC
+      backend: biotite
+      protomer_a: A
+      protomer_b: [B, C]
+      selector_a: "hotspot('binding_patch')"
+      hydrogens: add
+      hydrogen_ph: 7.0
+      hbond_distance: 2.5
+      hbond_angle: 120.0
+```
+
+`binding_patch` 是任务已有的 hotspot alias，需先在任务中定义。
+Selector 复用现有表达式系统，支持已注册 alias 和布尔组合；缺省选择该侧全部位置。
+链名优先指向具体 copy；展开同一 protomer 的所有 copy 可用 `protomer:A`。
+位置按链内 1-based residue ordinal 映射，兼容稀疏 PDB residue ID 与 insertion code。
+旧 residue range 和 selector 同时出现时取交集。空选择不会扩大为整条链：
+氢键可返回零，要求非空表面的指标会明确报错。
+
+`surface()`、`interface()`、`buried_unsat()` 等原有 selector 仍依赖 PyRosetta，
+即使最终评分使用独立 backend，也会按 registry 请求 native pose。
+H-bond/BUNS selector 限定计数位置，完整环境的遮蔽与链内氢键仍参与判定。
+Interface BUNS 两侧链组必须覆盖整个复合体，以明确 bound/unbound 分组。
+Ligand 指标的 a 侧是 ligand，b 侧是 protein；局部 Holes 保留原邻域，只限制报告位置。
+`chain_holes_diff` 比较删除整条链前后的完整体系，保持全链定义，不接受局部 selector。
+
+`hydrogens: add` 使用 Hydride 理想几何加氢，按 `hydrogen_ph` 估计标准残基电荷，
+不移动重原子或做能量优化。`hydrogens: existing` 保留输入 H 的位置，
+要求完整、可解释的闭壳层化学图；不完整 H、缺失必要重原子、未知化学键或半径会报错。
+BUNS 的 `sasa_probe_radius`（Å）、`buried_sasa_cutoff`（Å²）与 `sasa_points`
+属于独立几何定义。Rosetta 不支持的非默认几何选项会在 preflight 被拒绝。
+
+`oligomer_specific` 保留为 `_for` 的兼容形式；两者冲突会报错。
+RFD4 的 `binder_chains` / `target_chains` 保留兼容，不能与新的两侧链名混用。
+误注册但实现不接受的 SC 参数（如 `target_sc`、`return_raw`）现在在启动时拒绝；
+需要变换分数时使用 `expression_terms`。NaN、非法范围、未知参数与 selector 语法也会提前检查。
+
+实现与性能证据见 [implementation ledger](architecture_convergence.md#physical-score-backends-and-incremental-preparation-2026-11-17)。
+
 ## 7. 证据化调参闭环
 
 ### 7.1 一次只改一个 owner 家族

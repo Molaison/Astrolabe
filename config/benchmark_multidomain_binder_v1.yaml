@@ -81,12 +81,14 @@ loss:
       cutoff: 10.0
     contact_molecular_surface:
       _type: contact_molecular_surface
+      backend: rosetta
       protomer_a: A
       protomer_b: B
       distance_weight: 0.5
       use_rosetta_radii: true
     contact_molecular_surface_norm:
       _type: contact_molecular_surface_norm
+      backend: rosetta
       protomer_a: A
       protomer_b: B
       distance_weight: 0.5

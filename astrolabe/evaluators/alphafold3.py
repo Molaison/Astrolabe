@@ -25,6 +25,9 @@ from alphafold3.data import featurisation
 from astrolabe.core.cyclization import serialize_cyclic_relative_patches
 from astrolabe.utils.mmcif_ids import int_id_to_str_id
 from astrolabe.af3_featurisation_settings import featurisation_environment
+from astrolabe.af3_preparation import (
+    AF3PreparationCache, create_request_ccd, preparation_cache_scope,
+)
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.base import Evaluator
@@ -56,6 +59,11 @@ class AlphaFold3Evaluator(Evaluator):
         self._evaluation_lock = threading.RLock()
         self.model_runner = model_runner
         self.af3_conf = af3_conf
+        self._preparation_cache = (
+            AF3PreparationCache()
+            if self._get_config_value(af3_conf, "preparation_cache", True)
+            else None
+        )
         self._pre_eval_hook_reports = {}
         self._af3_antibody_msa_cache = None
         from astrolabe.af3_buckets import PREFERRED_BUCKETS
@@ -108,6 +116,8 @@ class AlphaFold3Evaluator(Evaluator):
 
     def shutdown(self) -> None:
         shutdown_model_handles(self.model_runner)
+        if self._preparation_cache is not None:
+            self._preparation_cache.clear()
 
     def evaluate(self, inputs=None, runtime_config=None):
         # Legacy scientific configuration is not qualified for concurrent use.
@@ -321,6 +331,7 @@ class AlphaFold3Evaluator(Evaluator):
                 model_runner=self.model_runner,
                 buckets=self.buckets.get(oligo),
                 featurisation_config=self.af3_conf,
+                preparation_cache=getattr(self, "_preparation_cache", None),
                 **self.kwargs[oligo],
             )
         return output
@@ -664,7 +675,8 @@ class AlphaFold3Evaluator(Evaluator):
         return patched
 
     @staticmethod
-    def predict_structure(fold_input, model_runner, buckets, *, featurisation_config=None, **kwargs):
+    def predict_structure(fold_input, model_runner, buckets, *, featurisation_config=None,
+                          preparation_cache=None, **kwargs):
         """Runs the full inference pipeline to predict structures for each seed."""
 
         cyclic_asym_ids = tuple(
@@ -680,7 +692,7 @@ class AlphaFold3Evaluator(Evaluator):
             model_runner.set_cyclic_relative_patches(cyclic_relative_patches)
         logging.debug(f"Featurising data for seeds {fold_input.rng_seeds}...")
         featurisation_start_time = time.time()
-        ccd = chemical_components.Ccd(user_ccd=fold_input.user_ccd)
+        ccd = create_request_ccd(user_ccd=fold_input.user_ccd)
         if "init_guess_path" in kwargs:
             if "init_guess_chain" not in kwargs:
                 raise ValueError("init_guess_chain not found in kwargs")
@@ -693,10 +705,14 @@ class AlphaFold3Evaluator(Evaluator):
 
         if isinstance(buckets, TokenBuckets):
             install_bucket_dispatch(featurisation.pipeline)
-        with featurisation_environment(featurisation_config), allow_all_x_protein_chains_during_featurisation(fold_input):
+        with (featurisation_environment(featurisation_config, user_ccd=fold_input.user_ccd),
+              allow_all_x_protein_chains_during_featurisation(fold_input),
+              preparation_cache_scope(preparation_cache)):
             featurised_examples = featurisation.featurise_input(
                 fold_input=fold_input, buckets=buckets, ccd=ccd, verbose=True, **kwargs
             )
+        if preparation_cache is not None:
+            logging.debug("AF3 preparation reuse: %s", preparation_cache.statistics)
         featurised_examples = AlphaFold3Evaluator._apply_query_residue_index_jumps(
             featurised_examples,
             fold_input,

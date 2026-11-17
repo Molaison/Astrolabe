@@ -2,6 +2,7 @@ import ast
 import copy
 import functools
 import hashlib
+import inspect
 import logging
 import math
 from collections import defaultdict
@@ -17,7 +18,7 @@ except Exception:  # pragma: no cover - optional dependency
 from omegaconf import DictConfig
 
 from astrolabe.core import global_config
-from astrolabe.loss_config import INTRINSIC_PARAMS
+from astrolabe.loss_config import INTRINSIC_PARAMS, normalize_loss_options, validate_loss_selector
 from astrolabe.losses.utils import LossRegistry
 from astrolabe.score_contributions import (
     score_contributions_from_runtime_config,
@@ -291,19 +292,12 @@ class LossEngine:
             if loss_names[loss_name] is None:
                 continue
 
-            params = dict(copy.deepcopy(loss_names[loss_name]))
+            params = normalize_loss_options(copy.deepcopy(loss_names[loss_name]))
             if "_type" not in params:
                 raise ValueError(
                     f"Loss specification '{loss_name}' must have a '_type' field."
                 )
             spec_string = params.pop("_type")
-
-            if "_for" in params:
-                oligomer = params.pop("_for")
-                if isinstance(oligomer, str):
-                    oligomer = oligomer.split(",")
-
-                params["oligomer_specific"] = oligomer
 
             metadata = self.registry.get_metadata(spec_string)
             if set(params.keys()) - (
@@ -315,15 +309,26 @@ class LossEngine:
                     f"Invalid parameters for loss '{spec_string}': {set(params.keys()) - (set(metadata.optional_params) | set(metadata.required_params))}"
                 )
 
-            if set(metadata.required_params) - set(params.keys()):
+            if any(key not in params or params[key] is None for key in metadata.required_params):
                 raise ValueError(
-                    f"Missing required parameters for loss '{spec_string}': {set(metadata.required_params) - set(params.keys())}"
+                    f"Missing required parameters for loss '{spec_string}': {set(key for key in metadata.required_params if key not in params or params[key] is None)}"
                 )
-            specs[loss_name] = (
-                spec_string,
-                self.registry.get_function(spec_string),
-                params,
+            function = self.registry.get_function(spec_string)
+            call_params = {key: value for key, value in params.items() if key not in INTRINSIC_PARAMS}
+            try:
+                inspect.signature(function).bind(None, **call_params)
+                for key in ("selector_a", "selector_b"):
+                    if key in call_params:
+                        validate_loss_selector(call_params[key])
+            except (TypeError, ValueError) as exc:
+                raise ValueError(f"Invalid parameters for loss {spec_string!r}: {exc}") from exc
+            from astrolabe.scoring_startup import validate_scoring_settings
+            issues = validate_scoring_settings(
+                "loss", spec_string, call_params, path=f"loss.loss_terms.{loss_name}", check_paths=False,
             )
+            if issues:
+                raise ValueError("; ".join(issues))
+            specs[loss_name] = (spec_string, function, params)
 
         return specs
 
@@ -717,6 +722,14 @@ class LossEngine:
         """Extract scores using registered loss functions."""
         # Native loss functions still include process-global consumers.
         self.runtime_context.require_current()
+        if any(
+            params.get(key) not in (None, "None")
+            for _spec, _function, params in self.loss_specs.values()
+            for key in ("selector_a", "selector_b")
+        ):
+            # Selectors can depend on current segment aliases and native state,
+            # which are not represented by the raw prediction's content codec.
+            return self._extract_scores_from_specs(eval_result, self.loss_specs)
         from astrolabe.design.native_scores import snapshot_scores
         from astrolabe.design.store import DataStore
 
@@ -785,6 +798,12 @@ class LossEngine:
                 if oligomer_specific is not None
                 else eval_result
             )
+            # Filtered views share only content-bound structure preparation.
+            # Selector masks and scalar scores are evaluated separately per term.
+            if this_eval_result is not eval_result:
+                contexts = getattr(eval_result, "_independent_structure_cache", None)
+                if contexts is not None:
+                    this_eval_result._independent_structure_cache = contexts
             oligo_names = list(getattr(this_eval_result, "names", None) or [])
             oligo = summarize_event_items(oligo_names)
             if oligo is None and oligomer_specific is not None:
@@ -808,6 +827,10 @@ class LossEngine:
                     span.skip(result="no_matching_oligomer", result_count=0)
                 else:
                     scores = loss_func(this_eval_result, **call_params)
+                    if this_eval_result is not eval_result:
+                        contexts = getattr(this_eval_result, "_independent_structure_cache", None)
+                        if contexts is not None:
+                            eval_result._independent_structure_cache = contexts
                     if isinstance(scores, dict):
                         values = list(scores.values())
                         span.finish(
