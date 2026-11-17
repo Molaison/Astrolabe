@@ -171,6 +171,105 @@ def _replace_worker(owner, args, role):
     return worker._WORKER
 
 
+@pytest.fixture
+def import_source(session, tmp_path):
+    owner, calls, args = session
+    source = tmp_path / "source"
+    args = (args[0], str(source / ".framework" / "data"), *args[2:4],
+            str(source / ".prediction_workers"))
+    owner = _replace_worker(owner, args, "prediction")
+    task = {**_task((owner, calls, args), step=0), "generation": 0, "parent_id": None}
+    raw = worker.execute(task)
+    path = owner.receipts / (task["_request_hash"] + ".json")
+    calls.clear()
+    return owner, calls, args, task, raw, path
+
+
+def test_fresh_root_import_skips_prediction_then_child_predicts(import_source, tmp_path):
+    from astrolabe.design.parallel_refinement import _PredictionPool, _ScoreHandoff
+    from concurrent.futures import Future
+
+    owner, calls, args, old_task, raw, path = import_source
+    source_bytes = path.read_bytes()
+    target = tmp_path / "target"
+    new_args = (args[0], str(target / ".framework" / "data"), *args[2:4],
+                str(target / ".prediction_workers"))
+    scorer = _replace_worker(owner, new_args, "score")
+    candidate = scorer.data.put(owner.translation.candidate, design_codec)
+    scorer.data.persist((candidate,))
+    task = {**old_task, "_request_hash": "new-root-epoch", "scoring_identity": "b" * 64}
+    # Real native routing must bypass prediction, not merely get a cache hit.
+    class ScorePool:
+        def submit(self, function, task):
+            future = Future()
+            future.set_result(function(task))
+            return future
+
+    class NoPrediction:
+        def submit(self, *_args):
+            pytest.fail("imported root dispatched to prediction")
+
+    events = []
+    handoff = _ScoreHandoff(NoPrediction(), ScorePool(), worker.execute)
+    parent = SimpleNamespace(
+        root_prediction_import={"path": str(path), "source_sha256": hashlib.sha256(source_bytes).hexdigest()},
+        data=scorer.data, worker_output=scorer.root,
+        spec=SimpleNamespace(event=lambda *args, **kw: events.append((args, kw))),
+    )
+    result = _PredictionPool(parent, handoff).submit(worker.execute, task).result()
+    assert calls == []
+    assert result["root_prediction_import"]["inference_count"] == 0
+    assert result["raw_scores"] == raw["raw_scores"]
+    assert result["prediction_after_rng"] == raw["prediction_after_rng"]
+    original = restore_scores(worker._blob(raw["raw_scores"]), _fresh_data(owner), tmp_path / "original")
+    imported = restore_scores(worker._blob(result["raw_scores"]), _fresh_data(scorer), tmp_path / "imported")
+    for assembly in ASSEMBLIES:
+        np.testing.assert_array_equal(imported.plddt[assembly][0], original.plddt[assembly][0])
+    assert imported.worker_test_extension == original.worker_test_extension
+    assert [Path(p).read_bytes() for p in imported.complex_paths.values()] == [
+        Path(p).read_bytes() for p in original.complex_paths.values()]
+    assert path.read_bytes() == source_bytes
+    assert events[0][0] == ("root_prediction_imported",)
+    predictor = _replace_worker(scorer, new_args, "prediction")
+    child = {**_task((predictor, calls, new_args), request="new-child", step=1), "id": 1}
+    _PredictionPool(parent, ScorePool()).submit(worker.execute, child).result()
+    assert len(calls) == 1
+
+
+@pytest.mark.parametrize("damage", [
+    "candidate", "seed", "child", "missing_blob", "corrupt_blob", "missing_sidecar",
+    "corrupt_sidecar", "unfinished", "missing_rng",
+])
+def test_root_import_rejects_invalid_evidence_before_prediction(import_source, tmp_path, damage):
+    owner, calls, _args, task, raw, path = import_source
+    source_sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
+    task = {**task, "_request_hash": "new-root"}
+    if damage == "candidate":
+        task["candidate_identity"] = "f" * 64
+    elif damage == "seed":
+        task["seed"] += 1
+    elif damage == "child":
+        task["parent_id"] = 2
+    elif damage in {"missing_blob", "corrupt_blob"}:
+        blob_path = owner.data._path_for(worker._blob(raw["raw_scores"]))
+        blob_path.unlink() if damage == "missing_blob" else blob_path.write_bytes(b"corrupt")
+    elif damage in {"missing_sidecar", "corrupt_sidecar"}:
+        sidecar = Path(raw["sidecars"][0]["path"])
+        sidecar.unlink() if damage == "missing_sidecar" else sidecar.write_bytes(b"corrupt")
+    elif damage == "unfinished":
+        path = path.with_suffix(".issued.json")
+    elif damage == "missing_rng":
+        del raw["prediction_after_rng"]
+        path.write_text(json.dumps(raw))
+    with pytest.raises((ContractConflict, OutcomeUnknown, KeyError)):
+        worker.import_root_prediction(
+            path, source_sha256=source_sha256, task=task,
+            data=DataStore(tmp_path / "target-data"), output_root=tmp_path / "target",
+        )
+    assert calls == []
+    assert not (tmp_path / "target" / "receipts").exists()
+
+
 def test_split_roles_reuse_raw_without_score_model_or_prediction_replay(session, monkeypatch):
     owner, calls, args = session
     task = _task(session)

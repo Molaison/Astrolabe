@@ -460,9 +460,10 @@ class ProtonPottsMPNNRunner:
             command.extend(["--design-mask-adapter", "preserve"])
         return command
 
-    @staticmethod
-    def _subprocess_env() -> dict[str, str]:
+    def _subprocess_env(self) -> dict[str, str]:
         env = os.environ.copy()
+        if self.device == "cpu":
+            env["CUDA_VISIBLE_DEVICES"] = ""
         env.pop("PYTHONPATH", None)
         env.pop("APPTAINERENV_PYTHONPATH", None)
         isolated_pythonpath = env.get("GH_PROTON_POTTSMPNN_PYTHONPATH", "").strip()

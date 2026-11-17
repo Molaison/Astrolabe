@@ -143,6 +143,19 @@ class _PredictionPool:
 
     def submit(self, worker, task):
         if task["kind"] == "evaluate":
+            if self.owner.root_prediction_import is not None and task["id"] == 0:
+                from .refinement_worker import import_root_prediction
+                imported = import_root_prediction(
+                    **self.owner.root_prediction_import, task=task,
+                    data=self.owner.data, output_root=self.owner.worker_output,
+                )
+                self.owner.spec.event(
+                    "root_prediction_imported", evaluation_id=0,
+                    **imported["root_prediction_import"],
+                )
+                if isinstance(self.pool, _ScoreHandoff):
+                    return self.pool.submit_score(task)
+                # Combined worker sees the imported raw receipt; never infers.
             return self.pool.submit(worker, task)
         future = Future()
         future.set_running_or_notify_cancel()
@@ -450,7 +463,8 @@ class ParallelRefinementOwner(DurableNativeRefinementOwner):
     """Single-writer proposal/measurement with bounded resident predictors."""
 
     def __init__(self, spec, runtime, *, protocol, pool, worker, worker_output,
-                 loss_order=None, score_context=None, async_mutator=False):
+                 loss_order=None, score_context=None, async_mutator=False,
+                 root_prediction_import=None):
         super().__init__(spec, runtime, protocol=protocol)
         from .branch_types import BranchJob
         from .refinement_worker import execute, initialize
@@ -464,6 +478,7 @@ class ParallelRefinementOwner(DurableNativeRefinementOwner):
         self.pool, self.worker = pool, worker
         self.loss_order = loss_order
         self.score_context = score_context
+        self.root_prediction_import = root_prediction_import
         from .configured_refinement import measure_configured_scores
         from astrolabe.losses.base import LossEngine, loss_registry
         self.identity = key_for((
@@ -578,10 +593,12 @@ class ParallelRefinementOwner(DurableNativeRefinementOwner):
         reference = self.data.put(prediction, _RAW_PREDICTION_CODEC)
         self.data.persist((reference,))
         self.spec.event(
-            "prediction_received", evaluation_id=job.id,
+            "prediction_import_received" if "root_prediction_import" in raw else "prediction_received",
+            evaluation_id=job.id,
             worker_pid=raw["worker_pid"],
             worker_constructor_count=raw["constructor_count"],
             prediction_wall_s=raw["prediction_wall_s"],
+            inference_count=0 if "root_prediction_import" in raw else 1,
         )
         raw_dir = Path(raw["job_raw_dir"]).resolve()
         worker_root = self.worker_output.resolve()
@@ -669,6 +686,7 @@ def run_parallel_native_refinement(
     async_mutator=False,
     loss_order=None,
     score_context=None,
+    root_prediction_import=None,
 ):
     """Run the same branching policy with spawn-isolated resident evaluators."""
     from astrolabe.app import Astrolabe
@@ -727,6 +745,7 @@ def run_parallel_native_refinement(
                 spec, runtime, protocol=protocol, pool=pool, worker=execute,
                 worker_output=worker_output,
                 score_context=score_context, async_mutator=async_mutator,
+                root_prediction_import=root_prediction_import,
             )
             owner.bootstrap()
             if loss_order is not None:

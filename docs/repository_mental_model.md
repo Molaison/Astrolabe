@@ -86,6 +86,22 @@ The release CPU suite includes protocol fault injection, raw-only Score
 recovery and child-owner cleanup checks. Native scientific qualification and
 deployment evidence are recorded for the exact release separately.
 
+## Configured search limits and budget snapshots
+
+Configured native branching stops normally when its `search.proposal_cap` is
+exhausted, even when deduplication or scientific rejection leaves fewer than
+`search.max_evaluations` scored members. `steps` remains the evaluation-budget
+fallback, not a generation limit. Set `search.max_generations` explicitly:
+generation zero is the evaluated root, and a limit of 12 prevents generation 13.
+`null` preserves an unbounded generation count; zero evaluates the root only.
+
+`astrolabe run --finalize-run RUN --finalize-output DIR` derives a budget-stop
+beam from a terminal, drained configured refinement journal. The source run is
+read-only; the separate output binds its checkpoint and completed measurements.
+It does not resume the old policy, migrate a checkpoint, rerun a model or change
+an original failed provenance to completed. `--dry-run` validates without
+exporting. Missing, corrupt, pending or unknown evidence cannot be finalized.
+
 ## Scientific restoration and initialization protocols
 
 Runtime contexts retain an immutable run identity. Old explicit stores remain
@@ -101,6 +117,23 @@ feedback state in its original Runtime at proposal boundaries, including
 consumption by rejected proposals. Recovery validates prior proposal receipts
 before initialization and restores all selected projections before new mutation.
 Missing/stale state cannot authorize continuation; unknown stays unknown.
+An explicit top-level `root_prediction_receipt` can instead import a verified
+original raw-only `evaluate/0` (generation/step 0, no parent) into **one fresh
+isolated fixed-request run**, through `astrolabe run`. This is not checkpoint
+migration. Preflight binds original config/protocol/assets and initialized
+Candidate/System (including template/MSA content), sequence, assembly and seed;
+only loss configuration and the stage's derived score expression may differ.
+Unsupported evaluator assets or incomplete/corrupt evidence fail before model
+loading, without inference fallback. Mutator/objective assets are not prediction
+assets. The new run copies only reachable raw/RNG blobs and raw sidecars, keeps
+their original hashes, and saves the exact source receipt under
+`.prediction_workers/imports/`. Its new raw receipt has a
+`root_prediction_import` provenance bridge and `inference_count: 0`; original
+worker/timing metadata describe the historical inference, not new work. Score
+and its receipt belong to the new epoch. Child jobs still predict normally.
+Set this individual field to the absolute original
+`.prediction_workers/receipts/<hash>.json` and choose a new output/task; do not
+set `search.resume`. Old journals, checkpoints and unknown fences are untouched.
 DPLM requires `response_cache=false` for this durable profile. Predocker bank
 projections alone do not cover dynamic-site/sidecar state, so configured durable
 refinement rejects predockers before initialization. The legacy trajectory,

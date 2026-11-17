@@ -6,6 +6,8 @@ defaults:
 
 task_name: null
 out_dir: null
+# Import only a verified original raw root prediction into a fresh native run.
+root_prediction_receipt: null
 # Decision-layer Metropolis acceptance is opt-in compatibility behavior. This
 # is separate from backend model sampling temperatures under mutator/evaluator
 # configs.

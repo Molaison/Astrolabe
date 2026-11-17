@@ -45,6 +45,7 @@ _RESULT_KEYS = {
     "prediction_wall_s", "job_raw_dir", "sidecars",
     "prediction_after_rng",
     "score_receipt", "score_worker_pid", "score_sidecars", "score_raw_dir",
+    "root_prediction_import",
 }
 
 
@@ -127,6 +128,105 @@ def _private_score_paths(value, raw_root, score_root):
         for name, item in vars(value).items():
             setattr(value, name, _private_score_paths(item, raw_root, score_root))
     return value
+
+
+def _require_root(task):
+    if any(task.get(name) != value for name, value in (
+        ("kind", "evaluate"), ("id", 0), ("generation", 0),
+        ("parent_id", None), ("step", 0),
+    )):
+        raise ContractConflict("raw prediction import is restricted to evaluate root0")
+
+
+def read_root_prediction(path):
+    """Read original completed raw evidence with the native worker validator.
+
+    No worker construction, model access, journal recovery or source writes.
+    The returned store is deliberately fresh so cached bytes cannot mask damage.
+    """
+    path = Path(path).expanduser().resolve(strict=True)
+    reader = _Worker.__new__(_Worker)
+    reader.root = path.parent.parent
+    if path.parent.name != "receipts" or reader.root.name != ".prediction_workers":
+        raise ContractConflict("expected an original .prediction_workers/receipts receipt")
+    original = path.read_bytes()
+    task = json.loads(original)["request"]
+    _require_root(task)
+    if path.name != task["_request_hash"] + ".json":
+        raise ContractConflict("expected a completed raw receipt, not an issued/Score receipt")
+    reader.data = DataStore(reader.root.parent / ".framework" / "data")
+    reader.codecs = {codec.identity: codec for codec in (
+        *REFINEMENT_REFERENCE_CODECS, *LEGACY_REFERENCE_CODECS,
+        design_codec, ArrayCodec(), JSONCodec(), _SCORE_RECEIPT_CODEC,
+    )}
+    for codec in reader.codecs.values():
+        reader.data.register(codec)
+    receipt = reader._read(path, task)
+    if "score_receipt" in receipt or "root_prediction_import" in receipt:
+        raise ContractConflict("only original raw-only prediction receipts can be imported")
+    if path.read_bytes() != original:
+        raise ContractConflict("source receipt changed during validation")
+    candidate = reader.data.get(_blob(task["candidate_blob"]), design_codec)
+    if (not isinstance(candidate, Candidate)
+            or candidate.identity.digest != task["candidate_identity"]
+            or candidate.system.digest != task["system_identity"]):
+        raise ContractConflict("source root Candidate/System proof differs from its request")
+    return receipt, reader.data, original
+
+
+def import_root_prediction(path, *, source_sha256, task, data, output_root):
+    """Publish a new raw receipt, preserving original blobs and provenance."""
+    _require_root(task)
+    receipt, source, original = read_root_prediction(path)
+    if hashlib.sha256(original).hexdigest() != source_sha256:
+        raise ContractConflict("source root receipt changed after preflight")
+    for name in ("candidate_blob", "candidate_identity", "system_identity", "seed", "sequence"):
+        if task[name] != receipt[name]:
+            raise ContractConflict(f"root prediction import changed {name}")
+    root = Path(output_root)
+    complete = root / "receipts" / (task["_request_hash"] + ".json")
+    issued = complete.with_suffix(".issued.json")
+    if complete.exists() or issued.exists():
+        raise ContractConflict("root prediction import requires an unissued fresh request")
+    # Copy only the reachable immutable raw/RNG closure, not a checkpoint tree.
+    pending = [_blob(receipt[name]) for name in ("raw_scores", "prediction_after_rng")]
+    seen = set()
+    while pending:
+        reference = pending.pop()
+        if reference in seen:
+            continue
+        seen.add(reference)
+        codec = source._codecs[reference.codec]
+        value = source.get(reference, codec)
+        data.register(codec)
+        copied = data.put(value, codec)
+        if copied != reference:
+            raise ContractConflict("raw codec changed imported immutable bytes")
+        pending.extend(codec.references(value))
+    data.persist(tuple(seen))
+    raw = root / "requests" / task["_request_hash"] / "raw_model_results"
+    shutil.copytree(receipt["job_raw_dir"], raw)
+    sidecars = _sidecars(raw, sync=True)
+    old_root = Path(receipt["job_raw_dir"])
+    expected = [{**item, "path": str(raw / Path(item["path"]).relative_to(old_root))}
+                for item in receipt["sidecars"]]
+    if sidecars != expected:
+        raise ContractConflict("imported sidecars differ from original completed evidence")
+    proof = root / "imports" / (source_sha256 + ".json")
+    proof.parent.mkdir(parents=True, exist_ok=True)
+    from .native_scores import _write_exact
+    _write_exact(proof, original)
+    imported = {
+        **receipt, **task, "request": task, "job_raw_dir": str(raw), "sidecars": sidecars,
+        "root_prediction_import": {
+            "schema": "astrolabe.root-prediction-import/v1", "inference_count": 0,
+            "source_receipt": str(Path(path).resolve()), "source_sha256": source_sha256,
+            "source_proof": str(proof),
+        },
+    }
+    complete.parent.mkdir(parents=True, exist_ok=True)
+    _complete(complete, imported)
+    return imported
 
 
 class _Worker:
@@ -365,6 +465,22 @@ class _Worker:
                 raise ValueError("invalid job raw directory")
             if _json(receipt["sidecars"]) != _json(_sidecars(raw_dir)):
                 raise ValueError("worker sidecars changed after completion")
+            if "root_prediction_import" in receipt:
+                _require_root(task)
+                bridge = receipt["root_prediction_import"]
+                proof = self.root / "imports" / (bridge["source_sha256"] + ".json")
+                original = proof.read_bytes()
+                prior = json.loads(original)
+                _require_root(prior["request"])
+                if (bridge["schema"] != "astrolabe.root-prediction-import/v1"
+                        or bridge["inference_count"] != 0
+                        or bridge["source_proof"] != str(proof)
+                        or hashlib.sha256(original).hexdigest() != bridge["source_sha256"]
+                        or any(prior[name] != receipt[name] for name in (
+                            "raw_scores", "prediction_after_rng", "worker_pid",
+                            "constructor_count", "prediction_wall_s", "timing",
+                            "candidate_blob", "candidate_identity", "system_identity", "seed", "sequence"))):
+                    raise ContractConflict("root prediction import provenance changed")
             if receipt["prediction_wall_s"] != receipt["timing"]["evaluation_seconds"]:
                 raise ValueError("inconsistent prediction timing")
             _json(receipt)
@@ -437,6 +553,9 @@ class _Worker:
                     raise ContractConflict(f"Score native structure content mismatch: {target}")
             scores.complex_paths[structure.assembly] = target
         _private_score_paths(scores, Path(raw_receipt["job_raw_dir"]), raw)
+        if "root_prediction_import" in raw_receipt:
+            prior = json.loads(Path(raw_receipt["root_prediction_import"]["source_proof"]).read_bytes())
+            _private_score_paths(scores, Path(prior["job_raw_dir"]), raw)
         runtime_config = dict(self.runtime_config)
         if task.get("score_context") is not None:
             envelope = restore_scores(_blob(task["score_context"]), self.data, root / "context")

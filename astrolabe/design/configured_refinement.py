@@ -36,6 +36,7 @@ _SEARCH_KEYS = frozenset(
         "width",
         "proposals_per_parent",
         "max_evaluations",
+        "max_generations",
         "proposal_cap",
         "measurement",
         "resume",
@@ -61,6 +62,7 @@ _EXCLUDED_SCIENTIFIC_KEYS = frozenset(
         "scheduling",
         "summary_format",
         "task_name",
+        "root_prediction_receipt",
     }
 )
 _ASSET_MANIFEST_SCHEMA = "astrolabe.configured-refinement.assets/v1"
@@ -128,6 +130,7 @@ class _SearchSettings:
     reuse_durable_closures: bool = False
     async_mutator: bool = False
     score_queue_size: int = 0
+    max_generations: int | None = None
 
 
 @dataclass(frozen=True)
@@ -243,6 +246,9 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         {"max_evaluations": search.get("max_evaluations", cfg.get("steps"))},
         "max_evaluations",
     )
+    max_generations = search.get("max_generations")
+    if max_generations is not None and (type(max_generations) is not int or max_generations < 0):
+        raise ValueError("cfg.search.max_generations must be null or a non-negative integer")
     raw_proposal_cap = search.get("proposal_cap")
     proposal_cap = (
         max(1, max_evaluations - 1)
@@ -317,6 +323,7 @@ def _search_settings(cfg: Any) -> _SearchSettings:
         reuse_durable_closures=execution.get("reuse_durable_closures", False),
         async_mutator=execution.get("async_mutator", False),
         score_queue_size=score_queue_size,
+        max_generations=max_generations,
     )
 
 
@@ -716,6 +723,11 @@ def _selected_asset_manifest(cfg: Any) -> _SelectedAssetManifest:
     except (ImportError, TypeError, ValueError):
         objective_names = set()
     for name in sorted(objective_names):
+        if name in expression_terms and name not in loss_terms:
+            # Derived score expressions are strings, not component mappings.
+            # Their exact formulas are already bound by the canonical config.
+            components.append(_AssetComponent(f"objective:{name}", "expression", "config_only"))
+            continue
         configured = loss_terms.get(name, expression_terms.get(name))
         if configured is None:
             continue
@@ -1203,6 +1215,7 @@ def _canonical_config(cfg: Any, repeat: RepeatRun, search: _SearchSettings) -> A
             "width": search.width,
             "proposals_per_parent": search.proposals_per_parent,
             "max_evaluations": search.max_evaluations,
+            "max_generations": search.max_generations,
             "proposal_cap": search.proposal_cap,
             "measurement": search.measurement,
             "summary_format": search.summary_format,
@@ -1573,12 +1586,90 @@ def _write_json_atomic(path: Path, value: Any) -> None:
         temporary.unlink(missing_ok=True)
 
 
+def _prepare_root_prediction_import(args, search, selected_assets, candidate):
+    """Verify a raw-only root in a separate source epoch, before model loading.
+
+    Deliberately not resume/migration: only loss configuration and the stage's
+    derived score expression may differ. Candidate/System bind the initialized
+    sequence, assembly, templates/MSAs and fixed constraints by content.
+    """
+    from omegaconf import OmegaConf
+    from .refinement_worker import read_root_prediction, _blob
+    from .runtime import ContractConflict
+
+    value = args.get("root_prediction_receipt")
+    if value is None:
+        return None
+    if (search.resume or search.execution_mode != "isolated"
+            or search.prediction_rng != "fixed_request"
+            or int(args.get("repeats", 1)) != 1):
+        raise ContractConflict("root_prediction_receipt requires one fresh isolated fixed_request run")
+    path = Path(str(value)).expanduser().resolve(strict=True)
+    source_root = path.parents[2]
+    if Path(args.out_dir).resolve() == source_root:
+        raise ContractConflict("root prediction import must use a NEW run directory")
+    receipt, source_data, original = read_root_prediction(path)
+    saved_path = source_root / "config.yaml"
+    saved_bytes = saved_path.read_bytes()
+    provenance = json.loads((source_root / "provenance.json").read_text())
+    if hashlib.sha256(saved_bytes).hexdigest() != provenance["config"]["sha256"]:
+        raise ContractConflict("source persisted config differs from its provenance")
+    saved = OmegaConf.create(saved_bytes.decode())
+    saved_search = _search_settings(saved)
+    if saved_search.prediction_rng != "fixed_request" or saved_search.execution_mode != "isolated":
+        raise ContractConflict("source root has no fixed-request isolated prediction contract")
+    saved_assets = _read_asset_manifest(source_root / ".framework" / "assets.json")
+    old_science, new_science = _scientific_config_payload(saved), _scientific_config_payload(args)
+    old_protocol = key_for((
+        "astrolabe.configured-refinement.protocol/v3",
+        key_for(("astrolabe.configured-refinement.scientific/v1", old_science)),
+        _asset_manifest_identity(saved_assets),
+    ))
+    if receipt["scoring_identity"] != old_protocol.digest:
+        raise ContractConflict("source receipt is not bound to its saved config/assets")
+    for payload in (old_science, new_science):
+        payload.pop("loss", None)
+        # These broker-only controls cannot change a completed prediction.
+        # Device allocation, execution mode and all prediction controls remain
+        # exact; import never relaxes live resource admission.
+        for key in ("telemetry_path", "telemetry_recovery"):
+            payload.get("execution", {}).pop(key, None)
+        # A future generation stop cannot change an already completed root.
+        payload.get("search", {}).pop("max_generations", None)
+        for stage in payload.get("stages", {}).values():
+            stage.pop("weighted_score_expression", None)
+    if old_science != new_science:
+        raise ContractConflict("root import prediction/input configuration changed")
+    # Ignore mutator/objective qualification: neither produced this root.
+    def prediction_assets(manifest):
+        record = _asset_manifest_record(manifest)
+        components = [item for item in record["components"] if item["role"].startswith("evaluator:")]
+        if not components or any(item["state"] not in {"hashed", "weight_free"} for item in components):
+            raise ContractConflict("root import evaluator assets cannot be content-verified")
+        return (components, [item for item in record["files"] if item["role"].startswith("evaluator:")])
+    if prediction_assets(saved_assets) != prediction_assets(selected_assets):
+        raise ContractConflict("root import selected prediction asset contents changed")
+    source_candidate = source_data.get(_blob(receipt["candidate_blob"]), design_codec)
+    if (source_candidate != candidate or receipt["seed"] != int(args.seed)
+            or receipt["sequence"] != _candidate_label(candidate)):
+        raise ContractConflict("root import initialized Candidate/System/sequence/seed changed")
+    # Confirm the original raw structures cover precisely the selected assembly.
+    from .native_scores import NATIVE_SCORES_ENVELOPE_CODEC
+    envelope = source_data.get(_blob(receipt["raw_scores"]), NATIVE_SCORES_ENVELOPE_CODEC)
+    assemblies = tuple(args.stages.default.oligo)
+    if {item.assembly for item in envelope.structures} != set(assemblies):
+        raise ContractConflict("root import raw structures do not match the selected assemblies")
+    return {"path": str(path), "source_sha256": hashlib.sha256(original).hexdigest()}
+
+
 def run_configured_refinement(cfg: Any, repeat: RepeatRun) -> dict[str, Any]:
     """Run one refinement repeat under the shared scientific state owner."""
 
     if not isinstance(repeat, RepeatRun):
         raise TypeError("repeat must be a design.repeats.RepeatRun")
     search = _search_settings(cfg)
+    if cfg.get("root_prediction_receipt") is not None and (repeat.total != 1 or repeat.index != 0):
+        raise ValueError("root_prediction_receipt requires exactly one repeat")
     run_cfg = _canonical_config(cfg, repeat, search)
     _validate_resume_root(run_cfg, search, repeat)
     selected_assets = _selected_asset_manifest(run_cfg)
@@ -1783,6 +1874,9 @@ def _run_configured_refinement_locked(
         if translated_assembly_names != assemblies:
             raise ValueError("translated assemblies differ from selected stage assemblies")
         expected_assemblies = assemblies
+        root_prediction_import = _prepare_root_prediction_import(
+            args, search, selected_assets, initial_candidate,
+        )
 
         def score_context(step):
             name = f"configured-refinement/score-context/{step}"
@@ -1868,6 +1962,10 @@ def _run_configured_refinement_locked(
             # Spawned Score workers do not initialize Rosetta in this process,
             # and their poses are deliberately absent from the score receipt.
             # Rebuild the parent's private selector view without rescoring.
+            # skip_complex_poses suppresses eager score views, not the native
+            # runtime required by a mutator's lazy pose-backed selector.
+            if bool(getattr(args, "enable_pyrosetta", False)) and bool(getattr(args, "skip_complex_poses", False)):
+                run_module._init_pyrosetta_runtime(structure_files=scores.complex_paths)
             run_module._ensure_evaluation_complex_poses(
                 args, scores, session.loss_computer,
             )
@@ -1983,6 +2081,7 @@ def _run_configured_refinement_locked(
             ),
             # Attempts, including duplicates, consume the proposal budget.
             # Exhausting that budget is a normal stop with a final beam.
+            max_generations=search.max_generations,
             cap_error=False,
         )
 
@@ -2022,6 +2121,7 @@ def _run_configured_refinement_locked(
                             "width": search.width,
                             "proposals_per_parent": search.proposals_per_parent,
                             "max_evaluations": search.max_evaluations,
+                            "max_generations": search.max_generations,
                             "proposal_cap": search.proposal_cap,
                             "assemblies": assemblies,
                             "proposal_batch_size": search.proposal_batch_size,
@@ -2078,6 +2178,7 @@ def _run_configured_refinement_locked(
                         async_mutator=search.async_mutator,
                         loss_order=lambda: tuple(session_holder["session"].loss_computer.loss_specs),
                         score_context=score_context,
+                        root_prediction_import=root_prediction_import,
                     )
                 else:
                     result = run_native_refinement(
@@ -2132,6 +2233,7 @@ def _run_configured_refinement_locked(
                         "width": search.width,
                         "proposals_per_parent": search.proposals_per_parent,
                         "max_evaluations": search.max_evaluations,
+                        "max_generations": search.max_generations,
                         "proposal_cap": search.proposal_cap,
                         "proposal_batch_size": search.proposal_batch_size,
                         "execution": {
