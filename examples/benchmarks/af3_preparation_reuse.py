@@ -15,6 +15,9 @@ import random
 import statistics
 import sys
 import time
+from types import SimpleNamespace
+
+import yaml
 
 import numpy as np
 
@@ -53,6 +56,7 @@ def main():
     parser.add_argument("--runs", type=int, default=5)
     parser.add_argument("--msa-depth", type=int, default=1024)
     parser.add_argument("--fixed-seed", action="store_true")
+    parser.add_argument("--bare-native", action="store_true", help="Use caller environment instead of config/base.yaml preparation knobs.")
     parser.add_argument("--template-cif", type=Path, help="Optional real protein mmCIF template; its first chain becomes the fixed target.")
     parser.add_argument("--af3-source", type=Path, help="Optional AF3 src directory with native compiled extension already installed.")
     parser.add_argument("--output", type=Path, required=True)
@@ -86,6 +90,15 @@ def main():
     sys.modules[spec.name] = preparation
     spec.loader.exec_module(preparation)
     cache = preparation.AF3PreparationCache()
+    settings_spec = importlib.util.spec_from_file_location(
+        "af3_benchmark_settings", root / "astrolabe/af3_featurisation_settings.py")
+    settings = importlib.util.module_from_spec(settings_spec)
+    settings_spec.loader.exec_module(settings)
+    base_config = yaml.safe_load((root / "config/base.yaml").read_text())["evaluator"]["alphafold3"]
+    prep_config = {key: base_config[key] for key in (
+        "refstructure_workers", "refstructure_cache", "refstructure_cache_max_entries",
+        "msa_cache", "msa_cache_max_entries")}
+    config = None if args.bare_native else SimpleNamespace(**prep_config)
 
     templates = []
     target_sequence = "ACDEFGHIKLMNPQRSTVWY" * 4
@@ -126,14 +139,15 @@ def main():
         for name, value in side_caches[side].items():
             setattr(features, name, value)
         scope = preparation.preparation_cache_scope(cache) if side == "cached" else nullcontext()
-        with scope:
+        with settings.featurisation_environment(config), scope:
             return featurisation.featurise_input(fold_input=item, ccd=ccd, buckets=None, verbose=False)[0]
 
     source_file = Path(features.__file__).resolve()
     native_cpp = Path(alphafold3.cpp.__file__).resolve()
     revision = subprocess.run(["git", "-C", str(source_file.parents[3]), "rev-parse", "HEAD"],
                               capture_output=True, text=True, check=False).stdout.strip()
-    result = {"template_cif": str(args.template_cif) if args.template_cif else None,
+    result = {"preparation_config": None if args.bare_native else prep_config,
+              "template_cif": str(args.template_cif) if args.template_cif else None,
               "features_sha256": hashlib.sha256(source_file.read_bytes()).hexdigest(),
               "native_revision": revision, "native_cpp": str(native_cpp),
               "existing_native_caches": list(old_native_caches),

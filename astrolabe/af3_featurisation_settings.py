@@ -61,13 +61,17 @@ def _configure_msa_env(config) -> None:
 
 
 @contextmanager
-def featurisation_environment(config):
+def featurisation_environment(config, *, user_ccd=None):
     with _LOCK:
         previous = {key: os.environ.get(key) for key in _KEYS}
         try:
             if config is not None:
                 _configure_refstructure_env(config)
                 _configure_msa_env(config)
+            if user_ccd is not None:
+                # Native reference-cache keys contain id(ccd_entry). Request-local
+                # custom entries may be freed and their IDs reused by another CCD.
+                os.environ["ALPHAFOLD3_REFSTRUCTURE_CACHE"] = "0"
             yield
         finally:
             for key, value in previous.items():

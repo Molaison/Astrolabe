@@ -25,7 +25,9 @@ from alphafold3.data import featurisation
 from astrolabe.core.cyclization import serialize_cyclic_relative_patches
 from astrolabe.utils.mmcif_ids import int_id_to_str_id
 from astrolabe.af3_featurisation_settings import featurisation_environment
-from astrolabe.af3_preparation import AF3PreparationCache, preparation_cache_scope
+from astrolabe.af3_preparation import (
+    AF3PreparationCache, create_request_ccd, preparation_cache_scope,
+)
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
 from astrolabe.evaluators.base import Evaluator
@@ -690,7 +692,7 @@ class AlphaFold3Evaluator(Evaluator):
             model_runner.set_cyclic_relative_patches(cyclic_relative_patches)
         logging.debug(f"Featurising data for seeds {fold_input.rng_seeds}...")
         featurisation_start_time = time.time()
-        ccd = chemical_components.Ccd(user_ccd=fold_input.user_ccd)
+        ccd = create_request_ccd(user_ccd=fold_input.user_ccd)
         if "init_guess_path" in kwargs:
             if "init_guess_chain" not in kwargs:
                 raise ValueError("init_guess_chain not found in kwargs")
@@ -703,7 +705,7 @@ class AlphaFold3Evaluator(Evaluator):
 
         if isinstance(buckets, TokenBuckets):
             install_bucket_dispatch(featurisation.pipeline)
-        with (featurisation_environment(featurisation_config),
+        with (featurisation_environment(featurisation_config, user_ccd=fold_input.user_ccd),
               allow_all_x_protein_chains_during_featurisation(fold_input),
               preparation_cache_scope(preparation_cache)):
             featurised_examples = featurisation.featurise_input(

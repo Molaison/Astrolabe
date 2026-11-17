@@ -42,6 +42,26 @@ def _array_bytes(value):
     return 0
 
 
+def create_request_ccd(*, user_ccd=None, ccd_pickle_path=None):
+    """Apply user chemistry to one request, preserving the native shared CCD."""
+    from alphafold3.constants import chemical_components
+    from alphafold3.cpp import cif_dict
+
+    ccd = chemical_components.Ccd(ccd_pickle_path=ccd_pickle_path)
+    if user_ccd is None:
+        return ccd
+    if not user_ccd:
+        raise ValueError("User CCD cannot be an empty string.")
+    user_entries = {
+        key: {name: tuple(values) for name, values in entry.items()}
+        for key, entry in cif_dict.parse_multi_data_cif(user_ccd).items()
+    }
+    # The pinned native constructor updates the dictionary returned by its
+    # global pickle cache. Keep its native entry format, but detach this request.
+    ccd._dict = {**ccd._dict, **user_entries}
+    return ccd
+
+
 class AF3PreparationCache:
     """One bounded, disposable cache per evaluator; callers never own cached arrays."""
 
@@ -209,7 +229,11 @@ def _install_dispatch():
 def preparation_cache_scope(cache):
     """Activate request-local dispatch; unrelated native callers retain their path."""
     if cache is None:
-        yield
+        token = _ACTIVE_CACHE.set(None)
+        try:
+            yield
+        finally:
+            _ACTIVE_CACHE.reset(token)
         return
     _install_dispatch()
     msa_enabled = os.environ.get("ALPHAFOLD3_MSA_CACHE", "1").lower() not in {"0", "false", "no"}

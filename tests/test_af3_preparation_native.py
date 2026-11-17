@@ -99,3 +99,71 @@ def test_scope_is_local_and_environment_opt_out(monkeypatch):
     assert cache.statistics == after_scope
     for a, b in zip(actual, expected, strict=True):
         np.testing.assert_array_equal(a, b)
+
+
+def test_nested_disabled_scope_does_not_inherit_outer_cache(monkeypatch):
+    from alphafold3.data import msa_features
+    monkeypatch.setenv("ALPHAFOLD3_MSA_CACHE", "1")
+    cache = _PREPARATION.AF3PreparationCache()
+    rows = ["ACDEFG", "ACDkEFG"]
+    with _PREPARATION.preparation_cache_scope(cache):
+        msa_features.extract_msa_features(rows, mmcif_names.PROTEIN_CHAIN)
+        before = cache.statistics.copy()
+        with _PREPARATION.preparation_cache_scope(None):
+            msa_features.extract_msa_features(rows, mmcif_names.PROTEIN_CHAIN)
+        assert cache.statistics == before
+        msa_features.extract_msa_features(rows, mmcif_names.PROTEIN_CHAIN)
+    assert cache.statistics["msa_tail_hits"] == 1
+
+
+def test_custom_ccd_is_request_local_and_preserves_native_validation(tmp_path, monkeypatch):
+    import pickle
+    from alphafold3.constants import chemical_components
+
+    path = tmp_path / "ccd.pickle"
+    initial_entry = {"_chem_comp.id": ("ALA",), "_chem_comp.name": ("original",)}
+    with path.open("wb") as handle:
+        pickle.dump({"ALA": initial_entry}, handle)
+    plain = _PREPARATION.create_request_ccd(ccd_pickle_path=path)
+    text = ("data_QA_TEST\n_chem_comp.id QA_TEST\n_chem_comp.name 'custom entry'\n"
+            "data_ALA\n_chem_comp.id ALA\n_chem_comp.name 'custom override'\n")
+    custom = _PREPARATION.create_request_ccd(ccd_pickle_path=path, user_ccd=text)
+    following = _PREPARATION.create_request_ccd(ccd_pickle_path=path)
+    assert set(plain) == set(following) == {"ALA"}
+    assert dict(plain["ALA"]) == initial_entry
+    assert dict(following["ALA"]) == initial_entry
+    assert set(custom) == {"ALA", "QA_TEST"}
+    assert custom["ALA"]["_chem_comp.name"] == ("custom override",)
+    assert custom._dict is not plain._dict
+
+    isolated_native_path = tmp_path / "native_ccd.pickle"
+    isolated_native_path.write_bytes(path.read_bytes())
+    native = chemical_components.Ccd(ccd_pickle_path=isolated_native_path, user_ccd=text)
+    assert dict(custom) == dict(native)
+    for invalid in ("", "not an mmcif document"):
+        with pytest.raises(Exception) as expected:
+            chemical_components.Ccd(ccd_pickle_path=isolated_native_path, user_ccd=invalid)
+        with pytest.raises(type(expected.value)) as actual:
+            _PREPARATION.create_request_ccd(ccd_pickle_path=path, user_ccd=invalid)
+        assert str(actual.value) == str(expected.value)
+    assert dict(plain["ALA"]) == initial_entry
+
+    # Custom-entry object IDs cannot safely key native reference caches after
+    # this request ends. The existing environment lock also restores failures.
+    import os
+    from types import SimpleNamespace
+    spec = importlib.util.spec_from_file_location(
+        "tested_af3_settings", _ROOT / "astrolabe/af3_featurisation_settings.py")
+    settings = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(settings)
+    monkeypatch.setenv("ALPHAFOLD3_REFSTRUCTURE_CACHE", "1")
+    config = SimpleNamespace(refstructure_cache=True, msa_cache=True)
+    with settings.featurisation_environment(config):
+        assert os.environ["ALPHAFOLD3_REFSTRUCTURE_CACHE"] == "1"
+        with pytest.raises(RuntimeError, match="request failed"):
+            with settings.featurisation_environment(config, user_ccd=text):
+                assert os.environ["ALPHAFOLD3_REFSTRUCTURE_CACHE"] == "0"
+                assert os.environ["ALPHAFOLD3_MSA_CACHE"] == "1"
+                raise RuntimeError("request failed")
+        assert os.environ["ALPHAFOLD3_REFSTRUCTURE_CACHE"] == "1"
+    assert os.environ["ALPHAFOLD3_REFSTRUCTURE_CACHE"] == "1"
