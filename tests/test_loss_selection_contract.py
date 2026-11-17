@@ -202,3 +202,14 @@ def test_common_chain_parameters_normalize_for_legacy_feedback_wrappers():
     with pytest.raises(ValueError, match="conflicts"):
         normalize_loss_options({"_type": "interface_shape_complementarity",
                                 "protomer_a": "A", "binder_chains": "B"})
+
+def test_registered_selector_alias_and_boolean_composition_remain_supported(protomers, monkeypatch):
+    monkeypatch.setattr(SelectorRegistry, "_registrations", dict(SelectorRegistry._registrations))
+    SelectorRegistry.register("selected_patch", module="astrolabe.selectors.hotspot",
+        class_name="HotspotAliasPositionSelector", context="complex_poses",
+        pose_required=False)
+    expression = "selected_patch('partA') and not hotspot('partA:1')"
+    validate_loss_selector(expression)
+    mask = loss_atom_mask(StandardScores(names=["ABA"], plddt=None, complex_paths=None),
+                          "ABA", atoms(), ["A"], selector=expression)
+    assert np.flatnonzero(mask).tolist() == [2, 3]
