@@ -1118,7 +1118,7 @@ def test_methods_recipe_bivalent_defaults_to_random_and_preserves_archived_start
     assert archived.seqs.A == "UCGGCAGCUGCCAUCUGACU@repeat repeat"
     assert [entry.source_step for entry in archived.search.archived_starts] == [269, 613, 774]
     assert archived.search.objective_weights == cfg.search.objective_weights
-    assert archived.evaluator.alphafold3.num_samples == cfg.evaluator.alphafold3.num_samples == 5
+    assert archived.evaluator.alphafold3.samples == cfg.evaluator.alphafold3.samples == 5
 
 
 @pytest.mark.parametrize("polymer,steps", [("rna", 20), ("dna", 40)])

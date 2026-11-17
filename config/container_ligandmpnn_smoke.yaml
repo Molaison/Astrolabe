@@ -20,8 +20,6 @@ evaluator:
     Protenix:
       _type: Protenix
       use_constraints: false
-      diffusion_batch_size: 1
-      diffusion_chunk_size: 1
       num_workers: 0
       recycles: 1
       samples: 1

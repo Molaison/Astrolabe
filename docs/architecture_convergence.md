@@ -263,6 +263,44 @@ Implementation worktrees were isolated; the integrator owned shared CLI,
 consumer migrations and final evidence. No native numerical-equivalence,
 real-model end-to-end or GPU-performance claim follows from these CPU checks.
 
+### Merge review follow-up
+
+The independent merge review reproduced a startup regression in
+`container_protenix_smoke` and `container_ligandmpnn_smoke`: their retained
+`diffusion_batch_size` and `diffusion_chunk_size` fields were not consumed by
+the old wrapper and were rejected by the new public contract. Both fields
+were removed from these profiles and the Protenix branch of
+`container_ligand_matrix_smoke`. The configured recycle, sample and diffusion
+budgets are unchanged. All three actual CLI dry-runs passed with Protenix
+selected, and a control confirmed the unsupported fields still fail validation.
+The reproduced issue now has three CLI regression cases.
+
+Two existing test consumers now read `samples`, retaining the value of five.
+AF3 lifecycle checks use the existing cold asset fixture and local structure/MSA
+inputs instead of `/case`. The registry construction check uses composed
+defaults and path-only cold assets; Mol-1's missing source is explicitly rejected
+without bypassing its pinned-source or checkpoint contract. Other registered
+families retain their descriptor and unloaded-owner assertions.
+
+The recorded recovery dependency diff from
+`c8cdc4b5f7e393a26bd0b1fe7fb00e92c9759d99` to
+`eec8ee27caccdcfc109b15ee19bf3cacb06a5901` changes only
+`NativeModelClient.poolable`, which selects private versus pooled model ownership.
+The four journal dependency files and `Runtime.call` transaction ordering are
+unchanged. After checking that correspondence, the coverage hash and skill
+review anchor were advanced. The full recovery self-test passed: both normal
+models, all three named counterexamples, the real crash tests and their three
+broken variants, and the restored source. Each real-code invocation ran all
+18 cases without skips. The bounded model and its invariants were unchanged.
+
+Review evidence uses the licensed a13 SIF's Python 3.11.14 with the existing
+read-only startup/test overlays, a private zsh runtime and mounted OpenJDK 8u504;
+no model or GPU was invoked. The separate migration, registry and environment
+control suites passed 53, 20 and 83 cases respectively; these sets are not added
+together. An eight-case `09f0460` comparison reproduced the Mol-1 missing-config
+failure and four `/case` failures on the baseline. Full repository regression
+and GitHub release checks remain required before merge.
+
 ### Primary-source checks
 
 The repository pins Hydra 1.3 and OmegaConf 2.3. Research first established

@@ -86,7 +86,7 @@ its dependency files.
 records the sync commit and SHA256 values of `runtime.py`, `operations.py`,
 `store.py`, `types.py`, and `model_execution.py`.
 The last code review anchor is
-`46501fc12136c915516d9a39455767c6f9dbe48b`.
+`eec8ee27caccdcfc109b15ee19bf3cacb06a5901`.
 Dependency hashes trigger review; they do not claim that all their functions
 are modeled. The runner refuses stale hashes.
 
