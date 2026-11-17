@@ -15,6 +15,7 @@ from astrolabe.core import global_config
 from astrolabe.core.chain_resolution import chain_to_protomer, resolve_selector_chain_ids
 from astrolabe.core.folding_input import ProteinChain
 from astrolabe.evaluators.base import Evaluator
+from astrolabe.evaluators.input_assets import materialize_msa
 from astrolabe.evaluators.mol1_contract import active_constraints, constraints_for_chains, explicit_seeds, output_samples
 from astrolabe.evaluators.structure_output import project_structure, structure_directory
 from astrolabe.evaluators.utils import StandardScores
@@ -197,8 +198,7 @@ class Mol1Evaluator(Evaluator):
                     if text:
                         if not self.model_runner.settings["use_msa"]:
                             raise ValueError("Mol-1 received MSA but use_msa=false; refusing to discard it")
-                        path = directory / f"{cid}_{attr}.a3m"
-                        path.write_text(text, encoding="utf-8")
+                        path = materialize_msa(self.output_dir / "inputs" / "msa", text)
                         entry[key] = str(path.resolve())
                         supplied = True
                 if self.model_runner.settings["use_msa"] and not supplied:

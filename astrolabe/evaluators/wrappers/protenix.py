@@ -24,6 +24,7 @@ from torch import distributed as dist
 
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import DnaChain, Ligand, ProteinChain, RnaChain
+from astrolabe.evaluators.input_assets import write_text_if_changed
 from astrolabe.evaluators.x_masking import preserve_unknown_residue_sequence
 
 # Prefer vendored Protenix code under `vendor/protenix` over any globally installed
@@ -701,10 +702,7 @@ def _msa_dir_for_protenix(*, cplx: str, entity_id: int) -> Path:
 
 
 def _write_text_atomic(path: Path, text: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + f".{os.getpid()}.tmp")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(str(tmp), str(path))
+    write_text_if_changed(path, text)
 
 
 def _minimal_a3m(sequence: str, header: str = "query") -> str:
