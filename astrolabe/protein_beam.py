@@ -27,6 +27,8 @@ import tempfile
 import time
 import uuid
 
+from astrolabe.profiling import event as profile_event, profiled, span
+
 METRICS = ("interface_ipae", "interface_ipsae", "interface_sc", "interface_holes", "interface_buns")
 _RUNTIME = None
 PRESERVE_FIXED_TARGET_HOMOLOGY = True
@@ -67,6 +69,7 @@ from astrolabe.configuration import (
 
 
 def event(path, kind, **fields):
+    profile_event("beam." + kind, **fields)
     data = json.dumps(dict(event=kind, ts=time.time(), pid=os.getpid(), **fields), allow_nan=False) + "\n"
     fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
     try:
@@ -368,6 +371,8 @@ def _scientific_contract_config(cfg):
             del contract_cfg.search
         if contract_cfg.get("repeat_plan") is not None:
             del contract_cfg.repeat_plan
+        if "profiling" in contract_cfg:
+            del contract_cfg.profiling
     return contract_cfg
 
 
@@ -457,6 +462,7 @@ def run_configured_branching(cfg, repeat):
             return run_beam(run_cfg, output, active_socket, on_abort=service.abort, **options)
 
 
+@profiled("beam.worker_init")
 def worker_init(config_yaml, output, socket_path):
     global _RUNTIME
     from astrolabe.protein_beam_contract import protect_worker_lifetime
@@ -527,6 +533,7 @@ def worker_init(config_yaml, output, socket_path):
           jax_platform="cpu", ligandmpnn_device=str(mutator.runner.device))
 
 
+@profiled("beam.worker")
 def worker_task(task):
     import numpy as np
     from astrolabe.core import global_config as gc
@@ -553,7 +560,8 @@ def worker_task(task):
         target = gc.protomers["B"].sequence
         mutator.runner.seed = int(task["seed"])
         mutation_context = {}
-        mutator.mutate(gc.protomers, parent_scores, mutation_context)
+        with span("mutate.propose", backend=type(mutator).__name__):
+            mutator.mutate(gc.protomers, parent_scores, mutation_context)
         sequence = _sequence_key(gc.protomers["A"], gc.segments, mutated=True)
         if gc.protomers["B"].mutated_sequence != target:
             raise ValueError("Proposal changed the fixed target")

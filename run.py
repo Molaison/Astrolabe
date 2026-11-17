@@ -2601,21 +2601,54 @@ def validate_mutation_counts(
 
 
 @timer("mutation step")
-def execute_mutation_step(
-    mutators, evaluation_result, runtime_config: Dict, step: int
+def execute_mutation_step(mutators, evaluation_result, runtime_config: Dict, step: int) -> None:
+    """Existing synchronous entrypoint; same ordered mutation implementation."""
+    from astrolabe.design.continuation import complete
+    return complete(execute_mutation_step_continuation(
+        mutators, evaluation_result, runtime_config, step, cooperative=False,
+    ))
+
+
+def execute_mutation_step_continuation(
+    mutators, evaluation_result, runtime_config: Dict, step: int, *, cooperative=True
 ) -> None:
     """Execute mutation for all mutators."""
+    from astrolabe.profiling import event as profile_event
+    from astrolabe.mutators.ligandmpnn import LigandMPNNMutator
+    from astrolabe.mutators.native_daemons import NativeSequenceRunner
+    eligible = (
+        cooperative and len(mutators) == 1
+        and type(mutators[0]) is LigandMPNNMutator
+        and type(mutators[0].runner) is NativeSequenceRunner
+        and mutators[0].runner.supports_cooperative_transport
+        and not runtime_config.get("mutator_stack_pre_update", False)
+        and mutators[0].predocker is None
+    )
+    if cooperative:
+        profile_event("proposal.staged" if eligible else "proposal.synchronous_fallback",
+                      mutators=[type(item).__name__ for item in mutators],
+                      staged_count=int(eligible), synchronous_fallback_count=int(not eligible),
+                      step=step, reason=None if eligible else "unsupported_mutation_stack_or_remote_runner")
     # Never carry a prior proposal forward, including sequence-identical proposals.
     runtime_config["generated_structure_records"] = {}
     if len(mutators) > 1 and any(
         getattr(mutator, "requires_exclusive_mutation", False) for mutator in mutators
     ):
         raise ValueError("The selected joint mutator cannot run in a mutation stack")
+    pre_update = bool(runtime_config.get("mutator_stack_pre_update", False))
+    if len(mutators) > 1 and not pre_update and any(
+        getattr(mutator, "requires_pre_update_stack", False) for mutator in mutators
+    ):
+        raise ValueError("Proton-PottsMPNN mutation stacks require explicit pre-update.")
     secondary_structure_by_proto = extract_secondary_structure_by_proto(evaluation_result)
     runtime_config["mutator_selector_score_contexts"] = []
-    pre_update = bool(runtime_config.get("mutator_stack_pre_update", False))
+    runtime_config.pop("mutator_stack_source_sequences", None)
     if pre_update:
+        runtime_config["mutator_stack_source_sequences"] = {
+            name: str(protomer.sequence) for name, protomer in global_config.protomers.items()
+        }
         global_config.segment_manager.begin_pre_update_step()
+    sequence_constraints = []
     max_entropy = runtime_config.get("mutator_stack_pre_update_max_entropy")
     max_entropy = None if max_entropy in (None, "null", "None") else float(max_entropy)
     for index, mutator in enumerate(mutators):
@@ -2641,9 +2674,27 @@ def execute_mutation_step(
             step=step,
             detail=getattr(mutator, "name", mutator.__class__.__name__),
         ) as span:
-            mutation_result = native_call("mutation", mutator.mutate,
-                global_config.mutable_protomers, evaluation_result, runtime_config
-            )
+            if eligible:
+                mutation_result = yield from mutator.mutate_continuation(
+                    global_config.mutable_protomers, evaluation_result, runtime_config,
+                )
+            else:
+                mutation_result = native_call("mutation", mutator.mutate,
+                    global_config.mutable_protomers, evaluation_result, runtime_config
+                )
+            limit = getattr(mutator, "max_total_mutations", None)
+            if limit is not None:
+                from astrolabe.utils.mmcif_ids import int_id_to_str_id
+                for name, record in mutator.last_mutation_telemetry["oligos"].items():
+                    chains = {int_id_to_str_id(i + 1): proto for i, proto in enumerate(name)}
+                    binder = record.get("binder_protomer") or chains[record["binder_chain"]]
+                    sequence_constraints.append((global_config.protomers[binder],
+                                                 mutator.reference_sequence, int(limit)))
+            for protomer, reference, limit in sequence_constraints:
+                projected = str(protomer.mutated_sequence)
+                if (len(projected) != len(reference)
+                        or sum(a != b for a, b in zip(projected, reference)) > limit):
+                    raise ValueError("Mutation stack exceeds the original-parent reference mutation budget.")
             from astrolabe.design.generated_structure import publish_generated_structure
             from astrolabe.mutators.rfd4_types import GenerationResult
 
@@ -2702,12 +2753,15 @@ def execute_mutation_step(
             global_config.segment_manager.preapply_pending_mutations(
                 max_entropy=max_entropy
             )
+            if getattr(mutator, "requires_pre_update_stack", False):
+                mutator._validate_input_contract(global_config.mutable_protomers)
 
 
 def _finalize_mutator_stack_pre_update(runtime_config: Dict, accepted: bool) -> None:
     if not bool(runtime_config.get("mutator_stack_pre_update", False)):
         return
     global_config.segment_manager.finish_pre_update_step(accepted=bool(accepted))
+    runtime_config.pop("mutator_stack_source_sequences", None)
 
 
 def _make_native_decision(decisions, *args, **kwargs):
@@ -3469,12 +3523,13 @@ def run_repeats(
     """Validate first, then own resources around the scientific repeat lifecycle."""
     from astrolabe.startup_validation import validate_startup_config
     from astrolabe.runtime.session import resource_session
+    from astrolabe.profiling.integration import configured_profile
 
     validate_startup_config(base_cfg, require_inputs=True)
     execution = base_cfg.get("execution") if hasattr(base_cfg, "get") else None
     if OmegaConf.is_config(execution):
         execution = OmegaConf.to_container(execution, resolve=True)
-    with resource_session(execution):
+    with configured_profile(base_cfg), resource_session(execution):
         _run_repeats_owned(base_cfg, on_stop_requested=on_stop_requested)
 
 
@@ -3510,7 +3565,8 @@ def _run_repeats_owned(
         global_config.reset()
         print(f"=== Repeat {repeat.number}/{repeat.total} ===")
         from astrolabe.model_execution import model_run_scope
-        with model_run_scope():
+        from astrolabe.profiling import span
+        with span("run.repeat", repeat=repeat.number, seed=repeat.seed), model_run_scope():
             if not dispatch_selected_search(run_cfg, repeat):
                 _run_pipeline(run_cfg)
         if stop_requested():

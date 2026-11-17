@@ -7,7 +7,9 @@ the typed references contained in their values.
 from __future__ import annotations
 
 import base64
-from dataclasses import fields, is_dataclass
+from collections import OrderedDict, deque
+from copy import deepcopy
+from dataclasses import dataclass, fields, is_dataclass
 import hashlib
 import io
 import json
@@ -17,6 +19,8 @@ from pathlib import Path
 import tempfile
 from typing import Any, Generic, TypeVar
 from urllib.parse import quote
+
+from astrolabe.profiling import event, profiled
 
 from . import types as design_types
 from .types import Blob, Codec, Key
@@ -473,13 +477,55 @@ def _design_dataclass_types() -> tuple[type[Any], ...]:
     return tuple(result)
 
 
+def _file_identity(status: os.stat_result) -> tuple[int, ...]:
+    # Do not use atime: reading a blob must not invalidate its proof.
+    return (status.st_dev, status.st_ino, status.st_mode, status.st_size,
+            status.st_mtime_ns, status.st_ctime_ns)
+
+
+@dataclass(frozen=True)
+class _DurableMember:
+    encoded: bytes
+    codec: Codec[Any]
+    compatibility: Any
+    children: tuple[Blob, ...]
+    file_identity: tuple[int, ...]
+    directories: tuple[tuple[Path, tuple[int, int]], ...]
+
+
 class DataStore:
     """Content-addressed storage with memory-only and optional durable modes."""
 
-    def __init__(self, root: Path | None = None) -> None:
+    # Bound retained proofs, not the existing store's scientific data lifetime.
+    _PROOF_LIMIT = 4096
+
+    def __init__(
+        self, root: Path | None = None, *, reuse_durable_closures: bool = False,
+    ) -> None:
         self.root = None if root is None else Path(root)
         self._memory: dict[Blob, bytes] = {}
         self._codecs: dict[str, Codec[Any]] = {}
+        self._durable_members: OrderedDict[Blob, _DurableMember] = OrderedDict()
+        self._durable_directories: OrderedDict[Path, tuple[int, ...]] = OrderedDict()
+        self._durable_scope: tuple[int, Path] | None = None
+        self.reuse_durable_closures = reuse_durable_closures
+
+    @property
+    def reuse_durable_closures(self) -> bool:
+        return self._reuse_durable_closures
+
+    @reuse_durable_closures.setter
+    def reuse_durable_closures(self, enabled: bool) -> None:
+        if not isinstance(enabled, bool):
+            raise TypeError("reuse_durable_closures must be bool")
+        if enabled != getattr(self, "_reuse_durable_closures", None):
+            self._clear_durable_proofs()
+        self._reuse_durable_closures = enabled
+
+    def _clear_durable_proofs(self) -> None:
+        self._durable_members.clear()
+        self._durable_directories.clear()
+        self._durable_scope = None
 
     def register(self, codec: Codec[Any]) -> Codec[Any]:
         identity = getattr(codec, "identity", None)
@@ -500,6 +546,7 @@ class DataStore:
         self._codecs.setdefault(identity, codec)
         return codec
 
+    @profiled("datastore.put")
     def put(self, value: Any, codec: Codec[Any]) -> Blob:
         self.register(codec)
         if self.root is not None and getattr(codec, "persistent", True) is False:
@@ -522,6 +569,7 @@ class DataStore:
         self._memory[reference] = encoded
         return reference
 
+    @profiled("datastore.get")
     def get(
         self,
         reference: Blob,
@@ -558,6 +606,7 @@ class DataStore:
             raise TypeError("codec.references() must return tuple[Blob, ...]")
         return value
 
+    @profiled("datastore.persist")
     def persist(self, references: tuple[Blob, ...]) -> None:
         """Validate and durably write the complete referenced-closure."""
 
@@ -567,6 +616,10 @@ class DataStore:
             not isinstance(reference, Blob) for reference in references
         ):
             raise TypeError("references must be tuple[Blob, ...]")
+
+        if self.reuse_durable_closures:
+            self._persist_reusing(references)
+            return
 
         queue = list(references)
         seen: set[Blob] = set()
@@ -616,6 +669,161 @@ class DataStore:
                 os.fsync(descriptor)
             finally:
                 os.close(descriptor)
+
+    def _persist_reusing(self, references: tuple[Blob, ...]) -> None:
+        # Forks, root changes and cwd changes for relative roots start cold.
+        scope = (os.getpid(), self.root.absolute())
+        if scope != self._durable_scope:
+            self._clear_durable_proofs()
+            self._durable_scope = scope
+        queue = deque(references)
+        seen: set[Blob] = set()
+        pending: dict[Blob, tuple[bytes, Codec[Any], Any, tuple[Blob, ...]]] = {}
+        members: dict[Blob, _DurableMember] = {}
+        directory_status: dict[Path, os.stat_result] = {}
+        checked = served = unsupported = 0
+
+        def directory_stat(path: Path) -> os.stat_result:
+            if path not in directory_status:
+                directory_status[path] = path.lstat()
+            return directory_status[path]
+
+        while queue:
+            reference = queue.popleft()
+            if reference in seen:
+                continue
+            seen.add(reference)
+            codec = self._codecs.get(reference.codec)
+            if codec is None:
+                self._durable_members.pop(reference, None)
+                raise KeyError(f"cannot persist unknown codec {reference.codec!r}")
+            if getattr(codec, "persistent", True) is False:
+                self._durable_members.pop(reference, None)
+                raise ValueError("Process-local resources cannot be persisted, including through another value")
+            # A custom codec's compatibility key need not describe mutable
+            # decode/references behavior. Only these exact built-ins have the
+            # known byte-to-closure contract; subclasses must also revalidate.
+            reusable = type(codec) in (JSONCodec, ArrayCodec, DataclassCodec)
+            if not reusable:
+                unsupported += 1
+                self._durable_members.pop(reference, None)
+            compatibility = _codec_compatibility(codec) if reusable else None
+            proof = self._durable_members.get(reference)
+            if proof is not None:
+                checked += 1
+                memory = self._memory.get(reference)
+                valid = (
+                    codec is proof.codec and compatibility == proof.compatibility
+                    and (memory is None or (
+                        isinstance(memory, bytes) and memory == proof.encoded
+                    ))
+                )
+                if valid:
+                    try:
+                        valid = (
+                            _file_identity(self._path_for(reference).lstat())
+                            == proof.file_identity
+                            and all(
+                                (directory_stat(path).st_dev, directory_stat(path).st_ino)
+                                == identity for path, identity in proof.directories
+                            )
+                        )
+                    except FileNotFoundError:
+                        valid = False
+                if valid:
+                    served += 1
+                    self._durable_members.move_to_end(reference)
+                    members[reference] = proof
+                    queue.extend(proof.children)
+                    continue
+                self._durable_members.pop(reference, None)
+
+            # A proof is not a fallback source of bytes: the strict path still
+            # decides whether a missing file can be restored from live memory.
+            encoded = self._load_bytes(reference)
+            if hashlib.sha256(encoded).hexdigest() != reference.identity.digest:
+                raise ValueError(
+                    f"content digest mismatch for {reference.codec}:"
+                    f"{reference.identity.digest}"
+                )
+            value = codec.decode(encoded)
+            children = codec.references(value)
+            if not isinstance(children, tuple) or any(
+                not isinstance(child, Blob) for child in children
+            ):
+                raise TypeError("codec.references() must return tuple[Blob, ...]")
+            pending[reference] = (encoded, codec, deepcopy(compatibility), children)
+            queue.extend(children)
+
+        # Finish validating the whole closure before changing any files.
+        identities = {}
+        for reference, (encoded, codec, _, _) in pending.items():
+            identities[reference] = self._write_reference(
+                reference, encoded,
+                prove_durable=type(codec) in (JSONCodec, ArrayCodec, DataclassCodec),
+            )
+        if pending:
+            # New directory entries can change ancestor timestamps. Never seal
+            # a directory proof using a pre-write stat snapshot.
+            directory_status.clear()
+        directories = {scope[1].parent}
+        for reference in seen:
+            if reference in members:
+                directories.update(path for path, _ in members[reference].directories)
+                continue
+            paths = []
+            directory = self._path_for(reference).absolute().parent
+            while directory != scope[1].parent:
+                paths.append(directory)
+                directory = directory.parent
+            paths.append(directory)
+            directories.update(paths)
+            encoded, codec, compatibility, children = pending[reference]
+            identity = identities[reference]
+            if identity is not None:
+                members[reference] = _DurableMember(
+                    encoded, codec, compatibility, children, identity,
+                    tuple((path, (directory_stat(path).st_dev, directory_stat(path).st_ino))
+                          for path in paths),
+                )
+
+        synced = {}
+        for directory in sorted(directories, key=lambda p: len(p.parts), reverse=True):
+            identity = _file_identity(directory_stat(directory))
+            if self._durable_directories.get(directory) == identity:
+                self._durable_directories.move_to_end(directory)
+                continue
+            self._durable_directories.pop(directory, None)
+            descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                before = _file_identity(os.fstat(descriptor))
+                os.fsync(descriptor)
+                after = _file_identity(os.fstat(descriptor))
+                if before == after == identity == _file_identity(directory.lstat()):
+                    synced[directory] = identity
+            finally:
+                os.close(descriptor)
+
+        # No proof is published until the complete file/directory barrier has
+        # succeeded. Eviction only costs work; it never changes stored data.
+        for reference, proof in members.items():
+            if not all(
+                path in synced or path in self._durable_directories
+                for path, _ in proof.directories
+            ):
+                # Symlinks and concurrent namespace changes cannot acquire a
+                # directory proof from fsync of a different underlying inode.
+                self._durable_members.pop(reference, None)
+                continue
+            self._durable_members[reference] = proof
+            self._durable_members.move_to_end(reference)
+        self._durable_directories.update(synced)
+        for cache in (self._durable_members, self._durable_directories):
+            while len(cache) > self._PROOF_LIMIT:
+                cache.popitem(last=False)
+        event("datastore.persist.reuse", checked=checked, served=served,
+              miss=len(pending), unsupported=unsupported, members=len(seen),
+              directories_synced=len(synced))
 
     def validate_chemical_edit(self, system, variable, old, new):
         """Validate graph edits at their owner against the represented maps.
@@ -683,21 +891,30 @@ class DataStore:
         digest = reference.identity.digest
         return self.root / codec_dir / digest[:2] / digest
 
-    def _write_reference(self, reference: Blob, encoded: bytes) -> None:
+    def _write_reference(
+        self, reference: Blob, encoded: bytes, *, prove_durable: bool = False,
+    ) -> tuple[int, ...] | None:
         target = self._path_for(reference)
         try:
-            existing = target.read_bytes()
+            with target.open("rb") as handle:
+                before = _file_identity(os.fstat(handle.fileno())) if prove_durable else None
+                existing = handle.read()
+                if existing != encoded:
+                    raise ValueError(
+                        f"durable content differs at {reference.codec}:"
+                        f"{reference.identity.digest}"
+                    )
+                if prove_durable:
+                    # Existing bytes are not evidence of a prior file fsync.
+                    os.fsync(handle.fileno())
+                    after = _file_identity(os.fstat(handle.fileno()))
+                    if before == after == _file_identity(target.lstat()):
+                        return after
+                return None
         except FileNotFoundError:
             # Only a missing target needs directory creation. Existing closure
             # members still have their actual bytes checked on every persist.
             target.parent.mkdir(parents=True, exist_ok=True)
-        else:
-            if existing != encoded:
-                raise ValueError(
-                    f"durable content differs at {reference.codec}:"
-                    f"{reference.identity.digest}"
-                )
-            return
         descriptor, temporary_name = tempfile.mkstemp(
             prefix=f".{target.name}.",
             suffix=".tmp",
@@ -708,7 +925,15 @@ class DataStore:
                 handle.write(encoded)
                 handle.flush()
                 os.fsync(handle.fileno())
-            os.replace(temporary_name, target)
+                before = os.fstat(handle.fileno()) if prove_durable else None
+                os.replace(temporary_name, target)
+                if prove_durable:
+                    after = os.fstat(handle.fileno())
+                    # Rename may change ctime, but not the synced contents.
+                    if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) == (
+                        after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns,
+                    ) and _file_identity(after) == _file_identity(target.lstat()):
+                        return _file_identity(after)
         finally:
             try:
                 os.unlink(temporary_name)

@@ -102,32 +102,36 @@ class LigandMPNNMutator(Mutator):
             result[label_name] = str(expression)
         return result
 
-    def compute_mutation(self, mutation_input_features: Tuple[Any, Any]):
+    def compute_mutation(self, mutation_input_features):
+        from astrolabe.design.continuation import complete
+        return complete(self.compute_mutation_continuation(mutation_input_features, _cooperative=False))
+
+    def compute_mutation_continuation(self, mutation_input_features, *, _cooperative=True):
         mutation_output = {}
         for oligo_name, input_feat in mutation_input_features.items():
             input_feat = dict(input_feat)
             supplemental_inputs = input_feat.pop("supplemental_inputs", [])
-            oligo_output = self.runner.design_sequences(**input_feat)
-            if supplemental_inputs:
-                supplemental_outputs = [
-                    {
-                        "source": supplemental_input["source"],
-                        "features": supplemental_input["features"],
-                        "output": self.runner.design_sequences(
-                            **supplemental_input["features"]
-                        ),
-                    }
-                    for supplemental_input in supplemental_inputs
-                ]
+            oligo_output = yield from self._design_continuation(input_feat, _cooperative)
+            supplemental_outputs = []
+            for supplemental_input in supplemental_inputs:
+                supplemental_outputs.append({
+                    "source": supplemental_input["source"],
+                    "features": supplemental_input["features"],
+                    "output": (yield from self._design_continuation(supplemental_input["features"], _cooperative)),
+                })
+            if supplemental_outputs:
                 oligo_output = self._merge_supplemental_outputs(
-                    oligo_name,
-                    oligo_output,
-                    supplemental_outputs,
+                    oligo_name, oligo_output, supplemental_outputs,
                 )
             oligo_output.update({"name": oligo_name, "feature_dict": input_feat})
             mutation_output[oligo_name] = oligo_output
-
         return mutation_output
+
+    def _design_continuation(self, features, cooperative):
+        staged = getattr(self.runner, "design_sequences_continuation", None) if cooperative else None
+        if staged is None:
+            return self.runner.design_sequences(**features)
+        return (yield from staged(**features))
 
     def design_initial_sequences(
         self,

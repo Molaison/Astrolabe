@@ -74,6 +74,11 @@ class BranchingState:
     refused: tuple[BranchJob, ...] = ()
     stop_reason: str | None = None
     finished: bool = False
+    # Stage acknowledgements are admission occupancy, not evaluation terminals.
+    prediction_done: tuple[int, ...] = ()
+    score_admitted: tuple[int, ...] = ()
+    score_done: tuple[int, ...] = ()
+    credit_epoch: int = 0
 
 
 @dataclass(frozen=True)
@@ -86,6 +91,10 @@ class BranchAction:
 @dataclass(frozen=True)
 class BranchEvent:
     terminals: tuple[BranchTerminal, ...]
+    prediction_done: tuple[int, ...] = ()
+    score_admitted: tuple[int, ...] = ()
+    score_done: tuple[int, ...] = ()
+    credit_epoch: int | None = None
 
 
 def branch_codec(value_type):

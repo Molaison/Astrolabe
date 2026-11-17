@@ -117,7 +117,7 @@ def _input_mounts(argv, cwd):
     for i, argument in enumerate(argv):
         key, equal, value = argument.partition("=")
         if key not in path_options and key.lstrip("+") not in {
-            "out_dir", "raw_model_results_dir",
+            "out_dir", "raw_model_results_dir", "profiling.output_dir",
             "evaluator.alphafold3.jax_compilation_cache_dir",
         }:
             continue
@@ -162,7 +162,7 @@ def runtime_command(root, argv, profile, environment=None, cwd=None):
         # An assigned device, UUID, empty restriction or scheduler mask wins.
         if "CUDA_VISIBLE_DEVICES" in env:
             values["CUDA_VISIBLE_DEVICES"] = env["CUDA_VISIBLE_DEVICES"]
-    for key in (*profile.get("forward_env", []), "GH_DALPHABALL"):
+    for key in (*profile.get("forward_env", []), "GH_DALPHABALL", "ASTROLABE_PROFILE_SESSION"):
         if key in env:
             values[key] = env[key]
     if cpu_only:
@@ -189,6 +189,16 @@ def runtime_command(root, argv, profile, environment=None, cwd=None):
     elif "JAX_COMPILATION_CACHE_DIR" in env:
         values["JAX_COMPILATION_CACHE_DIR"] = ""
     binds.extend(f"{p}:{p}" for p in _input_mounts(argv, cwd))
+    if env.get("ASTROLABE_PROFILE_SESSION"):
+        try:
+            descriptor = json.loads(env["ASTROLABE_PROFILE_SESSION"])
+            directory = Path(descriptor["directory"]).expanduser()
+            if directory.is_absolute() and directory.is_dir():
+                binds.append(f"{directory}:{directory}")
+        except (ValueError, TypeError, KeyError, OSError):
+            # The collector records an unavailable descriptor. Observations
+            # must not change whether the scientific child can be launched.
+            pass
     if env.get("GH_DALPHABALL"):
         binary = Path(os.path.expandvars(env["GH_DALPHABALL"])).expanduser()
         if binary.is_file():
@@ -226,6 +236,12 @@ def main(argv=None):
     except (OSError, ValueError, KeyError) as error:
         print(f"astrolabe: runtime setup: {error}", file=sys.stderr)
         return 2
+    words = command_words(argv)
+    if words[:1] == ["profile"]:
+        # Offline diagnostics need only the standard library, including on a
+        # machine where the scientific environment is available only remotely.
+        from astrolabe.profiling.cli import main as profile_main
+        return profile_main(words[1:])
     try:
         from astrolabe.cli import main as cli_main
     except ModuleNotFoundError as error:

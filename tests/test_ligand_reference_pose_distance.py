@@ -573,6 +573,8 @@ def test_ligand_aligned_reference_pocket_cb_alpha_shape_rejects_invalid_radius()
 
 
 def test_ligand_aligned_reference_pocket_cb_alpha_shape_uses_qhull_fallback(monkeypatch):
+    import scipy.spatial
+
     ligand_coords = np.asarray([[0.5, 0.5, 0.5]], dtype=float)
     pocket_cb = np.asarray(
         [
@@ -584,16 +586,16 @@ def test_ligand_aligned_reference_pocket_cb_alpha_shape_uses_qhull_fallback(monk
         ],
         dtype=float,
     )
-    real_delaunay = interaction.Delaunay
+    real_delaunay = scipy.spatial.Delaunay
     calls = []
 
     def flaky_delaunay(points, *args, **kwargs):
         calls.append(kwargs.get("qhull_options"))
         if len(calls) == 1:
-            raise interaction.QhullError("forced initial failure")
+            raise scipy.spatial.QhullError("forced initial failure")
         return real_delaunay(points, *args, **kwargs)
 
-    monkeypatch.setattr(interaction, "Delaunay", flaky_delaunay)
+    monkeypatch.setattr(scipy.spatial, "Delaunay", flaky_delaunay)
 
     score = interaction._fraction_inside_cb_alpha_shape(
         ligand_coords,

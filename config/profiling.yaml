@@ -1,0 +1,10 @@
+# Overlay for an existing task; does not change models, seeds or scheduling.
+# astrolabe run --standalone task.yaml --overlay /path/to/config/profiling.yaml
+profiling:
+  enabled: true
+  modules: ["*"]
+  sample_interval_s: 1.0
+  gpu: false
+  cprofile: false
+  max_events: 200000
+  output_dir: null

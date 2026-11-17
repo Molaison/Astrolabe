@@ -223,6 +223,29 @@ def _validate_chain_sequences(
         )
 
 
+def _validate_structure_seed(binder_sequence, binder_chain, chain_sequences,
+                             structure_chain_sequences, criteria):
+    if (set(chain_sequences) != set(structure_chain_sequences)
+            or binder_chain not in chain_sequences):
+        raise ValueError("Proton-PottsMPNN source/working chain identities must match and include the binder.")
+    if chain_sequences[binder_chain] != binder_sequence:
+        raise ValueError("Proton-PottsMPNN working binder identity differs from binder_sequence.")
+    for chain, source in structure_chain_sequences.items():
+        working = chain_sequences[chain]
+        _canonical_sequence(source, f"source chain {chain!r}")
+        _canonical_sequence(working, f"working chain {chain!r}")
+        if len(source) != len(working):
+            raise ValueError("Proton-PottsMPNN source/working sequence lengths must match.")
+        if chain != binder_chain and source != working:
+            raise ValueError("Proton-PottsMPNN external binder seeds cannot change target sequences.")
+    if structure_chain_sequences[binder_chain] != binder_sequence:
+        seed_source = str(criteria.get("seed_source") or "inverse").strip().lower()
+        method = str(criteria.get("method") or "converged_mcmc").strip().lower()
+        if seed_source != "inverse" or method in {"gibbs", "mpnn_sample"}:
+            raise ValueError("Proton-PottsMPNN source/working binder differences require an inverse external seed; "
+                             "native seeds and whole-chain methods cannot consume that seed.")
+
+
 def _canonical_sequence(value: Any, label: str) -> str:
     sequence = str(value or "").strip().upper()
     invalid = sorted(set(sequence) - CANONICAL_AA)
@@ -499,12 +522,22 @@ def _infer(runtime, message: dict[str, Any], output_dir: Path) -> dict[str, Any]
         str(k): str(v).strip().upper()
         for k, v in dict(message.get("chain_sequences") or {}).items()
     }
-    _validate_chain_sequences(observed, chain_sequences)
-    if observed.get(binder_chain) != binder_sequence:
-        raise ValueError(
-            f"Proton-PottsMPNN binder_sequence does not match chain {binder_chain!r} "
-            "in the structure."
-        )
+    structure_chain_sequences = message.get("structure_chain_sequences")
+    if structure_chain_sequences is None:
+        _validate_chain_sequences(observed, chain_sequences)
+        if observed.get(binder_chain) != binder_sequence:
+            raise ValueError(
+                f"Proton-PottsMPNN binder_sequence does not match chain {binder_chain!r} "
+                "in the structure."
+            )
+    else:
+        structure_chain_sequences = {str(k): str(v).strip().upper()
+                                     for k, v in dict(structure_chain_sequences).items()}
+        if set(observed) != set(structure_chain_sequences):
+            raise ValueError("Proton-PottsMPNN structure/source chain identities differ.")
+        _validate_chain_sequences(observed, structure_chain_sequences)
+        _validate_structure_seed(binder_sequence, binder_chain, chain_sequences,
+                                 structure_chain_sequences, dict(message.get("criteria") or {}))
 
     fixed_positions = [int(p) for p in message.get("fixed_positions") or []]
     _apply_design_mask(atom_array, binder_chain, fixed_positions)
@@ -556,10 +589,14 @@ def _infer(runtime, message: dict[str, Any], output_dir: Path) -> dict[str, Any]
         "fixed_positions": fixed_positions,
         "criteria": criteria,
         "seed": seed,
+        "seed_provenance": message.get("seed_provenance"),
         "selected": _design_metadata(selected),
         "designs": [_design_metadata(design) for design in designs],
         "seed_energies": seed_energies,
     }
+    if structure_chain_sequences is not None:
+        raw_payload["structure_chain_sequences"] = structure_chain_sequences
+        raw_payload["chain_sequences"] = chain_sequences
     _write_json_atomic(raw_output_path, raw_payload)
     _timing("serialize_write", started, request_id)
     return {

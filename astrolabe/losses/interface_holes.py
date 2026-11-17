@@ -3,12 +3,13 @@ from __future__ import annotations
 
 import math
 import numpy as np
-from scipy.spatial import cKDTree
 from astrolabe.losses.base import loss_registry
 
 
 def interface_residues(pose, chains_a, chains_b, distance=10.0):
     """Return pose indices with a cross-group heavy-atom neighbor (inclusive)."""
+    from scipy.spatial import cKDTree
+
     if not math.isfinite(distance) or distance <= 0:
         raise ValueError("interface_distance must be positive and finite")
     a, b = set(chains_a), set(chains_b)
