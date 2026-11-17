@@ -1986,7 +1986,7 @@ def _chain_group_region_selector(
     return selector_ns.ResidueIndexSelector(",".join(str(i) for i in indices))
 
 
-def _make_interface_buns_filter(*, ignore_surface_res: bool = False):
+def _make_interface_buns_filter(*, ignore_surface_res: bool = False, residue_selector=None):
     """Construct a fresh native filter; also permits pose-free resident warmup."""
     _require_pyrosetta()
     xml = (
@@ -2000,6 +2000,8 @@ def _make_interface_buns_filter(*, ignore_surface_res: bool = False):
     # The same native parser obtains the command-line score function itself.
     # A full RosettaScripts DataMap additionally loads unrelated score functions.
     filt.parse_my_tag(rosetta.utility.tag.Tag.create(xml), rosetta.basic.datacache.DataMap())
+    if residue_selector is not None:
+        filt.set_residue_selector(residue_selector)
     return filt
 
 
@@ -2010,6 +2012,7 @@ def _compute_interface_buried_unsatisfied_hbonds(
     *,
     separation_distance: float = 1000.0,
     ignore_surface_res: bool = False,
+    residue_selector=None,
 ) -> float:
     _require_pyrosetta()
     binder_chain_ids = {str(chain) for chain in binder_chains}
@@ -2030,7 +2033,7 @@ def _compute_interface_buried_unsatisfied_hbonds(
             f"pose={sorted(pose_chain_ids)!r} selected={sorted(selected_chain_ids)!r}."
         )
 
-    buns_filter = _make_interface_buns_filter(ignore_surface_res=ignore_surface_res)
+    buns_filter = _make_interface_buns_filter(ignore_surface_res=ignore_surface_res, residue_selector=residue_selector)
     bound_buns = float(buns_filter.report_sm(pose))
     if not math.isfinite(bound_buns):
         raise ValueError("Bound BUNS must be finite")
@@ -2309,71 +2312,85 @@ def calculate_ddg_loss(complex_poses, protomer, normalize_factor=5.0):
 
 @loss_registry.register(
     name="protomer_shape_complementarity",
-    description="Shape complementarity penalty between two protomers",
-    optional_params=[
-        "protomer_a",
-        "protomer_b",
-        # Back-compat alias used by some configs.
-        "included_protomers",
-        "target_sc",
-        "saturation_constant",
-        "return_raw",
-        "strict",
-    ],
+    description="Lawrence-Colman shape complementarity; sc_rs default, explicit Rosetta alternative",
+    optional_params=["protomer_a", "protomer_b", "included_protomers", "strict",
+                     "backend", "selector_a", "selector_b"],
     supports_oligomer_specific=True,
 )
 def protomer_shape_complementarity(
-    eval_result,
-    protomer_a: str | None = None,
-    protomer_b: str | None = None,
-    included_protomers: str | None = None,
-    strict: bool = False,
+    eval_result, protomer_a=None, protomer_b=None, included_protomers=None,
+    strict=False, backend="sc_rs", selector_a=None, selector_b=None,
 ):
+    from astrolabe.losses.independent import interface_scores, validate_backend
+    from astrolabe.losses.selection import resolve_loss_chain_groups
+
+    validate_backend(backend, "sc_rs")
+    if backend == "sc_rs":
+        return interface_scores(
+            eval_result, "sc", protomer_a, protomer_b, included_protomers,
+            selector_a=selector_a, selector_b=selector_b,
+        )
     _require_pyrosetta()
-    complex_poses = getattr(eval_result, "complex_poses", None)
-    if complex_poses is None or complex_poses.poses is None:
-        raise ValueError("Shape complementarity loss requires complex poses.")
-
-    if protomer_a is None and included_protomers:
-        # `included_protomers` may contain comma-separated protomer names; use the first as protomer_a.
-        protomer_a = str(included_protomers).split(",")[0].strip() or None
-
+    poses = getattr(getattr(eval_result, "complex_poses", None), "poses", None)
+    poses = validate_load_poses(poses, getattr(eval_result, "complex_paths", None))
     scores = {}
-    for oligo_name, pose in complex_poses.poses.items():
-        chain_a, chain_b = _resolve_chain_pair(
-            oligo_name, protomer_a, protomer_b
-        )
-        if chain_a is None or chain_b is None or chain_a == chain_b:
+    for name, pose in poses.items():
+        a, b = resolve_loss_chain_groups(name, protomer_a, protomer_b, included_protomers)
+        if len(a) == len(b) == 1 and selector_a is None and selector_b is None:
+            value = _compute_shape_complementarity_between_chains(
+                pose, a[0], b[0], strict=strict
+            )
+        else:
+            filt = ShapeComplementarityFilter()
+            filt.use_rosetta_radii(True)
+            filt.selector1(_loss_pose_selector(eval_result, name, pose, a, selector_a))
+            filt.selector2(_loss_pose_selector(eval_result, name, pose, b, selector_b))
+            value = float(filt.report_sm(pose))
+        if value is None or not math.isfinite(value) or value < 0:
             if strict:
-                raise ValueError("Missing/invalid shape complementarity chain pair")
-            scores[oligo_name] = 0.0
-            continue
-
-        sc_value = (
-            _compute_shape_complementarity_between_chains(pose, chain_a, chain_b, strict=True)
-            if strict else _compute_shape_complementarity_between_chains(pose, chain_a, chain_b)
-        )
-        if sc_value is None or sc_value < 0.0:
-            if strict:
-                raise ValueError("Shape complementarity calculation did not return a valid value")
-            scores[oligo_name] = 0.0
-            continue
-
-        scores[oligo_name] = sc_value
-
+                raise ValueError("Invalid Rosetta shape complementarity")
+            value = 0.0
+        scores[name] = float(value)
     return scores
+
+
+def _loss_pose_selector(eval_result, name, pose, chains, expression=None, residues=None):
+    from astrolabe.losses.selection import selected_residue_ordinals, pose_residue_indices
+
+    lengths = {chain: sum(
+        str(pose.pdb_info().chain(i)) == str(chain)
+        for i in range(1, pose.total_residue() + 1)
+    ) for chain in chains}
+    selection = selected_residue_ordinals(
+        eval_result, name, chains, chain_lengths=lengths,
+        selector=expression, residues=residues,
+    )
+    indices = pose_residue_indices(pose, selection)
+    if not indices:
+        return pyrosetta.rosetta.core.select.residue_selector.FalseResidueSelector()
+    return pyrosetta.rosetta.core.select.residue_selector.ResidueIndexSelector(
+        ",".join(map(str, indices))
+    )
 
 
 @loss_registry.register(
     name="ligand_shape_complementarity",
-    description="Mean Rosetta shape complementarity between ligand chain(s) and protein chain(s)",
-    optional_params=["ligand_targets"],
+    description="Mean ligand/protein shape complementarity using sc_rs or explicit Rosetta",
+    optional_params=["ligand_targets", "backend", "selector_a", "selector_b"],
     supports_oligomer_specific=True,
 )
 def ligand_shape_complementarity(
     eval_result,
     ligand_targets: str | Sequence[str] | None = None,
+    backend="sc_rs", selector_a=None, selector_b=None,
 ):
+    from astrolabe.losses.independent import ligand_scores, validate_backend
+    validate_backend(backend, "sc_rs")
+    if backend == "sc_rs":
+        return ligand_scores(eval_result, "sc", ligand_targets,
+                             selector_a=selector_a, selector_b=selector_b)
+    if selector_a is not None or selector_b is not None:
+        raise ValueError("Ligand SC positional selection currently requires backend='sc_rs'")
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     if complex_poses is None or complex_poses.poses is None:
@@ -2401,65 +2418,59 @@ def ligand_shape_complementarity(
 
 @loss_registry.register(
     name="contact_molecular_surface",
-    description="Rosetta contact molecular surface between two protomer/chain groups",
-    optional_params=[
-        "protomer_a",
-        "protomer_b",
-        "protomer_a_residues",
-        "protomer_b_residues",
-        "included_protomers",
-        "distance_weight",
-        "use_rosetta_radii",
-    ],
+    description="Target-side contact molecular surface in Angstrom squared; independent CMS or explicit Rosetta",
+    optional_params=["protomer_a", "protomer_b", "protomer_a_residues", "protomer_b_residues",
+                     "included_protomers", "distance_weight", "use_rosetta_radii",
+                     "backend", "selector_a", "selector_b"],
     supports_oligomer_specific=True,
 )
 def contact_molecular_surface(
-    eval_result,
-    protomer_a: str | Sequence[str] | None = None,
-    protomer_b: str | Sequence[str] | None = None,
-    protomer_a_residues: str | None = None,
-    protomer_b_residues: str | None = None,
-    included_protomers: str | None = None,
-    distance_weight: float = 0.5,
-    use_rosetta_radii: bool = True,
+    eval_result, protomer_a=None, protomer_b=None, protomer_a_residues=None,
+    protomer_b_residues=None, included_protomers=None, distance_weight=0.5,
+    use_rosetta_radii=None, backend="py_contact_ms", selector_a=None, selector_b=None,
 ):
-    _require_pyrosetta()
-    complex_poses = getattr(eval_result, "complex_poses", None)
-    pose_map = getattr(complex_poses, "poses", None) if complex_poses is not None else None
-    pose_map = validate_load_poses(
-        pose_map,
-        getattr(eval_result, "complex_paths", None),
-    )
+    from astrolabe.losses.independent import interface_scores, validate_backend
+    from astrolabe.losses.selection import resolve_loss_chain_groups
 
-    if protomer_a is None and included_protomers:
-        protomer_a = str(included_protomers).split(",")[0].strip() or None
-
-    scores = {}
-    for oligo_name, pose in pose_map.items():
-        chains_a, chains_b = _resolve_contact_chain_groups(
-            oligo_name, protomer_a, protomer_b
-        )
-        if not chains_a or not chains_b:
-            scores[oligo_name] = 0.0
-            continue
-
-        cms_value = _compute_contact_molecular_surface_between_chains(
-            pose,
-            chains_a,
-            chains_b,
-            distance_weight=distance_weight,
-            use_rosetta_radii=use_rosetta_radii,
+    validate_backend(backend, "py_contact_ms")
+    if backend == "py_contact_ms":
+        if use_rosetta_radii:
+            raise ValueError("use_rosetta_radii=True requires backend='rosetta'; py_contact_ms uses its own calibrated radii")
+        return interface_scores(
+            eval_result, "cms", protomer_a, protomer_b, included_protomers,
+            selector_a=selector_a, selector_b=selector_b,
             protomer_a_residues=protomer_a_residues,
-            protomer_b_residues=protomer_b_residues,
+            protomer_b_residues=protomer_b_residues, distance_weight=distance_weight,
         )
-        scores[oligo_name] = max(0.0, float(cms_value)) if cms_value is not None else 0.0
-
+    _require_pyrosetta()
+    poses = getattr(getattr(eval_result, "complex_poses", None), "poses", None)
+    poses = validate_load_poses(poses, getattr(eval_result, "complex_paths", None))
+    scores = {}
+    for name, pose in poses.items():
+        a, b = resolve_loss_chain_groups(name, protomer_a, protomer_b, included_protomers)
+        if selector_a is None and selector_b is None:
+            value = _compute_contact_molecular_surface_between_chains(
+                pose, a, b, distance_weight=distance_weight,
+                use_rosetta_radii=True if use_rosetta_radii is None else use_rosetta_radii,
+                protomer_a_residues=protomer_a_residues,
+                protomer_b_residues=protomer_b_residues,
+            )
+        else:
+            filt = ContactMolecularSurfaceFilter()
+            filt.selector1(_loss_pose_selector(eval_result, name, pose, a, selector_a, protomer_a_residues))
+            filt.selector2(_loss_pose_selector(eval_result, name, pose, b, selector_b, protomer_b_residues))
+            filt.distance_weight(float(distance_weight))
+            filt.use_rosetta_radii(True if use_rosetta_radii is None else use_rosetta_radii)
+            value = float(filt.report_sm(pose))
+        if value is None or not math.isfinite(value):
+            raise ValueError("Rosetta contact molecular surface failed")
+        scores[name] = max(0.0, float(value))
     return scores
 
 
 @loss_registry.register(
     name="contact_molecular_surface_norm",
-    description="Normalized Rosetta contact molecular surface score with cms=400 mapped to 0.8",
+    description="Normalized contact molecular surface score with cms=400 mapped to 0.8",
     optional_params=[
         "protomer_a",
         "protomer_b",
@@ -2472,6 +2483,7 @@ def contact_molecular_surface(
         "midpoint_value",
         "lower_scale",
         "upper_scale",
+        "backend", "selector_a", "selector_b",
     ],
     supports_oligomer_specific=True,
 )
@@ -2483,11 +2495,12 @@ def contact_molecular_surface_norm(
     protomer_b_residues: str | None = None,
     included_protomers: str | None = None,
     distance_weight: float = 0.5,
-    use_rosetta_radii: bool = True,
+    use_rosetta_radii: bool | None = None,
     midpoint: float = 400.0,
     midpoint_value: float = 0.8,
     lower_scale: float = 150.0,
     upper_scale: float = 75.0,
+    backend="py_contact_ms", selector_a=None, selector_b=None,
 ):
     raw_scores = contact_molecular_surface(
         eval_result,
@@ -2498,6 +2511,7 @@ def contact_molecular_surface_norm(
         included_protomers=included_protomers,
         distance_weight=distance_weight,
         use_rosetta_radii=use_rosetta_radii,
+        backend=backend, selector_a=selector_a, selector_b=selector_b,
     )
     return {
         oligo_name: normalize_contact_molecular_surface(
@@ -2523,6 +2537,8 @@ def contact_molecular_surface_norm(
         "included_protomers",
         "separation_distance",
         "ignore_surface_res",
+        "backend", "selector_a", "selector_b", "hydrogens", "hydrogen_ph",
+        "hbond_distance", "hbond_angle", "sasa_probe_radius", "buried_sasa_cutoff", "sasa_points",
     ],
     supports_oligomer_specific=True,
 )
@@ -2533,7 +2549,23 @@ def interface_buried_unsatisfied_hbonds(
     included_protomers: str | None = None,
     separation_distance: float = 1000.0,
     ignore_surface_res: bool = False,
+    backend="biotite", selector_a=None, selector_b=None,
+    hydrogens="add", hydrogen_ph=7.0, hbond_distance=2.5, hbond_angle=120.0,
+    sasa_probe_radius=1.4, buried_sasa_cutoff=1.0, sasa_points=1000,
 ):
+    from astrolabe.losses.independent import interface_scores, validate_backend
+    validate_backend(backend, "biotite")
+    if backend == "biotite":
+        if ignore_surface_res or separation_distance != 1000.0:
+            raise ValueError("ignore_surface_res and separation_distance overrides require backend='rosetta'")
+        return interface_scores(
+            eval_result, "buns", protomer_a, protomer_b, included_protomers,
+            selector_a=selector_a, selector_b=selector_b,
+            hydrogens=hydrogens, hydrogen_ph=hydrogen_ph,
+            hbond_distance=hbond_distance, hbond_angle=hbond_angle,
+            sasa_probe_radius=sasa_probe_radius, buried_sasa_cutoff=buried_sasa_cutoff,
+            sasa_points=sasa_points,
+        )
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     pose_map = getattr(complex_poses, "poses", None) if complex_poses is not None else None
@@ -2549,12 +2581,20 @@ def interface_buried_unsatisfied_hbonds(
         chains_a, chains_b = _resolve_contact_chain_groups(
             oligo_name, protomer_a, protomer_b
         )
+        extra = {}
+        if selector_a is not None or selector_b is not None:
+            ns = pyrosetta.rosetta.core.select.residue_selector
+            extra["residue_selector"] = ns.OrResidueSelector(
+                _loss_pose_selector(eval_result, oligo_name, pose, chains_a, selector_a),
+                _loss_pose_selector(eval_result, oligo_name, pose, chains_b, selector_b),
+            )
         scores[oligo_name] = _compute_interface_buried_unsatisfied_hbonds(
             pose,
             chains_a,
             chains_b,
             separation_distance=separation_distance,
             ignore_surface_res=ignore_surface_res,
+            **extra,
         )
     return scores
 
@@ -2644,14 +2684,28 @@ def _resolve_chain_pair(
 @loss_registry.register(
     name="ligand_protein_hbond",
     description="Saturated count of ligand–protein hydrogen bonds",
-    optional_params=["ligand_targets", "saturation_constant"],
+    optional_params=["ligand_targets", "saturation_constant", "backend", "selector_a", "selector_b",
+                     "hydrogens", "hydrogen_ph", "hbond_distance", "hbond_angle"],
     supports_oligomer_specific=True,
 )
 def ligand_protein_hbond(
     eval_result,
     ligand_targets: str | Sequence[str] | None = None,
     saturation_constant: float = 4.0,
+    backend="biotite", selector_a=None, selector_b=None, hydrogens="add", hydrogen_ph=7.0,
+    hbond_distance=2.5, hbond_angle=120.0,
 ):
+    from astrolabe.losses.independent import ligand_scores, validate_backend
+    validate_backend(backend, "biotite")
+    if backend == "biotite":
+        values = ligand_scores(
+            eval_result, "hbonds", ligand_targets, selector_a=selector_a, selector_b=selector_b,
+            hydrogens=hydrogens, hydrogen_ph=hydrogen_ph,
+            hbond_distance=hbond_distance, hbond_angle=hbond_angle,
+        )
+        return {name: _saturating_fraction(value, saturation_constant) for name, value in values.items()}
+    if selector_a is not None or selector_b is not None:
+        raise ValueError("Ligand H-bond positional selectors require backend='biotite'")
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     if complex_poses is None or complex_poses.poses is None:
@@ -2974,10 +3028,13 @@ def get_buried_contribution(pose, chain_id, buried_chain: str):
 @loss_registry.register(
     required_params=["buried_protomer"],
     description="Calculate holes difference for a specific protomer",
+    optional_params=["backend"],
     supports_oligomer_specific=True,
 )
-def chain_holes_diff(eval_result, buried_protomer: str):
-    """Calculate holes difference for specified protomer."""
+def chain_holes_diff(eval_result, buried_protomer: str, backend="rosetta"):
+    """Calculate the original RosettaHoles difference for a specified protomer."""
+    from astrolabe.loss_config import loss_backend
+    loss_backend("chain_holes_diff", {"backend": backend})
     _require_pyrosetta()
     buried_chain = {}
     for oligo_name in eval_result.names:
@@ -3772,8 +3829,8 @@ def ligand_protein_iptm(
 
 @loss_registry.register(
     name="ligand_local_holes",
-    description="Local Holes/packstat penalty in ligand environment",
-    optional_params=["ligand_targets", "neighbor_distance", "saturation_constant"],
+    description="Original RosettaHoles penalty in ligand environment",
+    optional_params=["ligand_targets", "neighbor_distance", "saturation_constant", "backend"],
     supports_oligomer_specific=True,
 )
 def ligand_local_holes(
@@ -3781,7 +3838,10 @@ def ligand_local_holes(
     ligand_targets: str | Sequence[str] | None = None,
     neighbor_distance: float = 8.0,
     saturation_constant: float = 10.0,
+    backend="rosetta",
 ):
+    from astrolabe.loss_config import loss_backend
+    loss_backend("ligand_local_holes", {"backend": backend})
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     if complex_poses is None or complex_poses.poses is None:
@@ -3813,7 +3873,9 @@ def ligand_local_holes(
 @loss_registry.register(
     name="ligand_buried_unsat_hbonds",
     description="Buried unsatisfied polar groups in the ligand local environment",
-    optional_params=["ligand_targets", "neighbor_distance", "saturation_constant"],
+    optional_params=["ligand_targets", "neighbor_distance", "saturation_constant", "backend",
+                     "selector_a", "selector_b", "hydrogens", "hydrogen_ph", "hbond_distance",
+                     "hbond_angle", "sasa_probe_radius", "buried_sasa_cutoff", "sasa_points"],
     supports_oligomer_specific=True,
 )
 def ligand_buried_unsat_hbonds(
@@ -3821,7 +3883,22 @@ def ligand_buried_unsat_hbonds(
     ligand_targets: str | Sequence[str] | None = None,
     neighbor_distance: float = 8.0,
     saturation_constant: float = 6.0,
+    backend="biotite", selector_a=None, selector_b=None, hydrogens="add", hydrogen_ph=7.0,
+    hbond_distance=2.5, hbond_angle=120.0, sasa_probe_radius=1.4, buried_sasa_cutoff=1.0, sasa_points=1000,
 ):
+    from astrolabe.losses.independent import ligand_scores, validate_backend
+    validate_backend(backend, "biotite")
+    if backend == "biotite":
+        values = ligand_scores(
+            eval_result, "buns", ligand_targets, selector_a=selector_a, selector_b=selector_b,
+            neighbor_distance=neighbor_distance, hydrogens=hydrogens, hydrogen_ph=hydrogen_ph,
+            hbond_distance=hbond_distance, hbond_angle=hbond_angle,
+            sasa_probe_radius=sasa_probe_radius, buried_sasa_cutoff=buried_sasa_cutoff,
+            sasa_points=sasa_points,
+        )
+        return {name: _saturating_fraction(value, saturation_constant) for name, value in values.items()}
+    if selector_a is not None or selector_b is not None:
+        raise ValueError("Ligand BUNS positional selectors require backend='biotite'")
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     if complex_poses is None or complex_poses.poses is None:

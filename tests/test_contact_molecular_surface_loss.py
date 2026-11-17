@@ -31,7 +31,7 @@ def test_contact_molecular_surface_returns_raw_value(monkeypatch) -> None:
         lambda pose, chain_a, chain_b, **kwargs: 250.0,
     )
 
-    out = contact_molecular_surface(_eval_result())
+    out = contact_molecular_surface(_eval_result(), backend="rosetta")
 
     assert out["AB"] == pytest.approx(250.0)
 
@@ -61,7 +61,7 @@ def test_contact_molecular_surface_norm_uses_runtime_loss(monkeypatch) -> None:
         lambda pose, chain_a, chain_b, **kwargs: 400.0,
     )
 
-    out = contact_molecular_surface_norm(_eval_result())
+    out = contact_molecular_surface_norm(_eval_result(), backend="rosetta")
 
     assert out["AB"] == pytest.approx(0.8)
 
@@ -91,7 +91,7 @@ def test_contact_molecular_surface_passes_chain_relative_residue_range(
         protomer_b="B",
         protomer_b_residues="138-343",
         distance_weight=1.0,
-    )
+     backend="rosetta")
 
     assert out["AB"] == pytest.approx(500.0)
     assert captured["protomer_b_residues"] == "138-343"
@@ -122,7 +122,7 @@ def test_contact_molecular_surface_treats_target_chains_as_one_group(
         _eval_result("ABCD"),
         protomer_a="A",
         protomer_b=["B", "C", "D"],
-    )
+     backend="rosetta")
 
     assert out["ABCD"] == pytest.approx(600.0)
     assert captured["chain_a"] == ["A"]
@@ -164,7 +164,7 @@ def test_contact_molecular_surface_loads_pose_from_complex_path(monkeypatch) -> 
         eval_result,
         protomer_a="A",
         protomer_b=["B", "C", "D"],
-    )
+     backend="rosetta")
 
     assert out["ABCD"] == pytest.approx(450.0)
     assert captured["path"] == "model.cif"
@@ -204,7 +204,7 @@ def test_interface_buns_uses_grouped_target_and_complex_path(monkeypatch) -> Non
         eval_result,
         protomer_a="A",
         protomer_b=["B", "C", "D"],
-    )
+     backend="rosetta")
 
     assert out["ABCD"] == pytest.approx(8.0)
     assert captured["pose"] is loaded_pose
@@ -280,6 +280,6 @@ def test_ligand_buried_unsat_hbonds_keeps_filter_failures_visible(
         with pytest.raises(RuntimeError, match="dalphaball missing"):
             ligand_buried_unsat_hbonds(
                 SimpleNamespace(complex_poses=SimpleNamespace(poses={"AB": object()}))
-            )
+            , backend="rosetta")
     finally:
         global_config.reset()

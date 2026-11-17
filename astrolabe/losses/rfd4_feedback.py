@@ -34,24 +34,59 @@ def _interface_feedback_scores(eval_result, binder_chains, target_chains, metric
 @loss_registry.register(
     name="interface_shape_complementarity",
     required_params=["binder_chains", "target_chains"],
-    optional_params=["hbond_energy_cutoff", "interface_distance", "buried_sasa_cutoff", "sasa_probe_radius"],
-    description="Rosetta whole-group shape complementarity scalar; measured empty interface is zero",
+    optional_params=["backend", "selector_a", "selector_b", "hbond_energy_cutoff",
+                     "interface_distance", "buried_sasa_cutoff", "sasa_probe_radius"],
+    description="Lawrence-Colman whole-group shape complementarity, sc_rs or explicit Rosetta",
     supports_oligomer_specific=True,
 )
-def interface_shape_complementarity(eval_result, binder_chains, target_chains, **options):
-    return _interface_feedback_scores(
-        eval_result, binder_chains, target_chains, "shape_complementarity", **options,
+def interface_shape_complementarity(
+    eval_result, binder_chains, target_chains, backend="sc_rs",
+    selector_a=None, selector_b=None, **options,
+):
+    from astrolabe.losses.independent import validate_backend
+    from astrolabe.losses.interaction import protomer_shape_complementarity
+
+    validate_backend(backend, "sc_rs")
+    if backend == "rosetta" and selector_a is None and selector_b is None:
+        return _interface_feedback_scores(
+            eval_result, binder_chains, target_chains, "shape_complementarity", **options,
+        )
+    if options:
+        raise ValueError("RFD4 energy/SASA feedback options require backend='rosetta'")
+    return protomer_shape_complementarity(
+        eval_result, binder_chains, target_chains, backend=backend,
+        selector_a=selector_a, selector_b=selector_b, strict=True,
     )
 
 
 @loss_registry.register(
     name="interface_hbond_count",
     required_params=["binder_chains", "target_chains"],
-    optional_params=["hbond_energy_cutoff", "interface_distance", "buried_sasa_cutoff", "sasa_probe_radius"],
-    description="Count qualifying Rosetta HBondSet donor-H/acceptor observations across binder/target groups once each; no per-residue double counting",
+    optional_params=["backend", "selector_a", "selector_b", "hydrogens", "hydrogen_ph",
+                     "hbond_distance", "hbond_angle", "hbond_energy_cutoff",
+                     "interface_distance", "buried_sasa_cutoff", "sasa_probe_radius"],
+    description="Crossgroup D-H-A observation count; chemically typed Baker-Hubbard or explicit Rosetta energy definition",
     supports_oligomer_specific=True,
 )
-def interface_hbond_count(eval_result, binder_chains, target_chains, **options):
+def interface_hbond_count(
+    eval_result, binder_chains, target_chains, backend="biotite",
+    selector_a=None, selector_b=None, hydrogens="add", hydrogen_ph=7.0,
+    hbond_distance=2.5, hbond_angle=120.0, **options,
+):
+    from astrolabe.losses.independent import interface_scores, validate_backend
+
+    validate_backend(backend, "biotite")
+    if backend == "biotite":
+        if options:
+            raise ValueError("Rosetta H-bond energy/SASA options require backend='rosetta'")
+        return interface_scores(
+            eval_result, "hbonds", binder_chains, target_chains,
+            selector_a=selector_a, selector_b=selector_b,
+            hydrogens=hydrogens, hydrogen_ph=hydrogen_ph,
+            hbond_distance=hbond_distance, hbond_angle=hbond_angle,
+        )
+    if selector_a is not None or selector_b is not None:
+        raise ValueError("H-bond positional selectors require backend='biotite'")
     return _interface_feedback_scores(
         eval_result, binder_chains, target_chains, "interfacial_hbond_count", **options,
     )
