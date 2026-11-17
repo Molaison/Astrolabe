@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Iterable, Optional
 
 from astrolabe.runtime_usage import analyze_runtime_usage
+from astrolabe.loss_config import iter_selected_loss_configs, loss_backend
 
 
 def _repo_root() -> Path:
@@ -159,6 +160,8 @@ def task_requirements(task_cfg: Any) -> dict:
             "subprocess_envs.rf3.python_bin",
         }
 
+    selected_loss_configs = [options for _, options in iter_selected_loss_configs(task_cfg)]
+    loss_types = {str(options.get("_type") or "") for options in selected_loss_configs}
     selector_exprs: list[str] = []
     for conf in mutator_terms_used.values():
         if not isinstance(conf, dict):
@@ -166,6 +169,12 @@ def task_requirements(task_cfg: Any) -> dict:
         expr = conf.get("position_selector")
         if isinstance(expr, str) and expr.strip():
             selector_exprs.append(expr.strip())
+
+    for conf in selected_loss_configs:
+        for field in ("selector_a", "selector_b", "position_selector"):
+            expression = conf.get(field)
+            if isinstance(expression, str) and expression.strip():
+                selector_exprs.append(expression.strip())
 
     # Evaluator requirements
     af3_terms_used = [
@@ -526,7 +535,19 @@ def task_requirements(task_cfg: Any) -> dict:
         "interface_shape_complementarity", "interface_hbond_count",
         "interface_polar_satisfaction", "short_range_interface_pair_energy",
     }
-    needs_pyrosetta = any(t in pyro_losses for t in loss_types)
+    independent_imports = {
+        "sc_rs": {"protein_interface", "biotite", "scipy"},
+        "py_contact_ms": {"py_contact_ms", "biotite", "scipy"},
+        "biotite": {"biotite", "hydride", "rdkit", "scipy"},
+    }
+    needs_pyrosetta = False
+    for conf in selected_loss_configs:
+        kind = str(conf.get("_type") or "").strip()
+        backend = loss_backend(kind, conf)
+        if backend == "rosetta" or (backend is None and kind in pyro_losses):
+            needs_pyrosetta = True
+        elif backend in independent_imports:
+            req_imports.update(independent_imports[backend])
     for conf in mutator_terms_used.values():
         if str(conf.get("_type") or "").lower() in {"proton_pottsmpnn", "proton-pottsmpnn", "vdm_proton", "vdm_pair"}:
             if any(_as_bool(conf.get(flag, proton_defaults.get(flag)), default=False)
@@ -542,7 +563,8 @@ def task_requirements(task_cfg: Any) -> dict:
     selector_vars: set[str] = set()
     for expr in selector_exprs:
         selector_vars |= _extract_selector_vars(expr)
-    if selector_vars & {"sse", "cdr", "bfactor", "interface", "surface", "long_helix_core", "long_loop"}:
+    from astrolabe.selectors.registry import SelectorRegistry
+    if selector_vars & SelectorRegistry.pose_required_variables():
         needs_pyrosetta = True
 
     if needs_pyrosetta:

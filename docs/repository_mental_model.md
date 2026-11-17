@@ -36,6 +36,8 @@ CLI / Hydra -> Astrolabe.run -> run_repeats -> _run_pipeline
 | Persistence | `decision_maker.py`, `run_config_lifecycle.py`, `execution_audit.py`, `posthoc/` | Same CSV row/column semantics. Single-file atomic replacement is not exact resume. |
 | AF3 compilation reuse | `af3_buckets.py`, `af3_compilation.py`, `launcher.py` | Native chemical token counts select the 40-token grid with inclusive 256/512/1024 windows. JAX owns executable compatibility; the launcher mounts its default disk cache outside ephemeral container HOME. Predictions and RNG remain fresh. See [cache controls](adaptive_runtime.md#af3-compilation-buckets-and-persistent-cache). |
 | Profiling | `profiling/`, public application/repeat scopes and module spans | Optional observations, separate per-process files and bounded resource sampling; no RNG, synchronization, scheduling or recovery authority. See [profiling](profiling.md). |
+| Physical loss preparation | `loss_config.py`, `losses/{selection,independent}.py` | Explicit backend and per-side selectors share one validation boundary. Content-bound structure/H/surface preparation is shared across scoped loss views; selected counts retain full H-bond/burial context. Holes stays native. See [usage](user_guide.md#61-物理评分-backend-与位置选择). |
+| AF3 preparation reuse | `af3_preparation.py`, `af3_featurisation_settings.py`, evaluator owners | Reuse MSA homologue encodings and conservatively keyed templates; rebuild query rows, token/atom layout and seeded features. Custom CCD is request-local. Boltz copies accessed CCD molecules per request; Protenix/Mol-1 reuse stable input assets. See [controls](adaptive_runtime.md#af3-deterministic-preparation-reuse). |
 
 ## Constraints that are easy to miss
 
@@ -150,7 +152,9 @@ activation/reset cannot erase applied patches or a poisoned process.
 MSA entries publish only after complete loading. Score extraction binds working
 sequences, dynamic sites, complete loss parameters and raw score contents
 (including referenced structure bytes) to its run. Cached mappings are copied
-for callers. Live poses and other values without a complete content codec bypass
+for callers. Selector-bearing scores also bypass whole-score reuse because live aliases
+can change without a complete content codec. Their structure preparation is still
+reused by artifact digest. Live poses and other values without a complete content codec bypass
 this cache; array subclasses such as masked arrays require an explicit codec for
 durable snapshots. This cache is not a durable Score receipt.
 

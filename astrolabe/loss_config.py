@@ -32,6 +32,21 @@ def loss_backend(kind, options=None):
     return backend
 
 
+def loss_selectors_require_pose(options):
+    """Use selector registrations to determine the structure context required."""
+    from astrolabe.selectors.registry import SelectorRegistry
+    pose_variables = SelectorRegistry.pose_required_variables()
+    for field in ("selector_a", "selector_b", "position_selector"):
+        expression = options.get(field)
+        if not isinstance(expression, str) or not expression.strip():
+            continue
+        names = {node.id for node in ast.walk(ast.parse(expression.strip(), mode="eval"))
+                 if isinstance(node, ast.Name)}
+        if names & pose_variables:
+            return True
+    return False
+
+
 def normalize_loss_options(options: Mapping) -> dict:
     """Normalize oligomer scope and reject conflicting compatibility fields."""
     result = dict(options)
@@ -95,3 +110,54 @@ def validate_loss_selector(expression):
         value = tree.body.value
         if value is not None and not isinstance(value, bool):
             raise ValueError("positional selector must return a selector or boolean")
+
+
+
+def iter_selected_loss_configs(cfg):
+    """Yield source/settings pairs selected by all reachable stage expressions.
+
+    Explicit non-null terms run even if absent from an expression, unless a
+    stage limits active_loss_terms. Expression aliases are traversed without
+    importing losses.
+    """
+    loss = cfg.get("loss") or {}
+    terms = loss.get("loss_terms") or {}
+    expressions = loss.get("expression_terms") or {}
+    stages = cfg.get("stages") or {}
+    default = stages.get("default") or {}
+    contexts = [(f"stages.{name}", stage) for name, stage in stages.items()
+                if stage is not None] or [("", {})]
+    fields = ("weighted_score_expression", "acceptance_threshold", "acceptance_gate",
+              "early_stopping", "prefix_early_stopping", "_entrance")
+    for stage_path, stage in contexts:
+        active = stage.get("active_loss_terms")
+        for alias, spec in terms.items():
+            if spec is not None and (active is None or alias in active):
+                yield f"loss.loss_terms.{alias}._type ({spec.get('_type')})", spec
+        for name in active or ():
+            if terms.get(name) is None:
+                yield f"{stage_path}.active_loss_terms ({name})", {"_type": name}
+        pending = []
+        for field in fields:
+            owner = stage if field in stage else default
+            expression = owner.get(field)
+            if isinstance(expression, str) and expression:
+                owner_path = stage_path if field in stage else "stages.default"
+                pending.append((f"{owner_path}.{field}", expression, field == "_entrance"))
+        visited = set()
+        while pending:
+            field_path, expression, entrance = pending.pop()
+            names = {node.id if isinstance(node, ast.Name) else node.attr
+                     for node in ast.walk(ast.parse(expression, mode="eval"))
+                     if isinstance(node, (ast.Name, ast.Attribute))}
+            for name in sorted(names):
+                if name in expressions and (name, entrance) not in visited:
+                    visited.add((name, entrance))
+                    pending.append((f"loss.expression_terms.{name}", expressions[name], entrance))
+                elif entrance and terms.get(name) is not None:
+                    # Entrance conditions use the source stage's engine, not
+                    # the destination stage's active-loss whitelist.
+                    yield f"{field_path} ({name})", terms[name]
+                elif (name not in terms and name not in expressions
+                      and (entrance or active is None or name in active)):
+                    yield f"{field_path} ({name})", {"_type": name}

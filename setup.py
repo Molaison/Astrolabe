@@ -40,6 +40,14 @@ setup(
         "prompt-toolkit>=3.0,<4",
     ],
     extras_require={
+        "scoring": [
+            "biotite==1.5.0",
+            "hydride==1.2.3",
+            "rdkit==2024.3.6",
+            "scipy==1.17.0",
+            "protein-interface==0.1.3",
+            "py-contact-ms==0.1.1",
+        ],
         "dev": [
             "pytest>=7.0",
             "build>=1",

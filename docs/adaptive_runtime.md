@@ -112,6 +112,45 @@ qualified PJRT serialization hotfix below. A persistent directory alone cannot
 repair that binary defect. Existing services retain the configuration with
 which they started; their clients do not reconfigure the owner's cache.
 
+
+## AF3 deterministic preparation reuse
+
+`evaluator.alphafold3.preparation_cache: true` enables an evaluator-owned cache
+(default: 32 entries, 128 MiB). Set it to `false` to compare against the existing
+native preparation path. It is separate from the JAX executable cache and the
+vendor's existing exact-sequence MSA/reference-structure caches.
+
+For a same-length query mutation, the MSA query row is rebuilt while unchanged
+homologue rows reuse their encoded arrays. Template features reuse an exact
+content key only for canonical, unmodified protein chains. That key binds chain
+order, token layout, template mmCIF, query-to-template mapping, padding and the
+native entity-equality partition. Mutations that merge or split entities therefore
+invalidate reuse. Custom chemistry, PTMs, covalent links and unsupported layouts
+keep native template preparation. Outputs are caller-owned; a nested disabled
+scope suppresses the outer cache, and evaluator shutdown releases entries.
+
+The native tokenizer, atom layout, seeded reference conformers and complete
+model batch are rebuilt. A few sequence substitutions can change downstream
+atom gather indices, so copying a previous complete feature batch is unsafe.
+Custom CCD entries are detached from the native shared dictionary, and their
+request disables the vendor's object-ID-keyed reference cache within the existing
+environment lock. Standard chemistry retains normal reference-cache behavior.
+
+Related family changes reuse proven invariant assets: Boltz retains one CCD
+asset per runner and copies each accessed molecule for a request; asset replacement
+invalidates it. Protenix leaves byte-identical MSA/template files untouched.
+Mol-1 uses content-addressed MSA files, so unchanged targets retain a stable path
+and previous request receipts remain valid. Complete Protenix, Mol-1 and Boltz
+feature tensors continue through their native preparation.
+
+Run `PYTHONPATH=. python examples/benchmarks/af3_preparation_reuse.py --output result.json`
+in the configured AF3 environment. Add `--fixed-seed` for the fixed-seed case or
+`--template-cif PATH` for a real template. The script uses current base-config
+preparation settings, keeps existing native caches separate for each side, and
+checks every numeric array plus native metadata across mutations.
+See the [implementation ledger](architecture_convergence.md#physical-score-backends-and-incremental-preparation-2026-11-17)
+for measured scope and the native build limitation.
+
 ## Opt-in AF3 cache hotfix and native beam ownership
 
 Use the ordinary command with shared configuration and an already-valid

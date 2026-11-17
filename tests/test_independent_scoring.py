@@ -210,13 +210,25 @@ from pathlib import Path
 from types import SimpleNamespace
 from astrolabe.losses.interaction import protomer_shape_complementarity, contact_molecular_surface, interface_buried_unsatisfied_hbonds
 from astrolabe.losses.rfd4_feedback import interface_hbond_count
-r = SimpleNamespace(names=["ABC"], complex_paths={"ABC": Path(sys.argv[1])})
+from astrolabe.evaluators.utils import StandardScores
+from astrolabe.losses.base import LossEngine
+r = StandardScores(names=["ABC"], plddt=None, complex_paths={"ABC": Path(sys.argv[1])})
 out = {
     "sc": protomer_shape_complementarity(r, "A", ["B", "C"])["ABC"],
     "cms": contact_molecular_surface(r, "A", ["B", "C"])["ABC"],
     "hb": interface_hbond_count(r, "A", ["B", "C"])["ABC"],
     "buns": interface_buried_unsatisfied_hbonds(r, "A", ["B", "C"])["ABC"],
 }
+kinds = {"sc": "protomer_shape_complementarity", "cms": "contact_molecular_surface",
+         "hb": "interface_hbond_count", "buns": "interface_buried_unsatisfied_hbonds"}
+engine = LossEngine({"loss_terms": {
+    alias: {"_type": kind, "_for": "ABC", "protomer_a": "A", "protomer_b": ["B", "C"]}
+    for alias, kind in kinds.items()
+}})
+engine.setup("sc + cms + hb - buns", None, None)
+actual = engine.score_context(r)
+for alias, value in out.items():
+    assert actual[alias] == value
 assert "pyrosetta" not in sys.modules
 assert interface_hbond_count(r, "A", ["B", "C"], selector_a="False")["ABC"] == 0
 assert interface_buried_unsatisfied_hbonds(r, "A", ["B", "C"], selector_a="False", selector_b="False")["ABC"] == 0
