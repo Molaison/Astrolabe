@@ -1790,15 +1790,15 @@ def _saturating_fraction(value: float, midpoint: float) -> float:
     return value / (value + midpoint)
 
 
-def _build_ligand_environment_pose(pose, ligand_chain: str, neighbor_distance: float):
+def _build_ligand_environment_pose(pose, ligand_chain: str, neighbor_distance: float, *, return_indices=False):
     from scipy.spatial import cKDTree
 
     ligand_residues = _residue_indices_for_chains(pose, [ligand_chain])
     if not ligand_residues:
-        return None
+        return (None, []) if return_indices else None
     ligand_coords = _heavy_atom_coordinates(pose, ligand_residues)
     if ligand_coords.size == 0:
-        return None
+        return (None, []) if return_indices else None
     ligand_tree = cKDTree(ligand_coords)
     neighbor_residues = []
     for res_idx in range(1, pose.total_residue() + 1):
@@ -1813,7 +1813,9 @@ def _build_ligand_environment_pose(pose, ligand_chain: str, neighbor_distance: f
         nearest, _ = ligand_tree.query(coords, k=1)
         if np.min(nearest) <= neighbor_distance:
             neighbor_residues.append(res_idx)
-    return _extract_subpose(pose, ligand_residues + neighbor_residues)
+    indices = sorted(set(ligand_residues + neighbor_residues))
+    sub_pose = _extract_subpose(pose, indices)
+    return (sub_pose, indices) if return_indices else sub_pose
 
 
 def _isolate_chains(pose, keep_chains: Iterable[str]):
@@ -2389,8 +2391,6 @@ def ligand_shape_complementarity(
     if backend == "sc_rs":
         return ligand_scores(eval_result, "sc", ligand_targets,
                              selector_a=selector_a, selector_b=selector_b)
-    if selector_a is not None or selector_b is not None:
-        raise ValueError("Ligand SC positional selection currently requires backend='sc_rs'")
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     if complex_poses is None or complex_poses.poses is None:
@@ -2407,9 +2407,18 @@ def ligand_shape_complementarity(
         values = []
         for _proto, ligand_chain in ligands:
             for protein_chain in protein_chains:
-                value = _compute_shape_complementarity_between_chains(
-                    pose, protein_chain, ligand_chain
-                )
+                if selector_a is None and selector_b is None:
+                    value = _compute_shape_complementarity_between_chains(
+                        pose, protein_chain, ligand_chain
+                    )
+                else:
+                    filt = ShapeComplementarityFilter()
+                    filt.use_rosetta_radii(True)
+                    filt.selector1(_loss_pose_selector(eval_result, oligo_name, pose, [protein_chain], selector_b))
+                    filt.selector2(_loss_pose_selector(eval_result, oligo_name, pose, [ligand_chain], selector_a))
+                    value = float(filt.report_sm(pose))
+                    if not math.isfinite(value) or value < 0:
+                        raise ValueError("Undefined Rosetta ligand shape complementarity for selected residues")
                 if value is not None and value >= 0.0:
                     values.append(float(value))
         scores[oligo_name] = float(np.mean(values)) if values else 0.0
@@ -2462,7 +2471,7 @@ def contact_molecular_surface(
             filt.distance_weight(float(distance_weight))
             filt.use_rosetta_radii(True if use_rosetta_radii is None else use_rosetta_radii)
             value = float(filt.report_sm(pose))
-        if value is None or not math.isfinite(value):
+        if value is None or not math.isfinite(value) or value < 0:
             raise ValueError("Rosetta contact molecular surface failed")
         scores[name] = max(0.0, float(value))
     return scores
@@ -2566,6 +2575,9 @@ def interface_buried_unsatisfied_hbonds(
             sasa_probe_radius=sasa_probe_radius, buried_sasa_cutoff=buried_sasa_cutoff,
             sasa_points=sasa_points,
         )
+    from astrolabe.losses.independent import validate_rosetta_polar_options
+    validate_rosetta_polar_options(hydrogens, hydrogen_ph, hbond_distance, hbond_angle,
+                                  sasa_probe_radius, buried_sasa_cutoff, sasa_points)
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     pose_map = getattr(complex_poses, "poses", None) if complex_poses is not None else None
@@ -2704,8 +2716,8 @@ def ligand_protein_hbond(
             hbond_distance=hbond_distance, hbond_angle=hbond_angle,
         )
         return {name: _saturating_fraction(value, saturation_constant) for name, value in values.items()}
-    if selector_a is not None or selector_b is not None:
-        raise ValueError("Ligand H-bond positional selectors require backend='biotite'")
+    from astrolabe.losses.independent import validate_rosetta_polar_options
+    validate_rosetta_polar_options(hydrogens, hydrogen_ph, hbond_distance, hbond_angle)
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     if complex_poses is None or complex_poses.poses is None:
@@ -2723,6 +2735,15 @@ def ligand_protein_hbond(
             continue
 
         ligand_residue_set = set(ligand_res_indices)
+        protein_selection = None
+        if selector_a is not None or selector_b is not None:
+            ligand_selection = _loss_pose_selector(
+                eval_result, oligo_name, pose, ligand_chains, selector_a,
+            ).apply(pose)
+            ligand_residue_set = {i for i in ligand_residue_set if ligand_selection[i]}
+            protein_selection = _loss_pose_selector(
+                eval_result, oligo_name, pose, _protein_chains_for_oligo(oligo_name), selector_b,
+            ).apply(pose)
         pose.update_residue_neighbors()
         hb_set = rosetta_hbonds.HBondSet()
         rosetta_hbonds.fill_hbond_set(pose, False, hb_set)
@@ -2737,7 +2758,9 @@ def ligand_protein_hbond(
             if don_is_ligand == acc_is_ligand:
                 continue
             partner = acc if don_is_ligand else don
-            if pose.residue(partner).is_protein():
+            if pose.residue(partner).is_protein() and (
+                protein_selection is None or protein_selection[partner]
+            ):
                 interaction_count += 1.0
 
         averaged = interaction_count / max(1, len(ligand_chains))
@@ -3830,7 +3853,7 @@ def ligand_protein_iptm(
 @loss_registry.register(
     name="ligand_local_holes",
     description="Original RosettaHoles penalty in ligand environment",
-    optional_params=["ligand_targets", "neighbor_distance", "saturation_constant", "backend"],
+    optional_params=["ligand_targets", "neighbor_distance", "saturation_constant", "backend", "selector_a", "selector_b"],
     supports_oligomer_specific=True,
 )
 def ligand_local_holes(
@@ -3838,7 +3861,7 @@ def ligand_local_holes(
     ligand_targets: str | Sequence[str] | None = None,
     neighbor_distance: float = 8.0,
     saturation_constant: float = 10.0,
-    backend="rosetta",
+    backend="rosetta", selector_a=None, selector_b=None,
 ):
     from astrolabe.loss_config import loss_backend
     loss_backend("ligand_local_holes", {"backend": backend})
@@ -3854,9 +3877,26 @@ def ligand_local_holes(
         if not ligands:
             continue
 
+        selected = None
+        if selector_a is not None or selector_b is not None:
+            ns = pyrosetta.rosetta.core.select.residue_selector
+            selected = ns.OrResidueSelector(
+                _loss_pose_selector(eval_result, oligo_name, pose, [chain for _, chain in ligands], selector_a),
+                _loss_pose_selector(eval_result, oligo_name, pose, _protein_chains_for_oligo(oligo_name), selector_b),
+            ).apply(pose)
         local_scores = []
         for _, chain_id in ligands:
-            sub_pose = _build_ligand_environment_pose(pose, chain_id, neighbor_distance)
+            if selected is None:
+                sub_pose = _build_ligand_environment_pose(pose, chain_id, neighbor_distance)
+            else:
+                sub_pose, original_indices = _build_ligand_environment_pose(
+                    pose, chain_id, neighbor_distance, return_indices=True,
+                )
+                local_indices = [i + 1 for i, original in enumerate(original_indices) if selected[original]]
+                if not local_indices:
+                    local_scores.append(0.0)
+                    continue
+                holes_filter.set_residue_selector(ns.ResidueIndexSelector(",".join(map(str, local_indices))))
             if sub_pose is None or sub_pose.total_residue() < 2:
                 continue
             raw_score = max(0.0, holes_filter.report_sm(sub_pose))
@@ -3897,8 +3937,9 @@ def ligand_buried_unsat_hbonds(
             sasa_points=sasa_points,
         )
         return {name: _saturating_fraction(value, saturation_constant) for name, value in values.items()}
-    if selector_a is not None or selector_b is not None:
-        raise ValueError("Ligand BUNS positional selectors require backend='biotite'")
+    from astrolabe.losses.independent import validate_rosetta_polar_options
+    validate_rosetta_polar_options(hydrogens, hydrogen_ph, hbond_distance, hbond_angle,
+                                  sasa_probe_radius, buried_sasa_cutoff, sasa_points)
     _require_pyrosetta()
     complex_poses = getattr(eval_result, "complex_poses", None)
     if complex_poses is None or complex_poses.poses is None:
@@ -3919,9 +3960,26 @@ def ligand_buried_unsat_hbonds(
             scores[oligo_name] = 0.0
             continue
 
+        selected = None
+        if selector_a is not None or selector_b is not None:
+            ns = pyrosetta.rosetta.core.select.residue_selector
+            selected = ns.OrResidueSelector(
+                _loss_pose_selector(eval_result, oligo_name, pose, [chain for _, chain in ligands], selector_a),
+                _loss_pose_selector(eval_result, oligo_name, pose, _protein_chains_for_oligo(oligo_name), selector_b),
+            ).apply(pose)
         local_scores = []
         for _proto, chain_id in ligands:
-            sub_pose = _build_ligand_environment_pose(pose, chain_id, neighbor_distance)
+            if selected is None:
+                sub_pose = _build_ligand_environment_pose(pose, chain_id, neighbor_distance)
+            else:
+                sub_pose, original_indices = _build_ligand_environment_pose(
+                    pose, chain_id, neighbor_distance, return_indices=True,
+                )
+                local_indices = [i + 1 for i, original in enumerate(original_indices) if selected[original]]
+                if not local_indices:
+                    local_scores.append(0.0)
+                    continue
+                buns_filter.set_residue_selector(ns.ResidueIndexSelector(",".join(map(str, local_indices))))
             if sub_pose is None or sub_pose.total_residue() < 2:
                 continue
             try:

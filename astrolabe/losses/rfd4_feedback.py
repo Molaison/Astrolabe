@@ -4,7 +4,7 @@ import math
 from astrolabe.losses.base import loss_registry
 
 
-def _interface_feedback_scores(eval_result, binder_chains, target_chains, metric, *, empty_interface_score=None, **options):
+def _interface_feedback_scores(eval_result, binder_chains, target_chains, metric, *, empty_interface_score=None, selector_a=None, selector_b=None, **options):
     from astrolabe.mutators.rfd4_feedback import analyze_interface, analyze_pose_interface
 
     sources = getattr(eval_result, "complex_paths", None)
@@ -21,6 +21,27 @@ def _interface_feedback_scores(eval_result, binder_chains, target_chains, metric
     for name, source in sources.items():
         feedback = analyzer(source, binder_chains, target_chains, **options)
         value = getattr(feedback, metric)
+        if selector_a is not None or selector_b is not None:
+            if metric != "interfacial_hbond_count":
+                raise ValueError("This native feedback metric does not expose positional selection")
+            from astrolabe.losses.selection import selected_residue_ordinals
+            lengths = {}
+            for residue in feedback.residues:
+                ref = residue.residue
+                lengths[ref.chain] = max(lengths.get(ref.chain, 0), ref.position)
+            first = selected_residue_ordinals(
+                eval_result, name, feedback.binder_chains, chain_lengths=lengths, selector=selector_a,
+            )
+            second = selected_residue_ordinals(
+                eval_result, name, feedback.target_chains, chain_lengths=lengths, selector=selector_b,
+            )
+            def selected(atom, group):
+                return atom.position in group.get(atom.chain, ())
+            value = sum(
+                (selected(h.donor, first) and selected(h.acceptor, second))
+                or (selected(h.donor, second) and selected(h.acceptor, first))
+                for h in feedback.interfacial_hbonds
+            )
         if value is None:
             if empty_interface_score is None:
                 raise ValueError(f"{metric} is undefined for {name!r}: empty interface polar denominator")
@@ -85,10 +106,11 @@ def interface_hbond_count(
             hydrogens=hydrogens, hydrogen_ph=hydrogen_ph,
             hbond_distance=hbond_distance, hbond_angle=hbond_angle,
         )
-    if selector_a is not None or selector_b is not None:
-        raise ValueError("H-bond positional selectors require backend='biotite'")
+    from astrolabe.losses.independent import validate_rosetta_polar_options
+    validate_rosetta_polar_options(hydrogens, hydrogen_ph, hbond_distance, hbond_angle)
     return _interface_feedback_scores(
-        eval_result, binder_chains, target_chains, "interfacial_hbond_count", **options,
+        eval_result, binder_chains, target_chains, "interfacial_hbond_count",
+        selector_a=selector_a, selector_b=selector_b, **options,
     )
 
 

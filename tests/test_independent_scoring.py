@@ -34,7 +34,7 @@ def test_content_cache_observes_same_path_replacement(tmp_path):
 
 
 def test_real_independent_surfaces_are_finite_and_separation_changes_cms(real_context):
-    pytest.importorskip("shape_complementarity")
+    pytest.importorskip("protein_interface")
     pytest.importorskip("py_contact_ms")
     _result, context = real_context
     atoms = context["atoms"]
@@ -49,7 +49,7 @@ def test_real_independent_surfaces_are_finite_and_separation_changes_cms(real_co
 
 
 def test_empty_surface_is_not_silently_scored_as_valid(real_context):
-    pytest.importorskip("shape_complementarity")
+    pytest.importorskip("protein_interface")
     result, _context = real_context
     with pytest.raises(ValueError, match="no heavy atoms"):
         interface_scores(result, "sc", "A", ["B", "C"], selector_a="False")
@@ -165,3 +165,73 @@ def test_independent_cms_rejects_unsupported_radii(real_context):
     atoms.atom_name[0] = "ZZZ"
     with pytest.raises(ValueError, match="no valid"):
         independent_cms(atoms, atoms.chain_id == "A", atoms.chain_id == "B")
+
+
+def test_partial_existing_hydrogens_are_rejected():
+    context = _explicit_molecules("NCC(=O)O")
+    atoms = context["atoms"]
+    assert polar_context(context, hydrogens="existing")["donors"].sum() > 0
+    keep = atoms.element != "H"
+    keep[np.flatnonzero(atoms.element == "H")[0]] = True
+    with pytest.raises(ValueError, match="Incomplete explicit hydrogens"):
+        polar_context({"atoms": atoms[keep], "polar": {}}, hydrogens="existing")
+
+
+def test_kdtree_cms_matches_upstream_and_reuses_surface_across_weights(real_context):
+    backend = pytest.importorskip("py_contact_ms")
+    _result, context = real_context
+    atoms = context["atoms"]
+    a, b = atoms.chain_id == "A", atoms.chain_id != "A"
+    first, second = atoms[a], atoms[b]
+    upstream, _, calculator = backend.calculate_contact_ms(
+        first.coord, backend.get_radii_from_names(first.res_name.tolist(), first.atom_name.tolist()),
+        second.coord, backend.get_radii_from_names(second.res_name.tolist(), second.atom_name.tolist()),
+    )
+    cache = {}
+    value = independent_cms(atoms, a, b, surface_cache=cache)
+    assert value == pytest.approx(upstream, rel=1e-12, abs=1e-9)
+    assert len(cache) == 1
+    arrays = next(iter(cache.values()))
+    for weight in (0.0, 1.2):
+        calculator.settings.weight = weight
+        expected, _ = calculator.calc_contact_molecular_surface(target_side=True)
+        assert independent_cms(atoms, a, b, distance_weight=weight, surface_cache=cache) == pytest.approx(
+            expected, rel=1e-12, abs=1e-9)
+        assert next(iter(cache.values())) is arrays
+
+
+def test_public_independent_losses_do_not_import_pyrosetta():
+    import subprocess
+    import sys
+
+    code = r'''
+import json, sys
+from pathlib import Path
+from types import SimpleNamespace
+from astrolabe.losses.interaction import protomer_shape_complementarity, contact_molecular_surface, interface_buried_unsatisfied_hbonds
+from astrolabe.losses.rfd4_feedback import interface_hbond_count
+r = SimpleNamespace(names=["ABC"], complex_paths={"ABC": Path(sys.argv[1])})
+out = {
+    "sc": protomer_shape_complementarity(r, "A", ["B", "C"])["ABC"],
+    "cms": contact_molecular_surface(r, "A", ["B", "C"])["ABC"],
+    "hb": interface_hbond_count(r, "A", ["B", "C"])["ABC"],
+    "buns": interface_buried_unsatisfied_hbonds(r, "A", ["B", "C"])["ABC"],
+}
+assert "pyrosetta" not in sys.modules
+assert interface_hbond_count(r, "A", ["B", "C"], selector_a="False")["ABC"] == 0
+assert interface_buried_unsatisfied_hbonds(r, "A", ["B", "C"], selector_a="False", selector_b="False")["ABC"] == 0
+assert len(r._independent_structure_cache["ABC"]["polar"]) == 1
+print(json.dumps(out))
+'''
+    process = subprocess.run([sys.executable, "-c", code, str(FIXTURE)],
+                             text=True, capture_output=True, timeout=120)
+    assert process.returncode == 0, process.stdout + process.stderr
+
+
+def test_hydrogen_addition_rejects_missing_ccd_heavy_atoms(real_context):
+    _result, context = real_context
+    atoms = context["atoms"]
+    keep = np.ones(len(atoms), dtype=bool)
+    keep[np.flatnonzero(atoms.atom_name == "CB")[0]] = False
+    with pytest.raises(ValueError, match="Incomplete heavy-atom chemistry"):
+        polar_context({"atoms": atoms[keep], "polar": {}})

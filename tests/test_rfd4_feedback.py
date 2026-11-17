@@ -737,3 +737,18 @@ def test_mmcif_loader_ignores_empty_nonatom_metadata(tmp_path, omit_bfactor):
     params_identity = json.loads(json.loads(relocated[0].feedback_json)["feedback"]["provenance"]["extra_residue_params"])
     assert params_identity[0]["name"] == "HIS_P.params"
     assert "path" not in params_identity[0]
+
+
+def test_native_hbond_loss_applies_endpoint_selectors(monkeypatch):
+    from types import SimpleNamespace
+    from astrolabe.losses.rfd4_feedback import interface_hbond_count
+    from astrolabe.mutators import rfd4_feedback
+
+    monkeypatch.setattr(rfd4_feedback, "analyze_pose_interface", lambda *a, **k: feedback())
+    result = SimpleNamespace(complex_poses=SimpleNamespace(poses={"AB": object()}))
+    assert interface_hbond_count(result, **GROUPS, backend="rosetta",
+                                 selector_a="True", selector_b="True") == {"AB": 1}
+    assert interface_hbond_count(result, **GROUPS, backend="rosetta",
+                                 selector_a="False", selector_b="True") == {"AB": 0}
+    assert interface_hbond_count(result, **GROUPS, backend="rosetta",
+                                 selector_a="True", selector_b="False") == {"AB": 0}

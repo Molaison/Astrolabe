@@ -34,6 +34,16 @@ def validate_backend(backend, independent):
     return backend
 
 
+
+def validate_rosetta_polar_options(hydrogens, hydrogen_ph, hbond_distance, hbond_angle,
+                                   sasa_probe_radius=1.4, buried_sasa_cutoff=1.0,
+                                   sasa_points=1000):
+    """Prevent geometry controls silently changing nothing on the energy backend."""
+    actual = (hydrogens, hydrogen_ph, hbond_distance, hbond_angle,
+              sasa_probe_radius, buried_sasa_cutoff, sasa_points)
+    if actual != ("add", 7.0, 2.5, 120.0, 1.4, 1.0, 1000):
+        raise ValueError("Hydrogen, geometry, and atom-SASA controls require backend='biotite'")
+
 def _finite_positive(value, name, *, zero=False):
     if isinstance(value, (bool, np.bool_)):
         raise ValueError(f"{name} must be a finite number")
@@ -78,7 +88,7 @@ def structure_context(eval_result, name):
         raise ValueError(f"Independent scoring expects PDB or mmCIF, got {path}")
     if not len(atoms) or not np.isfinite(atoms.coord).all():
         raise ValueError(f"Empty or nonfinite atomic coordinates in {path}")
-    context = {"digest": digest, "atoms": atoms, "polar": {}}
+    context = {"digest": digest, "atoms": atoms, "polar": {}, "surfaces": {}}
     cache[name] = context
     return context
 
@@ -94,14 +104,14 @@ def _surface_atoms(atoms, mask):
 
 def independent_sc(atoms, mask_a, mask_b):
     """Lawrence-Colman SC with sc-rs radii, including negative geometric values."""
-    backend = require_backend("shape_complementarity", "shape-complementarity==0.2.0")
+    backend = require_backend("protein_interface", "protein-interface==0.1.3")
     a, b = _surface_atoms(atoms, mask_a), _surface_atoms(atoms, mask_b)
     result = backend.compute_sc(
         coords_a=np.asarray(a.coord, dtype=float),
         atom_names_a=a.atom_name.tolist(), residue_names_a=a.res_name.tolist(),
         coords_b=np.asarray(b.coord, dtype=float),
         atom_names_b=b.atom_name.tolist(), residue_names_b=b.res_name.tolist(),
-        parallel=False,
+        parallel=True, use_spatial_index=True,
     )
     value = float(result.sc)
     if not math.isfinite(value) or not -1.000001 <= value <= 1.000001:
@@ -109,9 +119,18 @@ def independent_sc(atoms, mask_a, mask_b):
     return value
 
 
-def independent_cms(atoms, mask_a, mask_b, *, distance_weight=0.5):
-    """Target-side distance-weighted molecular surface area in Angstrom squared."""
+def independent_cms(atoms, mask_a, mask_b, *, distance_weight=0.5, surface_cache=None):
+    """Target-side distance-weighted molecular surface area in Angstrom squared.
+
+    The pinned upstream implementation supplies the entire Connolly surface.
+    Only its final all-pairs nearest-dot reduction is replaced by an exact
+    KD-tree query; the published area*exp(-weight*d^2) definition is unchanged.
+    Prepared area/distance arrays can be reused across weights and loss aliases.
+    """
     backend = require_backend("py_contact_ms", "py-contact-ms==0.1.1")
+    from py_contact_ms._core import MolecularSurfaceCalculator
+    from scipy.spatial import cKDTree
+
     weight = _finite_positive(distance_weight, "distance_weight", zero=True)
     a, b = _surface_atoms(atoms, mask_a), _surface_atoms(atoms, mask_b)
     radii = [
@@ -123,21 +142,41 @@ def independent_cms(atoms, mask_a, mask_b, *, distance_weight=0.5):
         if np.any(bad):
             unsupported = sorted(set(zip(side.res_name[bad], side.atom_name[bad])))
             raise ValueError(f"py-contact-ms has no valid molecular-surface radii for {unsupported}")
-    # py-contact-ms 0.1.1 flags interface atoms only within settings.sep=8 A.
-    # Its empty convex-queue path has an upstream float-index bug. Prove the
-    # absence of interface atoms before returning the mathematically empty area;
-    # errors from nonempty surface generation must still propagate.
-    from scipy.spatial import cKDTree
-    nearest, _ = cKDTree(b.coord).query(a.coord, distance_upper_bound=8.0)
-    if not np.isfinite(nearest).any():
-        return 0.0
-    value, _per_atom, calc = backend.calculate_contact_ms(
-        a.coord, radii[0], b.coord, radii[1]
-    )
-    if weight != 0.5:
-        calc.settings.weight = weight
-        value, _per_atom = calc.calc_contact_molecular_surface(target_side=True)
-    value = float(value)
+    key = hashlib.sha256(
+        a.coord.tobytes() + radii[0].tobytes() + b.coord.tobytes() + radii[1].tobytes()
+    ).digest()
+    cache = {} if surface_cache is None else surface_cache
+    if key not in cache:
+        calc = MolecularSurfaceCalculator()
+        # Upstream's empty convex-queue path has a float-index bug. Prove no
+        # interface attention atoms exist, using the upstream distance setting.
+        nearest, _ = cKDTree(b.coord).query(a.coord, distance_upper_bound=calc.settings.sep)
+        if not np.isfinite(nearest).any():
+            cache[key] = (np.empty(0), np.empty(0), np.empty(0, dtype=int), len(b))
+        else:
+            calc.add_binder_and_target(a.coord, radii[0], b.coord, radii[1])
+            # This is CalcLoaded()'s exact preparation, before its dense cdist.
+            calc.run.atoms.finalize()
+            calc.assign_attention_numbers(calc.run.atoms)
+            calc.generate_molecular_surfaces()
+            for dots in calc.run.dots:
+                dots.finalize()
+            query, reference = calc.run.dots[1], calc.run.dots[0]
+            q = query.buried.astype(bool)
+            r = reference.buried.astype(bool)
+            if not np.any(q) or not np.any(r):
+                cache[key] = (np.empty(0), np.empty(0), np.empty(0, dtype=int), len(b))
+            else:
+                distances, _ = cKDTree(reference.coor_xyz[r]).query(query.coor_xyz[q])
+                cache[key] = (
+                    query.area[q].copy(), distances * distances,
+                    query.atom_idx[q].astype(int) - len(a), len(b),
+                )
+    area, distance_squared, indices, target_count = cache[key]
+    # Preserve the upstream per-atom summation order as well as its definition.
+    per_atom = np.bincount(indices, weights=area * np.exp(-weight * distance_squared),
+                           minlength=target_count)
+    value = float(per_atom.sum())
     if not math.isfinite(value) or value < 0:
         raise ValueError(f"py-contact-ms returned invalid surface area {value!r}")
     return value
@@ -214,6 +253,18 @@ def polar_context(context, *, hydrogens="add", hydrogen_ph=7.0):
                     f"Cannot infer chemical bonds/charges for {res_name!r}; provide "
                     "complete explicit hydrogens and bonds or select backend='rosetta'"
                 ) from exc
+            ccd_names = struc.info.get_from_ccd("chem_comp_atom", res_name, "atom_id").as_array()
+            leaving = struc.info.get_from_ccd(
+                "chem_comp_atom", res_name, "pdbx_leaving_atom_flag"
+            ).as_array()
+            leaving_names = set(ccd_names[leaving == "Y"])
+            required = set(reference.atom_name[~np.isin(reference.element, ["H", "D"])]) - leaving_names
+            missing = required - set(residue.atom_name)
+            if missing:
+                raise ValueError(
+                    f"Incomplete heavy-atom chemistry for {res_name}: missing {sorted(missing)}; "
+                    "hydrogen placement cannot reconstruct missing heavy atoms"
+                )
             lookup = dict(zip(reference.atom_name, reference.charge))
             selected = (
                 (heavy.chain_id == residue.chain_id[0])
@@ -241,8 +292,13 @@ def polar_context(context, *, hydrogens="add", hydrogen_ph=7.0):
         raise ValueError("Hydrogen preparation produced nonfinite coordinates")
     try:
         mol = _typed_molecule(atoms)
+        if any(atom.GetNumRadicalElectrons() for atom in mol.GetAtoms()):
+            raise ValueError(
+                "Incomplete explicit hydrogens or unsupported radical chemistry; "
+                "provide a complete closed-shell structure or use hydrogens='add'"
+            )
     except Exception as exc:
-        raise ValueError("Cannot type donor/acceptor chemistry from the input chemical graph") from exc
+        raise ValueError(f"Cannot type donor/acceptor chemistry from the input chemical graph: {exc}") from exc
     donors = np.zeros(len(atoms), dtype=bool)
     acceptors = np.zeros(len(atoms), dtype=bool)
     for feature in _feature_factory().GetFeaturesForMol(mol):
@@ -331,6 +387,23 @@ def interface_buns(prepared, mask_a, mask_b, chains_a, chains_b, **options):
     return float(max(0, bound - unbound))
 
 
+
+def _cached_surface(context, metric, atoms, mask_a, mask_b, options=None):
+    # Two differently weighted/normalized loss aliases can share the exact
+    # surface result without sharing scientific settings or stale coordinates.
+    options = options or {}
+    key = (metric, mask_a.tobytes(), mask_b.tobytes(), tuple(sorted(options.items())))
+    cache = context.setdefault("surfaces", {})
+    if key not in cache:
+        if metric == "sc":
+            cache[key] = independent_sc(atoms, mask_a, mask_b)
+        else:
+            cache[key] = independent_cms(
+                atoms, mask_a, mask_b, surface_cache=context.setdefault("cms_surfaces", {}),
+                **options,
+            )
+    return cache[key]
+
 def interface_scores(eval_result, metric, protomer_a=None, protomer_b=None,
                      included_protomers=None, *, selector_a=None, selector_b=None,
                      protomer_a_residues=None, protomer_b_residues=None,
@@ -356,9 +429,9 @@ def interface_scores(eval_result, metric, protomer_a=None, protomer_b=None,
         if np.any(mask_a & mask_b):
             raise ValueError("Interface atom selections must be disjoint")
         if metric == "sc":
-            scores[name] = independent_sc(atoms, mask_a, mask_b)
+            scores[name] = _cached_surface(context, "sc", atoms, mask_a, mask_b)
         elif metric == "cms":
-            scores[name] = independent_cms(atoms, mask_a, mask_b, **options)
+            scores[name] = _cached_surface(context, "cms", atoms, mask_a, mask_b, options)
         elif metric == "hbonds":
             scores[name] = crossgroup_hbond_count(prepared, mask_a, mask_b, **options)
         elif metric == "buns":
@@ -393,7 +466,7 @@ def ligand_scores(eval_result, metric, ligand_targets=None, *, selector_a=None,
             if metric == "sc":
                 for protein in proteins:
                     partner = protein_mask & (atoms.chain_id == protein)
-                    values.append(independent_sc(atoms, partner, ligand_mask))
+                    values.append(_cached_surface(context, "sc", atoms, partner, ligand_mask))
             elif metric == "hbonds":
                 values.append(crossgroup_hbond_count(prepared, ligand_mask, protein_mask, **options))
             elif metric == "buns":
