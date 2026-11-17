@@ -142,9 +142,9 @@ def independent_cms(atoms, mask_a, mask_b, *, distance_weight=0.5, surface_cache
         if np.any(bad):
             unsupported = sorted(set(zip(side.res_name[bad], side.atom_name[bad])))
             raise ValueError(f"py-contact-ms has no valid molecular-surface radii for {unsupported}")
-    key = hashlib.sha256(
-        a.coord.tobytes() + radii[0].tobytes() + b.coord.tobytes() + radii[1].tobytes()
-    ).digest()
+    key = (a.coord.shape, b.coord.shape, a.coord.dtype.str, b.coord.dtype.str,
+           hashlib.sha256(a.coord.tobytes() + radii[0].tobytes()
+                          + b.coord.tobytes() + radii[1].tobytes()).digest())
     cache = {} if surface_cache is None else surface_cache
     if key not in cache:
         calc = MolecularSurfaceCalculator()
@@ -156,6 +156,7 @@ def independent_cms(atoms, mask_a, mask_b, *, distance_weight=0.5, surface_cache
         else:
             calc.add_binder_and_target(a.coord, radii[0], b.coord, radii[1])
             # This is CalcLoaded()'s exact preparation, before its dense cdist.
+            calc.run.results.valid = 0
             calc.run.atoms.finalize()
             calc.assign_attention_numbers(calc.run.atoms)
             calc.generate_molecular_surfaces()
@@ -301,11 +302,11 @@ def polar_context(context, *, hydrogens="add", hydrogen_ph=7.0):
         raise ValueError(f"Cannot type donor/acceptor chemistry from the input chemical graph: {exc}") from exc
     donors = np.zeros(len(atoms), dtype=bool)
     acceptors = np.zeros(len(atoms), dtype=bool)
-    for feature in _feature_factory().GetFeaturesForMol(mol):
-        if feature.GetFamily() == "Donor":
-            donors[list(feature.GetAtomIds())] = True
-        elif feature.GetFamily() == "Acceptor":
-            acceptors[list(feature.GetAtomIds())] = True
+    # Query only the two feature families we consume. Constructing every
+    # aromatic/hydrophobe feature on a full protein is unnecessary and costly.
+    for family, mask in (("Donor", donors), ("Acceptor", acceptors)):
+        for feature in _feature_factory().GetFeaturesForMol(mol, includeOnly=family):
+            mask[list(feature.GetAtomIds())] = True
     prepared = {"atoms": atoms, "donors": donors, "acceptors": acceptors, "hbonds": {}, "sasa": {}}
     context["polar"][key] = prepared
     return prepared

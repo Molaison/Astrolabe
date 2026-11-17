@@ -129,12 +129,12 @@ def main():
         if args.native_polar:
             from astrolabe.losses.interaction import interface_buried_unsatisfied_hbonds
             from astrolabe.losses.rfd4_feedback import interface_hbond_count
-            name = "".join(dict.fromkeys(atoms.chain_id))
-            native_result = SimpleNamespace(names=[name], complex_poses=SimpleNamespace(poses={name: pose}))
+            native_name = "".join(dict.fromkeys(atoms.chain_id))
+            native_result = SimpleNamespace(names=[native_name], complex_poses=SimpleNamespace(poses={native_name: pose}))
             functions["rosetta_hbond"] = lambda: interface_hbond_count(
-                native_result, args.chains_a, args.chains_b, backend="rosetta")[name]
+                native_result, args.chains_a, args.chains_b, backend="rosetta")[native_name]
             functions["rosetta_buns"] = lambda: interface_buried_unsatisfied_hbonds(
-                native_result, args.chains_a, args.chains_b, backend="rosetta")[name]
+                native_result, args.chains_a, args.chains_b, backend="rosetta")[native_name]
     for name, function in functions.items():
         start = time.perf_counter()
         value = float(function())
@@ -154,6 +154,15 @@ def main():
     for record in report["metrics"].values():
         assert np.isfinite(record["values"]).all()
         record["median_seconds"] = statistics.median(record["seconds"])
+    # Distinguish per-input preparation from same-context reuse and the one-off
+    # import/CCD cost. These fresh contexts reuse no prepared coordinates/masks.
+    fresh_times = []
+    for _ in range(3):
+        start = time.perf_counter()
+        polar_context({"atoms": atoms, "polar": {}})
+        fresh_times.append(time.perf_counter() - start)
+    report["fresh_input_polar_preparation_seconds"] = fresh_times
+    report["fresh_input_polar_preparation_median_seconds"] = statistics.median(fresh_times)
     text = json.dumps(report, indent=2)
     print(text)
     if args.output:

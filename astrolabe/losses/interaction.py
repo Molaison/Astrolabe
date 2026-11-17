@@ -2585,13 +2585,12 @@ def interface_buried_unsatisfied_hbonds(
         pose_map,
         getattr(eval_result, "complex_paths", None),
     )
-    if protomer_a is None and included_protomers:
-        protomer_a = str(included_protomers).split(",")[0].strip() or None
+    from astrolabe.losses.selection import resolve_loss_chain_groups
 
     scores = {}
     for oligo_name, pose in pose_map.items():
-        chains_a, chains_b = _resolve_contact_chain_groups(
-            oligo_name, protomer_a, protomer_b
+        chains_a, chains_b = resolve_loss_chain_groups(
+            oligo_name, protomer_a, protomer_b, included_protomers
         )
         extra = {}
         if selector_a is not None or selector_b is not None:

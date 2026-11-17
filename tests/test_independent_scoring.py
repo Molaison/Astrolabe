@@ -247,3 +247,18 @@ def test_hydrogen_addition_rejects_missing_ccd_heavy_atoms(real_context):
     keep[np.flatnonzero(atoms.atom_name == "CB")[0]] = False
     with pytest.raises(ValueError, match="Incomplete heavy-atom chemistry"):
         polar_context({"atoms": atoms[keep], "polar": {}})
+
+
+def test_targeted_feature_queries_preserve_rdkit_donor_acceptor_masks():
+    from astrolabe.losses.independent import _typed_molecule, _feature_factory
+    context = _explicit_molecules("NCC(=O)O.NC=O.C[NH3+].c1ccncc1")
+    atoms = context["atoms"]
+    # Full upstream feature-family query is an independent typing oracle here.
+    molecule = _typed_molecule(atoms)
+    expected = {"Donor": set(), "Acceptor": set()}
+    for feature in _feature_factory().GetFeaturesForMol(molecule):
+        if feature.GetFamily() in expected:
+            expected[feature.GetFamily()].update(feature.GetAtomIds())
+    prepared = polar_context(context, hydrogens="existing")
+    assert set(np.flatnonzero(prepared["donors"])) == expected["Donor"]
+    assert set(np.flatnonzero(prepared["acceptors"])) == expected["Acceptor"]

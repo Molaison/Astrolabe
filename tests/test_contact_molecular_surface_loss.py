@@ -283,3 +283,20 @@ def test_ligand_buried_unsat_hbonds_keeps_filter_failures_visible(
             , backend="rosetta")
     finally:
         global_config.reset()
+
+
+def test_native_buns_uses_same_legacy_chain_group_parser(monkeypatch):
+    captured = {}
+    monkeypatch.setattr("astrolabe.losses.interaction._require_pyrosetta", lambda: None)
+    def compute(pose, first, second, **options):
+        captured["groups"] = (first, second)
+        return 3.0
+    monkeypatch.setattr("astrolabe.losses.interaction._compute_interface_buried_unsatisfied_hbonds", compute)
+    assert interface_buried_unsatisfied_hbonds(
+        _eval_result("ABC"), included_protomers=["A"], backend="rosetta",
+    ) == {"ABC": 3.0}
+    assert captured["groups"] == (["A"], ["B", "C"])
+    with pytest.raises(ValueError, match="conflicts"):
+        interface_buried_unsatisfied_hbonds(
+            _eval_result("ABC"), protomer_a="A", included_protomers=["B"], backend="rosetta",
+        )
