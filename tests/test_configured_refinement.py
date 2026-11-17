@@ -1142,7 +1142,7 @@ def test_configured_proposal_cap_exports_without_replaying_models(tmp_path, monk
     probe = _Probe(tmp_path / "raw" / "models")
     _install_probe(monkeypatch, probe)
     if duplicate:
-        monkeypatch.setattr(run, "execute_mutation_step", lambda *args, **kwargs: None)
+        monkeypatch.setattr(run, "execute_mutation_step_continuation", lambda *args, **kwargs: iter(()))
     repeat = RepeatRun(index=0, total=1, seed=71, output=tmp_path / "outputs")
     summary = run_configured_refinement(_cfg(raw), repeat)
     assert summary["search"]["stop_reason"] == "proposal_cap"
