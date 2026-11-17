@@ -585,9 +585,9 @@ stages:
 | `interface_holes`、`chain_holes_diff`、`ligand_local_holes` | `rosetta` | 保留 Holes 的 DAlphaBall 体积与训练权重，没有用 cavity volume 替代 |
 
 需要复现旧分数或沿用旧阈值时，显式配置 `backend: rosetta`。切换算法后重新标定
-threshold、gate 与 loss 权重。独立 CMS 的表面生成在代表结构上仍慢于 Rosetta；
+threshold、gate 与 loss 权重。 内置 RFD4 与 multidomain recipe 原有 native energy/radii 参数已显式固定 Rosetta。独立 CMS 的表面生成在代表结构上仍慢于 Rosetta；
 相同选择的 raw/norm alias 与不同 distance weight 会复用表面，但每个新结构仍需生成 SES。
-速度优先的 CMS 配置可显式选 Rosetta。独立 polar 评分首次加载化学库也有冷启动成本，
+速度优先的 CMS 配置可显式选 Rosetta。独立 polar 评分首次加载与化学 typing 也有冷启动成本，
 后续 loss 在同一进程、同一结构上复用准备结果；具体测量见下方 ledger。
 
 `_for` 选择 oligomer，`protomer_a` / `protomer_b` 选择两侧链，
