@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import ast
+import inspect
 from collections.abc import Mapping
 from contextlib import contextmanager
 from contextvars import ContextVar
@@ -16,7 +17,7 @@ from omegaconf import OmegaConf
 from astrolabe.backend_startup import validate_backend_settings
 from astrolabe.scoring_startup import validate_scoring_settings
 from astrolabe.component_config import merge_component_config
-from astrolabe.loss_config import INTRINSIC_PARAMS
+from astrolabe.loss_config import INTRINSIC_PARAMS, normalize_loss_options, validate_loss_selector
 from astrolabe.stage_config import resolve_mutation_num
 from astrolabe.task_startup import validate_task_config
 
@@ -95,7 +96,11 @@ def _source_loss_optional():
                     defaulted = {arg.arg for arg in positional[len(positional) - len(node.args.defaults):]} if node.args.defaults else set()
                     defaulted.update(arg.arg for arg, default in zip(node.args.kwonlyargs, node.args.kw_defaults) if default is not None)
                     values["optional_params"] = tuple(defaulted - {"eval_result", "runtime_config", "oligo2complex"})
-                optional[str(values.get("name", node.name))] = set(values.get("optional_params", ()))
+                names = set(values.get("optional_params", ()))
+                if node.args.kwarg is None:
+                    accepted = {arg.arg for arg in node.args.posonlyargs + node.args.args + node.args.kwonlyargs}
+                    names &= accepted
+                optional[str(values.get("name", node.name))] = names
     return optional
 
 
@@ -509,6 +514,17 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                     _check_selector(selector, f"{path}.position_selector", errors)
             if family == "predocker" and kind not in processor_names:
                 errors.append(f"{path}._type: unknown predocker {kind!r}")
+            if family == "loss":
+                try:
+                    resolved = normalize_loss_options(resolved)
+                except ValueError as exc:
+                    errors.append(f"{path}: {exc}")
+                for key in ("selector_a", "selector_b"):
+                    if key in resolved:
+                        try:
+                            validate_loss_selector(resolved[key])
+                        except ValueError as exc:
+                            errors.append(f"{path}.{key}: {exc}")
             if family in {"loss", "predocker"}:
                 errors.extend(validate_scoring_settings(
                     family, kind, resolved, path=path,
@@ -523,6 +539,10 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                     metadata = losses_module.loss_registry.get_metadata(kind)
                 required = set(metadata.required_params or ()) if metadata is not None else set(source_specs["loss"].get(kind, ()))
                 optional = set(metadata.optional_params or ()) if metadata is not None else _source_loss_optional().get(kind, set())
+                if metadata is not None:
+                    signature = inspect.signature(losses_module.loss_registry.get_function(kind))
+                    if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in signature.parameters.values()):
+                        optional &= set(signature.parameters)
                 for key in required:
                     if key not in resolved or resolved[key] is None:
                         errors.append(f"{path}.{key}: required by loss {kind!r}")

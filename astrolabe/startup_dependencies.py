@@ -20,6 +20,8 @@ import subprocess
 import sys
 from collections.abc import Sequence
 
+from astrolabe.loss_config import loss_backend
+
 
 # Verified against losses/interaction.py, interface_holes.py and
 # design_screening.py. The listed BindCraft fields all call the shared
@@ -137,6 +139,10 @@ def _expression_names(expression: str) -> set[str]:
     }
 
 
+def _requires_dalphaball(kind, options=None):
+    return kind in DALPHABALL_LOSSES and loss_backend(kind, options) in (None, "rosetta")
+
+
 def dalphaball_required_by(cfg: dict) -> tuple[str, ...]:
     """Identify selected DAlphaBall losses without importing the loss registry.
 
@@ -159,7 +165,7 @@ def dalphaball_required_by(cfg: dict) -> tuple[str, ...]:
     for stage_path, stage in contexts:
         active = stage.get("active_loss_terms")
         for alias, spec in terms.items():
-            if (spec is not None and spec.get("_type") in DALPHABALL_LOSSES
+            if (spec is not None and _requires_dalphaball(spec.get("_type"), spec)
                     and (active is None or alias in active)):
                 required.append(f"loss.loss_terms.{alias}._type ({spec['_type']})")
 
@@ -178,7 +184,7 @@ def dalphaball_required_by(cfg: dict) -> tuple[str, ...]:
                     visited.add(name)
                     pending.append((f"loss.expression_terms.{name}", expressions[name]))
                 elif (name not in terms and name not in expressions
-                      and name in DALPHABALL_LOSSES
+                      and _requires_dalphaball(name)
                       and (active is None or name in active)):
                     required.append(f"{field_path} ({name})")
     return tuple(dict.fromkeys(required))

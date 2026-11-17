@@ -30,7 +30,7 @@ class _SelectorExpressionTransformer(ast.NodeTransformer):
 
 
 def construct_position_selector(
-    expression, evaluation_result, protomers
+    expression, evaluation_result, protomers, *, strict=False,
 ):
     default_sites = {name: np.ones(protomer.length, dtype=bool) for name, protomer in protomers.items()}
     if expression == "None" or expression is None:
@@ -96,11 +96,22 @@ def construct_position_selector(
         }
 
     result = {}
+    if not hasattr(final_selector, "sites"):
+        raise ValueError("Position selector expression must return a selector or boolean")
     for proto, base_mask in default_sites.items():
         selector_mask = final_selector.sites.get(proto)
         if selector_mask is None:
-            result[proto] = base_mask.copy()
+            result[proto] = np.zeros_like(base_mask) if strict else base_mask.copy()
         else:
+            if strict:
+                selector_mask = np.asarray(selector_mask)
+                if selector_mask.shape != base_mask.shape:
+                    raise ValueError(
+                        f"Position selector for {proto!r} has shape {selector_mask.shape}; "
+                        f"expected {base_mask.shape}"
+                    )
+                if selector_mask.dtype.kind not in "biuf" or not np.isfinite(selector_mask).all():
+                    raise ValueError(f"Position selector for {proto!r} must contain finite boolean/numeric values")
             result[proto] = np.logical_and(base_mask, selector_mask)
     return result
 

@@ -83,13 +83,13 @@ def test_stage_whitelist_does_not_inherit():
 def test_implicit_loss_through_reachable_expression_terms():
     cfg = {
         "loss": {"expression_terms": {
-            "quality": "-AB.interface_buried_unsatisfied_hbonds",
+            "quality": "-AB.interface_holes",
             "unused": "ligand_local_holes",
         }},
         "stages": {"default": {"weighted_score_expression": "quality"}},
     }
     assert dependencies.dalphaball_required_by(cfg) == (
-        "loss.expression_terms.quality (interface_buried_unsatisfied_hbonds)",
+        "loss.expression_terms.quality (interface_holes)",
     )
 
 
