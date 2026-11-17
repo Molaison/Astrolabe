@@ -213,3 +213,70 @@ def test_registered_selector_alias_and_boolean_composition_remain_supported(prot
     mask = loss_atom_mask(StandardScores(names=["ABA"], plddt=None, complex_paths=None),
                           "ABA", atoms(), ["A"], selector=expression)
     assert np.flatnonzero(mask).tolist() == [2, 3]
+
+def test_scoped_loss_aliases_share_content_bound_structure_preparation(monkeypatch):
+    pytest.importorskip("biotite")
+    from pathlib import Path
+    from astrolabe.losses.independent import structure_context
+    monkeypatch.setattr(loss_registry, "_loss_functions", dict(loss_registry._loss_functions))
+    monkeypatch.setattr(loss_registry, "_metadata", dict(loss_registry._metadata))
+    preparations = []
+
+    @loss_registry.register(name="__scoped_preparation__", optional_params=[])
+    def atom_count(eval_result):
+        context = structure_context(eval_result, "ABC")
+        preparations.append(context)
+        return {"ABC": float(len(context["atoms"]))}
+
+    spec = {"_type": "__scoped_preparation__", "_for": "ABC"}
+    engine = LossEngine({"loss_terms": {"first": spec, "second": spec}})
+    engine.setup("first + second", None, None)
+    path = Path(__file__).parents[1] / "examples/paper/inputs/assemblies/01_C3_seed2503_step024_reference.cif"
+    scores = StandardScores(names=["ABC"], plddt=None, complex_paths={"ABC": path})
+    value = engine.eval_score(scores, "first + second")
+    assert value == 2 * len(preparations[0]["atoms"])
+    assert len(preparations) == 2
+    assert preparations[0] is preparations[1]
+
+
+_ROSETTA_POLAR_KINDS = (
+    "interface_hbond_count", "ligand_protein_hbond",
+    "interface_buried_unsatisfied_hbonds", "ligand_buried_unsat_hbonds",
+)
+
+@pytest.mark.parametrize("kind", _ROSETTA_POLAR_KINDS)
+@pytest.mark.parametrize("key, value", [
+    ("hydrogens", "existing"), ("hydrogen_ph", 8),
+    ("hbond_distance", 3.0), ("hbond_angle", 130),
+])
+def test_native_polar_geometry_requires_independent_backend_at_preflight(kind, key, value):
+    from astrolabe.scoring_startup import validate_scoring_settings
+    errors = validate_scoring_settings("loss", kind,
+        {"backend": "rosetta", key: value}, path="loss.metric", check_paths=False)
+    assert errors == [f"loss.metric.{key}: requires backend=biotite"]
+
+@pytest.mark.parametrize("kind", _ROSETTA_POLAR_KINDS[2:])
+@pytest.mark.parametrize("key, value", [
+    ("sasa_probe_radius", 1.5), ("buried_sasa_cutoff", 2),
+    ("sasa_points", 2000),
+])
+def test_native_burial_geometry_requires_independent_backend_at_preflight(kind, key, value):
+    from astrolabe.scoring_startup import validate_scoring_settings
+    errors = validate_scoring_settings("loss", kind,
+        {"backend": "rosetta", key: value}, path="loss.metric", check_paths=False)
+    assert errors == [f"loss.metric.{key}: requires backend=biotite"]
+
+def test_native_polar_defaults_and_feedback_sasa_stay_valid():
+    from astrolabe.scoring_startup import validate_scoring_settings
+    for kind in _ROSETTA_POLAR_KINDS:
+        options = {"backend": "rosetta", "hydrogens": "add", "hydrogen_ph": 7,
+                   "hbond_distance": 2.5, "hbond_angle": 120}
+        if kind in _ROSETTA_POLAR_KINDS[2:]:
+            options.update(sasa_probe_radius=1.4, buried_sasa_cutoff=1, sasa_points=1000)
+        assert not validate_scoring_settings(
+            "loss", kind, options, path="loss.metric", check_paths=False)
+    # These are native RFD4 feedback options, unlike the independent BUNS geometry.
+    assert not validate_scoring_settings(
+        "loss", "interface_hbond_count",
+        {"backend": "rosetta", "sasa_probe_radius": 1.8, "buried_sasa_cutoff": 2},
+        path="loss.metric", check_paths=False)

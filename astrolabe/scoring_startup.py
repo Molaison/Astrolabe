@@ -140,6 +140,22 @@ def validate_scoring_settings(family, kind, options, *, path, check_paths) -> li
                     fail(key, "expected a boolean")
             if options.get("use_rosetta_radii") is not None and not isinstance(options["use_rosetta_radii"], bool):
                 fail("use_rosetta_radii", "expected a boolean or null")
+            if backend == "rosetta" and kind in {
+                "interface_hbond_count", "ligand_protein_hbond",
+                "interface_buried_unsatisfied_hbonds", "ligand_buried_unsat_hbonds",
+            }:
+                # Match the independent backend's native-option guard before any
+                # PyRosetta initialization. Equal defaults preserve old configs.
+                defaults = {
+                    "hydrogens": "add", "hydrogen_ph": 7.0,
+                    "hbond_distance": 2.5, "hbond_angle": 120.0,
+                }
+                if kind in {"interface_buried_unsatisfied_hbonds", "ligand_buried_unsat_hbonds"}:
+                    defaults.update(sasa_probe_radius=1.4, buried_sasa_cutoff=1.0, sasa_points=1000)
+                for key, default in defaults.items():
+                    if key in options and not any(error.startswith(f"{path}.{key}:") for error in errors):
+                        if options[key] != default:
+                            fail(key, "requires backend=biotite")
             if backend == "py_contact_ms" and options.get("use_rosetta_radii") is True:
                 fail("use_rosetta_radii", "requires backend=rosetta")
             if backend == "biotite" and kind == "interface_buried_unsatisfied_hbonds":

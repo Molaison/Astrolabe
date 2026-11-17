@@ -798,6 +798,12 @@ class LossEngine:
                 if oligomer_specific is not None
                 else eval_result
             )
+            # Filtered views share only content-bound structure preparation.
+            # Selector masks and scalar scores are evaluated separately per term.
+            if this_eval_result is not eval_result:
+                contexts = getattr(eval_result, "_independent_structure_cache", None)
+                if contexts is not None:
+                    this_eval_result._independent_structure_cache = contexts
             oligo_names = list(getattr(this_eval_result, "names", None) or [])
             oligo = summarize_event_items(oligo_names)
             if oligo is None and oligomer_specific is not None:
@@ -821,6 +827,10 @@ class LossEngine:
                     span.skip(result="no_matching_oligomer", result_count=0)
                 else:
                     scores = loss_func(this_eval_result, **call_params)
+                    if this_eval_result is not eval_result:
+                        contexts = getattr(this_eval_result, "_independent_structure_cache", None)
+                        if contexts is not None:
+                            eval_result._independent_structure_cache = contexts
                     if isinstance(scores, dict):
                         values = list(scores.values())
                         span.finish(
