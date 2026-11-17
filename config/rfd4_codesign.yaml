@@ -64,10 +64,12 @@ loss:
   loss_terms:
     interface_sc:
       _type: interface_shape_complementarity
+      backend: rosetta
       binder_chains: [A]
       target_chains: [B]
     interface_hbonds:
       _type: interface_hbond_count
+      backend: rosetta
       binder_chains: [A]
       target_chains: [B]
       hbond_energy_cutoff: 0.0

@@ -48,20 +48,54 @@ def test_real_native_score_is_one_complete_pose_call(monkeypatch):
 
 
 def test_real_fixture_holes():
-    import pyrosetta
+    import subprocess
+    import sys
     from pathlib import Path
-    from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
-    if not pyrosetta_was_initialized(pyrosetta):
-        pyrosetta.init('-mute all -holes:dalphaball '+str(Path('astrolabe/assets/DAlphaBall.gcc').resolve()))
-    fixture=Path('/case/config/001_binder_interface/01_astrolabe_beam/02_implement_shared_beam/03_fixture.pdb')
-    if not fixture.exists(): pytest.skip('Engineering fixture not mounted')
-    pose=pyrosetta.pose_from_file(str(fixture))
-    value, selected = native_interface_holes(pose,['A'],['B'],10)
-    swapped, indices = native_interface_holes(pose,['B'],['A'],10)
-    assert np.isfinite(value) and value==pytest.approx(swapped, abs=1e-10)
-    assert selected==indices and selected
-    from astrolabe.losses.interface_holes import native_interface_holes_details
-    details=native_interface_holes_details(pose,['A'],['B'],10)
-    assert details['sum']==pytest.approx(value,abs=1e-9)
-    assert details['atom_count']>len(selected)
-    assert details['mean']==pytest.approx(value/details['atom_count'],abs=1e-12)
+
+    code = r'''
+import sys
+from types import SimpleNamespace
+import numpy as np
+import pytest
+from astrolabe.losses.interface_holes import native_interface_holes
+import pyrosetta
+from pathlib import Path
+from astrolabe.utils.pyrosetta_init import pyrosetta_was_initialized
+if not pyrosetta_was_initialized(pyrosetta):
+    pyrosetta.init('-mute all -holes:dalphaball '+str(Path('astrolabe/assets/DAlphaBall.gcc').resolve()))
+import biotite.structure as struc
+from biotite.structure.io.pdb import PDBFile
+from astrolabe.losses.independent import structure_context
+fixture = Path(sys.argv[1]).parents[1] / "examples/paper/inputs/assemblies/01_C3_seed2503_step024_reference.cif"
+atoms = structure_context(SimpleNamespace(complex_paths={"ABC": fixture}), "ABC")["atoms"]
+pdb = PDBFile()
+pdb.set_structure(atoms)
+pose = pyrosetta.Pose()
+pyrosetta.rosetta.core.import_pose.pose_from_pdbstring(pose, str(pdb))
+assert pose.total_residue() == struc.get_residue_count(atoms) == 216
+value, selected = native_interface_holes(pose,['A'],['B', 'C'],10)
+swapped, indices = native_interface_holes(pose,['B', 'C'],['A'],10)
+assert np.isfinite(value) and value==pytest.approx(swapped, abs=1e-10)
+assert selected==indices and selected
+from astrolabe.losses.interface_holes import native_interface_holes_details
+details=native_interface_holes_details(pose,['A'],['B', 'C'],10)
+assert details['sum']==pytest.approx(value,abs=1e-9)
+assert details['atom_count']>len(selected)
+assert details['mean']==pytest.approx(value/details['atom_count'],abs=1e-12)
+
+
+subset = selected[::2]
+filtered, indices = native_interface_holes(
+    pose, ["A"], ["B", "C"], selected_residues=subset)
+details = native_interface_holes_details(
+    pose, ["A"], ["B", "C"], selected_residues=subset)
+assert indices == subset
+assert details["sum"] == pytest.approx(filtered, abs=1e-9)
+assert details["residue_count"] == len(subset)
+'''
+    result = subprocess.run(
+        [sys.executable, "-c", code, str(Path(__file__).resolve())],
+        capture_output=True, text=True, timeout=120,
+        cwd=Path(__file__).parents[1],
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
