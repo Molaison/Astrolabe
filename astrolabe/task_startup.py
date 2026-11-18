@@ -344,6 +344,10 @@ def validate_task_config(cfg, *, raw, resolve_environment=True, require_inputs=F
             if not is_list(value) or not all(isinstance(item, str) and item.strip() for item in value):
                 fail(f"{prefix}.{field}", "expected a list of non-empty strings")
                 continue
+            if field == "mutators":
+                aliases = [item for item in value if not deferred(item)]
+                if len(set(aliases)) != len(aliases):
+                    fail(f"{prefix}.mutators", "use distinct aliases, even when they share a mutator type")
             if field == "oligo":
                 seen = set()
                 for item in value:

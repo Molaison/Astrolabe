@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from fractions import Fraction
 import math
 from typing import Literal
 
@@ -100,7 +101,17 @@ def resolve_mutation_num(raw_value, *, protomer_pool=None, segments=None) -> int
     return budget.resolve(count_mutable_sites(protomer_pool, segments=segments))
 
 
-def current_mutation_count(*, weight=1.0, maximum=None, runtime=None) -> int:
+def _allocated_count(total, weights, alias):
+    fractions = {name: Fraction(str(weight)) for name, weight in weights.items()}
+    weight_sum = sum(fractions.values())
+    quotas = {name: total * weight / weight_sum for name, weight in fractions.items()}
+    counts = {name: int(quota) for name, quota in quotas.items()}
+    remaining = total - sum(counts.values())
+    ranked = sorted(quotas, key=lambda name: quotas[name] - counts[name], reverse=True)
+    return counts[alias] + int(alias in ranked[:remaining])
+
+
+def current_mutation_count(*, weight=1.0, alias=None, maximum=None, runtime=None) -> int:
     """Read the active stage policy afresh, then apply its mutator allocation."""
     if runtime is None:
         from astrolabe.core import global_config
@@ -127,9 +138,13 @@ def current_mutation_count(*, weight=1.0, maximum=None, runtime=None) -> int:
         base_count = 0
     if stage_manager is not None:
         runtime.set_variable("mutation_num", base_count)
-    if isinstance(weight, bool) or not math.isfinite(float(weight)) or float(weight) < 0:
-        raise ValueError("mutation weight must be finite and non-negative")
-    count = round(base_count * float(weight))
+    weights = getattr(stage_manager, "current_mutator_weights", {}) if alias is not None else {}
+    if alias in weights:
+        count = _allocated_count(base_count, weights, alias)
+    else:
+        if isinstance(weight, bool) or not math.isfinite(float(weight)) or float(weight) < 0:
+            raise ValueError("mutation weight must be finite and non-negative")
+        count = round(base_count * float(weight))
     if maximum is not None:
         count = min(count, maximum)
     return count

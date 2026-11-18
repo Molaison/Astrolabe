@@ -682,8 +682,9 @@ stages:
 - 改 `mutator_weights`：改变各 mutator 分到的预算份额；
 - 两者不是同一旋钮；不要为弥补一个过大的 mutation budget 而同时重排权重；
 - stage 中列出的 mutator 会按顺序逐个执行，`mutator_weights` **不是**随机选择某个
-  alias 的概率。position selector、固定残基、取整和模型输出仍会使实际变更位点数
-  少于预算；
+  alias 的概率。整数份额先向下取整，剩余预算按小数余量从大到小分配。余量相同时，
+  `mutators` 列表中靠前的 alias 优先。position selector、固定残基和模型输出
+  仍可能使实际变更位点数少于预算；
 - `100%` / `all` 取当前唯一可变位点总数，仍受 selector 与可用候选约束；
 - `0`、`0%` 得到零预算；百分比在空可变集合上也得到零预算，不会被强制提升到一次突变。
   整数保留请求数量，但选区为空时无法产生点突变；
@@ -692,6 +693,15 @@ stages:
 MCMC 的 `max_mutations` 是某个 alias 的额外上限，与 stage 请求预算一起交给同一
 resolver，不是第二个预算入口。它保留既有 paper protocol 中对局部 MCMC 的独立
 上限。PoreBlocker 也遵守 stage 预算；需要整个选区时显式用 `all`。
+
+同一个 stage 若需运行两次相同类型的 mutator，请为两次调用定义不同的 alias。
+`position_selector` 优先采用 `mutator.mutator_terms.<alias>` 中的值。该值为空时，
+依次查找 `mutator.selectors` 下的 alias 和类型。启动预检会检查实际选中的表达式。
+
+XMix 在所有 protomer 的唯一 Segment 位点中抽样。共享位点占一个预算名额，
+日志中的 `changed_positions` 则按出现位置计数。一个位点同时出现在 A 和 B 时，
+一次突变会在该字段中计为两处变化。
+
 Proton 的 `criteria.max_mutations` 是减去中心 pin 后的原生 cap，只能在每次调用
 时派生，不能在初始配置里固定。
 

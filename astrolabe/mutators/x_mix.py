@@ -131,8 +131,7 @@ class XMixMutator(Mutator):
             runtime_config=runtime_config,
             mutator_alias=getattr(self, "alias", self.name),
         )
-        mutation_inputs: dict[str, dict[str, Any]] = {}
-
+        candidates = {}
         for proto_name, protomer in protomers.items():
             if protomer.type != ProtomerTypes.PROTEIN:
                 continue
@@ -142,32 +141,28 @@ class XMixMutator(Mutator):
             else:
                 mutable_mask = list(np.asarray(raw_mutable_mask).astype(bool).tolist())
             excluded = set(excluded_positions.get(proto_name, []))
-            available_positions = [
-                idx
-                for idx, is_mutable in enumerate(mutable_mask)
-                if bool(is_mutable) and idx not in excluded
-            ]
-            if not available_positions:
-                continue
+            for position, is_mutable in enumerate(mutable_mask):
+                if not is_mutable or position in excluded:
+                    continue
+                site = self._map_global_to_segment(protomer, position)
+                if site is not None:
+                    segment_name, offset = site
+                    segment = global_config.segments[segment_name]
+                    candidates.setdefault((id(segment), offset), (proto_name, position))
 
-            mutation_quota = min(self.n_mutations(), len(available_positions))
-            if mutation_quota <= 0:
-                continue
-
-            sampled_positions = (
-                np.random.choice(
-                    available_positions,
-                    size=mutation_quota,
-                    replace=False,
-                )
-                .astype(int)
-                .tolist()
-            )
-            mutation_inputs[proto_name] = {
-                "sequence": protomer.sequence,
-                "sampled_positions": sorted(sampled_positions),
-            }
-
+        sites = list(candidates.values())
+        quota = self.n_mutations(maximum=len(sites))
+        if quota == 0:
+            return {}
+        chosen = np.random.choice(len(sites), size=quota, replace=False)
+        mutation_inputs: dict[str, dict[str, Any]] = {}
+        for index in sorted(chosen):
+            proto_name, position = sites[index]
+            entry = mutation_inputs.setdefault(proto_name, {
+                "sequence": protomers[proto_name].sequence,
+                "sampled_positions": [],
+            })
+            entry["sampled_positions"].append(position)
         return mutation_inputs
 
     def compute_mutation(self, mutation_input_features):

@@ -9,6 +9,7 @@ from typing import Any, Dict
 from astrolabe.runtime_support import ResourceOwner
 from astrolabe.core import global_config
 from astrolabe.mutation_budget import current_mutation_count
+from astrolabe.mutator_config import MUTATOR_DEFAULTS, mutator_position_selector
 from astrolabe.model_execution import ExecutionMode, execution_mode
 from astrolabe.mutators.capabilities import (
     MutatorCapabilities,
@@ -163,6 +164,7 @@ class Mutator:
     def n_mutations(self, *, maximum=None):
         return current_mutation_count(
             weight=getattr(self, "mutation_weight", 1.0),
+            alias=getattr(self, "alias", None),
             maximum=maximum,
             runtime=global_config,
         )
@@ -204,38 +206,18 @@ def build_mutators(mutator_conf, raw_model_results_dir: "pathlib.Path", *,
             if str(alias) not in enabled_set:
                 continue
             raw_kind = str(conf.get("_type", "")).strip().lower()
-            default_keys = {
-                "mcmc": ("MCMC",), "pore_blocker_mcmc": ("MCMC",),
-                "ligandmpnn": ("LigandMPNN",), "grouped_ligandmpnn": ("LigandMPNN",),
-                "proteinmpnn": ("LigandMPNN",), "multistateproteinmpnn": ("LigandMPNN",),
-                "multistate_proteinmpnn": ("LigandMPNN",),
-                "faraparttiedmultitargetligandmpnn": ("LigandMPNN",),
-                "far_apart_tied_multitarget_ligandmpnn": ("LigandMPNN",),
-                "proton_pottsmpnn": ("ProtonPottsMPNN",),
-                "proton-pottsmpnn": ("ProtonPottsMPNN",),
-                "vdm_pair": ("VDMPair",),
-                "vdm_proton": ("ProtonPottsMPNN",),
-                "dynamicmpnn": ("DynamicMPNN",), "surfdesign": ("SurfDesign",),
-                "surfpro": ("SurfPro",), "carbondesign": ("CarbonDesign",),
-                "dplm": ("DPLM",), "nampnn": ("NAMPNN",), "rfd4": ("rfd4",),
-            }.get(raw_kind, ())
+            default_keys = MUTATOR_DEFAULTS.get(raw_kind, ())
             conf = OmegaConf.to_container(merge_component_config(mutator_conf, default_keys, conf), resolve=True)
             name = conf.pop("_type", None)
             if not name:
                 raise ValueError(f"Mutator name must be specified for {alias} in `_type`")
 
-            selector_override = conf.pop("position_selector", None)
-
-            position_selector = selector_override
-            selectors = getattr(mutator_conf, "selectors", None)
-            if position_selector is None and selectors:
-                position_selector = selectors.get(alias, None)
-                if position_selector is None:
-                    position_selector = selectors.get(name, None)
-                if position_selector is None:
-                    position_selector = selectors.get(str(name).lower(), None)
-            if position_selector is not None:
-                conf["position_selector"] = position_selector
+            selector, _ = mutator_position_selector(
+                alias, name, conf, getattr(mutator_conf, "selectors", None)
+            )
+            conf.pop("position_selector", None)
+            if selector is not None:
+                conf["position_selector"] = selector
 
             try:
                 factory = MutatorRegistry.get(name)
