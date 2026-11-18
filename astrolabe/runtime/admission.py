@@ -12,12 +12,14 @@ ResourceClient(socket_path).lease(resource='gpu', backend='', identity='',
 shape='', phase='compute', resident_bytes=0, scratch_bytes=0, ram_bytes=0,
 output_bytes=0, concurrency_certified=False, timeout=None) is a context manager
 yielding Lease (token, device, finish(error=None, oom=False), cancel()). Errors,
-disconnect and cancellation fence running GPU resources until the original
-PID/start epoch exits or explicitly reports true completion. CPU/queued requests
-can cancel immediately. timeout is only the queue deadline. Successful context
-exit/finish() asserts actual device completion (the caller must synchronize GPU
-work); exceptional GPU context exit fences. finish() can reconnect after cancel()
+disconnect and cancellation fence running GPU resources and nonzero CPU capacity
+until the original PID/start epoch exits or explicitly reports true completion.
+CPU/queued requests without retained capacity can cancel immediately. timeout is
+only the queue deadline. Successful context exit/finish() asserts actual device
+completion (the caller must synchronize GPU work). An exceptional GPU context
+exit fences the lease. finish() can reconnect after cancel()
 using its token and the same PID/start epoch, once the device really has stopped.
+capacity_only leases retain memory without execution slots.
 
 register_model(model_id, device=None, resident_bytes=0, metadata=None,
 resident_ram_bytes=0, prepared_model_id=None) reserves
@@ -612,6 +614,12 @@ class ResourceBroker:
                     raise BrokerClosed("broker closed")
                 if op == "snapshot":
                     response = self._snapshot()
+                elif op == "resolve_device":
+                    self._healthy()
+                    device = self._affinity(request.get("device"), request.get("visible_devices"))
+                    if device not in self._devices:
+                        raise AdmissionError("actual client device is outside configured broker devices")
+                    response = {"device": device}
                 elif op == "register_model":
                     response = self._register(request, owner)
                 elif op == "unregister_model":
@@ -784,6 +792,13 @@ class ResourceBroker:
             # reservation; its actual process sample refines that reservation.
             if own_unknown_models and (request["resident_bytes"] or request["scratch_bytes"] > sample["free_bytes"]):
                 return None
+            if own_unknown_models and len(models) == 1 and request["unknown"]:
+                # The sole resident already holds exclusive capacity. A lower
+                # idle free-memory sample reduces its usable backing, without
+                # granting any extra bytes or letting another owner share it.
+                if sample["free_bytes"] == 0:
+                    return None
+                unmaterialized = min(unmaterialized, sample["free_bytes"])
             needed = min(budget - reserved, sample["free_bytes"] - unmaterialized)
             if needed < 0 or (needed == 0 and (not models or request.get("phase") == "load")):
                 return None
@@ -970,10 +985,12 @@ class ResourceBroker:
         record = self._leases.get(token)
         if record is None:
             return
-        if record["device"] and not _owner_exited(record["owner"]):
+        retained_capacity = record.get("capacity_only") and record["bytes"] > 0
+        if (record["device"] or retained_capacity) and not _owner_exited(record["owner"]):
             record["fenced"] = True
             record["connection"] = None
-            self._controllers[record["key"]].limit = 1
+            if record["device"]:
+                self._controllers[record["key"]].limit = 1
             try:
                 self._event("fence", token=token, pid=record["owner"][0], error=error)
             except AdmissionError:
@@ -1426,12 +1443,19 @@ class ResourceBroker:
         record = self._models.get(model_id)
         if record is None:
             return dict(removed=False)
-        if record["owner"] != owner and not _owner_exited(record["owner"]):
-            raise AdmissionError("model belongs to another PID/epoch")
+        if record["owner"] != owner:
+            if not _owner_exited(record["owner"]):
+                raise AdmissionError("model belongs to another PID/epoch")
+            # The parent's shutdown may beat the next telemetry cycle. Clear
+            # the exited worker's fenced leases before checking live claims.
+            self._reap_exited()
+            if model_id not in self._models:
+                return dict(removed=True)
         if any(lease.get("prepared_model_id") == model_id
                for lease in [*self._leases.values(), *self._pending]):
             raise AdmissionError("cannot unregister prepared weights claimed by placement")
-        if any(r["owner"] == owner and r["device"] == record["device"] for r in self._leases.values()):
+        if any(r["owner"] == record["owner"] and r["device"] == record["device"]
+               for r in self._leases.values()):
             raise AdmissionError("cannot unregister a model while its owner holds a device lease")
         self._persist_fence(record["device"], "model", model_id)
         del self._models[model_id]
@@ -1499,12 +1523,14 @@ class ResourceBroker:
             while True:
                 self._reap_exited()
                 gpu_leases = sum(r["device"] is not None for r in self._leases.values())
+                cpu_capacity = sum(r["device"] is None and r.get("capacity_only") and r["bytes"] > 0
+                                   for r in self._leases.values())
                 gpu_models = sum(r["device"] is not None or r["resident_ram_bytes"] > 0 for r in self._models.values())
-                if not gpu_leases and not gpu_models and not self._rss_residents:
+                if not gpu_leases and not cpu_capacity and not gpu_models and not self._rss_residents:
                     break
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
-                    raise BrokerBusy(f"resources busy: {gpu_leases} GPU leases, {gpu_models} resident models, {len(self._rss_residents)} RSS owners; UUID locks and owner monitoring retained")
+                    raise BrokerBusy(f"resources busy: {gpu_leases} GPU leases, {cpu_capacity} CPU capacities, {gpu_models} resident models, {len(self._rss_residents)} RSS owners; UUID locks and owner monitoring retained")
                 self._cv.wait(remaining)
             self._stop.set()
             if self._listener:
@@ -1601,6 +1627,14 @@ class ResourceClient:
     def unregister_model(self, model_id):
         return self._rpc(dict(op="unregister_model", model_id=model_id))
 
+    def resolve_device(self, device=None, visible_devices=None):
+        """Resolve a visible GPU to its configured UUID without reserving it."""
+        return self._rpc(dict(
+            op="resolve_device", device=device,
+            visible_devices=(os.environ.get("CUDA_VISIBLE_DEVICES")
+                             if visible_devices is None else visible_devices),
+        ))["device"]
+
     def lease(self, resource="gpu", backend="", identity="", shape="", phase="compute",
               resident_bytes=0, scratch_bytes=0, ram_bytes=0, output_bytes=0,
               concurrency_certified=False, timeout=None, device=None, visible_devices=None,
@@ -1634,6 +1668,7 @@ class Lease:
         self._cancelled = False
         self._used = False
         self._finished = False
+        self._finish_unconfirmed = False
 
     def __enter__(self):
         with self._lock:
@@ -1663,12 +1698,14 @@ class Lease:
                 return
             conn, self._conn = self._conn, None
             token = self.token
+            self._finish_unconfirmed = conn is not None or token is not None
         request = dict(op="finish", token=token, error=None if error is None else str(error), oom=oom)
         if conn is None:
             if token is not None:
                 self.client._rpc(request)
                 with self._lock:
                     self._finished = True
+                    self._finish_unconfirmed = False
             return
         try:
             conn.settimeout(5.0)
@@ -1676,6 +1713,7 @@ class Lease:
             self.client._check(_receive(conn, self.client.frame))
             with self._lock:
                 self._finished = True
+                self._finish_unconfirmed = False
         except (EOFError, OSError) as exc:
             raise BrokerClosed("broker disconnected while finishing lease") from exc
         finally:
@@ -1693,6 +1731,9 @@ class Lease:
             conn.close()
 
     def __exit__(self, exc_type, exc, tb):
+        if self._finish_unconfirmed:
+            self.cancel()
+            return False
         if exc is not None:
             if self.request["resource"] == "gpu" and not self._finished:
                 self.cancel()  # An exception is not a CUDA completion barrier.

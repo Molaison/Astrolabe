@@ -14,10 +14,17 @@ import threading
 import time
 import uuid
 from collections.abc import Mapping
+from contextlib import contextmanager
+from enum import Enum, auto
 from pathlib import Path
 from typing import Any
 
 from omegaconf import OmegaConf
+
+from astrolabe.model_daemon import RequestOutcomeUnknown
+from astrolabe.runtime import ResourceClient
+from astrolabe.runtime.admission import _epoch
+from astrolabe.runtime.cpu_scope import cpu_lock_scope, yield_cpu_slot
 
 from .proton_pottsmpnn_daemon import (
     _validated_encoded_binder_tokens,
@@ -308,6 +315,15 @@ def _validated_histidine_positions(
     return positions
 
 
+class _RunnerState(Enum):
+    NEW = auto()
+    STARTING = auto()
+    READY = auto()
+    UNKNOWN = auto()
+    CLOSING = auto()
+    CLOSED = auto()
+
+
 class ProtonPottsMPNNRunner:
     """Persistent JSONL adapter for the pinned Proton-PottsMPNN design engine."""
 
@@ -381,11 +397,28 @@ class ProtonPottsMPNNRunner:
         )
 
         self._proc: subprocess.Popen[str] | None = None
-        self._started = False
-        self._closed = False
+        self._broker_client = None
+        self._broker_identity = "proton_pottsmpnn-" + uuid.uuid4().hex
+        self._state = _RunnerState.NEW
+        self._unknown: RequestOutcomeUnknown | None = None
+        self._unknown_request: dict[str, Any] | None = None
         self._request_index = 0
         self._lock = threading.RLock()
+        self._state_lock = threading.Lock()
+        self._close_lock = threading.Lock()
         _register_runtime_owner(self)
+
+    @property
+    def _started(self) -> bool:
+        return self._state is not _RunnerState.NEW
+
+    @property
+    def _closed(self) -> bool:
+        return self._state is _RunnerState.CLOSED
+
+    @property
+    def _cleanup_pending(self) -> bool:
+        return self._state is _RunnerState.CLOSING
 
     @staticmethod
     def _resolve_path(value: str | os.PathLike[str]) -> Path:
@@ -469,81 +502,208 @@ class ProtonPottsMPNNRunner:
         isolated_pythonpath = env.get("GH_PROTON_POTTSMPNN_PYTHONPATH", "").strip()
         if isolated_pythonpath:
             env["PYTHONPATH"] = isolated_pythonpath
+        if self._broker_client is not None:
+            env["ASTROLABE_RESOURCE_SOCKET"] = self._broker_client.socket_path
+            env["ASTROLABE_PROTON_MODEL_IDENTITY"] = self._broker_identity
         return env
 
-    def _ensure_daemon(self) -> subprocess.Popen[str]:
-        if getattr(self, "_cleanup_pending", False):
+    def _ensure_usable(self) -> None:
+        if self._unknown is not None:
+            raise self._unknown
+        if self._cleanup_pending:
             raise RuntimeError("Proton-PottsMPNNRunner cleanup is unresolved.")
         if self._closed:
             raise RuntimeError("Proton-PottsMPNNRunner is closed.")
-        if self._proc is not None:
-            if self._proc.poll() is None:
-                return self._proc
-            raise RuntimeError(
-                "Proton-PottsMPNN daemon is no longer running; "
-                "implicit model restart is disabled."
-            )
-        if self._started:
-            raise RuntimeError(
-                "Proton-PottsMPNN daemon is no longer running; "
-                "implicit model restart is disabled."
-            )
+        if self._state in {_RunnerState.STARTING, _RunnerState.UNKNOWN}:
+            raise RuntimeError("Proton-PottsMPNNRunner startup is incomplete; restart is disabled.")
+
+    def _ensure_daemon(self) -> subprocess.Popen[str]:
+        with self._state_lock:
+            self._ensure_usable()
+            if self._proc is not None:
+                if self._proc.poll() is None:
+                    return self._proc
+                raise RuntimeError(
+                    "Proton-PottsMPNN daemon is no longer running; "
+                    "implicit model restart is disabled."
+                )
+            self._state = _RunnerState.STARTING
 
         started = time.perf_counter()
-        proc = subprocess.Popen(
-            self._command(),
-            cwd=str(self.repo_path),
-            env=self._subprocess_env(),
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=None,
-            text=True,
-            bufsize=1,
-        )
-        self._proc = proc
-        self._started = True
         try:
-            ready = self._read_response(proc, self.startup_timeout)
-        except Exception:
-            proc.terminate()
-            proc.wait()
-            raise
-        if ready.get("type") != "ready" or ready.get("model_load_count") != 1:
-            proc.terminate()
-            proc.wait()
-            raise RuntimeError(
-                f"Unexpected Proton-PottsMPNN daemon startup response: {ready}"
+            self._broker_client = ResourceClient.from_env()
+            proc = subprocess.Popen(
+                self._command(),
+                cwd=str(self.repo_path),
+                env=self._subprocess_env(),
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=None,
+                text=True,
+                bufsize=1,
             )
+            with self._state_lock:
+                self._proc = proc
+                if self._state is not _RunnerState.STARTING:
+                    raise RuntimeError("Proton-PottsMPNNRunner closed during startup.")
+            ready = self._read_response(proc, self.startup_timeout)
+            if ready.get("type") != "ready" or ready.get("model_load_count") != 1:
+                raise RuntimeError(
+                    f"Unexpected Proton-PottsMPNN daemon startup response: {ready}"
+                )
+            if self._broker_client is not None:
+                self._validate_admission(proc, ready)
+            with self._state_lock:
+                if self._state is not _RunnerState.STARTING:
+                    raise RuntimeError("Proton-PottsMPNNRunner closed during startup.")
+                self._state = _RunnerState.READY
+        except BaseException as error:
+            with self._state_lock:
+                if self._state is _RunnerState.STARTING:
+                    self._state = _RunnerState.UNKNOWN
+            if self._proc is not None:
+                if self._close_lock.acquire(blocking=False):
+                    try:
+                        self._stop_owned_child(self._proc)
+                    except BaseException as cleanup_error:
+                        error.add_note(f"Proton startup cleanup failed: {cleanup_error!r}")
+                    finally:
+                        self._close_lock.release()
+                else:
+                    error.add_note("Proton cleanup is already in progress; owner retained.")
+            raise
         _timing("daemon_ready", started, proc)
         return proc
+
+    def _validate_admission(self, proc, ready):
+        proof = ready.get("admission")
+        epoch = _epoch(proc.pid)
+        model_id = f"{self._broker_identity}:{proc.pid}:{epoch}"
+        if (not isinstance(proof, dict) or proof.get("version") != 1
+                or epoch is None or ready.get("pid") != proc.pid
+                or proof.get("pid") != proc.pid or proof.get("process_epoch") != epoch
+                or proof.get("model_id") != model_id or "device" not in proof
+                or (self.device == "cpu" and proof["device"] is not None)
+                or (self.device.startswith("cuda") and proof["device"] is None)):
+            raise RuntimeError("Proton daemon ready admission proof is missing or invalid")
+        models = self._broker_client.snapshot()["models"]
+        if not any(model["model_id"] == model_id and model["pid"] == proc.pid
+                   and model["process_epoch"] == model["worker_epoch"] == epoch
+                   and model["device"] == proof["device"] for model in models):
+            raise RuntimeError("Proton daemon ready admission residency is not registered")
+        if proof["device"] is not None:
+            requested = "cuda" if self.device == "auto" else self.device
+            expected = self._broker_client.resolve_device(
+                requested, visible_devices=os.environ.get("CUDA_VISIBLE_DEVICES"),
+            )
+            if proof["device"] != expected:
+                raise RuntimeError("Proton daemon ready admission device differs from requested GPU")
 
     @staticmethod
     def _read_response(
         proc: subprocess.Popen[str], timeout: float | None
     ) -> dict[str, Any]:
-        assert proc.stdout is not None
-        selector = selectors.DefaultSelector()
-        selector.register(proc.stdout, selectors.EVENT_READ)
-        try:
-            if not selector.select(timeout):
-                raise TimeoutError(
-                    "Timed out waiting for Proton-PottsMPNN daemon response."
-                )
-        finally:
-            selector.close()
-        line = proc.stdout.readline()
-        if not line:
-            raise RuntimeError(
-                "Proton-PottsMPNN daemon exited unexpectedly with code "
-                f"{proc.poll()}."
-            )
-        return json.loads(line)
+        with yield_cpu_slot():
+            assert proc.stdout is not None
+            fd = proc.stdout.fileno()
+            buffer = getattr(proc, "_proton_response_buffer", None)
+            if buffer is None:
+                buffer = bytearray()
+                proc._proton_response_buffer = buffer
+            deadline = None if timeout is None else time.monotonic() + timeout
+            blocking = os.get_blocking(fd)
+            selector = selectors.DefaultSelector()
+            try:
+                os.set_blocking(fd, False)
+                selector.register(fd, selectors.EVENT_READ)
+                while True:
+                    remaining = None if deadline is None else deadline - time.monotonic()
+                    if remaining is not None and remaining <= 0:
+                        raise TimeoutError(
+                            "Timed out waiting for Proton-PottsMPNN daemon response."
+                        )
+                    newline = buffer.find(b"\n")
+                    if newline >= 0:
+                        line = bytes(buffer[:newline])
+                        del buffer[:newline + 1]
+                        response = json.loads(line)
+                        if not isinstance(response, dict):
+                            raise ValueError("Proton-PottsMPNN daemon response must be a JSON object.")
+                        return response
+                    if not selector.select(remaining):
+                        raise TimeoutError(
+                            "Timed out waiting for Proton-PottsMPNN daemon response."
+                        )
+                    try:
+                        chunk = os.read(fd, 65536)
+                    except BlockingIOError:
+                        continue
+                    if not chunk:
+                        raise EOFError(
+                            "Proton-PottsMPNN daemon exited before a complete response "
+                            f"with code {proc.poll()}."
+                        )
+                    buffer.extend(chunk)
+            finally:
+                selector.close()
+                os.set_blocking(fd, blocking)
 
     @staticmethod
     def _write_request(proc: subprocess.Popen[str], payload: dict[str, Any]) -> None:
         assert proc.stdin is not None
-        proc.stdin.write(json.dumps(payload, separators=(",", ":")) + "\n")
-        proc.stdin.flush()
+        with yield_cpu_slot():
+            proc.stdin.write(json.dumps(payload, separators=(",", ":")) + "\n")
+            proc.stdin.flush()
+
+    @contextmanager
+    def _scientific_request(self, payload: dict[str, Any], phase: str):
+        proc = self._ensure_daemon()
+        started = time.perf_counter()
+        try:
+            self._write_request(proc, payload)
+            response = self._read_response(proc, self.request_timeout)
+            if (
+                not isinstance(response, dict)
+                or response.get("id") != payload["id"]
+                or response.get("type") not in {"result", "error", "unknown"}
+            ):
+                raise RuntimeError(f"Unexpected Proton-PottsMPNN daemon response: {response}")
+            if response["type"] == "unknown":
+                raise RuntimeError(f"Proton daemon completion unknown: {response.get('error')}")
+            _timing(phase, started, proc, payload["id"])
+            if response["type"] == "result":
+                yield response
+                return
+        except BaseException as error:
+            unknown = RequestOutcomeUnknown(
+                f"Proton-PottsMPNN {payload['type']} outcome unknown; not replayed: {error}",
+                request_id=payload["id"], generation=str(proc.pid),
+            )
+            with self._state_lock:
+                self._unknown = unknown
+                self._unknown_request = dict(payload)
+                if self._state is not _RunnerState.CLOSING:
+                    self._state = _RunnerState.UNKNOWN
+            if isinstance(error, Exception):
+                raise unknown from error
+            error.add_note(str(unknown))
+            raise
+        raise RuntimeError(
+            "Proton-PottsMPNN daemon error: "
+            f"{response.get('error_type')}: {response.get('error')}"
+        )
+
+    @staticmethod
+    def _stop_owned_child(proc: subprocess.Popen[str]) -> None:
+        with yield_cpu_slot(cleanup=True):
+            if proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(timeout=10.0)
+                    return
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+            proc.wait(timeout=10.0)
 
     @staticmethod
     def _plain_mapping(value: Any, name: str) -> dict[str, Any]:
@@ -589,7 +749,8 @@ class ProtonPottsMPNNRunner:
         n_jobs = int(features.get("n_jobs", self.n_jobs) or self.n_jobs)
 
         request_id = uuid.uuid4().hex
-        with self._lock:
+        with cpu_lock_scope(self._lock):
+            self._ensure_usable()
             request_seed, seed_provenance = resolve_proton_request_seed(
                 self.seed, self._request_index, features
             )
@@ -610,45 +771,41 @@ class ProtonPottsMPNNRunner:
                 "seed": request_seed,
                 "seed_provenance": seed_provenance,
             }
+            if "structure_chain_sequences" in features:
+                payload["structure_chain_sequences"] = features["structure_chain_sequences"]
             self._request_index += 1
-            proc = self._ensure_daemon()
-            started = time.perf_counter()
-            self._write_request(proc, payload)
-            response = self._read_response(proc, self.request_timeout)
-            _timing("request_roundtrip", started, proc, request_id)
-        if response.get("type") == "error" and response.get("id") == request_id:
-            raise RuntimeError(
-                "Proton-PottsMPNN daemon error: "
-                f"{response.get('error_type')}: {response.get('error')}"
-            )
-        if response.get("type") != "result" or response.get("id") != request_id:
-            raise RuntimeError(f"Unexpected Proton-PottsMPNN daemon response: {response}")
-        selected = response.get("selected")
-        if not isinstance(selected, Mapping):
-            raise RuntimeError("Proton-PottsMPNN daemon returned no selected design.")
-        canonical_sequence = str(selected.get("canonical_sequence") or "").strip()
-        if not canonical_sequence:
-            raise RuntimeError(
-                "Proton-PottsMPNN selected design is missing canonical_sequence."
-            )
-        if len(canonical_sequence) != len(binder_sequence):
-            raise RuntimeError(
-                "Proton-PottsMPNN selected canonical_sequence length "
-                f"{len(canonical_sequence)} does not match binder length "
-                f"{len(binder_sequence)}."
-            )
-        return {
-            "selected": dict(selected),
-            "designs_considered": int(response.get("designs_considered") or 0),
-            "raw_output_path": response.get("raw_output_path"),
-            "seed_energies": response.get("seed_energies"),
-            "seed": request_seed,
-            "seed_provenance": seed_provenance,
-            "request_id": request_id,
-            "daemon_pid": response.get("pid"),
-            "model_load_count": response.get("model_load_count"),
-            "request_count": response.get("request_count"),
-        }
+            with self._scientific_request(payload, "request_roundtrip") as response:
+                selected = response.get("selected")
+                if not isinstance(selected, Mapping):
+                    raise RuntimeError("Proton-PottsMPNN daemon returned no selected design.")
+                canonical_sequence = selected.get("canonical_sequence")
+                if (
+                    not isinstance(canonical_sequence, str)
+                    or not canonical_sequence
+                    or not set(canonical_sequence) <= _CANONICAL_AA
+                ):
+                    raise RuntimeError(
+                        "Proton-PottsMPNN selected canonical_sequence must be a nonempty "
+                        "string containing only uppercase canonical amino acids."
+                    )
+                if len(canonical_sequence) != len(binder_sequence):
+                    raise RuntimeError(
+                        "Proton-PottsMPNN selected canonical_sequence length "
+                        f"{len(canonical_sequence)} does not match binder length "
+                        f"{len(binder_sequence)}."
+                    )
+                return {
+                    "selected": dict(selected),
+                    "designs_considered": int(response.get("designs_considered") or 0),
+                    "raw_output_path": response.get("raw_output_path"),
+                    "seed_energies": response.get("seed_energies"),
+                    "seed": request_seed,
+                    "seed_provenance": seed_provenance,
+                    "request_id": request_id,
+                    "daemon_pid": response.get("pid"),
+                    "model_load_count": response.get("model_load_count"),
+                    "request_count": response.get("request_count"),
+                }
 
     def score_states(
         self,
@@ -706,7 +863,7 @@ class ProtonPottsMPNNRunner:
         audit = patterns is not None or encoded_tokens is not None
 
         request_id = uuid.uuid4().hex
-        with self._lock:
+        with cpu_lock_scope(self._lock):
             payload = {
                 "type": "score_states",
                 "id": request_id,
@@ -727,191 +884,216 @@ class ProtonPottsMPNNRunner:
                     "extended_vocab": self.extended_vocab,
                     "device": self.device,
                 }
-            proc = self._ensure_daemon()
-            started = time.perf_counter()
-            self._write_request(proc, payload)
-            response = self._read_response(proc, self.request_timeout)
-            _timing("score_states_roundtrip", started, proc, request_id)
+            with self._scientific_request(payload, "score_states_roundtrip") as response:
+                neutral = response.get("neutral_energy")
+                protonated = response.get("protonated_energy")
+                gap = response.get("gap")
+                numeric = {}
+                for label, value in (
+                    ("neutral_energy", neutral),
+                    ("protonated_energy", protonated),
+                    ("gap", gap),
+                ):
+                    try:
+                        parsed = float(value)
+                    except (TypeError, ValueError) as exc:
+                        raise RuntimeError(
+                            f"Proton-PottsMPNN score_states returned invalid {label}: {value!r}"
+                        ) from exc
+                    if not math.isfinite(parsed):
+                        raise RuntimeError(
+                            f"Proton-PottsMPNN score_states returned non-finite {label}: {value!r}"
+                        )
+                    numeric[label] = parsed
+                if not math.isclose(numeric["gap"], numeric["protonated_energy"] - numeric["neutral_energy"], rel_tol=1e-7, abs_tol=1e-7):
+                    raise RuntimeError(
+                        "Proton-PottsMPNN score_states returned inconsistent gap: "
+                        f"{numeric['gap']} != {numeric['protonated_energy']} - {numeric['neutral_energy']}"
+                    )
+                if response.get("n_centers") != len(positions):
+                    raise RuntimeError(
+                        "Proton-PottsMPNN score_states returned wrong n_centers: "
+                        f"{response.get('n_centers')} != {len(positions)}"
+                    )
+                if response.get("histidine_positions") != positions:
+                    raise RuntimeError(
+                        "Proton-PottsMPNN score_states returned different histidine_positions."
+                    )
+                if response.get("binder_sequence") != sequence:
+                    raise RuntimeError(
+                        "Proton-PottsMPNN score_states returned different binder_sequence."
+                    )
+                if response.get("outside_centers_unchanged") is not True:
+                    raise RuntimeError(
+                        "Proton-PottsMPNN score_states did not preserve non-centre states."
+                    )
+                raw_output_path = response.get("raw_output_path")
+                if not raw_output_path or not Path(raw_output_path).is_file():
+                    raise RuntimeError(
+                        "Proton-PottsMPNN score_states returned no existing raw_output_path."
+                    )
+                audit_fields = {}
+                if audit:
+                    requested = patterns if patterns is not None else [
+                        {"name": "S" * len(positions), "pattern": "S" * len(positions)},
+                        {"name": "P" * len(positions), "pattern": "P" * len(positions)},
+                    ]
+                    try:
+                        if (response["same_context"] is not True
+                                or response["audit_source"] != "fixed_geometry_potts_context"
+                                or response["energy_method"] != "ctx.scorer.H_of"
+                                or response["scored_binder_sequence"] != scored_sequence
+                                or response["state_names"] != [spec["name"] for spec in requested]
+                                or response["state_patterns"] != requested):
+                            raise ValueError("identity, patterns, or same context mismatch")
+                        baseline = response["scored_encoded_sequence"]
+                        native = response["native_encoded_sequence"]
+                        vocab = response["token_to_idx"]
+                        binder_indices = response["context_binder_positions"]
+                        centers = response["context_histidine_positions"]
+                        if (not isinstance(baseline, list) or not baseline
+                                or len(native) != len(baseline)
+                                or len(binder_indices) != len(sequence)
+                                or len(set(binder_indices)) != len(binder_indices)
+                                or any(type(p) is not int or not 0 <= p < len(baseline) for p in binder_indices)
+                                or centers != [binder_indices[p] for p in positions]):
+                            raise ValueError("context mapping mismatch")
+                        noncenters = [p for p in range(len(baseline)) if p not in centers]
+                        if response["noncenter_context_positions"] != noncenters:
+                            raise ValueError("noncenter mapping mismatch")
 
-        if response.get("type") == "error" and response.get("id") == request_id:
-            raise RuntimeError(
-                "Proton-PottsMPNN score_states daemon error: "
-                f"{response.get('error_type')}: {response.get('error')}"
-            )
-        if response.get("type") != "result" or response.get("id") != request_id:
-            raise RuntimeError(
-                f"Unexpected Proton-PottsMPNN score_states response: {response}"
-            )
-        neutral = response.get("neutral_energy")
-        protonated = response.get("protonated_energy")
-        gap = response.get("gap")
-        numeric = {}
-        for label, value in (
-            ("neutral_energy", neutral),
-            ("protonated_energy", protonated),
-            ("gap", gap),
-        ):
-            try:
-                parsed = float(value)
-            except (TypeError, ValueError) as exc:
-                raise RuntimeError(
-                    f"Proton-PottsMPNN score_states returned invalid {label}: {value!r}"
-                ) from exc
-            if not math.isfinite(parsed):
-                raise RuntimeError(
-                    f"Proton-PottsMPNN score_states returned non-finite {label}: {value!r}"
-                )
-            numeric[label] = parsed
-        if not math.isclose(numeric["gap"], numeric["protonated_energy"] - numeric["neutral_energy"], rel_tol=1e-7, abs_tol=1e-7):
-            raise RuntimeError(
-                "Proton-PottsMPNN score_states returned inconsistent gap: "
-                f"{numeric['gap']} != {numeric['protonated_energy']} - {numeric['neutral_energy']}"
-            )
-        if response.get("n_centers") != len(positions):
-            raise RuntimeError(
-                "Proton-PottsMPNN score_states returned wrong n_centers: "
-                f"{response.get('n_centers')} != {len(positions)}"
-            )
-        if response.get("histidine_positions") != positions:
-            raise RuntimeError(
-                "Proton-PottsMPNN score_states returned different histidine_positions."
-            )
-        if response.get("binder_sequence") != sequence:
-            raise RuntimeError(
-                "Proton-PottsMPNN score_states returned different binder_sequence."
-            )
-        if response.get("outside_centers_unchanged") is not True:
-            raise RuntimeError(
-                "Proton-PottsMPNN score_states did not preserve non-centre states."
-            )
-        raw_output_path = response.get("raw_output_path")
-        if not raw_output_path or not Path(raw_output_path).is_file():
-            raise RuntimeError(
-                "Proton-PottsMPNN score_states returned no existing raw_output_path."
-            )
-        audit_fields = {}
-        if audit:
-            requested = patterns if patterns is not None else [
-                {"name": "S" * len(positions), "pattern": "S" * len(positions)},
-                {"name": "P" * len(positions), "pattern": "P" * len(positions)},
-            ]
-            # Treat the daemon as a protocol boundary: reject a partial or
-            # different-context audit rather than passing it to scientific code.
-            try:
-                if (response["same_context"] is not True
-                        or response["audit_source"] != "fixed_geometry_potts_context"
-                        or response["energy_method"] != "ctx.scorer.H_of"
-                        or response["scored_binder_sequence"] != scored_sequence
-                        or response["state_names"] != [spec["name"] for spec in requested]
-                        or response["state_patterns"] != requested):
-                    raise ValueError("identity, patterns, or same context mismatch")
-                baseline = response["scored_encoded_sequence"]
-                native = response["native_encoded_sequence"]
-                vocab = response["token_to_idx"]
-                binder_indices = response["context_binder_positions"]
-                centers = response["context_histidine_positions"]
-                if (not isinstance(baseline, list) or not baseline
-                        or len(native) != len(baseline)
-                        or len(binder_indices) != len(sequence)
-                        or len(set(binder_indices)) != len(binder_indices)
-                        or any(type(p) is not int or not 0 <= p < len(baseline) for p in binder_indices)
-                        or centers != [binder_indices[p] for p in positions]):
-                    raise ValueError("context mapping mismatch")
-                noncenters = [p for p in range(len(baseline)) if p not in centers]
-                if response["noncenter_context_positions"] != noncenters:
-                    raise ValueError("noncenter mapping mismatch")
+                        def check_tokens(values, tokens):
+                            if (len(values) != len(baseline) or len(tokens) != len(baseline)
+                                    or any(type(v) is not int or vocab[t] != v for v, t in zip(values, tokens))):
+                                raise ValueError("encoded tokens mismatch")
 
-                def check_tokens(values, tokens):
-                    if (len(values) != len(baseline) or len(tokens) != len(baseline)
-                            or any(type(v) is not int or vocab[t] != v for v, t in zip(values, tokens))):
-                        raise ValueError("encoded tokens mismatch")
-
-                check_tokens(baseline, response["scored_tokens"])
-                check_tokens(native, response["native_tokens"])
-                binder_tokens = [response["scored_tokens"][p] for p in binder_indices]
-                if response["scored_binder_tokens"] != binder_tokens:
-                    raise ValueError("binder tokens mismatch")
-                if encoded_tokens is not None:
-                    if binder_tokens != encoded_tokens:
-                        raise ValueError("encoded override mismatch")
-                    if any(baseline[p] != native[p] for p in range(len(baseline)) if p not in set(binder_indices)):
-                        raise ValueError("override changed nonbinder states")
-                elif baseline != native:
-                    raise ValueError("baseline changed native states")
-                states = response["states"]
-                if not isinstance(states, list) or len(states) != len(requested):
-                    raise ValueError("incomplete states")
-                for state, spec in zip(states, requested):
-                    if state["name"] != spec["name"] or state["pattern"] != spec["pattern"]:
-                        raise ValueError("state identity mismatch")
-                    center_tokens = [f"HIS-{s}" for s in spec["pattern"]]
-                    expected = list(baseline)
-                    for p, token in zip(centers, center_tokens):
-                        expected[p] = vocab[token]
-                    if state["encoded_sequence"] != expected or state["center_tokens"] != center_tokens:
-                        raise ValueError("state changed noncenters or selected states")
-                    check_tokens(state["encoded_sequence"], state["tokens"])
-                    if type(state["energy"]) not in (int, float) or not math.isfinite(state["energy"]):
-                        raise ValueError("non-finite or invalid state energy")
-                    endpoint = {"S" * len(positions): numeric["neutral_energy"],
-                                "P" * len(positions): numeric["protonated_energy"]}
-                    if spec["pattern"] in endpoint and state["energy"] != endpoint[spec["pattern"]]:
-                        raise ValueError("legacy endpoint energy mismatch")
-                audit_fields = {key: response[key] for key in (
-                    "state_names", "states", "state_patterns", "scored_binder_sequence",
-                    "context_binder_positions", "context_histidine_positions",
-                    "scored_encoded_sequence", "scored_tokens", "scored_binder_tokens",
-                    "native_encoded_sequence", "native_tokens", "token_to_idx",
-                    "noncenter_context_positions", "same_context", "audit_source",
-                    "energy_method", "energy_semantics",
-                )}
-            except (KeyError, TypeError, ValueError, IndexError, OverflowError) as exc:
-                raise RuntimeError(f"Proton-PottsMPNN score_states invalid state audit: {exc}") from exc
-        return {
-            **numeric,
-            "n_centers": len(positions),
-            "histidine_positions": positions,
-            "binder_sequence": sequence,
-            "outside_centers_unchanged": True,
-            "raw_output_path": raw_output_path,
-            "request_id": request_id,
-            "daemon_pid": response.get("pid"),
-            "model_load_count": response.get("model_load_count"),
-            "request_count": response.get("request_count"),
-            **audit_fields,
-        }
+                        check_tokens(baseline, response["scored_tokens"])
+                        check_tokens(native, response["native_tokens"])
+                        binder_tokens = [response["scored_tokens"][p] for p in binder_indices]
+                        if response["scored_binder_tokens"] != binder_tokens:
+                            raise ValueError("binder tokens mismatch")
+                        if encoded_tokens is not None:
+                            if binder_tokens != encoded_tokens:
+                                raise ValueError("encoded override mismatch")
+                            if any(baseline[p] != native[p] for p in range(len(baseline)) if p not in set(binder_indices)):
+                                raise ValueError("override changed nonbinder states")
+                        elif baseline != native:
+                            raise ValueError("baseline changed native states")
+                        states = response["states"]
+                        if not isinstance(states, list) or len(states) != len(requested):
+                            raise ValueError("incomplete states")
+                        for state, spec in zip(states, requested):
+                            if state["name"] != spec["name"] or state["pattern"] != spec["pattern"]:
+                                raise ValueError("state identity mismatch")
+                            center_tokens = [f"HIS-{s}" for s in spec["pattern"]]
+                            expected = list(baseline)
+                            for p, token in zip(centers, center_tokens):
+                                expected[p] = vocab[token]
+                            if state["encoded_sequence"] != expected or state["center_tokens"] != center_tokens:
+                                raise ValueError("state changed noncenters or selected states")
+                            check_tokens(state["encoded_sequence"], state["tokens"])
+                            if type(state["energy"]) not in (int, float) or not math.isfinite(state["energy"]):
+                                raise ValueError("non-finite or invalid state energy")
+                            endpoint = {"S" * len(positions): numeric["neutral_energy"],
+                                        "P" * len(positions): numeric["protonated_energy"]}
+                            if spec["pattern"] in endpoint and state["energy"] != endpoint[spec["pattern"]]:
+                                raise ValueError("legacy endpoint energy mismatch")
+                        audit_fields = {key: response[key] for key in (
+                            "state_names", "states", "state_patterns", "scored_binder_sequence",
+                            "context_binder_positions", "context_histidine_positions",
+                            "scored_encoded_sequence", "scored_tokens", "scored_binder_tokens",
+                            "native_encoded_sequence", "native_tokens", "token_to_idx",
+                            "noncenter_context_positions", "same_context", "audit_source",
+                            "energy_method", "energy_semantics",
+                        )}
+                    except (KeyError, TypeError, ValueError, IndexError, OverflowError) as exc:
+                        raise RuntimeError(f"Proton-PottsMPNN score_states invalid state audit: {exc}") from exc
+                return {
+                    **numeric,
+                    "n_centers": len(positions),
+                    "histidine_positions": positions,
+                    "binder_sequence": sequence,
+                    "outside_centers_unchanged": True,
+                    "raw_output_path": raw_output_path,
+                    "request_id": request_id,
+                    "daemon_pid": response.get("pid"),
+                    "model_load_count": response.get("model_load_count"),
+                    "request_count": response.get("request_count"),
+                    **audit_fields,
+                }
 
     def close(self) -> None:
         if self._closed:
             _unregister_shared_runner(self)
             return
-        proc = None
+        if not self._close_lock.acquire(blocking=False):
+            raise RuntimeError("Proton-PottsMPNNRunner cleanup is already in progress.")
+        locked = False
         try:
-            with self._lock:
-                self._cleanup_pending = True
-                proc = self._proc
+            with self._state_lock:
+                previous = self._state
+                self._state = _RunnerState.CLOSING
+            locked = self._lock.acquire(blocking=False)
+            proc = self._proc
+            if not locked:
+                error = RuntimeError(
+                    "Proton-PottsMPNN RPC is still in progress; cleanup owner retained."
+                )
                 if proc is not None:
-                    if proc.poll() is not None:
-                        raise RuntimeError(
-                            "Proton-PottsMPNN daemon exited before shutdown; "
-                            f"return code {proc.returncode}."
-                        )
-                    self._write_request(proc, {"type": "shutdown"})
-                    response = self._read_response(proc, 30.0)
-                    if response.get("type") != "ok":
-                        raise RuntimeError(
-                            "Unexpected Proton-PottsMPNN daemon shutdown response: "
-                            f"{response}"
-                        )
-                    return_code = proc.wait(timeout=30.0)
-                    if return_code != 0:
-                        raise RuntimeError(
-                            "Proton-PottsMPNN daemon shutdown returned code "
-                            f"{return_code}."
-                        )
-                self._closed = True
+                    try:
+                        self._stop_owned_child(proc)
+                    except BaseException as cleanup_error:
+                        error.add_note(f"Proton cleanup failed: {cleanup_error!r}")
+                raise error
+            if proc is not None:
+                error = None
+                graceful = False
+                if previous is _RunnerState.READY:
+                    try:
+                        if proc.poll() is not None:
+                            raise RuntimeError(
+                                "Proton-PottsMPNN daemon exited before shutdown; "
+                                f"return code {proc.returncode}."
+                            )
+                        self._write_request(proc, {"type": "shutdown"})
+                        response = self._read_response(proc, 30.0)
+                        if not isinstance(response, dict) or response.get("type") != "ok":
+                            raise RuntimeError(
+                                "Unexpected Proton-PottsMPNN daemon shutdown response: "
+                                f"{response}"
+                            )
+                        with yield_cpu_slot(cleanup=True):
+                            return_code = proc.wait(timeout=30.0)
+                        if return_code != 0:
+                            raise RuntimeError(
+                                "Proton-PottsMPNN daemon shutdown returned code "
+                                f"{return_code}."
+                            )
+                        graceful = True
+                    except BaseException as shutdown_error:
+                        error = shutdown_error
+                if not graceful:
+                    try:
+                        self._stop_owned_child(proc)
+                    except BaseException as cleanup_error:
+                        if error is None:
+                            if self._unknown is not None:
+                                cleanup_error.add_note(f"Original request failure: {self._unknown!r}")
+                            raise
+                        error.add_note(f"Proton cleanup failed: {cleanup_error!r}")
+                if error is not None:
+                    raise error
+                for name in ("stdin", "stdout"):
+                    stream = getattr(proc, name, None)
+                    if stream is not None:
+                        stream.close()
+            with self._state_lock:
+                self._proc = None
+                self._state = _RunnerState.CLOSED
+            _unregister_shared_runner(self)
         finally:
-            if self._closed:
-                _unregister_shared_runner(self)
+            if locked:
+                self._lock.release()
+            self._close_lock.release()
 
     shutdown = close

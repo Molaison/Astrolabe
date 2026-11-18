@@ -607,6 +607,19 @@ class Decisions:
             span.finish(**finish_fields)
             return outcome
 
+    def reject_infeasible_proposal(self, step, rejection) -> None:
+        """Record an attempted proposal that never reached the evaluator."""
+        logging.info("step=%s decision=reject reason=%s detail=%s", step, rejection.reason, rejection)
+        global_config.segment_manager.clear_mutations()
+        self.stage_history[step] = getattr(global_config.stage_manager, "current_stage", "unknown")
+        self.scores_detail[step] = {"proposal_rejection": rejection.reason}
+        self.sequences[step] = {
+            f"{p.type.value}{name}": p.sequence for name, p in global_config.protomers.items()
+        }
+        self._record_score_row(step=step, accepted=False, note=rejection.reason)
+        self._observe_assessment("mutation", step, False)
+        self.dump_results(global_config.out_dir, incremental=True)
+
     def _commit_mutation_decision(
         self, *, step: int, accepted: bool, early_stop: bool,
         acceptance_log: str | None = None, log_before_last: bool = False,

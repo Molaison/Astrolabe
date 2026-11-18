@@ -324,6 +324,30 @@ the historical base/runtime wholesale. Fixed/target constraints, starting-root
 site identity, proposal budgets and current ResourceOwner/seed boundaries remain
 owned by their existing components. Frozen historical runs are not migrated.
 
+The follow-up repair on `04cd241` aligns the startup and factory contracts for
+`vdm_pair` and `vdm_proton`, partitions the live stage mutation budget across
+aliases, and passes the source-structure sequences through the Proton JSONL
+runner. Known vdM infeasibility uses the existing refinement rejection type
+and is also recorded by the serial optimization loop. Cached pairsets use
+manifest-declared parent IDs and still recognize the flat single-parent layout.
+
+The CPU CLI controls exercised all three daemon-option validators. The budget
+control produced two edits from the first alias and one from the second under
+a shared budget of three. The empty vdM library control used an existing
+structure and recorded two no-match attempts after one initial evaluation.
+Both attempts retained the accepted sequence and left the candidate score
+blank. Native refinement completed two rejected proposals at the proposal
+cap with only its initial evaluation. A zero-budget vdM control recorded
+the corresponding budget rejection.
+
+The configured Score worker used the real Proton checkpoint on CPU with
+one broker CPU slot. It completed one state-scoring request and one
+evaluation. A separate CPU pre-update control changed one position before
+Proton. The Proton response recorded different source and working sequences
+for the binder, matching source and working sequences for the context
+chains, and eight engine candidates. The control used a root-only structure
+evaluator, which stopped at the following evaluation.
+
 The raw `ph_binding_endpoint` loss supplies local three-system Proton-H,
 Rosetta and fa_elec S/P descriptors. Shared normalization/ensemble expressions
 use the existing LossEngine; they do not introduce a second optimization loop.

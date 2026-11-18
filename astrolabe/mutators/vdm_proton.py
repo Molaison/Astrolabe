@@ -20,12 +20,14 @@ import copy
 import hashlib
 import json
 import math
+from collections.abc import Mapping
 from numbers import Real
 from pathlib import Path
 
 import numpy as np
 
 from astrolabe.core import global_config
+from astrolabe.design.proposal_rejection import ProposalInfeasible
 from astrolabe.utils.mmcif_ids import int_id_to_str_id
 from astrolabe.mutators.proton_pottsmpnn import (
     CANONICAL_AA,
@@ -81,6 +83,31 @@ def _sequence(value):
     if not isinstance(value, str) or not value or set(value) - CANONICAL_AA:
         raise ValueError("vdm_proton requires canonical uppercase source/current sequences.")
     return value
+
+
+def _pairset_records(handoff, requested_parent):
+    """Select one manifest entry, or read the original flat single-parent layout."""
+    if "parents" in handoff:
+        parents = handoff["parents"]
+        if not isinstance(parents, Mapping) or not parents:
+            raise ValueError("vdm_proton handoff parents must be a nonempty mapping.")
+        if requested_parent is None and len(parents) == 1:
+            requested_parent = next(iter(parents))
+        if requested_parent not in parents or not isinstance(parents[requested_parent], Mapping):
+            raise ValueError("vdm_proton requires pairset_parent_id naming a parent in the handoff.")
+        return requested_parent, parents[requested_parent], None
+
+    prefixes = [key.removesuffix("_proposal") for key in handoff if key.endswith("_proposal")]
+    if len(prefixes) != 1:
+        raise ValueError("vdm_proton flat handoff must contain one <prefix>_proposal entry.")
+    prefix = prefixes[0]
+    return requested_parent, {
+        "proposal": handoff[f"{prefix}_proposal"],
+        "joint_preview": handoff[f"{prefix}_joint_preview"],
+        "roles": handoff[f"{prefix}_roles"],
+        "overlay": handoff[f"original_{prefix}_overlay"],
+        "effective_config": handoff[f"original_{prefix}_effective_config"],
+    }, prefix
 
 
 def _frame(path):
@@ -179,7 +206,7 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
 
     def __init__(self, *, proposal_manifest=None, proposal_id=None, hbond_handoff=None,
                  pairset_handoff=None, pairset_handoff_sha256=None,
-                 pairset_parent_id="p10_shard_134_rep33_1",
+                 pairset_parent_id=None,
                  microenvironment_mutations=3, proposal_manifest_sha256=None,
                  hbond_handoff_sha256=None, criteria=None, **kwargs):
         if "pair_count" in kwargs:
@@ -192,6 +219,12 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
             raise ValueError("vdm_proton pairset_handoff and legacy manifest/hbond inputs are mutually exclusive.")
         if pairset_handoff is not None and not pairset_handoff_sha256:
             raise ValueError("vdm_proton pairset_handoff requires pairset_handoff_sha256.")
+        if pairset_parent_id is not None and (
+            pairset_handoff is None
+            or not isinstance(pairset_parent_id, str)
+            or not pairset_parent_id.strip()
+        ):
+            raise ValueError("vdm_proton pairset_parent_id requires a nonempty parent name and pairset_handoff.")
         if any(x is not None for x in supplied) and not all(supplied):
             raise ValueError("vdm_proton cached mode requires proposal_manifest, proposal_id and hbond_handoff together.")
         criteria = copy.deepcopy(dict(criteria or {}))
@@ -245,8 +278,8 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
         global mutation_num nor either alias's mutation_weight is changed.
         """
         budget = global_config.mutation_num
-        if type(budget) is not int or budget < 1:
-            raise ValueError("vdm_proton global mutation_num must be a positive integer.")
+        if type(budget) is not int or budget < 0:
+            raise ValueError("vdm_proton global mutation_num must be a nonnegative integer.")
         return budget
 
     def _local_allocation(self, *, live, producer_allocated=None):
@@ -257,7 +290,8 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
                 raise ValueError("vdm_proton cached source allocated mutation budget must be a positive integer.")
             allocated = self._mutation_budget() - producer_allocated
         if allocated < 1:
-            raise ValueError(
+            raise ProposalInfeasible(
+                "vdm_proton_budget_insufficient",
                 f"vdm_proton local allocation {allocated} must leave at least 1 local edit "
                 f"(global={self._mutation_budget()}, source={producer_allocated}, live={live})."
             )
@@ -268,7 +302,8 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
         total = self._mutation_budget()
         remaining = total - actual
         if remaining < 1:
-            raise ValueError(
+            raise ProposalInfeasible(
+                "vdm_proton_budget_insufficient",
                 f"vdm_proton complete pair set requires {actual} canonical edits; "
                 f"total mutation budget {total} leaves {remaining} "
                 "local edits, but at least 1 is required; refusing partial pair set."
@@ -372,17 +407,15 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
         handoff = json.loads(handoff_path.read_text())
         if handoff.get("schema") != "vdm_pairset_handoff" or handoff.get("status") != "READY":
             raise ValueError("vdm_proton pairset handoff is not READY.")
-        if self.pairset_parent_id != "p10_shard_134_rep33_1":
-            raise ValueError("vdm_proton frozen handoff contains only p10; requested parent unavailable, no fallback (p14 two pairs insufficient).")
+        parent_id, records, legacy_prefix = _pairset_records(handoff, self.pairset_parent_id)
         root = Path(__file__).resolve().parents[2]
         for relative, record in handoff["source_snapshot"].items():
             if relative.startswith("astrolabe/"):
                 _checked(record["path"], record["sha256"])
                 _checked(root / relative, record["sha256"])
-        checked = {key: _checked(handoff[key]["path"], handoff[key]["sha256"])
-                   for key in ("p10_proposal", "p10_joint_preview", "p10_roles",
-                               "original_p10_overlay", "original_p10_effective_config")}
-        original = json.loads(checked["p10_proposal"].read_text())
+        checked = {key: _checked(records[key]["path"], records[key]["sha256"])
+                   for key in ("proposal", "joint_preview", "roles", "overlay", "effective_config")}
+        original = json.loads(checked["proposal"].read_text())
         if len(original["mutation_input"]) != 1:
             raise ValueError("vdm_proton frozen pairset requires one native complex.")
         name, source_features = next(iter(original["mutation_input"].items()))
@@ -396,23 +429,28 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
         # Explicitly authorized metadata replay: only the captured allocation is
         # added in memory. Raw packet, original masks/policies and edits stay frozen.
         features["mutation_budget"] = budget
-        _checked(original["input_structure"], original["input_sha256"])
-        if (Path(features["structure_path"]).resolve() != Path(original["input_structure"]).resolve()
-                or self.pairset_parent_id not in Path(original["input_structure"]).parts
-                or Path(original["template_preview"]).resolve() != checked["p10_joint_preview"]
-                or original["template_preview_sha256"] != handoff["p10_joint_preview"]["sha256"]):
+        source = _checked(original["input_structure"], original["input_sha256"])
+        if legacy_prefix is not None:
+            parents = [part for part in source.parent.parts
+                       if part == legacy_prefix or part.startswith(f"{legacy_prefix}_")]
+            if len(parents) != 1 or parent_id not in (None, parents[0]):
+                raise ValueError("vdm_proton flat handoff does not identify the requested parent.")
+            parent_id = parents[0]
+        if (Path(features["structure_path"]).resolve() != source
+                or Path(original["template_preview"]).resolve() != checked["joint_preview"]
+                or original["template_preview_sha256"] != records["joint_preview"]["sha256"]):
             raise ValueError("vdm_proton frozen pairset source/preview/parent identity mismatch.")
         roles = _pair_set_builder()(oligo_name=name, features=features,
                                     telemetry=original["proposal"], protomers=protomers)
-        if json.loads(json.dumps(roles)) != json.loads(checked["p10_roles"].read_text()):
+        if json.loads(json.dumps(roles)) != json.loads(checked["roles"].read_text()):
             raise ValueError("vdm_proton actual native helper differs from frozen exported roles.")
         trace = dict(handoff=str(handoff_path), handoff_sha256=self.pairset_handoff_sha,
-                     proposal=handoff["p10_proposal"], preview=handoff["p10_joint_preview"],
-                     roles=handoff["p10_roles"], parent_id=self.pairset_parent_id,
+                     proposal=records["proposal"], preview=records["joint_preview"],
+                     roles=records["roles"], parent_id=parent_id,
                      budget_replay=dict(source_field="proposal.selected_mutation_budget",
                                         value=budget, added_in_memory="mutation_budget" not in source_features,
                                         raw_proposal_preserved=True))
-        return roles, str(checked["p10_joint_preview"]), trace
+        return roles, str(checked["joint_preview"]), trace
 
     def _validate_input_contract(self, protomers, prepared=None):
         self._validate_segment_manager(protomers)
@@ -439,7 +477,11 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
         # Clear before any validation, including the pre-super preview checks.
         if runtime_config is not None:
             runtime_config.pop("network_pair_roles", None)
-        self._mutation_budget()
+        if self._mutation_budget() == 0:
+            raise ProposalInfeasible(
+                "vdm_proton_budget_insufficient",
+                "vdm_proton requires one or more local edits; the global budget is zero.",
+            )
         runtime = runtime_config or {}
         live = "vdm_pair_roles" in runtime
         pairset = not live and self.pairset_handoff is not None
@@ -447,7 +489,10 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
             # A native per-step helper result, never a fallback to a cached pair.
             live_roles = runtime["vdm_pair_roles"]
             if live_roles is None:
-                raise ValueError("vdm_proton no-match role contract; independent Potts fallback is forbidden.")
+                raise ProposalInfeasible(
+                    "vdm_pair_no_match",
+                    "vdm_proton did not receive a matched pair from the current vdM proposal.",
+                )
             preview_info = runtime.get("vdm_pair_preview")
             if not isinstance(preview_info, dict) or not {"structure_path", "structure_sha256"} <= preview_info.keys():
                 raise ValueError("vdm_proton runtime roles require vdm_pair_preview with full-complex structure_path and structure_sha256.")

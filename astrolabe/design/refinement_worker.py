@@ -283,7 +283,12 @@ class _Worker:
             self.args = self.run.parse_arguments(
                 cfg, existing_run_dir=self.session_root, persist_config=False
             )
-            prepared = self.run.prepare_pipeline_state(self.args, apply_initialization=False)
+            try:
+                prepared = self.run.prepare_pipeline_state(self.args, apply_initialization=False)
+            finally:
+                self.pipeline_owner = global_config.build_runtime_context().get_const("resource_owner", None)
+                if self.pipeline_owner is not None:
+                    self._cleanup.add(SimpleNamespace(shutdown=self._close_pipeline), "worker.pipeline")
             # requires_mutators initializers report pending even when replay was
             # disabled. Deliberately bypass load_pipeline_components/initializer.
             if prepared.initializer_pending:
@@ -361,6 +366,15 @@ class _Worker:
                 error.add_note(f"refinement worker cleanup failed: {cleanup_error!r}")
                 error.cleanup_owner = self
             raise
+
+    def _close_pipeline(self):
+        from astrolabe.runtime_support import cleanup_retry_allowed
+
+        report = self.pipeline_owner.close(retry_failed=cleanup_retry_allowed())
+        if report.failed:
+            raise report.failed[0].error
+        if not report.complete:
+            raise RuntimeError("Worker pipeline cleanup is still in progress")
 
     def shutdown(self):
         from astrolabe.runtime_support import cleanup_retry_allowed
@@ -572,8 +586,9 @@ class _Worker:
         lease = nullcontext()
         if os.environ.get("ASTROLABE_RESOURCE_SOCKET"):
             from astrolabe.runtime.admission import ResourceClient
-            lease = ResourceClient.from_env().lease(
-                resource="cpu", backend="configured-score", phase="score",
+            from astrolabe.runtime.cpu_scope import cpu_work_scope
+            lease = cpu_work_scope(
+                ResourceClient.from_env(), backend="configured-score", phase="score",
                 identity=task["_request_hash"],
             )
         with lease:

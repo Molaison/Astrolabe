@@ -50,17 +50,29 @@ installation is not model readiness.
 
 ## Use and interpretation
 
-Select `proton_pottsmpnn` or `Proton-PottsMPNN` through the normal mutator
-configuration; shared defaults live in `mutator.ProtonPottsMPNN`. Use
+Select `proton_pottsmpnn`, `Proton-PottsMPNN`, or `vdm_proton` through the normal
+mutator configuration. They share the defaults in `mutator.ProtonPottsMPNN`. Use
 `astrolabe run --task <task> --dry-run` to check the selected configuration.
 See [pH design](ph_sensitive_design.md), [automatic core
 design](ph_core_automatic.md) and [network proposals](ph_joint_network_proposals.md).
 Standalone `astrolabe posthoc proton-states` and `proton-parity` have their own
 `--help`; parity arms require their exact source trees and inputs.
 
-This integration supports the existing protein-only v6 adapter and its pH
-loss/posthoc interfaces. It preserves masks, joint proposals, budgets and RNG
-behavior. It does not add vdM or independent Rosetta pH analysis tools.
+The standalone `vdm_pair` mutator uses a local geometry library. Set
+`mutator.VDMPair.library_path`, the alias's `library_path`, or
+`GH_VDM_PAIR_LIBRARY`. Its current-step preview can be consumed by
+`vdm_proton` in the same mutation stack. The library search and a downstream
+structure prediction produce separate artifacts.
+
+For cached `vdm_proton` pairsets, a `READY` `vdm_pairset_handoff` manifest can
+declare `parents` keyed by parent ID. Each entry contains `proposal`,
+`joint_preview`, `roles`, `overlay`, and `effective_config` records, each with
+`path` and `sha256`. The manifest retains `source_snapshot`. Use
+`pairset_parent_id` to select an entry when a manifest has multiple parents.
+Single-parent manifests and the original flat `<prefix>_proposal` layout
+remain readable.
+
+The protein-only v6 adapter exposes pH loss and posthoc interfaces.
 `HIS-S` is neutral and `HIS-P` protonated. Potts state scores are uncalibrated
 model proxies, not numerical pH, pKa or binding free energies. The existing
 `network_only` mode uses centre-free neutral-pair proposals with selectivity

@@ -1643,6 +1643,7 @@ def sample_mutations_by_aa_probs(
     entropy_cutoff: float | None = None,
     enforce_mutation_num: bool = False,
     enforce_mutation_distribution: str = "raw_log_probs",
+    mutation_alias: str | None = None,
 ):
     if propagate_scores:
         per_proto_scores = aggregate_per_proto_scores(
@@ -1771,7 +1772,9 @@ def sample_mutations_by_aa_probs(
             proto_usage[proto_name] += 1
         shuffled_mutations = budgeted
 
-    requested_mutations = current_mutation_count(weight=mutation_weight, runtime=global_config)
+    requested_mutations = current_mutation_count(
+        weight=mutation_weight, alias=mutation_alias, runtime=global_config
+    )
     if (
         enforce_mutation_num
         and requested_mutations > 0

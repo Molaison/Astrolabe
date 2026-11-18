@@ -96,6 +96,7 @@ class NucleicAcidDesignMutator(Mutator):
             mutation_output,
             self.alphabet_order,
             getattr(self, "mutation_weight", 1.0),
+            mutation_alias=getattr(self, "alias", None),
             protomer_type=self.target_type,
             per_proto_limits=budgets,
             propagate_scores=False,

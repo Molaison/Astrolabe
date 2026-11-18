@@ -2513,21 +2513,34 @@ def load_or_evaluate_initial(
 
 
 @timer("mutation step")
-def execute_mutation_step(mutators, evaluation_result, runtime_config: Dict, step: int) -> None:
+def execute_mutation_step(mutators, evaluation_result, runtime_config: Dict, step: int, *, record_rejection=False):
     """Existing synchronous entrypoint; same ordered mutation implementation."""
     from astrolabe.design.continuation import complete
     return complete(execute_mutation_step_continuation(
         mutators, evaluation_result, runtime_config, step, cooperative=False,
+        record_rejection=record_rejection,
     ))
 
 
 def execute_mutation_step_continuation(
-    mutators, evaluation_result, runtime_config: Dict, step: int, *, cooperative=True
-) -> None:
+    mutators, evaluation_result, runtime_config: Dict, step: int, *,
+    cooperative=True, record_rejection=False,
+):
     """Execute mutation for all mutators."""
     from astrolabe.profiling import event as profile_event
     from astrolabe.mutators.ligandmpnn import LigandMPNNMutator
     from astrolabe.mutators.native_daemons import NativeSequenceRunner
+    from astrolabe.design.proposal_rejection import ProposalInfeasible
+    from astrolabe.design.runtime import outcome_is_unknown
+
+    def invoke(mutator):
+        try:
+            return mutator.mutate(global_config.mutable_protomers, evaluation_result, runtime_config)
+        except ProposalInfeasible as error:
+            if outcome_is_unknown(error):
+                raise
+            return error
+
     eligible = (
         cooperative and len(mutators) == 1
         and type(mutators[0]) is LigandMPNNMutator
@@ -2543,6 +2556,8 @@ def execute_mutation_step_continuation(
                       step=step, reason=None if eligible else "unsupported_mutation_stack_or_remote_runner")
     # Never carry a prior proposal forward, including sequence-identical proposals.
     runtime_config["generated_structure_records"] = {}
+    runtime_config.pop("vdm_pair_roles", None)
+    runtime_config.pop("vdm_pair_preview", None)
     if len(mutators) > 1 and any(
         getattr(mutator, "requires_exclusive_mutation", False) for mutator in mutators
     ):
@@ -2561,6 +2576,7 @@ def execute_mutation_step_continuation(
         }
         global_config.segment_manager.begin_pre_update_step()
     sequence_constraints = []
+    rejection = None
     max_entropy = runtime_config.get("mutator_stack_pre_update_max_entropy")
     max_entropy = None if max_entropy in (None, "null", "None") else float(max_entropy)
     for index, mutator in enumerate(mutators):
@@ -2591,9 +2607,11 @@ def execute_mutation_step_continuation(
                     global_config.mutable_protomers, evaluation_result, runtime_config,
                 )
             else:
-                mutation_result = native_call("mutation", mutator.mutate,
-                    global_config.mutable_protomers, evaluation_result, runtime_config
-                )
+                mutation_result = native_call("mutation", invoke, mutator)
+                if isinstance(mutation_result, ProposalInfeasible):
+                    rejection = mutation_result
+                    span.finish(result="infeasible", reason=rejection.reason)
+                    break
             limit = getattr(mutator, "max_total_mutations", None)
             if limit is not None:
                 from astrolabe.utils.mmcif_ids import int_id_to_str_id
@@ -2667,6 +2685,10 @@ def execute_mutation_step_continuation(
             )
             if getattr(mutator, "requires_pre_update_stack", False):
                 mutator._validate_input_contract(global_config.mutable_protomers)
+
+    if rejection is not None and not record_rejection:
+        raise rejection
+    return rejection
 
 
 def _finalize_mutator_stack_pre_update(runtime_config: Dict, accepted: bool) -> None:
@@ -3143,9 +3165,30 @@ def _advance_optimization_state(
     # Mutation phase
     is_accepted = False
     try:
-        execute_mutation_step(
-            stage_manager.current_mutators, mutation_input_scores, runtime_config, step
+        rejection = execute_mutation_step(
+            stage_manager.current_mutators, mutation_input_scores, runtime_config, step,
+            record_rejection=True,
         )
+        if rejection is not None:
+            _finalize_mutator_stack_pre_update(runtime_config, accepted=False)
+            native_call("decision", decisions.reject_infeasible_proposal, step, rejection)
+            early_stop = False
+            if stage_manager.transition_consistency_gate_context is None:
+                stage_result = _handle_stage_entry(
+                    args=args, step=step, evaluation_result=evaluation_result,
+                    decisions=decisions, loss_computer=loss_computer,
+                    runtime_config=runtime_config, stage_manager=stage_manager,
+                )
+                if stage_result is not None:
+                    evaluation_result = stage_result
+                    early_stop = bool(loss_computer.is_early_stopping(
+                        decisions.scores_detail.get(decisions.last_accepted, {})
+                    ))
+            logging.info(build_step_outcome_message(
+                step=step, accepted=False, early_stop=early_stop,
+                stage_name=stage_manager.current_stage,
+            ))
+            return evaluation_result, False, early_stop
 
         # Evaluation phase
         evaluation_result = perform_evaluation(

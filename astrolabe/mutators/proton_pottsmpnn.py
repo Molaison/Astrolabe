@@ -689,6 +689,9 @@ class ProtonPottsMPNNMutator(Mutator):
                 "the full GH budget and are not a supported joint model."
             )
         self._validate_input_contract(protomers)
+        budget = self._mutation_budget()
+        if budget == 0:
+            return {}
         excluded_positions = prepare_exclude_sites(
             self.position_selector,
             active_scores,
@@ -697,13 +700,6 @@ class ProtonPottsMPNNMutator(Mutator):
             mutator_alias=getattr(self, "alias", self.name),
             fallback_to_all_mutable_if_selector_empty=False,
         )
-        budget = self._mutation_budget()
-        if budget <= 0:
-            raise ValueError(
-                "Proton-PottsMPNN requires a positive GH mutation budget "
-                "(mutation_num * mutation_weight)."
-            )
-
         prepared: dict[str, dict[str, Any]] = {}
         owner_by_binder_proto: dict[str, str] = {}
         owner_by_mutable_segment: dict[str, str] = {}

@@ -371,6 +371,12 @@ class VdmPairMutator(Mutator):
                 raise ValueError("vdm_pair site_map structure/library/target input changed after preparation.")
 
     def prepare_mutation_input(self, protomers, evaluation_scores, runtime_config):
+        native_budget = self.n_mutations()
+        if native_budget == 0:
+            raise ProposalInfeasible(
+                "vdm_pair_budget_insufficient",
+                "vdm_pair has no allocated edits in the current stage budget.",
+            )
         runtime = runtime_config or {}
         ignored = set(runtime.get("ignored_complexes") or []) | set(runtime.get("negative_design_complexes") or [])
         names = [name for name in evaluation_scores.names if name not in ignored]
@@ -533,7 +539,6 @@ class VdmPairMutator(Mutator):
         parameters = copy.deepcopy(self.parameters)
         parameters.setdefault("protect_gly_pro", self.protect_gly_pro)
         parameters.setdefault("preserve_disulfides", self.preserve_disulfides)
-        native_budget = self.n_mutations()
         mutable_per_pair = sum(s["sequence"] == "mutable" for s in normalized_sites)
         if not mutable_per_pair:
             raise ValueError("vdm_pair requires at least one mutable site per pair.")
@@ -608,6 +613,11 @@ class VdmPairMutator(Mutator):
                         f"vdm_pair site_map live endpoint search failed: {result['status']}.",
                     )
                 raise ValueError(f"vdm_pair site_map live endpoint search failed: {result['status']}.")
+            if result["status"] in {"no_match", "no_op_no_mutable_positions", "no_op_zero_budget"}:
+                raise ProposalInfeasible(
+                    "vdm_pair_no_match",
+                    f"vdm_pair did not produce a candidate: {result['status']}.",
+                )
             if features["pair_count"] > 1 and result["status"] != "proposed":
                 if result["status"] == "insufficient_pairs":
                     raise ProposalInfeasible(

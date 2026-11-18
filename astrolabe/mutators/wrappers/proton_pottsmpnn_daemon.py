@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import importlib.util
 import json
 import math
 import operator
@@ -15,6 +16,117 @@ import time
 import traceback
 from pathlib import Path
 from typing import Any
+
+
+def _resource_runtime():
+    name = "_astrolabe_proton_runtime"
+    if name not in sys.modules:
+        directory = Path(__file__).resolve().parents[2] / "runtime"
+        spec = importlib.util.spec_from_file_location(
+            name, directory / "__init__.py",
+            submodule_search_locations=[str(directory)],
+        )
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        try:
+            spec.loader.exec_module(module)
+        except BaseException:
+            sys.modules.pop(name, None)
+            raise
+    return sys.modules[name]
+
+
+class _CompletionUnknown(RuntimeError):
+    pass
+
+
+class _DaemonAdmission:
+    def __init__(self, args):
+        runtime = _resource_runtime()
+        self.client = runtime.ResourceClient.from_env()
+        self.identity = os.environ["ASTROLABE_PROTON_MODEL_IDENTITY"]
+        import torch
+
+        device = args.device
+        if device == "auto":
+            if torch.cuda.is_available():
+                device = "cuda"
+            elif hasattr(torch, "xpu") and torch.xpu.is_available():
+                raise RuntimeError("Proton broker admission does not support XPU")
+            elif torch.backends.mps.is_available():
+                raise RuntimeError("Proton broker admission does not support MPS")
+            else:
+                device = "cpu"
+        if re.fullmatch(r"cpu|cuda(?::\d+)?", device) is None:
+            raise RuntimeError(f"Proton broker admission does not support {device!r}")
+        args.device = self.device = device
+        self.resource = "cpu" if device == "cpu" else "gpu"
+        self.epoch = sys.modules[runtime.__name__ + ".admission"]._epoch(os.getpid())
+        if self.epoch is None:
+            raise RuntimeError("Proton broker admission requires a live process epoch")
+        self.model_id = f"{self.identity}:{os.getpid()}:{self.epoch}"
+        self.proof = None
+
+    @contextlib.contextmanager
+    def operation(self, phase):
+        lease = self.client.lease(resource=self.resource, backend="proton_pottsmpnn",
+                                  identity=self.identity, phase=phase, device=self.device)
+        try:
+            lease.__enter__()
+        except BaseException:
+            lease.cancel()
+            raise
+        error = None
+        try:
+            yield
+        except BaseException as exc:
+            error = exc
+            raise
+        finally:
+            try:
+                if isinstance(error, _CompletionUnknown):
+                    lease.cancel()
+                else:
+                    if self.resource == "gpu":
+                        import torch
+
+                        torch.cuda.synchronize(self.device)
+                    lease.finish(error=error)
+            except BaseException as completion:
+                lease.cancel()
+                unknown = _CompletionUnknown(
+                    f"Proton {phase} resource completion is unknown: {completion}"
+                )
+                if error is not None:
+                    unknown.add_note(f"Original Proton failure: {error!r}")
+                raise unknown from completion
+
+    def validate_device(self, engine):
+        import torch
+
+        try:
+            actual = torch.device(engine.device)
+            actual_index = (torch.cuda.current_device()
+                            if actual.type == "cuda" and actual.index is None else actual.index)
+        except Exception as error:
+            raise _CompletionUnknown("Proton native engine device is unproven") from error
+        admitted = torch.device(self.device)
+        admitted_index = 0 if admitted.index is None else admitted.index
+        if (actual.type != admitted.type
+                or (actual.type == "cuda" and actual_index != admitted_index)):
+            raise _CompletionUnknown(
+                f"Proton native engine device {actual} disagrees with admitted {self.device}"
+            )
+        if actual.type == "cuda":
+            self.device = f"cuda:{admitted_index}"
+
+    def register(self):
+        registered = self.client.register_model(
+            self.model_id, device=self.device,
+            metadata={"backend": "proton_pottsmpnn", "identity": self.identity},
+        )
+        self.proof = dict(version=1, pid=os.getpid(), process_epoch=self.epoch,
+                          model_id=self.model_id, device=registered["device"])
 
 
 def _timing(phase: str, started: float, request_id=None) -> None:
@@ -825,11 +937,17 @@ def main() -> int:
     output_dir.mkdir(parents=True, exist_ok=True)
     with contextlib.redirect_stdout(sys.stderr):
         started = time.perf_counter()
-        runtime = _load_runtime(args)
+        admission = _DaemonAdmission(args) if os.environ.get("ASTROLABE_RESOURCE_SOCKET") else None
+        with admission.operation("load") if admission else contextlib.nullcontext():
+            runtime = _load_runtime(args)
+            if admission:
+                admission.validate_device(runtime[0])
+                admission.register()
         _timing("load_runtime", started)
     _write(
         protocol_out,
-        {"type": "ready", "pid": os.getpid(), "model_load_count": 1},
+        {"type": "ready", "pid": os.getpid(), "model_load_count": 1,
+         **({"admission": admission.proof} if admission else {})},
     )
 
     request_count = 0
@@ -866,10 +984,26 @@ def main() -> int:
         request_count += 1
         try:
             with contextlib.redirect_stdout(sys.stderr):
-                if message_type == "score_states":
-                    result = _score_states(runtime, message, output_dir)
-                else:
-                    result = _infer(runtime, message, output_dir)
+                with admission.operation(message_type) if admission else contextlib.nullcontext():
+                    if message_type == "score_states":
+                        result = _score_states(runtime, message, output_dir)
+                    else:
+                        result = _infer(runtime, message, output_dir)
+        except _CompletionUnknown as exc:
+            _write(protocol_out, {
+                "type": "unknown", "id": message.get("id"),
+                "error_type": type(exc).__name__, "error": str(exc),
+                "traceback": traceback.format_exc(),
+            })
+            for raw in sys.stdin:
+                try:
+                    shutdown = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                if shutdown.get("type") == "shutdown":
+                    _write(protocol_out, {"type": "ok", "message": "bye"})
+                    return 0
+            return 0
         except Exception as exc:  # noqa: BLE001 - reported to the parent process
             _write(
                 protocol_out,

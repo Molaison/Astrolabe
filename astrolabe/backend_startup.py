@@ -224,7 +224,7 @@ def _validate_common_options(family, kind, cfg, root, *, allow_unresolved=False)
             numeric('max_fixed_atom_rmsd', integer=False)
             numeric('request_timeout', integer=False, positive=True)
             seed(nullable=False)
-        if normalized in {'proton_pottsmpnn', 'proton-pottsmpnn'}:
+        if normalized in {'proton_pottsmpnn', 'proton-pottsmpnn', 'vdm_proton'}:
             boolean('daemon')
             enum('extended_vocab', {'v6'})
             enum('design_mask_adapter', {'none', 'preserve'})
@@ -724,7 +724,18 @@ def validate_backend_settings(family, kind, options, *, path, check_paths,
                     validate_generation(generation)
                 except (TypeError, ValueError) as error:
                     fail('generation', str(error))
-        elif normalized_kind in {'proton_pottsmpnn', 'proton-pottsmpnn'}:
+        elif normalized_kind == 'vdm_pair':
+            asset('library_path', required=True)
+            if value('site_map') not in _MISSING:
+                asset('site_map')
+            if 'daemon' in cfg:
+                fail('daemon', 'vdm_pair uses local geometry and has no daemon option')
+            network_only = value('network_only')
+            if network_only is not None and network_only is not True and not (
+                allow_unresolved and isinstance(network_only, str) and '${' in network_only
+            ):
+                fail('network_only', 'vdm_pair requires true when set')
+        elif normalized_kind in {'proton_pottsmpnn', 'proton-pottsmpnn', 'vdm_proton'}:
             repo = asset('repo_path', required=True, kind='dir')
             asset('python_bin', required=True, executable=True)
             asset('hbplus_bin', required=True, executable=True)
@@ -747,6 +758,22 @@ def validate_backend_settings(family, kind, options, *, path, check_paths,
                     fail('device', 'must be auto, cpu, cuda or cuda:N')
             if value('daemon_script_path') not in _MISSING:
                 asset('daemon_script_path')
+            if normalized_kind == 'vdm_proton':
+                legacy = ('proposal_manifest', 'proposal_id', 'hbond_handoff')
+                supplied = [field for field in legacy if value(field) not in _MISSING]
+                has_pairset = value('pairset_handoff') not in _MISSING
+                if supplied and (has_pairset or len(supplied) != len(legacy)):
+                    fail('proposal_manifest', 'provide all three legacy packet fields, or use pairset_handoff alone')
+                if has_pairset and value('pairset_handoff_sha256') in _MISSING:
+                    fail('pairset_handoff_sha256', 'is required with pairset_handoff')
+                parent = value('pairset_parent_id')
+                if parent is not None and (
+                    not has_pairset or not isinstance(parent, str) or not parent.strip()
+                ):
+                    fail('pairset_parent_id', 'requires a nonempty parent name and pairset_handoff')
+                for field in ('pairset_handoff', 'proposal_manifest', 'hbond_handoff'):
+                    if value(field) not in _MISSING:
+                        asset(field)
         elif normalized_kind in {name.lower() for name in _MPNN}:
             if allow_unresolved and isinstance(value('model_type'), str) and '${' in value('model_type'):
                 return errors  # The selected checkpoint cannot yet be determined.

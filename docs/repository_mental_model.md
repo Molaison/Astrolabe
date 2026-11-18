@@ -242,6 +242,19 @@ The former searches natural pair geometry and supplies a fresh preview/role
 packet; the latter consumes those validated roles for local Proton redesign.
 Root site-map identity, fixed pair/target positions and the shared mutation
 budget remain scientific inputs, not an opportunity to reuse stale previews.
+
+Stage aliases divide each resolved mutation budget by largest remainder, with
+stage order breaking ties. A vdM `ProposalInfeasible` is recorded as one
+rejected attempt before evaluation. The serial loop records the rejection in
+`scores.csv` with a blank candidate score and keeps the last accepted state.
+Native refinement records the same rejection reason in its proposal journal.
+
+The Proton request carries both the source structure's chain sequences and
+the staged working chain sequences when pre-update is active. When the
+resource broker is enabled, the Proton child owns load and compute admission.
+The parent's readiness check binds the child PID and epoch to the broker's
+resident model and resolved device. An ambiguous issued request quarantines
+the runner until its owner closes it.
 The qualified geometry and role helpers are retained rather than replacing
 the current orchestration or Proton resource ownership.
 The surface selector accepts explicit `core_cutoff`/`surface_cutoff` SASA

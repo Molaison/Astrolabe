@@ -1,10 +1,12 @@
 """Typed, local proposal infeasibility; never certifies external failures."""
 
 VDM_INFEASIBILITY_REASONS = frozenset({
+    "vdm_pair_no_match",
     "vdm_site_map_endpoint_not_mutable",
     "vdm_site_map_no_match",
     "vdm_pair_budget_insufficient",
     "vdm_pair_set_insufficient_pairs",
+    "vdm_proton_budget_insufficient",
 })
 
 
