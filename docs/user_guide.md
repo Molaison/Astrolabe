@@ -643,6 +643,10 @@ stages:
 
 ### 7.2 区分 loss 权重、penalty、threshold 与 gate
 
+在 `loss.loss_terms.<alias>` 下用 `_for` 限定 loss 对哪些 oligomer 计算。
+例如 `_for: [AB, AC]` 选择 `AB` 和 `AC`。单个名称和逗号分隔的名称也可用，
+`oligomer_specific` 是等效的配置键。每个 loss 只填写其中一个键。
+
 - **loss 权重**进入 `weighted_score_expression`，改变连续目标的相对贡献；
 - **penalty** 也是 weighted score 的一部分，可以只在越过某条线后连续增大；它
   不会像 gate 一样无条件拒绝候选；
