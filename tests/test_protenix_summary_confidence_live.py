@@ -218,6 +218,32 @@ def test_prepare_output_exposes_structure_start_soft_select_candidates(
     assert candidates[1].complex_paths["AB"].exists()
 
 
+def test_prediction_lookup_requires_requested_step(tmp_path: Path):
+    filename = "AB_seed_7_sample_0.cif"
+    old_path = tmp_path / "step_001/AB/seed_7/predictions" / filename
+    old_path.parent.mkdir(parents=True)
+    old_path.write_text("data_previous\n")
+    options = dict(dump_dir=tmp_path, dataset_name="step_002", oligo_name="AB", seed=7)
+    assert ProtenixEvaluator._find_raw_prediction_cif(**options) is None
+
+    evaluator = ProtenixEvaluator(model_runner=types.SimpleNamespace(
+        configs=types.SimpleNamespace(seed=7, dump_dir=tmp_path),
+    ))
+    global_config.reset()
+    global_config.init_const("out_dir", tmp_path / "out")
+    global_config.set_variable("step", 2)
+    try:
+        with pytest.raises(FileNotFoundError, match="step_002/AB, seed 7, sample 0"):
+            evaluator.prepare_output({"AB": {}}, {"AB": None}, runtime_config={})
+    finally:
+        global_config.reset()
+
+    current_path = tmp_path / "step_002/AB/seed_7/predictions" / filename
+    current_path.parent.mkdir(parents=True)
+    current_path.write_text("data_current\n")
+    assert ProtenixEvaluator._find_raw_prediction_cif(**options) == current_path
+
+
 @pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_prepare_output_extracts_cuda_summary_fields(
     tmp_path: Path,

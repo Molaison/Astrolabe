@@ -663,14 +663,15 @@ def get_af3_scores(all_inference_results):
         result_scores["inter_o_cross_scores"].append(
             take_scores(inter_o_cross_scores_indicators, metadata)
         )
-        result_scores["per_res_scores"].append(
-            {
-                "per_res_plddt": extract_plddt(
-                    predicted_structure.res_auth_seq_id,
-                    predicted_structure.atom_b_factor,
-                )
-            }
+        chain_plddt = extract_plddt(
+            predicted_structure.chain_id,
+            predicted_structure.res_auth_seq_id,
+            predicted_structure.atom_b_factor,
         )
+        result_scores["per_res_scores"].append({
+            "per_res_plddt": list(itertools.chain.from_iterable(chain_plddt.values())),
+            "per_chain_plddt": chain_plddt,
+        })
 
     fmt_result_scores = {}
 
@@ -709,15 +710,12 @@ def process_chain_pair_scores(eval_result):
             )
 
 
-def extract_plddt(atom2res, atom2bfactor):
-    per_res_plddt = {}
-    i = 0
-    for res, plddt in itertools.groupby(zip(atom2res, atom2bfactor), lambda x: x[0]):
-        _, plddts = zip(*plddt)
-        plddts = np.array(plddts).mean()
-        per_res_plddt[i] = plddts
-        i += 1
-    return [per_res_plddt[i] for i in range(len(per_res_plddt))]
+def extract_plddt(atom_chains, atom_residues, atom_b_factors):
+    per_chain = defaultdict(list)
+    atoms = zip(atom_chains, atom_residues, atom_b_factors, strict=True)
+    for (chain_id, _), residue_atoms in itertools.groupby(atoms, lambda atom: atom[:2]):
+        per_chain[chain_id].append(np.mean([atom[2] for atom in residue_atoms]))
+    return dict(per_chain)
 
 
 from astrolabe.af3_featurisation_settings import (

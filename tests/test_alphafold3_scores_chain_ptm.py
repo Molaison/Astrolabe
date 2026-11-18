@@ -169,8 +169,8 @@ class TestAlphafold3ScoresChainPtm(unittest.TestCase):
         chain_pair_contact_lis = np.zeros((2, 2), dtype=float)
 
         predicted_structure = SimpleNamespace(
-            # Two residues, two atoms each.
-            res_auth_seq_id=np.array([0, 0, 1, 1], dtype=int),
+            chain_id=np.array(["A", "A", "B", "B"]),
+            res_auth_seq_id=np.array(["1", "1", "1", "1"]),
             atom_b_factor=np.array([50.0, 50.0, 60.0, 60.0], dtype=float),
         )
 
@@ -198,3 +198,4 @@ class TestAlphafold3ScoresChainPtm(unittest.TestCase):
         self.assertIn("chain_iptm", scores["chain_pair_scores"])
         self.assertEqual(scores["chain_pair_scores"]["chain_ptm"][0], [0.1, 0.9])
         self.assertEqual(scores["chain_pair_scores"]["chain_iptm"][0], [0.2, 0.8])
+        self.assertEqual(scores["per_res_scores"]["per_res_plddt"], [[50.0, 60.0]])

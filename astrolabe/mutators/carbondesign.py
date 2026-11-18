@@ -257,5 +257,6 @@ class CarbonDesignMutator(Mutator):
             mutation_output,
             self.aa_order,
             self.mutation_weight,
+            mutation_alias=getattr(self, "alias", None),
             runtime_config=runtime_config,
         )

@@ -16,7 +16,8 @@ from omegaconf import OmegaConf
 from astrolabe.backend_startup import validate_backend_settings
 from astrolabe.scoring_startup import validate_scoring_settings
 from astrolabe.component_config import merge_component_config
-from astrolabe.loss_config import INTRINSIC_PARAMS
+from astrolabe.loss_config import loss_parameter_errors
+from astrolabe.mutator_config import MUTATOR_DEFAULTS, mutator_position_selector
 from astrolabe.stage_config import resolve_mutation_num
 from astrolabe.task_startup import validate_task_config
 
@@ -31,24 +32,6 @@ _STAGE_FIELDS = frozenset({
     "negative_design_complexes", "evaluator", "active_loss_terms", "mutators",
     "mutator_weights", "transition_consistency_gate", "mutation_num", "_entrance",
 })
-_MUTATOR_DEFAULTS = {
-    "rfd4": ("rfd4",),
-    "mcmc": ("MCMC",), "pore_blocker_mcmc": ("MCMC",),
-    "ligandmpnn": ("LigandMPNN",), "grouped_ligandmpnn": ("LigandMPNN",),
-    "proteinmpnn": ("LigandMPNN",), "multistateproteinmpnn": ("LigandMPNN",),
-    "multistate_proteinmpnn": ("LigandMPNN",),
-    "faraparttiedmultitargetligandmpnn": ("LigandMPNN",),
-    "far_apart_tied_multitarget_ligandmpnn": ("LigandMPNN",),
-    "dynamicmpnn": ("DynamicMPNN",), "surfdesign": ("SurfDesign",),
-    "proton_pottsmpnn": ("ProtonPottsMPNN",),
-    "proton-pottsmpnn": ("ProtonPottsMPNN",),
-    "vdm_pair": ("VDMPair",),
-    "vdm_proton": ("ProtonPottsMPNN",),
-    "surfpro": ("SurfPro",), "carbondesign": ("CarbonDesign",),
-    "dplm": ("DPLM",), "nampnn": ("NAMPNN",),
-}
-
-
 def _literal_names(path, decorator):
     """Built-in registry fallback; loaded runtime registrations take precedence."""
     names = set()
@@ -447,7 +430,7 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                     resolved = OmegaConf.to_container(merged_cfg, resolve=resolve_environment)
                 elif family == "mutator":
                     raw_kind = selected_kind.lower()
-                    merged_cfg = merge_component_config(section_cfg, _MUTATOR_DEFAULTS.get(raw_kind, ()), selected_term_cfg, resolve=resolve_environment)
+                    merged_cfg = merge_component_config(section_cfg, MUTATOR_DEFAULTS.get(raw_kind, ()), selected_term_cfg, resolve=resolve_environment)
                     resolved = OmegaConf.to_container(merged_cfg, resolve=resolve_environment)
                 elif family == "predocker":
                     raw_kind = selected_kind
@@ -511,9 +494,13 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                                 errors.append(f"{path}.predocker: unknown predocker alias {ref!r}")
                             elif predocker_enabled is not None and isinstance(predocker_enabled, list) and ref not in predocker_enabled:
                                 errors.append(f"{path}.predocker: disabled predocker alias {ref!r}")
-                selector = resolved.get("position_selector")
-                if selector is not None:
-                    _check_selector(selector, f"{path}.position_selector", errors)
+                try:
+                    selectors = (section_cfg if resolve_environment else raw[family]).get("selectors")
+                    selector, selector_path = mutator_position_selector(alias, kind, resolved, selectors)
+                    if selector is not None:
+                        _check_selector(selector, selector_path, errors)
+                except (ValueError, TypeError) as exc:
+                    errors.append(str(exc))
             if family == "predocker" and kind not in processor_names:
                 errors.append(f"{path}._type: unknown predocker {kind!r}")
             if family in {"loss", "predocker"}:
@@ -530,12 +517,10 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                     metadata = losses_module.loss_registry.get_metadata(kind)
                 required = set(metadata.required_params or ()) if metadata is not None else set(source_specs["loss"].get(kind, ()))
                 optional = set(metadata.optional_params or ()) if metadata is not None else _source_loss_optional().get(kind, set())
-                for key in required:
-                    if key not in resolved or resolved[key] is None:
-                        errors.append(f"{path}.{key}: required by loss {kind!r}")
                 if metadata is not None or kind in source_specs["loss"]:
-                    for key in set(resolved) - {"_type", "_for"} - INTRINSIC_PARAMS - required - optional:
-                        errors.append(f"{path}.{key}: invalid parameter for loss {kind!r}")
+                    errors.extend(loss_parameter_errors(
+                        resolved, path=path, kind=kind, required=required, optional=optional,
+                    ))
 
     from astrolabe.task_references import sequence_inventory, validate_loss_references
     # Alias/complex membership needs no model or structure-coordinate runtime.

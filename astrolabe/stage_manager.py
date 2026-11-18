@@ -2,6 +2,7 @@ import copy
 import logging
 import re
 import ast
+import math
 from dataclasses import dataclass, field
 from typing import Any, List, Optional
 
@@ -75,7 +76,7 @@ class StageUnit:
     evaluator: str | None = None
     active_loss_terms: List[str] | None = None
     mutators: List[str] | None = None
-    mutator_weights: List[str] | None = None
+    mutator_weights: list[float] | None = None
     transition_consistency_gate: TransitionConsistencyGateConfig | dict[str, Any] | None = None
     mutation_num: int | float | str | None = None
     _entrance: str | None = None  # Condition to enter this stage
@@ -543,15 +544,31 @@ class StageManager:
         return self.resolve_stage_evaluator_instance(self.execution_setting)
 
     @property
-    def current_mutators(self):
+    def current_mutator_weights(self):
         stage_setting = self.execution_setting
+        mutator_names = stage_setting.mutators
+        weights = stage_setting.mutator_weights
         if stage_setting.mutators is None:
             mutator_names = self.default_setting.mutators or []
-        else:
-            mutator_names = stage_setting.mutators
+            if weights is None:
+                weights = self.default_setting.mutator_weights
+        if len(set(mutator_names)) != len(mutator_names):
+            raise ValueError("Stage mutators must use distinct aliases. Define a second alias to run a type twice.")
+        if weights is None:
+            return dict.fromkeys(mutator_names, 1.0)
+        if len(weights) != len(mutator_names):
+            raise ValueError("Stage mutator_weights must match the number of effective mutator aliases.")
+        numeric = [float(weight) for weight in weights]
+        total = sum(numeric)
+        if any(weight < 0 or not math.isfinite(weight) for weight in numeric) or not math.isfinite(total) or total <= 0:
+            raise ValueError("Stage mutator_weights must be finite, non-negative, and have a positive finite sum.")
+        return dict(zip(mutator_names, numeric))
 
+    @property
+    def current_mutators(self):
+        weights = self.current_mutator_weights
         try:
-            mutators = [self.runtime_context.mutators[mutator] for mutator in mutator_names]
+            mutators = [self.runtime_context.mutators[alias] for alias in weights]
         except KeyError as exc:
             missing = str(exc.args[0]) if exc.args else "<unknown>"
             available = sorted((self.runtime_context.mutators or {}).keys())
@@ -563,27 +580,9 @@ class StageManager:
         if not mutators:
             raise ValueError("No mutators configured for the current stage or default stage.")
 
-        weights = getattr(stage_setting, "mutator_weights", None)
-        if weights is not None and len(weights) == len(mutators):
-            weights = [float(w) for w in weights]
-            weights = [weight / sum(weights) for weight in weights]
-        else:
-            default_weights = (
-                getattr(self.default_setting, "mutator_weights", None)
-                if stage_setting.mutators is None
-                else None
-            )
-            if (
-                default_weights is not None
-                and len(default_weights) == len(mutators)
-            ):
-                weights = [float(w) for w in default_weights]
-                weights = [weight / sum(weights) for weight in weights]
-            else:
-                weights = [1.0 / len(mutators)] * len(mutators)
-
-        for mutator, weight in zip(mutators, weights):
-            mutator.mutation_weight = weight
+        total = sum(weights.values())
+        for mutator, weight in zip(mutators, weights.values()):
+            mutator.mutation_weight = weight / total
 
         return mutators
 

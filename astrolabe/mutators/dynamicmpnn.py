@@ -52,6 +52,7 @@ class DynamicMPNNMutator(Mutator):
         self, mutation_output, protomers, evaluation_scores, runtime_config
     ):
         self._feature_helper.mutation_weight = getattr(self, "mutation_weight", 1.0)
+        self._feature_helper.alias = getattr(self, "alias", None)
         self._feature_helper.prepare_mutation_output(
             mutation_output, protomers, evaluation_scores, runtime_config
         )

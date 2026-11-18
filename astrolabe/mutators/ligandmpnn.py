@@ -659,6 +659,7 @@ class LigandMPNNMutator(Mutator):
             mutation_output,
             self.aa_order,
             self.mutation_weight,
+            mutation_alias=getattr(self, "alias", None),
             runtime_config=runtime_config,
             entropy_cutoff=self.entropy_cutoff,
             enforce_mutation_num=self.enforce_mutation_num,
