@@ -3303,6 +3303,42 @@ def _finish_run_provenance(
         )
 
 
+def _propose_from_initial(args, stage_manager, runtime_config, initial_loader):
+    """Materialize the proposed genotype without evaluating or accepting it."""
+    term = args.evaluator.evaluator_terms[stage_manager.execution_setting.evaluator]
+    if str(term["_type"]).lower() != "generated_structure":
+        raise ValueError("--proposal-only requires the generated_structure evaluator.")
+    scores = initial_loader()
+    mutators = stage_manager.current_mutators
+    initial = {name: str(proto.sequence) for name, proto in global_config.protomers.items()}
+    global_config.set_variable("step", 1)
+    try:
+        rejection = execute_mutation_step(
+            mutators, scores, runtime_config, step=1, record_rejection=True,
+        )
+        proposed = (None if rejection is not None else
+                    {name: str(proto.mutated_sequence)
+                     for name, proto in global_config.protomers.items()})
+        receipt = dict(
+            status="proposed" if rejection is None else "infeasible",
+            reason=None if rejection is None else rejection.reason,
+            seed=args.seed,
+            before_sequences=initial,
+            after_sequences=proposed,
+            global_mutation_budget=global_config.mutation_num,
+            stage_budgets={mutator.alias: mutator.n_mutations() for mutator in mutators},
+            telemetry={mutator.alias: getattr(mutator, "last_mutation_telemetry", {})
+                       for mutator in mutators},
+        )
+    finally:
+        _finalize_mutator_stack_pre_update(runtime_config, accepted=False)
+    from astrolabe.runtime_support import atomic_text_writer
+
+    with atomic_text_writer(pathlib.Path(args.out_dir) / "proposal.json") as stream:
+        json.dump(receipt, stream, indent=2, default=str, allow_nan=False)
+        stream.write("\n")
+
+
 def _run_pipeline(cfg) -> None:
     """Execute a single astrolabe run."""
     args = None
@@ -3362,18 +3398,19 @@ def _run_pipeline(cfg) -> None:
             if max_entropy not in (None, "null", "None"):
                 runtime_config["mutator_stack_pre_update_max_entropy"] = float(max_entropy)
 
-            # The common coordinator owns the root evaluation and all advances.
-            run_optimization_loop(
-                args,
-                loss_computer,
-                None,
-                stage_manager,
-                runtime_config,
-                initial_loader=lambda: load_or_evaluate_initial(
+            def initial_loader():
+                return load_or_evaluate_initial(
                     args, stage_manager.current_evaluator, inputs, runtime_config,
                     args.task_name, loss_computer=loss_computer,
-                ),
-            )
+                )
+
+            if cfg.get("proposal_only", False):
+                _propose_from_initial(args, stage_manager, runtime_config, initial_loader)
+            else:
+                run_optimization_loop(
+                    args, loss_computer, None, stage_manager, runtime_config,
+                    initial_loader=initial_loader,
+                )
         logging.info("Pipeline completed successfully")
         succeeded = True
 

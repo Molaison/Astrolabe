@@ -593,6 +593,11 @@ class ResourceBroker:
                 except AdmissionError:
                     continue
                 del self._models[model_id]
+                try:
+                    self._event("reap_model", model_id=model_id, pid=record["owner"][0],
+                                device=record["device"])
+                except AdmissionError:
+                    pass  # A telemetry fault must never prevent cleanup.
         for owner in dead:
             self._rss_residents.pop(owner, None)
         if not self._rss_residents:

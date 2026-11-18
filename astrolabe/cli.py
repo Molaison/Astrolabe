@@ -653,7 +653,7 @@ def _cmd_run(ns: argparse.Namespace) -> int:
             raise ValueError("--finalize-run and --finalize-output must be supplied together")
         if any(getattr(ns, field, None) for field in (
             "task", "standalone", "overlay", "overrides", "overrides_file",
-            "hydra_overrides", "config_dir", "print_config", "autoselect_gpu",
+            "hydra_overrides", "config_dir", "print_config", "autoselect_gpu", "proposal_only",
         )) or not getattr(ns, "chdir", True):
             raise ValueError("Finalization cannot be mixed with run configuration, overrides or GPU options")
         from astrolabe.design.refinement_finalization import finalize_run
@@ -751,6 +751,11 @@ def _cmd_run(ns: argparse.Namespace) -> int:
     if getattr(ns, "profile", False):
         with open_dict(cfg):
             OmegaConf.update(cfg, "profiling.enabled", True, force_add=True)
+    if getattr(ns, "proposal_only", False):
+        if cfg.get("search") is not None or cfg.get("recovery") is not None:
+            raise ValueError("--proposal-only requires a run without search or recovery.")
+        with open_dict(cfg):
+            cfg.proposal_only = True
 
     if ns.dry_run:
         from astrolabe.startup_validation import validate_startup_config
@@ -6680,6 +6685,11 @@ def _build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="Compose/print config and exit without running the pipeline.",
+    )
+    run_p.add_argument(
+        "--proposal-only",
+        action="store_true",
+        help="Run one native mutation step from a retained generated_structure and write proposal.json.",
     )
     run_p.add_argument(
         "hydra_overrides",

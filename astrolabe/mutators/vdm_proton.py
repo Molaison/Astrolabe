@@ -248,10 +248,11 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
         dep_map = dict(criteria.get("dep_map") or {})
         if dep_map.get("HIS-S", ["HIS-P"]) != ["HIS-P"]:
             raise ValueError("vdm_proton requires HIS-S -> [HIS-P].")
-        # Base preparation builds masks before the validated role set is known.
-        # This one-centre preflight is replaced below, together with its cap;
-        # reserving all pins here would double-count already installed His.
-        criteria.update(required, max_mutations=microenvironment_mutations, center_count=1)
+        # Base preparation builds masks before the role set is known. It
+        # derives its own provisional cap. Only the validated roles below can
+        # determine the native local cap.
+        criteria.pop("max_mutations", None)
+        criteria.update(required, center_count=1)
         criteria.setdefault("selective", True)
         criteria.setdefault("combined_lambda", 0.3)
         criteria["dep_map"] = {**dep_map, "HIS-S": ["HIS-P"]}
@@ -412,7 +413,14 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
         for relative, record in handoff["source_snapshot"].items():
             if relative.startswith("astrolabe/"):
                 _checked(record["path"], record["sha256"])
-                _checked(root / relative, record["sha256"])
+                # Replay does not execute the vdM producer. Preserve its
+                # archived bytes, but pin the running role/coordinate validators.
+                if relative not in {
+                    "astrolabe/mutators/vdm.py",
+                    "astrolabe/mutators/vdm_geometry.py",
+                    "astrolabe/mutators/vdm_geometry_legacy.py",
+                }:
+                    _checked(root / relative, record["sha256"])
         checked = {key: _checked(records[key]["path"], records[key]["sha256"])
                    for key in ("proposal", "joint_preview", "roles", "overlay", "effective_config")}
         original = json.loads(checked["proposal"].read_text())
@@ -442,7 +450,12 @@ class VdmProtonMutator(ProtonPottsMPNNMutator):
             raise ValueError("vdm_proton frozen pairset source/preview/parent identity mismatch.")
         roles = _pair_set_builder()(oligo_name=name, features=features,
                                     telemetry=original["proposal"], protomers=protomers)
-        if json.loads(json.dumps(roles)) != json.loads(checked["roles"].read_text()):
+        frozen_roles = json.loads(checked["roles"].read_text())
+        checked_roles = roles
+        if frozen_roles.get("schema") == "vdm_pair_roles_v1" and roles["pair_count"] == 1:
+            checked_roles = _pair_builder()(oligo_name=name, features=features,
+                                            telemetry=original["proposal"], protomers=protomers)
+        if json.loads(json.dumps(checked_roles)) != frozen_roles:
             raise ValueError("vdm_proton actual native helper differs from frozen exported roles.")
         trace = dict(handoff=str(handoff_path), handoff_sha256=self.pairset_handoff_sha,
                      proposal=records["proposal"], preview=records["joint_preview"],

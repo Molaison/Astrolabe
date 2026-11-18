@@ -70,7 +70,17 @@ declare `parents` keyed by parent ID. Each entry contains `proposal`,
 `path` and `sha256`. The manifest retains `source_snapshot`. Use
 `pairset_parent_id` to select an entry when a manifest has multiple parents.
 Single-parent manifests and the original flat `<prefix>_proposal` layout
-remain readable.
+remain readable. A single-pair entry can use frozen `vdm_pair_roles_v1` roles.
+The consumer verifies those roles and derives the same bounded proposal
+contract used for v2 pair sets.
+
+To replay a cached proposal on retained coordinates, configure the
+`generated_structure` evaluator with `initial_structures` and run
+`astrolabe run --standalone CONFIG --proposal-only`. The native mutation step
+writes `proposal.json` with the input and proposed sequences, the resolved
+budget, and the selected parent and mutator telemetry. A typed infeasible
+proposal records its reason there. The command stops before evaluating or
+accepting a proposed sequence. Omit `search` and `recovery` in this mode.
 
 The protein-only v6 adapter exposes pH loss and posthoc interfaces.
 `HIS-S` is neutral and `HIS-P` protonated. Potts state scores are uncalibrated
