@@ -308,6 +308,7 @@ Protenix 模型 preset，也不要把请求输入/输出路径写进 AF3 任务�
 这些错误在模型加载前拒绝。
 
 [`rfd4_mol1_partial.yaml`](../config/rfd4_mol1_partial.yaml) 是简化后的方法 profile。
+它从 base 继承 `steps`、`repeats` 和 `seed`。
 其中 `???` 保留为待接入的输入和评分，不能直接运行，也不把缺失的 PAE 当作 PDE。
 Python 工具需要完整配置时使用
 `astrolabe.configuration.load_composed_config(path)`，单独 `OmegaConf.load(base.yaml)`
@@ -511,6 +512,9 @@ GPU、外部 daemon 或网络的任务，在 expensive run 前做一个缩小 st
 `COMPLETED` 单独判定科学成功；调度器只证明进程退出。
 
 ### 4.4 `steps`、`repeats` 和 seed
+
+`base.yaml` 默认设定 `steps: 20`、`repeats: 1` 和 `seed: null`。任务配置和
+CLI 可以显式覆盖这些值。
 
 - `steps` 是优化循环的配置上限；具体模板可能把 step 0 用作初始评估，因此不要
   将它机械解释为恰好 N 次 mutation。

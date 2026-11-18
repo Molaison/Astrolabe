@@ -378,3 +378,17 @@ passed 157 local CPU cases. The recovery coverage manifest matches the seven
 affected-source hashes from main. The earlier unrestricted test run encountered
 storage errors and missing external fixtures. Release verification uses the
 repository's clean-install CI matrix on the merged source.
+
+### Task parameter defaults
+
+Tasks composed from `base.yaml` inherit `steps: 20`, `repeats: 1` and
+`seed: null`. The repeat planner derives a stable seed from the task name and
+repeat index when the seed is omitted. Task and CLI overrides take precedence.
+The RFD4/Mol-1 partial template inherits these three fields and keeps its
+required case inputs and scoring placeholders.
+
+The public CPU CLI with the dummy evaluator recorded steps 0–19 in one run
+with a derived seed. Explicit overrides recorded steps 0–2 in two runs with
+seeds 42 and 43. The saved configs and provenance matched both runs. A dry run
+of the incomplete RFD4/Mol-1 template still rejected missing case inputs.
+The configuration routing and CLI dry-run suites passed all 31 cases.
