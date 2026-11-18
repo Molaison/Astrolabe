@@ -368,8 +368,9 @@ initializer、decision context、component registry 和 output helper
 
 ### 3.1 配置是公共 API
 
-可复用默认值放 `config/base.yaml`，task 工作流放 `config/<task>.yaml`，机器路径和
-权重放 env spec 或环境变量。公共 schema 应表达领域意图，而不是 backend 调用栈：
+任务通用入口放 `config/base.yaml`，backend defaults 放 `config/components/`，
+task 工作流放 `config/<task>.yaml`，机器路径和权重放 env spec 或环境变量。
+模型结构与训练参数只属于原生 preset/checkpoint。公共 schema 应表达领域意图：
 
 ```yaml
 evaluator:
@@ -419,13 +420,21 @@ stages:
 - 非 default stage 的 `_entrance`
 - `transition_consistency_gate`
 
-根级 `mutation_num` 和 `initial_temperature` 等历史字段仍可能存在于 base/config，
-但不应成为新 feature 的 owner。`argparser._validate_schema_compatibility()` 已拒绝
+根级 `mutation_num` 被拒绝，统一使用 stage 字段。`initial_temperature` 仍属于
+decision Metropolis acceptance，不能和 backend sampling temperature 合并。
+`argparser._validate_schema_compatibility()` 也拒绝
 `evaluator.name`、`mutator.mutation_num`、非默认 `mutator.mutation_rate` 和
 `mutator.mutator_weights` 等过时写法。
 
-`mutation_num` 可是整数、按 protomer mapping 或百分比字符串；它最终针对 mutable
-length 解析并校验不超过可变位点数。不要在 mutator wrapper 中再次解释这个预算。
+`mutation_num` 是非负整数、百分比字符串或 `all`；不接受 protomer mapping、布尔值、
+负数或非整数数量。`mutation_budget.py` 统一解析与分配，每次 proposal 从当前唯一
+可变位点重新计算并应用 selector/cap。不要在 wrapper 再解释百分比、重复乘权重，
+或通过初始化时解析 interpolation 来传递动态数量。
+
+新增/修改 evaluator 控制时，先更新 `component_contracts.py` 的公共名和原生名
+映射，再走 `merge_component_config`；普通 factory 和独立 service 都要经过这个
+边界。禁止把供应商完整训练配置复制进公共 defaults。配置规则的入口是根目录
+`AGENTS.md` 与 [ownership contract](repository_mental_model.md#configuration-and-mutation-ownership)。
 
 ### 3.3 Enabled alias 与 persisted cleanup
 

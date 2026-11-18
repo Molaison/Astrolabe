@@ -3,7 +3,6 @@ defaults:
 task_name: sandwich_v9.1
 out_dir: outputs
 steps: 100
-mutation_num: 10
 seqs:
   A: "MATLEKILELLKKALEALKKGELEKALELLEEVIELLKTLDQSDELISELLEVVEELKELLEEVIKE"
   B: "EMALLKEIALTLLEIALLLLEEIGAPEEVLERVEELKERLEKEPEKITEILKELKELLEEVIKE"
@@ -61,6 +60,7 @@ loss:
 
 stages:
   default:
+    mutation_num: 10
     evaluator: Alphafold3
     oligo: ["ABC"]
     mutators: ["MCMC", "LMPNN_wt_center"]

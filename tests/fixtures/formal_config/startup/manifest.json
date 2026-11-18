@@ -466,9 +466,9 @@
     ]
   },
   {
-    "id": "valid_negative_mutation_semantics",
-    "file": "valid_negative_mutation_semantics.yaml",
-    "expected_error": null,
+    "id": "invalid_negative_mutation_semantics",
+    "file": "invalid_negative_mutation_semantics.yaml",
+    "expected_error": "stages.default.mutation_num",
     "parameters": [
       "stages.default.mutation_num"
     ],

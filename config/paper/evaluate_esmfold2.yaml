@@ -21,9 +21,9 @@ evaluator:
     ESMFold2:
       _type: ESMFold2
   esmfold2:
-    num_loops: 3
-    num_sampling_steps: 50
-    num_diffusion_samples: 1
+    recycles: 3
+    diffusion_steps: 50
+    samples: 1
 stages:
   default:
     oligo:

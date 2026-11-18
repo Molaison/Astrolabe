@@ -8,9 +8,9 @@ paper_protocol:
   planned_trajectories_per_ligand: 30
 evaluator:
   boltz:
-    recycling_steps: 3
-    sampling_steps: 200
-    diffusion_samples: 1
+    recycles: 3
+    diffusion_steps: 200
+    samples: 1
   evaluator_terms:
     holo_predictor:
       _type: Boltz

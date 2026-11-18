@@ -44,8 +44,8 @@ evaluator:
     Alphafold3:
       _type: Alphafold3
   alphafold3:
-    num_recycles: 10
-    num_samples: 5
+    recycles: 10
+    samples: 5
 loss:
   loss_terms:
     binder_rog:

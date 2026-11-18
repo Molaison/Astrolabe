@@ -221,8 +221,8 @@ def test_budget_changes_only_native_budget_and_quota(tmp_path: Path) -> None:
     assert cfg.mutator == original.mutator
     assert cfg.loss == original.loss
     assert cfg.stages == original.stages
-    assert cfg.evaluator.alphafold3.num_samples == 1
-    assert cfg.evaluator.alphafold3.num_recycles == 3
+    assert cfg.evaluator.alphafold3.samples == 1
+    assert cfg.evaluator.alphafold3.recycles == 3
     assert cfg.protein_beam.max_evaluations == harness.EVALUATION_BUDGET
     assert cfg.protein_beam.max_generations is None
     assert cfg.protein_beam.af3_call_budget.max_total == 2

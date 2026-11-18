@@ -12,7 +12,6 @@ seqs:
   B: "EEELLNKLKEAFRKFVTALAKFFSPEMAKLVLELVDTIVEETKTIKDFIELATEFLERLLEVETLEELEELREEILRKLEERKAKE"
   C: "MTX"
 
-mutation_num: 10
 
 predocker:
   predocker_terms:
@@ -66,6 +65,7 @@ loss:
 
 stages:
   default:
+    mutation_num: 10
     oligo: ["ABC"]
     mutators: ["MCMC","LMPNN_wt_center"]
     mutator_weights: [ 0.3, 0.7 ]

@@ -395,7 +395,15 @@ def _select_protenix_model_name(raw: Mapping[str, Any]) -> str:
     return "protenix-v2"
 
 
-def _normalize_protenix_configs(configs: Any) -> Any:
+def _normalize_protenix_configs(configs: Any, *, request_derived: bool = False) -> Any:
+    from astrolabe.component_contracts import component_ownership_errors, normalize_evaluator_options
+
+    raw = normalize_evaluator_options("protenix", _as_plain_mapping(configs), path="protenix")
+    errors = component_ownership_errors("evaluator", "protenix", raw, path="protenix", runtime=True)
+    if "skip_amp" in raw and not request_derived:
+        errors.append("protenix.skip_amp: derived from the current token count; remove this override")
+    if errors:
+        raise ValueError("; ".join(errors))
     _lazy_import_protenix()
     try:
         from configs.configs_base import configs as configs_base
@@ -404,16 +412,16 @@ def _normalize_protenix_configs(configs: Any) -> Any:
         from configs.configs_model_type import model_configs
         from ml_collections import ConfigDict
         from protenix.config.config import parse_configs
-    except Exception:
-        return configs
+    except Exception as exc:
+        raise RuntimeError("Cannot load native Protenix configuration presets") from exc
 
-    raw = _as_plain_mapping(configs)
     model_name = _select_protenix_model_name(raw)
+    if model_name not in model_configs:
+        raise ValueError(f"Unknown native Protenix model preset {model_name!r}")
     defaults = {**configs_base, **{"data": data_configs}, **inference_configs}
     defaults["model_name"] = model_name
     normalized = parse_configs(configs=defaults, fill_required_with_null=True)
-    if model_name in model_configs:
-        _deep_update(normalized, ConfigDict(model_configs[model_name]).to_dict())
+    _deep_update(normalized, ConfigDict(model_configs[model_name]).to_dict())
 
     runtime_overrides: dict[str, Any] = {}
     for key in (
@@ -453,9 +461,7 @@ def _normalize_protenix_configs(configs: Any) -> Any:
             if k
             in {
                 "N_sample",
-                "N_sample_mini_rollout",
                 "N_step",
-                "N_step_mini_rollout",
                 "guidance",
                 "gamma0",
                 "gamma_min",
@@ -467,9 +473,6 @@ def _normalize_protenix_configs(configs: Any) -> Any:
         model_overrides: dict[str, Any] = {}
         if "N_cycle" in raw["model"]:
             model_overrides["N_cycle"] = raw["model"]["N_cycle"]
-        constraint_embedder = raw["model"].get("constraint_embedder")
-        if isinstance(constraint_embedder, ABCMapping):
-            model_overrides["constraint_embedder"] = constraint_embedder
         if model_overrides:
             runtime_overrides["model"] = model_overrides
 
@@ -1291,25 +1294,22 @@ class DataDumper:
 
 
 def update_inference_configs(configs: Any, N_token: int):
-    # Setting the default inference configs for different N_token and N_atom
-    # when N_token is larger than 3000, the default config might OOM even on a
-    # A100 80G GPUS,
-    if N_token > 3840:
-        configs.skip_amp.confidence_head = False
-        configs.skip_amp.sample_diffusion = False
-    elif N_token > 2560:
-        configs.skip_amp.confidence_head = False
-        configs.skip_amp.sample_diffusion = True
+    """Derive request precision from current tokens without modifying defaults."""
+    from omegaconf import OmegaConf, open_dict
+
+    configs = deepcopy(configs)
+    flags = dict(configs.get("skip_amp") or {})
+    flags.update(confidence_head=N_token <= 2560, sample_diffusion=N_token <= 3840)
+    if OmegaConf.is_config(configs):
+        with open_dict(configs):
+            configs.skip_amp = flags
     else:
-        configs.skip_amp.confidence_head = True
-        configs.skip_amp.sample_diffusion = True
+        configs["skip_amp"] = flags
     return configs
 
 
 class ProtenixRunner(object):
     def __init__(self, configs: Any) -> None:
-        _ensure_protenix_ccd_cache_files_exist()
-        _lazy_import_protenix()
         self.configs = _normalize_protenix_configs(configs)
         self.init_env()
         self.init_basics()
@@ -1547,5 +1547,5 @@ class ProtenixRunner(object):
         from omegaconf import OmegaConf
 
         if OmegaConf.is_config(new_configs) or isinstance(new_configs, dict):
-            new_configs = _normalize_protenix_configs(new_configs)
+            new_configs = _normalize_protenix_configs(new_configs, request_derived=True)
         self.model.configs = new_configs

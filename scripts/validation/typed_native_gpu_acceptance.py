@@ -276,7 +276,6 @@ def acceptance_config(
         cfg.seed = SEED
         cfg.repeats = 1
         cfg.steps = MAX_EVALUATIONS
-        cfg.mutation_num = 1
         cfg.enable_pyrosetta = False
         cfg.skip_complex_poses = True
         cfg.use_metropolis_acceptance = False
@@ -301,8 +300,8 @@ def acceptance_config(
         cfg.evaluator.enabled_aliases = ["AF3"]
         cfg.evaluator.alphafold3.model_dir = model_path
         cfg.evaluator.alphafold3.num_seeds = 1
-        cfg.evaluator.alphafold3.num_recycles = 1
-        cfg.evaluator.alphafold3.num_samples = 1
+        cfg.evaluator.alphafold3.recycles = 1
+        cfg.evaluator.alphafold3.samples = 1
         cfg.evaluator.alphafold3.run_data_pipeline = False
         cfg.evaluator.alphafold3.run_inference = True
         cfg.evaluator.alphafold3.flash_attention_implementation = "cudnn"

@@ -9,7 +9,7 @@ import pytest
 from omegaconf import OmegaConf
 
 from astrolabe.core import global_config
-from astrolabe.core.protomer_config_parser import ProtomerTypes
+from astrolabe.core.protomer_config_parser import ProtomerTypes, Segment, SegmentManager
 from astrolabe.mutators import proton_pottsmpnn as adapter
 from astrolabe.mutators.base import build_mutators
 from astrolabe.mutators.wrappers import proton_pottsmpnn_runner as runner_module
@@ -149,6 +149,11 @@ def test_centre_free_mutator_passes_explicit_parent_and_total_budget(monkeypatch
     monkeypatch.setattr(adapter, "prepare_exclude_sites", lambda *_a, **_k: {})
     global_config.reset()
     global_config.init_const("exclude_AA", [])
+    segment = Segment(protomer.sequence, ptm_dict={})
+    manager = SegmentManager()
+    manager.add_segment("P1", segment)
+    global_config.init_const("segments", {"P1": segment})
+    global_config.init_const("segment_manager", manager)
     global_config.set_variable("mutation_num", 8)
     try:
         prepared = mutator.prepare_mutation_input(

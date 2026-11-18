@@ -7,6 +7,7 @@ import numpy as np
 import pytest
 import torch
 from omegaconf import OmegaConf
+from astrolabe.configuration import load_composed_config
 
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import Protomer, SegmentManager
@@ -136,7 +137,7 @@ def _ppm_bundle(encoded_residues: list[str], rows: list[dict[str, float]]) -> di
 
 
 def test_base_config_defaults_nampnn_to_mixed() -> None:
-    cfg = OmegaConf.load(REPO_ROOT / "config" / "base.yaml")
+    cfg = load_composed_config(REPO_ROOT / "config" / "base.yaml")
     assert cfg.mutator.NAMPNN.design_na_only == 0
     assert cfg.mutator.NAMPNN.parse_na_only == 0
     assert cfg.mutator.NAMPNN.na_shared_tokens == 0

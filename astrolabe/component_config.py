@@ -8,7 +8,7 @@ from omegaconf import DictConfig, OmegaConf, open_dict, read_write
 from astrolabe.config_merge import merge_configs
 
 
-def merge_component_config(section, default_keys, override, *, resolve=True) -> DictConfig:
+def merge_component_config(section, default_keys, override, *, resolve=True, family=None) -> DictConfig:
     """Return an independent config, resolving only after defaults and alias merge.
 
     A temporary child of a copy of the original root retains absolute OmegaConf
@@ -20,9 +20,16 @@ def merge_component_config(section, default_keys, override, *, resolve=True) -> 
             if not name.startswith("_") and not callable(getattr(section, name))
         }
     keys = (default_keys,) if isinstance(default_keys, str) else tuple(default_keys)
+    if family is None and OmegaConf.is_config(section):
+        family = section._key()
+    kind = keys[-1] if keys else ""
     layers = []
     def disposable_layer(value):
         raw = OmegaConf.to_container(value, resolve=False) if OmegaConf.is_config(value) else value
+        if family == "evaluator" and isinstance(raw, Mapping):
+            from astrolabe.component_contracts import normalize_evaluator_options
+
+            raw = normalize_evaluator_options(kind, raw, path=f"evaluator.{kind}")
         return OmegaConf.create(raw)
     for key in keys:
         if key in section and section[key] is not None:

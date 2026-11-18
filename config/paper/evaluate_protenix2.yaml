@@ -22,11 +22,9 @@ evaluator:
       _type: Protenix
   protenix:
     model_name: protenix-v2
-    model:
-      N_cycle: 10
-    sample_diffusion:
-      N_sample: 5
-      N_step: 200
+    recycles: 10
+    samples: 5
+    diffusion_steps: 200
 stages:
   default:
     oligo:

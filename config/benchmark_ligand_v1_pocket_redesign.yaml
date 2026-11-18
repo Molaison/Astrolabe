@@ -10,7 +10,6 @@ defaults:
 #       gh run --task benchmark_ligand_v1_pocket_redesign --overlay overlay.yaml
 
 initial_temperature: 0.02
-mutation_num: 6
 
 predocker:
   predocker_terms:

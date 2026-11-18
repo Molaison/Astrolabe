@@ -607,6 +607,20 @@ def _model_component_assets(
         files = (_hash_selected_file(role, data_dir / "params" / f"params_{model_name}.npz"),)
         return _AssetComponent(role, selected, "hashed"), files
 
+    checkpoint_location = {
+        "surfdesign": ("experiment_path", "checkpoints", "best.ckpt"),
+        "surfpro": ("checkpoint_dir", "", "checkpoint_best.pt"),
+    }.get(selected)
+    if checkpoint_location is not None:
+        directory_key, subdirectory, default_name = checkpoint_location
+        checkpoint = Path(str(_case_value(mapping, "checkpoint") or default_name)).expanduser()
+        if not checkpoint.is_absolute():
+            directory = _config_path(_case_value(mapping, directory_key))
+            if directory is None:
+                raise ValueError(f"{role} requires {directory_key} for a relative checkpoint")
+            checkpoint = directory / subdirectory / checkpoint
+        mapping = _merge_component_mapping(mapping, {"checkpoint": str(checkpoint)})
+
     files = _generic_selected_files(role, mapping)
     if files:
         return _AssetComponent(role, selected, "hashed"), files

@@ -13,6 +13,7 @@ from Bio.PDB.Model import Model
 from Bio.PDB.Residue import Residue
 from Bio.PDB.Structure import Structure
 from omegaconf import OmegaConf
+from astrolabe.configuration import load_composed_config
 
 from astrolabe.core import global_config
 from astrolabe.core.folding_input import Input, Ligand, ProteinChain, Template
@@ -227,9 +228,7 @@ def test_construct_evaluators_registers_rf3(monkeypatch, tmp_path: Path) -> None
 
 
 def test_benchmark_channel_config_exposes_top_level_rf3_defaults() -> None:
-    base_cfg = OmegaConf.load("config/base.yaml")
-    benchmark_cfg = OmegaConf.load("config/benchmark_channel_v1_refine.yaml")
-    merged_cfg = OmegaConf.merge(base_cfg, benchmark_cfg)
+    merged_cfg = load_composed_config("config/benchmark_channel_v1_refine.yaml")
 
     assert "rf3" in merged_cfg.evaluator
     assert "repo_path" in merged_cfg.evaluator.rf3

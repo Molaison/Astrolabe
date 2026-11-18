@@ -642,7 +642,11 @@ class StageManager:
             if self.runtime_context.mutable_protomers
             else self.runtime_context.protomers
         )
-        resolved = resolve_mutation_num(raw_value, protomer_pool=protomer_pool)
+        resolved = resolve_mutation_num(
+            raw_value,
+            protomer_pool=protomer_pool,
+            segments=self.runtime_context.get_const("segments", None),
+        )
         self.runtime_context.set_variable("mutation_num", resolved)
 
     def find_entrance_stage(self, eval_result, loss_computer: "LossEngine"):

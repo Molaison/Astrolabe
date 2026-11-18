@@ -122,13 +122,12 @@ def _compose_archived_config(out_dir: Path) -> Any:
 
 def _archive_profile(cfg: Any) -> dict[str, Any]:
     from omegaconf import OmegaConf
+    from astrolabe.component_config import merge_component_config
 
-    af3_term = OmegaConf.to_container(
-        cfg.evaluator.evaluator_terms.Alphafold3,
-        resolve=True,
+    af3 = merge_component_config(
+        cfg.evaluator, "alphafold3", cfg.evaluator.evaluator_terms.Alphafold3,
+        family="evaluator",
     )
-    af3 = OmegaConf.to_container(cfg.evaluator.alphafold3, resolve=True)
-    af3.update(af3_term)
     nampnn_term = OmegaConf.to_container(
         cfg.mutator.mutator_terms.NAMPNN,
         resolve=True,

@@ -422,7 +422,7 @@ def test_paper_cli_execution_matrix_runs_analyses_and_model_previews(tmp_path: P
     paper = tmp_path / "paper"
     preview = yaml.safe_load((paper / "evaluation_resolved.yaml").read_text())
     assert preview["seqs"] == {"A": "ACGS", "B": "GASG"}
-    assert preview["evaluator"]["alphafold3"]["num_samples"] == 5
+    assert preview["evaluator"]["alphafold3"]["samples"] == 5
     assert payloads["paper", "baseline"]["executed"] is False
     assert not (paper / "baseline").exists()
     collected = payloads["paper", "collect"]

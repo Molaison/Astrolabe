@@ -14,7 +14,6 @@ seqs:
   C: "MYVYMFLWWYWFIAMMWVYLYFVLAAVYIVFAIIYVMAYFYYFAMAVWYVMVAVAMLLAFMLYLVVYIYFAFMFMLFFIV"
   D: "ATP"
 
-mutation_num: 10
 selectors:
   interface: "interface('AB', 'C')"
   sse: "sse('H')"
@@ -65,6 +64,7 @@ loss:
 
 stages:
   default:
+    mutation_num: 10
     oligo: [ "A", "C" ]
     evaluator: esmfold
     mutators: [ "MCMC","LMPNN_wo_center" ]

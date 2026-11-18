@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from omegaconf import OmegaConf
+from astrolabe.configuration import load_composed_config
 
 from astrolabe.mutators.channel_bias import build_channel_aa_bias
 
@@ -68,7 +69,7 @@ def test_base_config_routes_root_aa_bias_to_ligandmpnn_defaults() -> None:
         extracellular_mouth_residues=["A12"],
     )
     cfg = OmegaConf.merge(
-        OmegaConf.load(REPO_ROOT / "config" / "base.yaml"),
+        load_composed_config(REPO_ROOT / "config" / "base.yaml"),
         OmegaConf.create({"aa_bias": payload}),
     )
 
@@ -80,7 +81,7 @@ def test_base_config_routes_root_aa_bias_to_ligandmpnn_defaults() -> None:
 
 
 def test_base_config_sets_channel_ligandmpnn_runtime_defaults() -> None:
-    cfg = OmegaConf.load(REPO_ROOT / "config" / "base.yaml")
+    cfg = load_composed_config(REPO_ROOT / "config" / "base.yaml")
 
     assert cfg.mutator.LigandMPNN.temperature == 0.3
     assert cfg.mutator.LigandMPNN.ligand_mpnn_use_side_chain_context == 1

@@ -335,18 +335,59 @@ def test_container_af3_cold_build_ignores_missing_inactive_rf3_and_hashes_assets
     assert changed.descriptor.identity != first.descriptor.identity
 
 
-def test_empty_options_build_every_real_registered_family_type_without_load(
-    tmp_path,
+def test_registered_families_stay_unloaded_and_reject_missing_required_assets(
+    tmp_path, monkeypatch,
 ):
+    from astrolabe.configuration import load_composed_config
+
+    monkeypatch.chdir(tmp_path)
     bindings = _minimal_bindings(tmp_path)
     import astrolabe.evaluators.utils  # noqa: F401
     import astrolabe.mutators.base  # noqa: F401
 
+    cfg = load_composed_config(Path(__file__).resolve().parents[1] / "config/base.yaml")
+    assets = tmp_path / "assets"
+    assets.mkdir()
+    # Path-only fixtures satisfy cold asset hashing, never native model loading.
+    for relative in (
+        "weights.bin", "af3.bin", "params/params_model_3_multimer_v3.npz",
+        "global_label_membrane_mpnn_v_48_020.pt", "ligandmpnn_v_32_020_25.pt",
+        "per_residue_label_membrane_mpnn_v_48_020.pt", "proteinmpnn_v_48_020.pt",
+        "solublempnn_v_48_020.pt", "checkpoints/best.ckpt", ".hydra/config.yaml", "checkpoint_best.pt",
+        "potts_v6_afdb_edge_his0.3_acid0.06/epoch-0125.ckpt",
+        "params/carbondesign_default.ckpt",
+        "config/config_model_mrf_pair_enable_esm_sc.json", "config/config_data_mrf2.json",
+    ):
+        path = assets / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"fake CPU registry asset; never loaded")
+    for key in (
+        "alphafold", "alphafold3", "boltz", "opendde", "ligandmpnn",
+        "proton_pottsmpnn", "surfdesign", "surfpro", "rfd4",
+    ):
+        cfg.weight_path[key] = str(assets)
+    cfg.weight_path.rf3 = cfg.weight_path.protenix = str(assets / "weights.bin")
+    cfg.rhofold.checkpoint = str(assets / "weights.bin")
+    cfg.carbondesign.repo_path = str(assets)
+    cfg.subprocess_envs.rfd4.repo_path = str(assets)
+    missing_source = tmp_path / "missing-mol1-source"
+    cfg.evaluator.mol1.repo_path = str(missing_source)
+    context = NativeComponentContext(
+        bindings=bindings,
+        validated_evaluator_conf=cfg.evaluator,
+        validated_mutator_conf=cfg.mutator,
+        raw_model_results_dir=bindings.work_root / "raw",
+        sampling_policy=_sampling(bindings.data),
+    )
     for name in EvaluatorRegistry.list_available():
-        context = _context(
-            bindings,
-            evaluator_terms={"selected": {"_type": name}},
-        )
+        cfg.evaluator.evaluator_terms = {"selected": {"_type": name}}
+        if name.casefold() in {"mol1", "mol-1"}:
+            with pytest.raises(FileNotFoundError) as error:
+                EvaluatorRegistry.build_operation(
+                    name, alias="selected", options={}, context=context,
+                )
+            assert Path(error.value.filename) == missing_source
+            continue
         operation = EvaluatorRegistry.build_operation(
             name,
             alias="selected",
@@ -357,10 +398,7 @@ def test_empty_options_build_every_real_registered_family_type_without_load(
         assert operation.owner._value is None
 
     for name in MutatorRegistry.list_available():
-        context = _context(
-            bindings,
-            mutator_terms={"selected": {"_type": name}},
-        )
+        cfg.mutator.mutator_terms = {"selected": {"_type": name}}
         operation = MutatorRegistry.build_operation(
             name,
             alias="selected",

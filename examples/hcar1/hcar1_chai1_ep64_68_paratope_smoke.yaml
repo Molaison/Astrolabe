@@ -9,7 +9,6 @@ out_dir: outputs/hcar1_paratope_ep64_68_chai1
 
 # One-shot evaluation only (no mutation); just to test whether Chai-1 respects binding_site restraints.
 steps: 1
-mutation_num: 0
 repeats: 1
 
 enable_pyrosetta: false
@@ -40,7 +39,7 @@ evaluator:
   # Smoke stability: disable ESM embeddings (avoids downloading the ~3.5GB traced ESM2 model).
   chai1:
     use_esm_embeddings: false
-    num_diffn_samples: 1
+    samples: 1
 
 mutator:
   mutator_terms:

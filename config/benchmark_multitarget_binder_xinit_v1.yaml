@@ -28,9 +28,9 @@ evaluator:
       _type: Protenix
   chai1:
     use_esm_embeddings: false
-    num_trunk_recycles: 3
-    num_diffn_timesteps: 50
-    num_diffn_samples: 1
+    recycles: 3
+    diffusion_steps: 50
+    samples: 1
 
 binding_site:
   AB:

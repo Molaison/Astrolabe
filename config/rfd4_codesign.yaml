@@ -26,10 +26,6 @@ mutator:
       assembly: AB
       binder_chains: [A]
       target_chains: [B]
-      python_bin: ${oc.env:ASTROLABE_RFD4_PYTHON}
-      source_dir: ${oc.env:ASTROLABE_RFD4_SOURCE}
-      model_dir: ${oc.env:ASTROLABE_RFD4_MODEL}
-      cache_dir: ${oc.env:ASTROLABE_RFD4_CACHE}
       max_fixed_atom_rmsd: 0.5
       generation:
         nsteps: 60
@@ -54,8 +50,8 @@ evaluator:
     Alphafold3:
       _type: Alphafold3
       num_seeds: 1
-      num_recycles: 1
-      num_samples: 1
+      recycles: 1
+      samples: 1
       run_data_pipeline: false
       run_inference: true
       flash_attention_implementation: xla

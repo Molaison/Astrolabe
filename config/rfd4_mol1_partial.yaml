@@ -1,0 +1,74 @@
+# 初始方法 profile；不是可直接启动的完整实验配置。
+# RFD4 环境与原生 preset 从 env / backend defaults 继承。
+# 目标配体：利匹韦林（rilpivirine）、奈韦拉平（nevirapine），各用独立 case 输入。
+# ??? 为显式待填项，防止未接通的指标被默认为 0 或悄悄替换。
+# 本文件不指定受体名单，不沿用旧配体的 6 Å mask 或 Beam4 预算。
+defaults:
+  - base
+  - override env: env
+  - _self_
+
+task_name: ???
+out_dir: ???
+steps: ???
+repeats: ???
+seed: ???
+enable_pyrosetta: false
+exclude_AA: []
+
+# 物理链 A = 待设计 GPCR；B = 固定小分子。
+# 输入复合物须匹配 case 中的实际序列、CCD 身份和链号。
+types:
+  A: p
+  B: c
+seqs:
+  A: ???
+  B: ???
+named_files:
+  initial_complex: ???
+
+mutator:
+  mutator_terms:
+    rfd4:
+      _type: rfd4
+      assembly: AB
+      binder_chains: [A]
+      target_chains: [B]
+      generation:
+        mode: partial
+        # 原生轨迹区间比例；不是 partial_t_backbone/partial_t_latent。
+        partial_trajectory_fraction_steps: 0.85
+      feedback:
+        enabled: false
+      # case 需另行指定允许设计的区域，不自动释放整个受体。
+      position_selector: ???
+
+evaluator:
+  enabled_aliases: [Mol1]
+  evaluator_terms:
+    Mol1:
+      _type: mol-1
+    # 声明结构输入，尚未启用为设计阶段 evaluator。
+    # 启动前须接通它与 Mol1 的 bootstrap；不能把结构路径当作 Mol1 模板。
+    initial_structure:
+      _type: generated_structure
+      initial_structures:
+        AB: ${named_files.initial_complex}
+
+loss:
+  loss_terms:
+    # 必须绑定小分子原子 pLDDT，归一化至 [0,1]；不能替换为复合物 pLDDT。
+    ligand_plddt: ???
+    # 必须绑定受体—配体双方向 ipSAE 的 min；不能用现有 ipsae 的 max。
+    # 当前 Mol1 adapter 未返回 PAE；不能把 PDE 当 PAE 或缺失值当 0。
+    ligand_ipsae_min: ???
+
+stages:
+  default:
+    oligo: [AB]
+    evaluator: Mol1
+    mutators: [rfd4]
+    mutation_num: ???
+    weighted_score_expression: 0.5 * ligand_plddt + ligand_ipsae_min
+    acceptance_threshold: null
+    early_stopping: null
