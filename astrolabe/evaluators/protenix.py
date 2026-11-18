@@ -106,25 +106,15 @@ class ProtenixEvaluator(Evaluator):
         sample_idx: int = 0,
     ) -> Path | None:
         fname = f"{oligo_name}_seed_{seed}_sample_{sample_idx}.cif"
-        candidates = [
+        path = (
             dump_dir
             / dataset_name
             / oligo_name
             / f"seed_{seed}"
             / "predictions"
-            / fname,
-            dump_dir / oligo_name / f"seed_{seed}" / "predictions" / fname,
-        ]
-        for candidate in candidates:
-            if candidate.exists():
-                return candidate
-
-        # Last resort: tolerate older/alternate layouts by searching under dump_dir.
-        hits = list(dump_dir.glob(f"**/predictions/{fname}"))
-        if hits:
-            hits.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-            return hits[0]
-        return None
+            / fname
+        )
+        return path if path.is_file() else None
 
     @staticmethod
     def _structure_start_soft_select_enabled() -> bool:
@@ -329,19 +319,14 @@ class ProtenixEvaluator(Evaluator):
                 sample_idx=0,
             )
             out_cif = structures_dir / f"{jobname}_model.cif"
-            try:
-                if raw_cif is None:
-                    raise FileNotFoundError(
-                        f"Protenix prediction CIF not found under {dump_dir} for {oligo_name}"
-                    )
-                shutil.copy(str(raw_cif), str(out_cif))
-                project_structure(out_cif, global_config.out_dir, getattr(self, "alias", None))
-                complex_paths[oligo_name] = out_cif
-            except Exception:
-                if getattr(self, "alias", None) is not None:
-                    raise
-                if raw_cif is not None and raw_cif.exists():
-                    complex_paths[oligo_name] = raw_cif
+            if raw_cif is None:
+                raise FileNotFoundError(
+                    f"Protenix prediction CIF missing for {dataset_name}/{oligo_name}, "
+                    f"seed {seed}, sample 0 under {dump_dir}"
+                )
+            shutil.copy(str(raw_cif), str(out_cif))
+            project_structure(out_cif, global_config.out_dir, getattr(self, "alias", None))
+            complex_paths[oligo_name] = out_cif
 
             metrics0 = sample_metrics(prediction, 0)
             if metrics0 is None:

@@ -438,6 +438,18 @@ class AlphaFold3Evaluator(Evaluator):
                 f.write(lines)
                 f.write('_dummy.title ""\n')
 
+        def append_protomer_plddt(dest, oligo_name, chains, sample_plddts):
+            for protomer, chain in zip(oligo_name, chains):
+                if not isinstance(chain, ProteinChain):
+                    continue
+                values = [sample.get(chain.id, ()) for sample in sample_plddts]
+                if not values or any(len(row) != len(chain.sequence) for row in values):
+                    raise ValueError(
+                        f"AF3 {oligo_name} chain {chain.id} must have "
+                        f"{len(chain.sequence)} residue pLDDT values per sample."
+                    )
+                dest[protomer].append(np.mean(values, axis=0) / 100.0)
+
         def ligand_resname_mapping_for_oligo(oligo_name):
             mapping = {}
             for i, proto in enumerate(oligo_name):
@@ -488,15 +500,10 @@ class AlphaFold3Evaluator(Evaluator):
 
             scores = get_af3_scores(outputs[oligo_name])
             scores_by_oligo[oligo_name] = scores
-            plddts = np.array(scores["per_res_scores"]["per_res_plddt"])
-            plddt_per_res = plddts.mean(axis=0) / 100.0
-            res_idx = 0
-            for chain_id, chain in zip(input.name, input.chains):
-                if isinstance(chain, ProteinChain):
-                    per_proto_plddt[chain_id].append(
-                        plddt_per_res[res_idx : res_idx + len(chain.sequence)]
-                    )
-                    res_idx += len(chain.sequence)
+            append_protomer_plddt(
+                per_proto_plddt, oligo_name, input.chains,
+                scores["per_res_scores"]["per_chain_plddt"],
+            )
 
             if not soft_select_candidates:
                 continue
@@ -549,14 +556,10 @@ class AlphaFold3Evaluator(Evaluator):
                     payload["chain_pair_scores"][oligo_name] = candidate_scores[
                         "chain_pair_scores"
                     ]
-                    plddt_per_res = payload["plddt"][oligo_name][0]
-                    res_idx = 0
-                    for chain_id, chain in zip(input.name, input.chains):
-                        if isinstance(chain, ProteinChain):
-                            payload["per_proto_scores"][chain_id].append(
-                                plddt_per_res[res_idx : res_idx + len(chain.sequence)]
-                            )
-                            res_idx += len(chain.sequence)
+                    append_protomer_plddt(
+                        payload["per_proto_scores"], oligo_name, input.chains,
+                        candidate_scores["per_res_scores"]["per_chain_plddt"],
+                    )
                     candidate_keys_by_oligo[oligo_name].add(key)
         plddt = {}
         ptm = {}
