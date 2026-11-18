@@ -72,6 +72,10 @@ fixed/locked/PTM/covalent constraints. Zero permits no point edits. The budget c
 eligible edits, not a promise that every proposed residue differs from its
 starting identity.
 
+For each resolved total, active mutators receive integer shares that sum to
+that total. Give any remainder to the largest fractional shares and break
+ties in stage order. An alias may appear once in the stage.
+
 Backend-native joint or reconstruction operations need an explicit contract for
 how they consume that policy. A joint sample cannot be made budget-compliant by
 silently replacing some of its residues afterwards. Sample multiplicity,

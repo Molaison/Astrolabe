@@ -575,3 +575,24 @@ def test_real_pyrosetta_no_histidine_is_evidence_based_and_backend_free(tmp_path
     normalized = ph_core._load_pose(audit["normalized_apo_path"])
     assert normalized.pdb_info().chain(1) == "A"
     assert normalized.pdb_info().number(1) == 1
+
+
+def test_apo_preserves_internal_disulfide_and_reduces_cut_bond():
+    pr = pytest.importorskip("pyrosetta")
+    ph_core._pyrosetta()
+    pose = pr.pose_from_sequence("ACA")
+    pr.rosetta.core.pose.append_pose_to_pose(pose, pr.pose_from_sequence("ACACACA"), True)
+    conformation = pr.rosetta.core.conformation
+    conformation.form_disulfide(pose.conformation(), 2, 7)
+    conformation.form_disulfide(pose.conformation(), 5, 9)
+
+    apo = ph_core._binder_apo_pose(pose, list(range(4, 11)))
+
+    assert conformation.is_disulfide_bond(apo.conformation(), 2, 6)
+    assert not apo.residue(4).type().is_disulfide_bonded()
+    assert conformation.is_disulfide_bond(pose.conformation(), 2, 7)
+    for index in (2, 4, 6):
+        assert tuple(apo.residue(index).xyz("SG")) == pytest.approx(
+            tuple(pose.residue(index + 3).xyz("SG"))
+        )
+    assert np.isfinite(pr.create_score_function("ref2015")(apo))

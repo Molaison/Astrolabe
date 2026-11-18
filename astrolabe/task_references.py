@@ -6,6 +6,7 @@ import re
 
 from astrolabe.core.binding_site import parse_binding_site
 from astrolabe.core.chain_resolution import chain_to_protomer, resolve_selector_chain_ids
+from astrolabe.loss_config import loss_oligomers
 
 
 def _unresolved(value):
@@ -187,13 +188,14 @@ def validate_references(values, *, check_paths, fail):
 
 
 def validate_loss_references(options, *, path, oligos, segments, fail):
-    target = options.get("_for", options.get("oligomer_specific"))
-    targets = target.split(",") if isinstance(target, str) else target
-    if targets is not None:
-        if not isinstance(targets, (list, tuple)) or not all(isinstance(x, str) for x in targets):
-            fail(path + "._for", "expected an oligomer string or list")
-        elif oligos and set(targets) - oligos:
-            fail(path + "._for", f"unknown stage oligomers {sorted(set(targets) - oligos)}")
+    field = "_for" if "_for" in options else "oligomer_specific"
+    try:
+        targets = loss_oligomers(options)
+    except ValueError as exc:
+        fail(f"{path}.{field}", str(exc))
+    else:
+        if targets and oligos and set(targets) - oligos:
+            fail(f"{path}.{field}", f"unknown stage oligomers {sorted(set(targets) - oligos)}")
     # These consumers use segment aliases, not complex-chain selectors.
     if options.get("_type") not in {"hotspot_dsasa", "hotspot_dsasa_fraction", "hotspot_contact_support"}:
         return

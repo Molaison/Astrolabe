@@ -44,7 +44,10 @@ def test_prepare_output_reuses_extracted_scores_per_oligo(monkeypatch, tmp_path:
         (output_dir / f"{job_name}_model.cif").write_text("data_test\n", encoding="utf-8")
 
     scores = {
-        "per_res_scores": {"per_res_plddt": [[90.0, 80.0]]},
+        "per_res_scores": {
+            "per_res_plddt": [[90.0, 80.0]],
+            "per_chain_plddt": [{"A": [90.0, 80.0]}],
+        },
         "per_str_scores": {
             "ptm": [0.1],
             "iptm": [0.2],
@@ -114,7 +117,10 @@ def test_prepare_output_passes_save_all_samples_from_af3_conf(
         )
 
     scores = {
-        "per_res_scores": {"per_res_plddt": [[90.0, 80.0]]},
+        "per_res_scores": {
+            "per_res_plddt": [[90.0, 80.0]],
+            "per_chain_plddt": [{"A": [90.0, 80.0]}],
+        },
         "per_str_scores": {
             "ptm": [0.1],
             "iptm": [0.2],
@@ -152,6 +158,9 @@ def test_prepare_output_remaps_ccd_ligand_resname_in_canonical_structure(
         },
     )
     global_config.init_const("ligand_resnames", {"B": "Z49", "B49": "Z49"})
+    global_config.init_const(
+        "structure_start", SimpleNamespace(config=SimpleNamespace(mode="soft_select"))
+    )
     global_config.set_variable("step", 0)
 
     evaluator = af3_eval.AlphaFold3Evaluator(
@@ -173,7 +182,9 @@ def test_prepare_output_remaps_ccd_ligand_resname_in_canonical_structure(
         ],
         rng_seeds=[1],
     )
-    outputs = {"AB": [SimpleNamespace(seed=1, inference_results=[])]}
+    outputs = {"AB": [af3_eval.ResultsForSeed(
+        seed=1, inference_results=[object()], full_fold_input=fold_input, embeddings=None,
+    )]}
 
     def fake_write_outputs(*, output_dir, job_name, **_kwargs):
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -191,7 +202,10 @@ def test_prepare_output_remaps_ccd_ligand_resname_in_canonical_structure(
         )
 
     scores = {
-        "per_res_scores": {"per_res_plddt": [[90.0, 80.0, 70.0]]},
+        "per_res_scores": {
+            "per_res_plddt": [[70.0, 90.0, 80.0]],
+            "per_chain_plddt": [{"B": [70.0], "A": [90.0, 80.0]}],
+        },
         "per_str_scores": {
             "ptm": [0.1],
             "iptm": [0.2],
@@ -205,11 +219,14 @@ def test_prepare_output_remaps_ccd_ligand_resname_in_canonical_structure(
     monkeypatch.setattr(af3_eval, "get_af3_scores", lambda _results: scores)
 
     try:
-        evaluator.prepare_output(outputs, {"AB": fold_input}, runtime_config={})
+        prepared = evaluator.prepare_output(outputs, {"AB": fold_input}, runtime_config={})
     finally:
         global_config.reset()
 
     canonical = tmp_path / "structures" / "step_000_AB_model.cif"
+    np.testing.assert_allclose(prepared.per_proto_scores["A"][0], [0.9, 0.8])
+    assert len(prepared.candidate_scores) == 1
+    np.testing.assert_allclose(prepared.candidate_scores[0].per_proto_scores["A"][0], [0.9, 0.8])
     text = canonical.read_text(encoding="utf-8")
     assert "Z49" in text
     assert "B49" not in text

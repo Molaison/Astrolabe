@@ -279,19 +279,40 @@ def ph_positive_charge_count(eval_result, chain: str, phase: str = "high"):
     return scores
 
 
+def _slice_pose(pose, indices):
+    pr = _pyrosetta()
+    conformation = pr.rosetta.core.conformation
+    indices = sorted(indices)
+    new_index = {index: offset for offset, index in enumerate(indices, start=1)}
+    disulfides = pr.rosetta.utility.vector1_std_pair_unsigned_long_unsigned_long_t()
+    conformation.disulfide_bonds(pose.conformation(), disulfides)
+    retained, crossing = [], []
+    for left, right in disulfides:
+        if left in new_index and right in new_index:
+            retained.append((new_index[left], new_index[right]))
+        elif left in new_index or right in new_index:
+            crossing.append((left, right))
+    if crossing:
+        pose = pose.clone()
+        for left, right in crossing:
+            conformation.break_disulfide(pose.conformation(), left, right)
+    selected = pr.rosetta.utility.vector1_unsigned_long()
+    for index in indices:
+        selected.append(index)
+    out = pr.Pose()
+    pr.rosetta.core.pose.pdbslice(out, pose, selected)
+    for left, right in retained:
+        out.conformation().declare_chemical_bond(
+            left, out.residue(left).type().get_disulfide_atom_name(),
+            right, out.residue(right).type().get_disulfide_atom_name(),
+        )
+    return out
+
+
 def _electrostatic_binding_energy(pose, binder, target, pack_separated=False):
     pr = _pyrosetta()
-    # Slice complete selected chains, retaining their original residue types.
-    def subset(indices):
-        out = pr.Pose()
-        selected = pr.rosetta.utility.vector1_unsigned_long()
-        for index in sorted(indices):
-            selected.append(index)
-        pr.rosetta.core.pose.pdbslice(out, pose, selected)
-        return out
-
-    bound = subset(binder | target)
-    separated = [subset(binder), subset(target)]
+    bound = _slice_pose(pose, binder | target)
+    separated = [_slice_pose(pose, binder), _slice_pose(pose, target)]
     if pack_separated:
         for chain_pose in separated:
             _repack(chain_pose)

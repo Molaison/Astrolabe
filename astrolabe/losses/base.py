@@ -17,7 +17,7 @@ except Exception:  # pragma: no cover - optional dependency
 from omegaconf import DictConfig
 
 from astrolabe.core import global_config
-from astrolabe.loss_config import INTRINSIC_PARAMS
+from astrolabe.loss_config import INTRINSIC_PARAMS, loss_oligomers, loss_parameter_errors
 from astrolabe.losses.utils import LossRegistry
 from astrolabe.score_contributions import (
     score_contributions_from_runtime_config,
@@ -268,57 +268,46 @@ class LossEngine:
         # Parse loss specifications
         self.loss_names = list(self.loss_specs.keys())
 
-        if set(self.included_loss_terms) - set(self.loss_names):
+        missing = sorted(set(self.included_loss_terms) - set(self.loss_names))
+        if missing:
             raise ValueError(
-                f"Loss terms having required arguments {set(self.included_loss_terms) - set(self.loss_names)} shoule be defined in the `loss_terms`."
+                f"Define loss terms {missing} with their required parameters in loss.loss_terms."
             )
-
-        # Validate configuration
-        if validate_config:
-            self._validate_configuration()
 
     def _parse_loss_specs(
         self,
         loss_names: Dict[str, DictConfig],
     ) -> Dict[str, Dict[str, Any]]:
         """Parse loss specifications from configuration."""
-        # todo not parsed from string, but from a dict in the config
         specs = {}
 
         for loss_name in loss_names:
-            # Handle oligomer-specific format: <oligomer>.<loss>:<params>
-
             if loss_names[loss_name] is None:
                 continue
 
+            path = f"loss.loss_terms.{loss_name}"
             params = dict(copy.deepcopy(loss_names[loss_name]))
-            if "_type" not in params:
-                raise ValueError(
-                    f"Loss specification '{loss_name}' must have a '_type' field."
-                )
-            spec_string = params.pop("_type")
-
-            if "_for" in params:
-                oligomer = params.pop("_for")
-                if isinstance(oligomer, str):
-                    oligomer = oligomer.split(",")
-
-                params["oligomer_specific"] = oligomer
-
-            metadata = self.registry.get_metadata(spec_string)
-            if set(params.keys()) - (
-                set(metadata.optional_params)
-                | set(metadata.required_params)
-                | INTRINSIC_PARAMS
-            ):
-                raise ValueError(
-                    f"Invalid parameters for loss '{spec_string}': {set(params.keys()) - (set(metadata.optional_params) | set(metadata.required_params))}"
-                )
-
-            if set(metadata.required_params) - set(params.keys()):
-                raise ValueError(
-                    f"Missing required parameters for loss '{spec_string}': {set(metadata.required_params) - set(params.keys())}"
-                )
+            spec_string = params.pop("_type", None)
+            if not isinstance(spec_string, str) or not spec_string.strip():
+                raise ValueError(f"{path}._type: expected a registered loss name")
+            try:
+                metadata = self.registry.get_metadata(spec_string)
+            except ValueError as exc:
+                raise ValueError(f"{path}._type: unknown loss {spec_string!r}") from exc
+            issues = list(loss_parameter_errors(
+                params, path=path, kind=spec_string,
+                required=metadata.required_params, optional=metadata.optional_params,
+            ))
+            if issues:
+                raise ValueError("\n".join(issues))
+            field = "_for" if "_for" in params else "oligomer_specific"
+            try:
+                oligomers = loss_oligomers(params)
+            except ValueError as exc:
+                raise ValueError(f"{path}.{field}: {exc}") from exc
+            params.pop("_for", None)
+            if oligomers is not None:
+                params["oligomer_specific"] = oligomers
             specs[loss_name] = (
                 spec_string,
                 self.registry.get_function(spec_string),
@@ -326,28 +315,6 @@ class LossEngine:
             )
 
         return specs
-
-    def _validate_configuration(self) -> None:
-        """Validate loss configuration against registry."""
-        issues = []
-
-        for loss_name, (spec, func, params) in self.loss_specs.items():
-            # Check if loss function exists
-            if spec not in self.registry.valid_losses:
-                issues.append(f"Unknown loss function: {loss_name}")
-                continue
-
-            # Validate parameters
-            all_params = list(params.keys() - INTRINSIC_PARAMS)
-
-            param_issues = self.registry.validate_params(spec, all_params)
-            issues.extend(param_issues)
-
-        if issues:
-            raise ValueError(
-                f"Configuration validation failed:\n"
-                + "\n".join(f"  - {issue}" for issue in issues)
-            )
 
     def _event_context(self) -> tuple[str | None, int]:
         stage_manager = self.runtime_context.stage_manager

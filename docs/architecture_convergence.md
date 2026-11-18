@@ -416,3 +416,27 @@ with a derived seed. Explicit overrides recorded steps 0–2 in two runs with
 seeds 42 and 43. The saved configs and provenance matched both runs. A dry run
 of the incomplete RFD4/Mol-1 template still rejected missing case inputs.
 The configuration routing and CLI dry-run suites passed all 31 cases.
+
+### Loss, evaluator, and mutator review
+
+The local review started at `04cd241`. A retained RFD4 structure crashed
+PyRosetta when the B-chain slice lost the connection between residues 69 and
+101. The same input produced a finite `ph_core_network` value of `0.0` after
+the slice preserved the bond. Preflight and `LossEngine` now accept the same
+oligomer selector forms and identify invalid fields by their configuration
+paths. The holdout `A=0.25`, `AA=0.75` selected `0.75` for `AA` in all three
+tested selector forms.
+
+The Protenix output check used two step directories with the same native CIF
+filename. A missing current-step CIF now produces an error with the step,
+oligomer, seed, and sample. The AF3 output check recovered two pLDDT values,
+50 and 60, where the baseline merged residues numbered `1` across chains
+and returned 55. These evaluator checks ran against local output fixtures.
+
+A local `steps=20` run used the sequence evaluator and two equal-weight MCMC
+aliases with budget 1. It saved 20 score rows, including initialization. Each
+of its 19 proposal rounds changed one position in the first alias and zero
+in the second. A separate XMix CLI run specified budget 9 over two independent
+segments. A and B share the first segment, and C owns the second. The same
+input changed 16 unique sites before the fix and nine after it. The Protenix
+CUDA-only check was skipped in the CPU environment.

@@ -2309,15 +2309,12 @@ def calculate_ddg_loss(complex_poses, protomer, normalize_factor=5.0):
 
 @loss_registry.register(
     name="protomer_shape_complementarity",
-    description="Shape complementarity penalty between two protomers",
+    description="Rosetta shape complementarity between two protomers",
     optional_params=[
         "protomer_a",
         "protomer_b",
         # Back-compat alias used by some configs.
         "included_protomers",
-        "target_sc",
-        "saturation_constant",
-        "return_raw",
         "strict",
     ],
     supports_oligomer_specific=True,

@@ -16,7 +16,7 @@ from omegaconf import OmegaConf
 from astrolabe.backend_startup import validate_backend_settings
 from astrolabe.scoring_startup import validate_scoring_settings
 from astrolabe.component_config import merge_component_config
-from astrolabe.loss_config import INTRINSIC_PARAMS
+from astrolabe.loss_config import loss_parameter_errors
 from astrolabe.mutator_config import MUTATOR_DEFAULTS, mutator_position_selector
 from astrolabe.stage_config import resolve_mutation_num
 from astrolabe.task_startup import validate_task_config
@@ -517,12 +517,10 @@ def validate_startup_config(cfg, *, check_dependencies=True, resolve_environment
                     metadata = losses_module.loss_registry.get_metadata(kind)
                 required = set(metadata.required_params or ()) if metadata is not None else set(source_specs["loss"].get(kind, ()))
                 optional = set(metadata.optional_params or ()) if metadata is not None else _source_loss_optional().get(kind, set())
-                for key in required:
-                    if key not in resolved or resolved[key] is None:
-                        errors.append(f"{path}.{key}: required by loss {kind!r}")
                 if metadata is not None or kind in source_specs["loss"]:
-                    for key in set(resolved) - {"_type", "_for"} - INTRINSIC_PARAMS - required - optional:
-                        errors.append(f"{path}.{key}: invalid parameter for loss {kind!r}")
+                    errors.extend(loss_parameter_errors(
+                        resolved, path=path, kind=kind, required=required, optional=optional,
+                    ))
 
     from astrolabe.task_references import sequence_inventory, validate_loss_references
     # Alias/complex membership needs no model or structure-coordinate runtime.
