@@ -46,7 +46,8 @@ logging:
     console: auto
     file: strip
     dump: strip
-steps: 200
+steps: 20
+repeats: 1
 seed: null
 types: null
 selector:
