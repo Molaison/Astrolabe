@@ -38,13 +38,14 @@ setup(
         "omegaconf>=2.3,<2.4",
         "pandas>=2,<3",
         "prompt-toolkit>=3.0,<4",
+        "PyYAML>=6,<7",
+        "scipy>=1.11,<2",
     ],
     extras_require={
         "dev": [
             "pytest>=7.0",
             "build>=1",
             "setuptools>=70.1",
-            "scipy==1.17.0",
         ],
     },
     entry_points={

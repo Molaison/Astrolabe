@@ -410,6 +410,7 @@ EOF
     # catches tracked modules that depend on a source file omitted from the
     # staged build context before a SIF can be published.
     python -c 'from astrolabe.app import _load_run_module; _load_run_module()'
+    python /opt/Astrolabe/scripts/validation/sif_native_cpu_smoketest.py
     if [ -f /opt/gh-build-features/pyrosetta ]; then
         python -c "import pyrosetta; pyrosetta.init('-mute all'); assert pyrosetta.pose_from_sequence('AAAA').total_residue() == 4"
     fi

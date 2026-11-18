@@ -148,6 +148,12 @@ is the minimal skeleton; `container/Astrolabe.af3.def` is the AF3 runtime recipe
 Prefer the installer rather than invoking `apptainer build` on an unprepared
 source directory, which may omit dependencies or copy unintended local data.
 
+The AF3 image build runs a model-free native CLI workflow to exercise the
+runtime's lazy dependencies before publishing the SIF. To check a candidate
+checkout and image together, run `scripts/validation/sif_native_cpu_smoketest.py`
+with the candidate runtime's Python and the checkout on `PYTHONPATH`.
+A successful check completes three native evaluations with the dummy evaluator.
+
 Keep vendor source revisions, image metadata, selected assets, configuration,
 seed and native outputs with scientific execution records. Current validation
 and outstanding release conditions are in
