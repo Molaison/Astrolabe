@@ -83,14 +83,14 @@ def test_common_config_is_bounded_and_does_not_change_af3_science(tmp_path: Path
     assert cfg.seed == 17
     assert cfg.steps == 2
     assert cfg.repeats == 1
-    assert cfg.mutation_num == 1
+    assert "mutation_num" not in cfg
     assert cfg.seqs.A == harness.SINGLE_SEQUENCE
     assert cfg.stages.default.oligo == ["A"]
     assert cfg.stages.default.mutation_num == 1
     assert cfg.stages.default.weighted_score_expression == "plddt"
     assert cfg.evaluator.alphafold3.num_seeds == 1
-    assert cfg.evaluator.alphafold3.num_recycles == 1
-    assert cfg.evaluator.alphafold3.num_samples == 1
+    assert cfg.evaluator.alphafold3.recycles == 1
+    assert cfg.evaluator.alphafold3.samples == 1
     assert cfg.evaluator.alphafold3.run_data_pipeline is False
     assert cfg.evaluator.alphafold3.flash_attention_implementation == "cudnn"
     assert cfg.evaluator.alphafold3.model_dir == harness.AF3_MODEL_DIR
@@ -599,18 +599,19 @@ def test_full_capsule_manifest_filters_exact_numerical_set_and_detects_missing()
     payload["files"]["vendor/alphafold3/run_alphafold.py"] = "2" * 64
     filtered = harness._source_manifest_from_payload(payload)
     assert filtered == current
+    assert "config/components/evaluator.yaml" in dict(filtered.files)
 
-    vendor_path = next(
-        path for path, _digest in filtered.files
-        if path.startswith("vendor/alphafold3/src/")
-    )
+    component_path = "config/components/evaluator.yaml"
     incomplete = dict(filtered.files)
-    del incomplete[vendor_path]
-    missing_vendor = harness._source_manifest_from_payload(
+    del incomplete[component_path]
+    missing_component = harness._source_manifest_from_payload(
         {"files": incomplete}
     )
-    assert missing_vendor != current
-    assert vendor_path not in dict(missing_vendor.files)
+    assert missing_component != current
+    assert component_path not in dict(missing_component.files)
+    changed = dict(filtered.files)
+    changed[component_path] = "0" * 64
+    assert harness._source_manifest_from_payload({"files": changed}) != current
 
 
 def test_sif_manifest_projection_excludes_unused_repo_vendor() -> None:

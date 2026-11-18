@@ -13,6 +13,7 @@ except Exception:  # pragma: no cover
     torch = None
 
 from astrolabe.core import global_config
+from astrolabe.mutation_budget import current_mutation_count
 from astrolabe.core.protomer_config_parser import MutableTypes, ProtomerTypes
 from astrolabe.selectors.utils import construct_position_selector
 from astrolabe.per_residue_scores import (
@@ -1770,7 +1771,7 @@ def sample_mutations_by_aa_probs(
             proto_usage[proto_name] += 1
         shuffled_mutations = budgeted
 
-    requested_mutations = round(global_config.mutation_num * mutation_weight)
+    requested_mutations = current_mutation_count(weight=mutation_weight, runtime=global_config)
     if (
         enforce_mutation_num
         and requested_mutations > 0

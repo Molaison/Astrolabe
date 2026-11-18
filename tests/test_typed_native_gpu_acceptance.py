@@ -162,7 +162,9 @@ def isolated_runtime_registries(monkeypatch, acceptance_module):
         del term_conf, alias, oligo_names, evaluator_conf
         return StructuralAF3(raw_model_results_dir)
 
-    EvaluatorRegistry.register("typed_acceptance_fake", fake_factory)
+    # Use the declared weight-free fixture contract so crash/resume checks
+    # exercise recovery without weakening production asset verification.
+    EvaluatorRegistry.register("fake", fake_factory)
     yield
     global_config.reset()
 
@@ -172,7 +174,7 @@ def _config(acceptance_module, root: Path):
 
     cfg = acceptance_module.acceptance_config(root)
     with open_dict(cfg):
-        cfg.evaluator.evaluator_terms.AF3._type = "typed_acceptance_fake"
+        cfg.evaluator.evaluator_terms.AF3._type = "fake"
     return cfg
 
 
@@ -200,13 +202,13 @@ def test_root_config_persists_active_science_without_unused_rf3_env(
     assert "rf3" not in stored
     assert stored["evaluator"]["enabled_aliases"] == ["AF3"]
     assert stored["evaluator"]["evaluator_terms"]["AF3"]["_type"] == (
-        "typed_acceptance_fake"
+        "fake"
     )
     assert stored["mutator"]["enabled_aliases"] == ["MCMC"]
     assert stored["mutator"]["mutator_terms"]["MCMC"]["_type"] == "MCMC"
 
     restored = acceptance_module.load_acceptance_config(root)
-    assert restored.evaluator.evaluator_terms.AF3._type == "typed_acceptance_fake"
+    assert restored.evaluator.evaluator_terms.AF3._type == "fake"
     assert restored.mutator.mutator_terms.MCMC._type == "MCMC"
 
 

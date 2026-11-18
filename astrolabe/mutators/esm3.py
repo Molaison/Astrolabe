@@ -179,26 +179,7 @@ class ESM3Mutator(Mutator):
         return self._esm_protein_cls(sequence=sequence)
 
     def _mutation_quota(self, sequence_length: int) -> int:
-        base_mutations = getattr(global_config, "mutation_num", 0) or 0
-        if isinstance(base_mutations, str):
-            value = base_mutations.strip()
-            if value.endswith("%"):
-                try:
-                    fraction = float(value[:-1]) / 100.0
-                except ValueError:
-                    fraction = 0.0
-                base_mutations = fraction * sequence_length
-            else:
-                try:
-                    base_mutations = float(value)
-                except ValueError:
-                    base_mutations = 0
-        weight = getattr(self, "mutation_weight", 1.0)
-        try:
-            quota = int(round(base_mutations * weight))
-        except TypeError:
-            quota = int(base_mutations)
-        return max(0, min(quota, sequence_length))
+        return self.n_mutations(maximum=sequence_length)
 
     def _mask_sequence(
         self,

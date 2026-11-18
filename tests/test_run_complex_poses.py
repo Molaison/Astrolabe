@@ -6,6 +6,7 @@ import sys
 from types import SimpleNamespace
 
 from omegaconf import OmegaConf
+from astrolabe.configuration import load_composed_config
 import pytest
 import run
 import astrolabe.losses.interaction as interaction_losses
@@ -122,7 +123,7 @@ def test_bindcraft_loss_promotes_pyrosetta_and_post_eval_hook() -> None:
 
 
 def test_base_config_allows_bindcraft_post_eval_hook_auto_detection() -> None:
-    base_cfg = OmegaConf.load(Path(__file__).resolve().parents[1] / "config" / "base.yaml")
+    base_cfg = load_composed_config(Path(__file__).resolve().parents[1] / "config" / "base.yaml")
     args = SimpleNamespace(
         post_eval_hooks=OmegaConf.select(base_cfg, "post_eval_hooks", default=None)
     )

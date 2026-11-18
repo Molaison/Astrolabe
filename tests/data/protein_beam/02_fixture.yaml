@@ -35,8 +35,8 @@ evaluator:
     Alphafold3:
       _type: Alphafold3
   alphafold3:
-    num_recycles: 3
-    num_samples: 1
+    recycles: 3
+    samples: 1
     service_socket: null
     num_seeds: 1
     run_data_pipeline: false

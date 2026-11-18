@@ -100,7 +100,6 @@ rhofold:
 task_name: release_protein
 out_dir: outputs
 initial_temperature: 0.05
-mutation_num: 10
 homologies: {}
 ligand_resnames: {}
 dynamic_binding_site_enabled: false

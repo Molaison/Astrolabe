@@ -12,7 +12,6 @@ seqs:
   B: "EEELLNKLKEAFRKFVTALAKFFSPEMAKLVLELVDTIVEETKTIKDFIELATEFLERLLEVETLEELEELREEILRKLEERKAKE"
   C: "MTX"
 debug: True
-mutation_num: 10
 
 selector:
   selector_terms:
@@ -68,6 +67,7 @@ loss:
 
 stages:
   default:
+    mutation_num: 10
     oligo: ["ABC"]
     mutators: ["MCMC", "LMPNN_wt_center"]
     mutator_weights: [0.3, 0.7]

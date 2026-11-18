@@ -573,7 +573,7 @@ def test_run_repeats_does_not_resolve_unused_env_interpolations(monkeypatch) -> 
 
 def test_base_and_env_configs_expose_nampnn_runner_fields() -> None:
     repo_root = Path(__file__).resolve().parents[1]
-    base_text = (repo_root / "config" / "base.yaml").read_text(encoding="utf-8")
+    base_text = (repo_root / "config" / "components" / "mutator.yaml").read_text(encoding="utf-8")
     env_text = (repo_root / "config" / "env.yaml").read_text(encoding="utf-8")
     env_container_text = (repo_root / "config" / "env_container.yaml").read_text(
         encoding="utf-8"

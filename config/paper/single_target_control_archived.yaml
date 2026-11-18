@@ -38,16 +38,14 @@ evaluator:
     Protenix:
       _type: Protenix
   alphafold3:
-    num_recycles: 10
-    num_samples: 5
+    recycles: 10
+    samples: 5
   protenix:
     model_name: protenix-v2
     load_checkpoint_path: null
-    model:
-      N_cycle: 4
-    sample_diffusion:
-      N_sample: 5
-      N_step: 200
+    recycles: 4
+    samples: 5
+    diffusion_steps: 200
 loss:
   loss_terms:
     binder_rog:

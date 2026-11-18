@@ -100,7 +100,6 @@ rhofold:
 task_name: null
 out_dir: null
 initial_temperature: 0.01
-mutation_num: 10
 homologies:
   A: null
 ligand_resnames: {}

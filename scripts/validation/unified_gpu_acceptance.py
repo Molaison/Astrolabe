@@ -218,6 +218,7 @@ def _source_files(
     root = root.expanduser().resolve()
     files = set((root / "astrolabe").rglob("*.py"))
     files.add(root / "run.py")
+    files.update((root / "config" / "components").glob("*.yaml"))
     if not numerical_only:
         files.update(
             {
@@ -279,6 +280,10 @@ def _source_manifest_from_payload(
             or (
                 path.startswith("astrolabe/")
                 and path.endswith(".py")
+            )
+            or (
+                path.startswith("config/components/")
+                and path.endswith(".yaml")
             )
             or (
                 include_af3_vendor
@@ -496,7 +501,6 @@ def _apply_common_config(
         # AcceptedSuccessorPolicy rounds are max(0, steps - 1), so the
         # explicit acceptance cap is also the root-plus-successors call count.
         cfg.steps = MAX_EVALUATIONS
-        cfg.mutation_num = 1
         cfg.enable_pyrosetta = False
         cfg.skip_complex_poses = True
         cfg.stages.default.mutation_num = 1
@@ -504,8 +508,8 @@ def _apply_common_config(
         cfg.evaluator.alphafold3.execution = execution
         cfg.evaluator.alphafold3.model_dir = AF3_MODEL_DIR
         cfg.evaluator.alphafold3.num_seeds = 1
-        cfg.evaluator.alphafold3.num_recycles = 1
-        cfg.evaluator.alphafold3.num_samples = 1
+        cfg.evaluator.alphafold3.recycles = 1
+        cfg.evaluator.alphafold3.samples = 1
         cfg.evaluator.alphafold3.run_data_pipeline = False
         cfg.evaluator.alphafold3.run_inference = True
         cfg.evaluator.alphafold3.flash_attention_implementation = "cudnn"
@@ -513,8 +517,10 @@ def _apply_common_config(
         # shared alphafold3 defaults, so keep the same overrides there.
         term = cfg.evaluator.evaluator_terms.Alphafold3
         term.num_seeds = 1
-        term.num_recycles = 1
-        term.num_samples = 1
+        term.pop("num_recycles", None)
+        term.pop("num_samples", None)
+        term.recycles = 1
+        term.samples = 1
         term.run_data_pipeline = False
         term.run_inference = True
         term.flash_attention_implementation = "cudnn"
@@ -721,7 +727,12 @@ def _digest_config(cfg: Any) -> dict[str, Any]:
         allow_nan=False,
         default=_json_default,
     ).encode("utf-8")
-    term = cfg.evaluator.evaluator_terms.Alphafold3
+    from astrolabe.component_config import merge_component_config
+
+    term = merge_component_config(
+        cfg.evaluator, "alphafold3", cfg.evaluator.evaluator_terms.Alphafold3,
+        family="evaluator",
+    )
     return {
         "sha256": hashlib.sha256(encoded).hexdigest(),
         "acceptance": acceptance_budget_record(),

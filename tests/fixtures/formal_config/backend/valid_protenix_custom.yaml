@@ -20,10 +20,6 @@ evaluator:
       dtype: bf16
       model:
         N_cycle: 0
-        msa_module:
-          n_blocks: 0
-        pairformer:
-          n_blocks: 0
       sample_diffusion:
         N_sample: 1
         N_step: 1

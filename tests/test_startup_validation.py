@@ -371,7 +371,7 @@ def test_invalid_stage_mutation_num_fails_preflight(stage_name, bad):
         validate_startup_config(cfg, check_dependencies=False)
 
 
-def test_stage_mutation_num_accepts_percentage_and_negative_native_value():
+def test_stage_mutation_num_accepts_percentage_and_rejects_negative_count():
     from types import SimpleNamespace
     from astrolabe.stage_config import resolve_mutation_num
     from astrolabe.stage_manager import resolve_mutation_num as consumer_resolver
@@ -382,7 +382,8 @@ def test_stage_mutation_num_accepts_percentage_and_negative_native_value():
     cfg.stages.later = {"_entrance": "True", "mutation_num": "50%"}
     validate_startup_config(cfg, check_dependencies=False)
     cfg.stages.later.mutation_num = -1
-    validate_startup_config(cfg, check_dependencies=False)
+    with pytest.raises(StartupValidationError, match="stages.later.mutation_num"):
+        validate_startup_config(cfg, check_dependencies=False)
 
 
 def test_nonsense_mutation_num_fails_before_runner_import(monkeypatch):

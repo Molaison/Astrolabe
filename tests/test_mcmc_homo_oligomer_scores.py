@@ -3,6 +3,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from astrolabe.core import global_config
 from astrolabe.core.protomer_config_parser import ProtomerTypes
@@ -142,7 +143,8 @@ def test_pore_blocker_mcmc_samples_small_residues_only_on_selected_positions() -
         global_config.reset()
 
 
-def test_pore_blocker_mcmc_queues_all_selected_blockers_despite_global_mutation_num() -> None:
+@pytest.mark.parametrize("budget, expected", [(0, 0), (1, 1), ("all", 3)])
+def test_pore_blocker_mcmc_respects_stage_budget(budget, expected) -> None:
     global_config.reset()
     try:
         protomer_a = _RecordingProtomer("YFLS")
@@ -155,7 +157,7 @@ def test_pore_blocker_mcmc_queues_all_selected_blockers_despite_global_mutation_
         _init_global("protomers", {"A": protomer_a})
         _init_global("segments", {})
         _init_global("segment_manager", segment_manager)
-        global_config.set_variable("mutation_num", 1)
+        global_config.set_variable("mutation_num", budget)
 
         mutator = PoreBlockingSubstitutionMutator(
             position_selector="dummy_selector()",
@@ -170,7 +172,7 @@ def test_pore_blocker_mcmc_queues_all_selected_blockers_despite_global_mutation_
         )
 
         assert segment_manager.added is not None
-        assert segment_manager.added[1] == 3
+        assert segment_manager.added[1] == expected
         assert [mutation[1][-1] for mutation in segment_manager.added[0]] == [
             0.1,
             0.2,

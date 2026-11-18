@@ -116,13 +116,15 @@ def _prepare(
     from astrolabe.protein_beam import load_config
 
     cfg = load_config(public_root / plan["cases"][0]["config"])
+    from astrolabe.component_config import merge_component_config
+    af3 = merge_component_config(cfg.evaluator, "alphafold3", None, family="evaluator")
     science = {
         "max_evaluations": int(cfg.protein_beam.max_evaluations),
         "max_generations": cfg.protein_beam.max_generations,
         "max_total": int(cfg.protein_beam.af3_call_budget.max_total),
         "max_per_case": int(cfg.protein_beam.af3_call_budget.max_per_case),
-        "num_samples": int(cfg.evaluator.alphafold3.num_samples),
-        "num_recycles": int(cfg.evaluator.alphafold3.num_recycles),
+        "num_samples": int(af3.num_samples),
+        "num_recycles": int(af3.num_recycles),
         "seed": int(cfg.seed),
     }
     expected = {

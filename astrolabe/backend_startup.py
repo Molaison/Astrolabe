@@ -388,6 +388,14 @@ def validate_backend_settings(family, kind, options, *, path, check_paths,
     if not isinstance(options, Mapping):
         return [f'{root}: expected a mapping of resolved backend settings']
     cfg = options
+    from astrolabe.component_contracts import component_ownership_errors, normalize_evaluator_options
+
+    if family == 'evaluator':
+        try:
+            cfg = normalize_evaluator_options(kind, cfg, path=root)
+        except ValueError as error:
+            return [str(error)]
+    errors.extend(component_ownership_errors(family, kind, cfg, path=root))
     if family == 'evaluator' and kind in {'mol1', 'mol-1'}:
         from astrolabe.evaluators.mol1_contract import configuration_errors
 

@@ -40,8 +40,8 @@ evaluator:
       _type: Alphafold3
   alphafold3:
     num_seeds: 1
-    num_recycles: 10
-    num_samples: 5
+    recycles: 10
+    samples: 5
     run_data_pipeline: false
     flash_attention_implementation: cudnn
 loss:

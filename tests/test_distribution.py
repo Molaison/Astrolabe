@@ -70,6 +70,10 @@ def test_wheel_ships_runner_and_portable_config_resources(wheel_names: list[str]
     assert "resources/ligand_hbond_filter.py" in names
     for required in (
         "config/base.yaml",
+        "config/components/evaluator.yaml",
+        "config/components/mutator.yaml",
+        "config/components/predocker.yaml",
+        "config/components/initializer.yaml",
         "config/monomer.yaml",
         "config/env/env.yaml",
         "config/env/env_container.yaml",

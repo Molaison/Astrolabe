@@ -6,7 +6,6 @@ defaults:
 task_name: sif_af2_smoke
 out_dir: /tmp/gh_af2_smoke_runs
 steps: 2
-mutation_num: 0
 
 types:
   A: "p"

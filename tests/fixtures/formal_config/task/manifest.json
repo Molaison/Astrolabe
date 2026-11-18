@@ -2695,13 +2695,13 @@
       ]
     },
     {
-      "id": "task.valid_negative_mutations",
-      "file": "valid_negative_mutations.yaml",
-      "expected_error": null,
+      "id": "task.invalid_negative_mutations",
+      "file": "invalid_negative_mutations.yaml",
+      "expected_error": "stages.default.mutation_num",
       "parameters": [
         "stages.default.mutation_num"
       ],
-      "valid_control": "valid_negative_mutations.yaml",
+      "valid_control": "valid_minimal.yaml",
       "source": [
         "astrolabe/stage_manager.py:StageUnit.__post_init__;StageManager.__init__;StageManager.current_mutators",
         "astrolabe/stage_config.py:resolve_mutation_num",

@@ -6,6 +6,7 @@ import sys
 from types import SimpleNamespace
 
 from omegaconf import OmegaConf
+from astrolabe.configuration import load_composed_config
 
 from astrolabe.evaluators.esmfold import (
     ESMFoldEvaluator,
@@ -61,7 +62,7 @@ def test_construct_evaluators_merges_esmfold2_base_and_term_defaults(tmp_path: P
 
 
 def test_base_config_declares_esmfold2_defaults() -> None:
-    cfg = OmegaConf.load(Path(__file__).resolve().parents[1] / "config" / "base.yaml")
+    cfg = load_composed_config(Path(__file__).resolve().parents[1] / "config" / "base.yaml")
     esmfold2_cfg = OmegaConf.to_container(cfg.evaluator.esmfold2, resolve=False)
     assert esmfold2_cfg["model_name"] == "biohub/ESMFold2"
     assert esmfold2_cfg["python_bin"] == "${subprocess_envs.esmfold2.python_bin}"

@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 import astrolabe.cli as cli
+import pytest
 
 
 REPO_CONFIG_ROOT = Path(__file__).resolve().parents[1] / "config"
@@ -14,6 +15,32 @@ def _run(argv: list[str]) -> int:
     handler = getattr(ns, "_handler", None)
     assert handler is not None
     return int(handler(ns))
+
+
+@pytest.mark.parametrize(
+    "profile",
+    (
+        "container_protenix_smoke",
+        "container_ligandmpnn_smoke",
+        "container_ligand_matrix_smoke",
+    ),
+)
+def test_protenix_container_smoke_profiles_pass_public_startup(profile, capsys) -> None:
+    rc = _run(
+        [
+            "--config-dir",
+            str(REPO_CONFIG_ROOT),
+            "run",
+            "--task",
+            profile,
+            "--dry-run",
+            "env=env",
+            "stages.default.evaluator=Protenix",
+        ]
+    )
+
+    capsys.readouterr()
+    assert rc == 0
 
 
 def test_benchmark_binder_v1_4_x_mask_dry_run(capsys) -> None:

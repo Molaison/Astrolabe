@@ -55,7 +55,10 @@ def digest(path):
 def source_identity():
     paths = ("astrolabe/model_execution.py", "astrolabe/model_daemon.py",
              "astrolabe/mutators/native_daemons.py",
-             "astrolabe/mutators/wrappers/ligandmpnn_run.py")
+             "astrolabe/mutators/wrappers/ligandmpnn_run.py",
+             "config/base.yaml", "config/env/env.yaml",
+             *(str(path.relative_to(ROOT)) for path in
+               sorted((ROOT / "config" / "components").glob("*.yaml"))))
     return {path: digest(ROOT / path) for path in paths}
 
 
@@ -77,6 +80,7 @@ def main(argv=None):
     import torch
     from Bio.PDB import MMCIFParser, PDBIO, PDBParser, Select
     from omegaconf import OmegaConf
+    from astrolabe.configuration import load_composed_config
     from astrolabe.model_execution import NativeModelClient, capture_random_state
     from astrolabe.mutators.wrappers.ligandmpnn_run import LigandMPNN
 
@@ -108,8 +112,7 @@ def main(argv=None):
     if not any(line.startswith("ATOM") for line in pdb_path.read_text().splitlines()):
         parser.error(f"No protein atoms found for chain {args.chain!r}")
 
-    cfg = OmegaConf.merge(OmegaConf.load(ROOT / "config/env/env.yaml"),
-                          OmegaConf.load(ROOT / "config/base.yaml"))
+    cfg = load_composed_config(ROOT / "config/base.yaml")
     cfg.seed = args.seed
     cfg.exclude_AA = ""
     cfg.weight_path.ligandmpnn = str(args.weights.resolve())

@@ -7,7 +7,6 @@ task_name: container_ligand_matrix_smoke
 out_dir: /cache/gh-runtime/smoke/ligand_matrix_20260915
 steps: 2
 seed: 20260915
-mutation_num: 1
 
 types:
   A: "p"
@@ -51,28 +50,24 @@ evaluator:
     Alphafold3:
       _type: Alphafold3
       num_seeds: 1
-      num_recycles: 1
-      num_samples: 1
+      recycles: 1
+      samples: 1
       run_data_pipeline: false
       run_inference: true
       flash_attention_implementation: cudnn
     Protenix:
       _type: Protenix
       use_constraints: false
-      diffusion_batch_size: 1
-      diffusion_chunk_size: 1
       num_workers: 0
-      model:
-        N_cycle: 1
-      sample_diffusion:
-        N_sample: 1
-        N_step: 200
+      recycles: 1
+      samples: 1
+      diffusion_steps: 200
     Boltz:
       _type: Boltz
       accelerator: gpu
-      recycling_steps: 1
-      sampling_steps: 200
-      diffusion_samples: 1
+      recycles: 1
+      diffusion_steps: 200
+      samples: 1
       num_workers: 0
       write_full_pae: false
 

@@ -24,6 +24,8 @@ def resident_mode(config):
 def load_service_config(path):
     """Use the same inherited AF3 settings as clients, or a legacy mapping."""
     from omegaconf import OmegaConf
+    from astrolabe.component_config import merge_component_config
+    from astrolabe.component_contracts import normalize_evaluator_options
     config = OmegaConf.load(path)
     if "defaults" in config or "evaluator" in config:
         from astrolabe.configuration import load_composed_config as load_config
@@ -31,15 +33,15 @@ def load_service_config(path):
         task = load_config(path)
         adaptive = service_settings(task).adaptive
         lifecycle = asdict(service_settings(task))
-        config = task.evaluator.alphafold3
-        config = OmegaConf.create(OmegaConf.to_container(config, resolve=True))
+        config = merge_component_config(task.evaluator, "alphafold3", {}, family="evaluator")
         # This config also serves CPU clients. Only the owner copy must use
         # the local model; keep the original client transport untouched.
         config.service_socket = None
         config._service_adaptive = asdict(adaptive)
         config._service_settings = lifecycle
         return config
-    return OmegaConf.create(OmegaConf.to_container(config, resolve=True))
+    return OmegaConf.create(normalize_evaluator_options(
+        "alphafold3", OmegaConf.to_container(config, resolve=True), path="alphafold3"))
 
 
 def inference_handler(runner, config, *, device_kernel=None):
