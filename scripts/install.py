@@ -3777,6 +3777,7 @@ def _run_import_smoke(
         "assert gh_source.startswith('/opt/Astrolabe/'), gh_source; "
         "from astrolabe.app import _load_run_module; "
         "_load_run_module(); "
+        "import jsonschema; jsonschema.validate({}, {'type': 'object'}); "
         "print('container source:', gh_source); "
         "print('container run graph import ok'); "
         "print('container import smoke ok:', ','.join(mods))"
