@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import unittest
 
+from astrolabe.evaluators.utils import StandardScores
 from astrolabe.losses.base import LossEngine, loss_registry
 
 
@@ -47,6 +48,17 @@ class _EvalResult:
 
 
 class TestLossEngineOligomerSpecific(unittest.TestCase):
+    def test_oligomer_specific_string_selects_complete_name(self) -> None:
+        engine = LossEngine(loss_config={"loss_terms": {
+            "probe": {"_type": "__unittest_dummy_loss__", "oligomer_specific": "AA"}
+        }})
+        engine.setup("probe", None, None)
+        scores = StandardScores(names=["A", "AA"], plddt={}, complex_paths={})
+
+        per_oligo, _ = engine._extract_scores_with_registry(scores)
+
+        self.assertEqual(set(per_oligo), {"AA"})
+
     def test_oligomer_specific_params_not_mutated(self) -> None:
         counter = {"calls": 0}
         engine = LossEngine(

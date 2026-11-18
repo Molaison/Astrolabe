@@ -299,11 +299,10 @@ class LossEngine:
             spec_string = params.pop("_type")
 
             if "_for" in params:
-                oligomer = params.pop("_for")
-                if isinstance(oligomer, str):
-                    oligomer = oligomer.split(",")
-
-                params["oligomer_specific"] = oligomer
+                params["oligomer_specific"] = params.pop("_for")
+            oligomer = params.get("oligomer_specific")
+            if isinstance(oligomer, str):
+                params["oligomer_specific"] = oligomer.split(",")
 
             metadata = self.registry.get_metadata(spec_string)
             if set(params.keys()) - (

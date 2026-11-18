@@ -41,6 +41,7 @@ from astrolabe.losses.ph_sensitive import (
     _hbonds,
     _load_pose,
     _pyrosetta,
+    _slice_pose,
 )
 
 
@@ -251,11 +252,7 @@ def _binder_apo_pose(original_pose, binder_indices: list[int]):
         raise ValueError("binder_chain selected no protein residues from the AF3 complex.")
     pr = _pyrosetta()
     neutral = _neutralize_charged_histidines(original_pose)
-    selected = pr.rosetta.utility.vector1_unsigned_long()
-    for index in binder_indices:
-        selected.append(int(index))
-    apo = pr.Pose()
-    pr.rosetta.core.pose.pdbslice(apo, neutral, selected)
+    apo = _slice_pose(neutral, binder_indices)
     info = pr.rosetta.core.pose.PDBInfo(apo)
     for index in range(1, apo.total_residue() + 1):
         info.chain(index, "A")
