@@ -218,9 +218,18 @@ def _compose_hydra_config(
 def _apply_override_config_file(cfg, override_config_path):  # type: (Any, Optional[str]) -> Any
     if not override_config_path:
         return cfg
-    override_cfg = OmegaConf.load(override_config_path)
+    override_cfg = _load_run_config_file(pathlib.Path(override_config_path))
     from astrolabe.config_merge import merge_configs
     return merge_configs(cfg, override_cfg)
+
+
+def _load_run_config_file(path: pathlib.Path) -> DictConfig:
+    if path.suffix.lower() == ".toml":
+        import tomllib
+
+        with path.open("rb") as stream:
+            return OmegaConf.create(tomllib.load(stream))
+    return OmegaConf.load(path)
 
 
 def _strip_defaults_key(cfg: Any) -> Any:
@@ -422,11 +431,15 @@ def _normalize_dotlist_overrides(overrides: List[str]) -> List[str]:
     return out
 
 
-def _run_from_config(cfg: Any, *, autoselect_gpu: bool) -> None:
+def _run_from_config(cfg: Any, *, autoselect_gpu: bool, planned_repeats=None, gpus=None) -> int:
     from astrolabe.startup_validation import startup_validation_scope
     from astrolabe.profiling.integration import configured_profile
 
     with startup_validation_scope(cfg, require_inputs=True):
+        if gpus is not None:
+            from astrolabe.runtime.repeat_workers import run_gpu_repeats
+
+            return run_gpu_repeats(cfg, planned_repeats, gpus)
         with configured_profile(cfg):
             _maybe_autoselect_cuda_visible_devices(enabled=autoselect_gpu)
             _preinitialize_cuda_driver(argparse.Namespace(_cuda_preinitialize=True, dry_run=False))
@@ -434,7 +447,11 @@ def _run_from_config(cfg: Any, *, autoselect_gpu: bool) -> None:
             # Import late so `astrolabe env doctor` doesn't drag heavy deps.
             from astrolabe.app import run_from_cfg
 
-            run_from_cfg(cfg)
+            if planned_repeats is None:
+                run_from_cfg(cfg)
+            else:
+                run_from_cfg(cfg, planned_repeats=planned_repeats)
+    return 0
 
 
 def _maybe_autoselect_cuda_visible_devices(*, enabled: bool) -> None:
@@ -651,11 +668,13 @@ def _cmd_run(ns: argparse.Namespace) -> int:
     if getattr(ns, "finalize_run", None) or getattr(ns, "finalize_output", None):
         if not getattr(ns, "finalize_run", None) or not getattr(ns, "finalize_output", None):
             raise ValueError("--finalize-run and --finalize-output must be supplied together")
-        if any(getattr(ns, field, None) for field in (
+        run_options = any(getattr(ns, field, None) for field in (
             "task", "standalone", "overlay", "overrides", "overrides_file",
             "hydra_overrides", "config_dir", "print_config", "autoselect_gpu", "proposal_only",
-        )) or not getattr(ns, "chdir", True):
-            raise ValueError("Finalization cannot be mixed with run configuration, overrides or GPU options")
+        ))
+        repeat_options = any(getattr(ns, field, None) is not None for field in ("gpus", "repeats", "seed"))
+        if run_options or repeat_options or not getattr(ns, "chdir", True):
+            raise ValueError("Finalization cannot be mixed with run configuration or resource options")
         from astrolabe.design.refinement_finalization import finalize_run
         summary = finalize_run(ns.finalize_run, ns.finalize_output, dry_run=ns.dry_run)
         print(json.dumps({
@@ -738,7 +757,7 @@ def _cmd_run(ns: argparse.Namespace) -> int:
     )
     if config_file_path is not None:
         from astrolabe.config_merge import merge_configs
-        external_cfg = OmegaConf.load(str(config_file_path))
+        external_cfg = _load_run_config_file(config_file_path)
         external_cfg = _strip_defaults_key(external_cfg)
         with open_dict(cfg):
             cfg = merge_configs(cfg, external_cfg)
@@ -757,17 +776,44 @@ def _cmd_run(ns: argparse.Namespace) -> int:
         with open_dict(cfg):
             cfg.proposal_only = True
 
+    planned_repeats = None
+    gpus = getattr(ns, "gpus", None)
+    repeats = getattr(ns, "repeats", None)
+    seed = getattr(ns, "seed", None)
+    autoselect_gpu = bool(getattr(ns, "autoselect_gpu", False))
+    if gpus is not None or repeats is not None or seed is not None:
+        from astrolabe.design.repeats import plan_cli_repeats
+        from astrolabe.runtime.repeat_workers import gpu_selectors, validate_gpu_repeat_config
+
+        if gpus is not None:
+            if autoselect_gpu:
+                raise ValueError("Choose --gpus or --autoselect-gpu.")
+            gpus = gpu_selectors(gpus)
+            validate_gpu_repeat_config(cfg, gpus)
+        planned_repeats = plan_cli_repeats(cfg, count=repeats, seed=seed)
+
     if ns.dry_run:
         from astrolabe.startup_validation import validate_startup_config
 
         validate_startup_config(cfg, check_dependencies=False, resolve_environment=False)
+    if planned_repeats is not None:
+        for repeat in planned_repeats:
+            gpu = f", GPU {gpus[repeat.index % len(gpus)]}" if gpus is not None else ""
+            print(
+                f"[astrolabe] Repeat {repeat.number}/{repeat.total}: seed {repeat.seed}{gpu}",
+                file=sys.stderr,
+            )
     if ns.print_config or ns.dry_run:
         print(OmegaConf.to_yaml(cfg, resolve=False))
         if ns.dry_run:
             return 0
 
-    _run_from_config(cfg, autoselect_gpu=bool(getattr(ns, "autoselect_gpu", False)))
-    return 0
+    if planned_repeats is None:
+        _run_from_config(cfg, autoselect_gpu=autoselect_gpu)
+        return 0
+    return _run_from_config(
+        cfg, autoselect_gpu=autoselect_gpu, planned_repeats=planned_repeats, gpus=gpus,
+    )
 
 
 def _cmd_completion_bash(_ns: argparse.Namespace) -> int:
@@ -6630,8 +6676,9 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Run generation/optimization.",
         description=(
             "Compose a run config then execute it.\n"
-            "Choose one source: -t/--task for a repo template, or --standalone for a standalone YAML.\n"
-            "Use -o/--overlay to layer an overlay on top of the chosen base."
+            "Use -t/--task for a repo template or --standalone for a YAML/TOML file.\n"
+            "Use -o/--overlay to layer an overlay on top of the chosen base.\n"
+            "Example: astrolabe run --standalone config.toml --gpus 0,1 --repeats 8 --seed auto"
         ),
         formatter_class=argparse.RawTextHelpFormatter,
     )
@@ -6652,13 +6699,13 @@ def _build_parser() -> argparse.ArgumentParser:
     run_p.add_argument(
         "--standalone",
         default=None,
-        help="Path to a standalone config YAML layered on top of the repo template; its defaults list is ignored.",
+        help="Standalone YAML or TOML layered on top of the repo template; its defaults list is ignored.",
     )
     run_p.add_argument(
         "-o",
         "--overlay",
         default=None,
-        help="Overlay config YAML layered after --task/--standalone composition.",
+        help="YAML or TOML overlay layered after --task/--standalone composition.",
     )
     run_p.add_argument(
         "--chdir",
@@ -6677,6 +6724,22 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Text file with one Hydra override per line (recommended).",
     )
     run_p.add_argument(
+        "--gpus",
+        metavar="GPU[,GPU...]",
+        help="Local GPU indices from nvidia-smi or GPU UUIDs, one repeat at a time per GPU.",
+    )
+    run_p.add_argument(
+        "--repeats",
+        type=int,
+        metavar="N",
+        help="Number of repeats using the same config (default: configured repeats).",
+    )
+    run_p.add_argument(
+        "--seed",
+        metavar="auto|N",
+        help="Sample distinct seeds for this invocation, or start a sequence at N (N, N+1, ...).",
+    )
+    run_p.add_argument(
         "--print-config",
         action="store_true",
         help="Print the composed config (after layering) before running.",
@@ -6684,7 +6747,7 @@ def _build_parser() -> argparse.ArgumentParser:
     run_p.add_argument(
         "--dry-run",
         action="store_true",
-        help="Compose/print config and exit without running the pipeline.",
+        help="Print the config and any CLI repeat plan without starting workers or loading models.",
     )
     run_p.add_argument(
         "--proposal-only",

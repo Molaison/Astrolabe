@@ -31,7 +31,7 @@ import sys
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple
 
@@ -42,7 +42,7 @@ try:  # pragma: no cover - optional (should be installed via deps)
     from absl import logging as absl_logging
 except Exception:  # pragma: no cover
     absl_logging = None
-from omegaconf import OmegaConf
+from omegaconf import OmegaConf, open_dict
 
 if TYPE_CHECKING:  # pragma: no cover
     from astrolabe.core.folding_input import Input
@@ -3510,6 +3510,7 @@ def _cleanup_auto_managed_raw_dir(*, args, succeeded: bool) -> None:
 def run_repeats(
     base_cfg: Any,
     *,
+    planned_repeats: Sequence[RepeatRun] | None = None,
     on_stop_requested: Callable[[int, int], None] | None = None,
 ) -> None:
     """Validate first, then own resources around the scientific repeat lifecycle."""
@@ -3522,12 +3523,15 @@ def run_repeats(
     if OmegaConf.is_config(execution):
         execution = OmegaConf.to_container(execution, resolve=True)
     with configured_profile(base_cfg), resource_session(execution):
-        _run_repeats_owned(base_cfg, on_stop_requested=on_stop_requested)
+        _run_repeats_owned(
+            base_cfg, planned_repeats=planned_repeats, on_stop_requested=on_stop_requested,
+        )
 
 
 def _run_repeats_owned(
     base_cfg: Any,
     *,
+    planned_repeats: Sequence[RepeatRun] | None = None,
     on_stop_requested: Callable[[int, int], None] | None = None,
 ) -> None:
     """Preserve configured repeats, seeds and graceful-stop boundaries."""
@@ -3547,12 +3551,17 @@ def _run_repeats_owned(
             if type(repeats) is not int or repeats != 1 or planned not in (None, 1):
                 raise ValueError("search.resume=true requires exactly one repeat")
     validate_execution_selection(base_cfg)
-    repeats = plan_repeat_runs(base_cfg)
+    repeats = plan_repeat_runs(base_cfg) if planned_repeats is None else planned_repeats
 
     install_handlers()
 
     for repeat in repeats:
         run_cfg = materialize_repeat(base_cfg, repeat)
+        if planned_repeats is not None and repeat.total > 1 and run_cfg.get("recovery") is not None:
+            # The durable owner receives one fresh trajectory with an already selected seed.
+            with open_dict(run_cfg):
+                run_cfg.repeats = 1
+                run_cfg.pop("repeat_plan", None)
         validate_execution_selection(run_cfg)
         global_config.reset()
         print(f"=== Repeat {repeat.number}/{repeat.total} ===")

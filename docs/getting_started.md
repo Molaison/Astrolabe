@@ -52,6 +52,29 @@ outputs/cpu-demo/
 The input is an existing prediction. The demo verifies packaged analysis and
 reporting behavior. It does not predict a structure or evaluate a new design.
 
+## Repeat one configuration across GPUs
+
+```bash
+astrolabe run --standalone config.toml --gpus 0,1 --repeats 8 --seed auto
+```
+
+Use one shared TOML or YAML file, or select a repository template with `-t`.
+`--repeats 8` sets the total across the listed GPUs. Use local indices from
+`nvidia-smi` or GPU UUIDs. AstroLabe assigns repeats in GPU-list order and
+runs each GPU's assigned repeats in sequence. Existing CUDA and scheduler
+allocations limit which GPUs the command can use. For managed execution, use
+`execution.devices: allocated` so each worker takes its allocation from
+`--gpus`.
+
+`--seed auto` samples a distinct seed per repeat for this invocation.
+`--seed 17` uses 17, 18 and so on in repeat order. Omit `--seed` to keep the
+configured seed policy. Add `--dry-run` to see the assignments and composed
+config before launching. An automatic seed preview draws its own sample.
+The command prints the seeds used for execution. Standard runs keep their
+own `config.yaml` and `provenance.json` with the effective seed and repeat
+index. Parallel runs receive directory numbers in startup order. Put CLI
+flags before any trailing Hydra overrides.
+
 ## Inspect an installation plan
 
 Run a setup plan before changing an environment.

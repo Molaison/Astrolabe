@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
+from collections.abc import Sequence
 from functools import lru_cache
 from typing import TYPE_CHECKING
 
@@ -10,6 +11,7 @@ from astrolabe import run_script_path
 
 if TYPE_CHECKING:
     from astrolabe.design.composition import DesignRun
+    from astrolabe.design.repeats import RepeatRun
     from astrolabe.design.types import RunResult
 
 
@@ -48,16 +50,16 @@ class Astrolabe:
     def __init__(self, config):
         self.config = config
 
-    def run(self) -> RunResult | None:
+    def run(self, *, planned_repeats: Sequence[RepeatRun] | None = None) -> RunResult | None:
         """Run a direct design composition or the configured repeat lifecycle."""
         from astrolabe.startup_validation import startup_validation_scope
         from astrolabe.profiling.integration import configured_profile
 
         with startup_validation_scope(self.config, require_inputs=True):
             with configured_profile(self.config):
-                return self._run_validated()
+                return self._run_validated(planned_repeats)
 
-    def _run_validated(self) -> RunResult | None:
+    def _run_validated(self, planned_repeats: Sequence[RepeatRun] | None) -> RunResult | None:
         os.environ.setdefault("XLA_PYTHON_CLIENT_PREALLOCATE", "false")
         from astrolabe.design.composition import ControlRun, DesignRun
 
@@ -74,10 +76,13 @@ class Astrolabe:
                 flush=True,
             )
 
-        run.run_repeats(self.config, on_stop_requested=report_graceful_stop)
+        run.run_repeats(
+            self.config, planned_repeats=planned_repeats,
+            on_stop_requested=report_graceful_stop,
+        )
         return None
 
 
-def run_from_cfg(cfg) -> None:
+def run_from_cfg(cfg, *, planned_repeats: Sequence[RepeatRun] | None = None) -> None:
     """CLI entry into the same public Astrolabe application lifecycle."""
-    Astrolabe(cfg).run()
+    Astrolabe(cfg).run(planned_repeats=planned_repeats)

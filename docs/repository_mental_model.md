@@ -102,6 +102,7 @@ configuration boundary.
 - Main-loop overlap evaluates serially and bounds outstanding CPU finalizations. Experimental candidate batch remains a separate subprocess-based search protocol, not unified GPU scheduling.
 - `design.collection.CompletionPool` validates a finite generation before admission or dispatch. Job IDs remain unique across the pool lifetime, including failures and consumed results. A rehydrated job can be reconciled once using the owner's terminal admission proof, without execution; missing proof retains the unknown fence. Worker results must match the submitted job ID and generation and retain its input payload. These guards do not change collection selection, RNG or budgets.
 - Explicit repeat seed increments by repeat index; missing seed derives deterministically from task/index; zero is invalid. Bare shared chain selectors are chain-first; `protomer:A` expands repeated A copies.
+- `run --gpus` sends the composed config and planned repeat identities to one process per selected GPU. Each process owns its CUDA visibility and uses the usual repeat loop and run output lifecycle. CLI seed sampling happens once in the parent, before GPU dispatch. See [repeat usage](getting_started.md#repeat-one-configuration-across-gpus).
 - `run --dry-run` stops before model execution; `--print-config` alone does not. Experimental candidate-batch dry-run still writes candidate configurations.
 
 ## Verification routing

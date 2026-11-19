@@ -142,6 +142,15 @@ identities are recorded separately in release evidence.
 
 ## Configuration and mutation boundaries
 
+The run CLI composes a shared YAML or TOML once. The repeat planner freezes
+each repeat index and seed, and the runtime assigns each requested GPU its
+share of the plan in an isolated process. On f102, the existing
+`profiling_cpu_example` case completed five repeats with distinct sampled
+seeds and three with fixed seeds. The run provenance matched the requested
+GPU UUID and seed in all eight outputs. Duplicate selectors and a device
+outside the CUDA mask were rejected. These runs exercised process dispatch
+and artifact isolation with the sequence evaluator.
+
 This work starts from `09f0460feb733b4675923ee580c977c7f7423e13`. The requested
 outcome is a usable task configuration surface, clear parameter ownership,
 effective agent conventions and one mutation-policy interface. The

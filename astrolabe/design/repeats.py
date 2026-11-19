@@ -5,11 +5,12 @@ repeat and constructs its configuration from user-facing repeat controls.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 from pathlib import Path
 import random
 from typing import Any, Callable, Mapping, Sequence
+from uuid import uuid4
 
 from omegaconf import DictConfig, OmegaConf, open_dict
 
@@ -140,6 +141,7 @@ class RepeatRun:
     output: Path | None = None
     start: Mapping[str, Any] | None = None
     initial_sequence: Mapping[str, Any] | None = None
+    raw_namespace: str | None = None
 
     def __post_init__(self) -> None:
         if type(self.index) is not int or self.index < 0:
@@ -212,13 +214,18 @@ def _repeat_count(cfg: Mapping[str, Any], repeat_plan: Mapping[str, Any]) -> int
     return count
 
 
-def plan_repeat_runs(base_cfg: Any) -> tuple[RepeatRun, ...]:
+def plan_repeat_runs(base_cfg: Any, *, seed: str | None = None) -> tuple[RepeatRun, ...]:
     """Validate and plan every repeat before execution starts."""
 
     cfg = _container(base_cfg)
     repeat_plan = _mapping(cfg.get("repeat_plan"), name="repeat_plan")
     search = _mapping(cfg.get("search"), name="search")
     count = _repeat_count(cfg, repeat_plan)
+    sampled_seeds = None
+    if seed == "auto":
+        if count > _MAX_U32:
+            raise ValueError(f"--seed auto supports at most {_MAX_U32} distinct seeds")
+        sampled_seeds = random.SystemRandom().sample(range(1, _MAX_U32 + 1), count)
     starts, cursor = _selected_starts(search=search, repeat_plan=repeat_plan)
     if starts and cursor + count > len(starts):
         raise ValueError(
@@ -227,16 +234,19 @@ def plan_repeat_runs(base_cfg: Any) -> tuple[RepeatRun, ...]:
         )
 
     explicit_override = _optional_seed(
-        repeat_plan.get("seed_override"),
+        repeat_plan.get("seed_override") if seed is None else None,
         name="repeat_plan.seed_override",
     )
+    if seed is not None and seed != "auto":
+        explicit_override = _seed(seed, name="--seed")
+        _seed(explicit_override + count - 1, name=f"repeat {count} seed")
     start_seed = _optional_seed(
         repeat_plan.get("start_seed"),
         name="repeat_plan.start_seed",
     )
     base_seed = _optional_seed(cfg.get("seed"), name="seed")
     explicit_seeds = repeat_plan.get("seeds")
-    if explicit_seeds is not None:
+    if explicit_seeds is not None and seed is None:
         explicit_seeds = list(explicit_seeds)
         if len(explicit_seeds) < count:
             raise ValueError("repeat_plan.seeds must provide one seed per repeat")
@@ -259,29 +269,31 @@ def plan_repeat_runs(base_cfg: Any) -> tuple[RepeatRun, ...]:
     planned: list[RepeatRun] = []
     for index in range(count):
         start = starts[cursor + index] if starts else None
-        if explicit_override is not None:
-            seed = explicit_override + index
+        if sampled_seeds is not None:
+            run_seed = sampled_seeds[index]
+        elif explicit_override is not None:
+            run_seed = explicit_override + index
         elif explicit_seeds is not None:
-            seed = _seed(explicit_seeds[index], name=f"repeat_plan.seeds[{index}]")
+            run_seed = _seed(explicit_seeds[index], name=f"repeat_plan.seeds[{index}]")
         elif start is not None and start.get("seed") is not None:
-            seed = _seed(start["seed"], name=f"repeat start {cursor + index} seed")
+            run_seed = _seed(start["seed"], name=f"repeat start {cursor + index} seed")
         elif start_seed is not None:
-            seed = start_seed + index
+            run_seed = start_seed + index
         elif base_seed is not None:
-            seed = base_seed + index
+            run_seed = base_seed + index
         else:
             digest = hashlib.sha256(
                 f"{task_name}:{index}".encode("utf-8")
             ).hexdigest()
-            seed = (int(digest[:8], 16) % 1_000_000) + 1
-        _seed(seed, name=f"repeat {index + 1} seed")
+            run_seed = (int(digest[:8], 16) % 1_000_000) + 1
+        _seed(run_seed, name=f"repeat {index + 1} seed")
 
         output = out_dir
         if output_pattern:
             relative = output_pattern.format(
                 index=index,
                 repeat=index + 1,
-                seed=seed,
+                seed=run_seed,
             )
             output = out_dir / relative
 
@@ -300,20 +312,66 @@ def plan_repeat_runs(base_cfg: Any) -> tuple[RepeatRun, ...]:
                 raise ValueError("repeat_plan.initial_sequence.target must be non-empty")
             initial_sequence = {
                 "target": target,
-                "value": generator(specification, seed),
+                "value": generator(specification, run_seed),
             }
 
         planned.append(
             RepeatRun(
                 index=index,
                 total=count,
-                seed=seed,
+                seed=run_seed,
                 output=output,
                 start=start,
                 initial_sequence=initial_sequence,
             )
         )
     return tuple(planned)
+
+
+def plan_cli_repeats(cfg: Any, *, count: int | None, seed: str | None) -> tuple[RepeatRun, ...]:
+    """Apply CLI controls and isolate fresh repeats that share an output root."""
+    if count is not None:
+        with open_dict(cfg):
+            cfg.repeats = count
+            if OmegaConf.select(cfg, "repeat_plan.count") is not None:
+                cfg.repeat_plan.count = count
+    search = cfg.get("search") or {}
+    resuming = any(
+        OmegaConf.select(cfg, key) is True for key in (
+            "search.resume", "search.execution.resume", "recovery.resume",
+        )
+    )
+    replaying_root = cfg.get("root_prediction_receipt") is not None
+    if resuming and seed is not None:
+        raise ValueError("A resume uses its original seed. Remove --seed.")
+    if replaying_root and seed == "auto":
+        raise ValueError("root_prediction_receipt requires its original seed.")
+    planned = plan_repeat_runs(cfg, seed=seed)
+    if len(planned) > 1 and (resuming or replaying_root):
+        raise ValueError("Resuming or importing a root prediction requires exactly one repeat.")
+    if resuming:
+        return planned
+
+    namespace = f"batch_{uuid4().hex}"
+    if len(planned) > 1 and search.get("owner") in {"isolated_native", "archived_refinement"}:
+        plan = cfg.get("repeat_plan") or {}
+        if not (plan.get("output") or plan.get("output_pattern")):
+            planned = tuple(
+                replace(run, output=run.output / namespace / f"repeat_{run.number:03d}")
+                if run.output is not None else run
+                for run in planned
+            )
+        roots = set()
+        for run in planned:
+            if run.output is None:
+                raise ValueError("This search requires out_dir for repeat outputs.")
+            root = run.output.resolve()
+            if root in roots:
+                raise ValueError("Each repeat must have a separate output directory.")
+            roots.add(root)
+        if any(root in roots for path in roots for root in path.parents):
+            raise ValueError("Repeat output directories cannot be nested.")
+    return tuple(replace(run, raw_namespace=namespace) for run in planned)
 
 
 def materialize_repeat(base_cfg: Any, repeat: RepeatRun) -> Any:
@@ -355,10 +413,10 @@ def materialize_repeat(base_cfg: Any, repeat: RepeatRun) -> Any:
 
         raw_dir = run_cfg.get("raw_model_results_dir")
         if raw_dir not in (None, "", "null", "None"):
-            run_cfg.raw_model_results_dir = (
-                Path(str(raw_dir)).expanduser()
-                / f"repeat_{repeat.number:03d}"
-            )
+            raw_root = Path(str(raw_dir)).expanduser()
+            if repeat.raw_namespace is not None:
+                raw_root /= repeat.raw_namespace
+            run_cfg.raw_model_results_dir = raw_root / f"repeat_{repeat.number:03d}"
     return run_cfg
 
 

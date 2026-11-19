@@ -160,8 +160,9 @@ def runtime_command(root, argv, profile, environment=None, cwd=None):
         command.append("--nv")
         values["CUDA_DEVICE_ORDER"] = env.get("CUDA_DEVICE_ORDER", values.get("CUDA_DEVICE_ORDER", "PCI_BUS_ID"))
         # An assigned device, UUID, empty restriction or scheduler mask wins.
-        if "CUDA_VISIBLE_DEVICES" in env:
-            values["CUDA_VISIBLE_DEVICES"] = env["CUDA_VISIBLE_DEVICES"]
+        for key in ("CUDA_VISIBLE_DEVICES", "SLURM_STEP_GPUS", "SLURM_JOB_GPUS"):
+            if key in env:
+                values[key] = env[key]
     for key in (*profile.get("forward_env", []), "GH_DALPHABALL", "ASTROLABE_PROFILE_SESSION"):
         if key in env:
             values[key] = env[key]
