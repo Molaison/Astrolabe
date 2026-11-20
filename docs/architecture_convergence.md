@@ -462,3 +462,8 @@ unavailable, the run reads Git from its local source root.
 With the same container profile, the candidate completed `astrolabe run -t
 container_smoke` from outside the checkout. The recorded commit was `b02c892`
 on `main` with `git.dirty` set to true, matching the tracked edits at launch.
+
+From a second checkout, `astrolabe run --help` initially loaded that directory's
+CLI through Python's implicit import path. The container launch now keeps the
+caller's working directory for inputs while importing AstroLabe from the source
+mount on `PYTHONPATH`.

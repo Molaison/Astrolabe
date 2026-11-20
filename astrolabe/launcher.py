@@ -224,7 +224,9 @@ def runtime_command(root, argv, profile, environment=None, cwd=None):
     if container_home is not None:
         # Apptainer intentionally rejects HOME through --env.
         command.extend(["/usr/bin/env", f"HOME={container_home}"])
-    command.extend([profile.get("python", "python"), "-m", "astrolabe", *argv])
+    # The caller's directory can contain another Astrolabe checkout. Keep it
+    # as the working directory while importing the mounted source on PYTHONPATH.
+    command.extend([profile.get("python", "python"), "-P", "-m", "astrolabe", *argv])
     return command, env
 
 
