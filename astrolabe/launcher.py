@@ -170,6 +170,12 @@ def runtime_command(root, argv, profile, environment=None, cwd=None):
         values.update(CUDA_VISIBLE_DEVICES="", JAX_PLATFORMS="cpu")
     values["ASTROLABE_RUNTIME_ACTIVE"] = "1"
     values["PYTHONPATH"] = container_root + (":" + values["PYTHONPATH"] if values.get("PYTHONPATH") else "")
+    if command_words(argv)[:1] == ["run"]:
+        from astrolabe.git_provenance import GIT_PROVENANCE_ENV, encode_host_git_provenance
+
+        values[GIT_PROVENANCE_ENV] = ""
+        if not any(arg in ("--dry-run", "--help", "-h") for arg in argv):
+            values[GIT_PROVENANCE_ENV] = encode_host_git_provenance(root, container_root)
     binds = [f"{root}:{container_root}:ro", *profile.get("binds", [])]
     # --no-home / HOME=/tmp must not turn the default JAX cache into an
     # ephemeral container path. Resolve and mount it on the host instead.

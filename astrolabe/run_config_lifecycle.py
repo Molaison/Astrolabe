@@ -17,6 +17,7 @@ from typing import Any
 
 from omegaconf import OmegaConf
 
+from astrolabe.git_provenance import collect_checkout_git, read_host_git_provenance
 from astrolabe.runtime_requirements import task_requirements
 from astrolabe.runtime_usage import analyze_runtime_usage
 
@@ -453,7 +454,6 @@ _VISIBILITY_ENV_VARS = (
     "HIP_VISIBLE_DEVICES",
 )
 _NVIDIA_SMI_QUERY = "--query-gpu=index,name,driver_version,memory.total,compute_cap"
-_GIT_TIMEOUT_SECONDS = 30.0
 _NVIDIA_SMI_TIMEOUT_SECONDS = 10.0
 _HASH_CHUNK_BYTES = 1024 * 1024
 
@@ -484,74 +484,10 @@ def _source_root() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parents[1]
 
 
-def _git(root: pathlib.Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ("git", "-C", str(root), *args),
-        capture_output=True,
-        text=True,
-        errors="replace",
-        timeout=_GIT_TIMEOUT_SECONDS,
-        check=False,
-    )
-
-
 def collect_git_provenance(source_root: Any = None) -> dict[str, Any]:
-    """Collect commit/branch/dirty state from the source root's own `.git`.
-
-    Limitations: only the source root is inspected (`git -C <source_root>`), never the
-    current working directory, so an installed wheel or copied source tree reports
-    `available: false` rather than inferring an unrelated checkout. `dirty` covers
-    tracked modifications only (`--untracked-files=no --ignore-submodules=all`) and is
-    `None` when that check could not run. Every failure is reported in `reason`; this
-    function never raises.
-    """
+    """Collect Git state for the running source, using host launch metadata when present."""
     root = pathlib.Path(source_root) if source_root is not None else _source_root()
-    record: dict[str, Any] = {
-        "available": False,
-        "root": str(root),
-        "commit": None,
-        "branch": None,
-        "dirty": None,
-        "dirty_entries": None,
-        "dirty_scope": (
-            "tracked modifications; untracked files and submodule worktrees excluded"
-        ),
-        "reason": None,
-    }
-    if not (root / ".git").exists():
-        record["reason"] = "no .git in source root (installed or copied source tree)"
-        return record
-    if shutil.which("git") is None:
-        record["reason"] = "git executable not found on PATH"
-        return record
-    try:
-        commit = _git(root, "rev-parse", "HEAD")
-        if commit.returncode != 0:
-            record["reason"] = f"git rev-parse HEAD failed: {_stderr_tail(commit.stderr)}"
-            return record
-        branch = _git(root, "rev-parse", "--abbrev-ref", "HEAD")
-        dirty = _git(
-            root,
-            "status",
-            "--porcelain",
-            "--ignore-submodules=all",
-            "--untracked-files=no",
-        )
-    except (OSError, subprocess.SubprocessError) as exc:
-        record["reason"] = f"git invocation failed: {exc}"
-        return record
-
-    record["available"] = True
-    record["commit"] = commit.stdout.strip() or None
-    if branch.returncode == 0 and branch.stdout.strip():
-        record["branch"] = branch.stdout.strip()
-    if dirty.returncode != 0:
-        record["reason"] = f"git status failed: {_stderr_tail(dirty.stderr)}"
-    else:
-        entries = [line for line in dirty.stdout.splitlines() if line.strip()]
-        record["dirty"] = bool(entries)
-        record["dirty_entries"] = len(entries)
-    return record
+    return read_host_git_provenance(root) or collect_checkout_git(root)
 
 
 def collect_version_provenance() -> dict[str, Any]:

@@ -449,3 +449,16 @@ in the second. A separate XMix CLI run specified budget 9 over two independent
 segments. A and B share the first segment, and C owns the second. The same
 input changed 16 unique sites before the fix and nine after it. The Protenix
 CUDA-only check was skipped in the CPU environment.
+
+### Container Git provenance
+
+On f102, the linked worktree at `b02c892` completed the AF3 smoke run with
+`git.available` set to false. Its `.git` pointer referred to host metadata
+outside the source mount. The launcher now reads the mounted checkout's Git
+state on the host. The container records `git.source` as `host_launch` along
+with the host and container source roots. When matching launch metadata is
+unavailable, the run reads Git from its local source root.
+
+With the same container profile, the candidate completed `astrolabe run -t
+container_smoke` from outside the checkout. The recorded commit was `b02c892`
+on `main` with `git.dirty` set to true, matching the tracked edits at launch.
